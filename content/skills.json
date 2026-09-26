@@ -1,0 +1,4 @@
+[
+  { "id": "prog.loops", "title": { "en": "Loops", "tr": "Döngüler" }, "category": "programming-fundamentals" },
+  { "id": "prog.types", "title": { "en": "Types and values", "tr": "Tipler ve değerler" }, "category": "programming-fundamentals" }
+]

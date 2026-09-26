@@ -15,7 +15,7 @@ Early development. Roadmap:
 | Phase | Scope |
 |---|---|
 | F0 | Project skeleton, CI, docs ✅ |
-| F1 | Content engine: Markdown challenge format, schema validation, `validate` script |
+| F1 | Content engine: Markdown challenge format, schema validation, `validate` script ✅ |
 | F2 | Runners: JS/TS (Web Worker), HTML/CSS (sandboxed iframe), SQL (PGlite), quizzes |
 | F3 | UI: catalog, category, challenge workspace, skill map, settings |
 | F4 | All 14 curriculum categories as a template + sample challenges, GitHub Pages release |
@@ -31,6 +31,7 @@ Performance · Product Engineering · Data & Analytics
 ```bash
 npm install
 npm run dev        # local dev server
+npm run validate   # check content/ (see docs/challenge-format.md)
 npm test           # unit tests (Vitest)
 npm run typecheck
 npm run lint

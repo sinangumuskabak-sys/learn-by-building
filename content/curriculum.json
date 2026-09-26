@@ -1,0 +1,20 @@
+{
+  "categories": [
+    {
+      "id": "programming-fundamentals",
+      "title": { "en": "Programming Fundamentals", "tr": "Programlama Temelleri" },
+      "description": {
+        "en": "Values, control flow, functions and data structures.",
+        "tr": "Değerler, kontrol akışı, fonksiyonlar ve veri yapıları."
+      },
+      "icon": "code",
+      "modules": [
+        {
+          "id": "loops",
+          "title": { "en": "Loops", "tr": "Döngüler" },
+          "challenges": ["iterate-odd-numbers", "loop-basics-quiz"]
+        }
+      ]
+    }
+  ]
+}
