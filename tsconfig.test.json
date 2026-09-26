@@ -23,7 +23,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "virtual:content": [
+        "./src/content/virtual-content.d.ts"
+      ]
+    }
   },
   "include": [
     "src/**/*.test.ts",

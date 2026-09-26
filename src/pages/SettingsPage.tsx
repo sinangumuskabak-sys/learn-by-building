@@ -1,0 +1,166 @@
+import clsx from 'clsx'
+import { Download, Upload } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
+import { ConfirmButton } from '../components/ConfirmButton.tsx'
+import { Button, Page } from '../components/ui.tsx'
+import { useI18n } from '../i18n/i18n.ts'
+import { langs } from '../i18n/messages.ts'
+import { useDocumentTitle } from '../lib/hooks.ts'
+import { fontSizes, settingsStore, themeStore, useSettings, useTheme } from '../lib/settings.ts'
+import { progressActions } from '../progress/progress.ts'
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-border bg-surface">
+      <h2 className="border-b border-border px-5 py-3 font-semibold tracking-tight">{title}</h2>
+      <div className="divide-y divide-border">{children}</div>
+    </section>
+  )
+}
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
+      <div className="flex-1">
+        <p className="text-sm font-medium">{label}</p>
+        {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
+      </div>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  )
+}
+
+function Segmented<T extends string | number>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+  label: string
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={clsx(
+            'rounded-md px-3 py-1.5 text-sm transition-colors',
+            value === option.value ? 'bg-surface font-medium text-fg shadow-sm' : 'text-muted hover:text-fg',
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function SettingsPage() {
+  const { t, lang, setLang } = useI18n()
+  const theme = useTheme()
+  const { fontSize } = useSettings()
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  useDocumentTitle(t('settings.title'))
+
+  const exportProgress = () => {
+    const blob = new Blob([progressActions.exportJson()], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `learn-platform-progress-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const importProgress = async (file: File) => {
+    const ok = progressActions.importJson(await file.text())
+    setMessage({ ok, text: ok ? t('settings.importDone') : t('settings.importFailed') })
+  }
+
+  return (
+    <Page className="max-w-3xl space-y-6">
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('settings.title')}</h1>
+
+      <Section title={t('settings.appearance')}>
+        <Row label={t('settings.theme')}>
+          <Segmented
+            label={t('settings.theme')}
+            value={theme}
+            onChange={(value) => themeStore.set(value)}
+            options={[
+              { value: 'light', label: t('settings.light') },
+              { value: 'dark', label: t('settings.dark') },
+            ]}
+          />
+        </Row>
+        <Row label={t('settings.language')}>
+          <Segmented
+            label={t('settings.language')}
+            value={lang}
+            onChange={setLang}
+            options={langs.map((code) => ({ value: code, label: code === 'en' ? 'English' : 'Türkçe' }))}
+          />
+        </Row>
+      </Section>
+
+      <Section title={t('settings.editor')}>
+        <Row label={t('settings.fontSize')}>
+          <select
+            value={fontSize}
+            onChange={(e) => settingsStore.set({ fontSize: Number(e.target.value) })}
+            aria-label={t('settings.fontSize')}
+            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm"
+          >
+            {fontSizes.map((size) => (
+              <option key={size} value={size}>
+                {size}px
+              </option>
+            ))}
+          </select>
+        </Row>
+      </Section>
+
+      <Section title={t('settings.progress')}>
+        <Row label={t('settings.progress')} hint={t('settings.progressHint')}>
+          <Button size="sm" onClick={exportProgress}>
+            <Download size={15} aria-hidden />
+            {t('settings.export')}
+          </Button>
+          <Button size="sm" onClick={() => fileInput.current?.click()}>
+            <Upload size={15} aria-hidden />
+            {t('settings.import')}
+          </Button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void importProgress(file)
+              e.target.value = ''
+            }}
+          />
+        </Row>
+        {message && (
+          <p role="status" className={clsx('px-5 py-3 text-sm', message.ok ? 'text-success' : 'text-danger')}>
+            {message.text}
+          </p>
+        )}
+        <Row label={t('settings.reset')}>
+          <ConfirmButton variant="danger" confirmLabel={t('settings.resetConfirm')} onConfirm={progressActions.resetAll}>
+            {t('settings.reset')}
+          </ConfirmButton>
+        </Row>
+      </Section>
+    </Page>
+  )
+}

@@ -1,12 +1,18 @@
+import { Compass } from 'lucide-react'
 import { Link } from 'react-router'
+import { buttonClass } from '../components/button-class.ts'
+import { Page } from '../components/ui.tsx'
+import { useI18n } from '../i18n/i18n.ts'
 
-export function NotFoundPage() {
+export function NotFoundPage({ title }: { title?: string }) {
+  const { t } = useI18n()
   return (
-    <section>
-      <h1 className="text-2xl font-bold tracking-tight">Page not found</h1>
-      <Link to="/" className="mt-4 inline-block text-accent hover:underline">
-        Back to catalog
+    <Page className="flex flex-col items-center py-20 text-center">
+      <Compass size={40} className="text-muted" aria-hidden />
+      <h1 className="mt-4 text-2xl font-bold tracking-tight">{title ?? t('notFound.title')}</h1>
+      <Link to="/" className={`${buttonClass('secondary')} mt-6`}>
+        {t('notFound.back')}
       </Link>
-    </section>
+    </Page>
   )
 }
