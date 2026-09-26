@@ -16,7 +16,7 @@ Early development. Roadmap:
 |---|---|
 | F0 | Project skeleton, CI, docs ✅ |
 | F1 | Content engine: Markdown challenge format, schema validation, `validate` script ✅ |
-| F2 | Runners: JS/TS (Web Worker), HTML/CSS (sandboxed iframe), SQL (PGlite), quizzes |
+| F2 | Runners: JS/TS (Web Worker), HTML/CSS (sandboxed iframe), SQL (PGlite), quizzes ✅ |
 | F3 | UI: catalog, category, challenge workspace, skill map, settings |
 | F4 | All 14 curriculum categories as a template + sample challenges, GitHub Pages release |
 

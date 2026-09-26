@@ -2,7 +2,10 @@
   "categories": [
     {
       "id": "programming-fundamentals",
-      "title": { "en": "Programming Fundamentals", "tr": "Programlama Temelleri" },
+      "title": {
+        "en": "Programming Fundamentals",
+        "tr": "Programlama Temelleri"
+      },
       "description": {
         "en": "Values, control flow, functions and data structures.",
         "tr": "Değerler, kontrol akışı, fonksiyonlar ve veri yapıları."
@@ -11,8 +14,97 @@
       "modules": [
         {
           "id": "loops",
-          "title": { "en": "Loops", "tr": "Döngüler" },
-          "challenges": ["iterate-odd-numbers", "loop-basics-quiz"]
+          "title": {
+            "en": "Loops",
+            "tr": "Döngüler"
+          },
+          "challenges": [
+            "loop-basics-quiz",
+            "read-off-by-one",
+            "iterate-odd-numbers"
+          ]
+        },
+        {
+          "id": "types",
+          "title": {
+            "en": "Types",
+            "tr": "Tipler"
+          },
+          "challenges": [
+            "typed-sum"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "software-architecture",
+      "title": {
+        "en": "Software Architecture",
+        "tr": "Yazılım Mimarisi"
+      },
+      "description": {
+        "en": "Boundaries, trade-offs, caching and scaling decisions.",
+        "tr": "Sınırlar, ödünleşimler, önbellek ve ölçekleme kararları."
+      },
+      "icon": "blocks",
+      "modules": [
+        {
+          "id": "caching-basics",
+          "title": {
+            "en": "Caching basics",
+            "tr": "Önbellek temelleri"
+          },
+          "challenges": [
+            "design-cache-policy"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "databases",
+      "title": {
+        "en": "Databases",
+        "tr": "Veritabanları"
+      },
+      "description": {
+        "en": "SQL, schema design, indexes and access control.",
+        "tr": "SQL, şema tasarımı, indeksler ve erişim denetimi."
+      },
+      "icon": "database",
+      "modules": [
+        {
+          "id": "sql-basics",
+          "title": {
+            "en": "SQL basics",
+            "tr": "SQL temelleri"
+          },
+          "challenges": [
+            "filter-active-users"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frontend-mobile",
+      "title": {
+        "en": "Frontend / Mobile",
+        "tr": "Ön Yüz / Mobil"
+      },
+      "description": {
+        "en": "HTML, CSS, accessibility and UI state.",
+        "tr": "HTML, CSS, erişilebilirlik ve arayüz durumu."
+      },
+      "icon": "layout",
+      "modules": [
+        {
+          "id": "html-basics",
+          "title": {
+            "en": "HTML basics",
+            "tr": "HTML temelleri"
+          },
+          "challenges": [
+            "accessible-button"
+          ]
         }
       ]
     }

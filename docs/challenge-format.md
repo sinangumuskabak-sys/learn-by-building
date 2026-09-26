@@ -63,5 +63,20 @@ Reference solution with the same files as the seed. Separate alternative solutio
 | `read` | description, seed (code to read), questions |
 | `design` | description, rubric |
 
-Non-runnable types (`quiz`, `read`, `design`) must not have hints or solutions. Test code sees the learner's variables, the raw source as `code`, and a Chai-style `assert`
-(provided by the runners in phase F2).
+Non-runnable types (`quiz`, `read`, `design`) must not have hints or solutions.
+
+`npm run validate` runs every runnable challenge twice: the seed must fail at least one test and every reference
+solution must pass all of them.
+
+## What tests can use
+
+Tests are JavaScript and always get Chai's `assert` and `code` (the learner's raw source).
+
+| Type | Also available |
+|---|---|
+| `code-js`, `code-ts` | the learner's top-level variables and functions (TypeScript types are stripped, not checked) |
+| `sql` | `rows` (objects from the last statement), `columns`, `await query(sql)` to inspect the database |
+| `web` | `document` and `window` of the rendered page |
+
+Learner code runs once per test in a fresh scope, so tests do not affect each other. In the browser, JS/TS runs in a
+Web Worker with a 5 s timeout; SQL runs in PGlite (Postgres compiled to WebAssembly), loaded only when needed.

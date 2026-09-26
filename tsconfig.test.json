@@ -29,6 +29,7 @@
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/test",
-    "src/content/load-node.ts"
+    "src/content/load-node.ts",
+    "src/runners/node.ts"
   ]
 }

@@ -1,4 +1,42 @@
 [
-  { "id": "prog.loops", "title": { "en": "Loops", "tr": "Döngüler" }, "category": "programming-fundamentals" },
-  { "id": "prog.types", "title": { "en": "Types and values", "tr": "Tipler ve değerler" }, "category": "programming-fundamentals" }
+  {
+    "id": "prog.loops",
+    "title": {
+      "en": "Loops",
+      "tr": "Döngüler"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "prog.types",
+    "title": {
+      "en": "Types and values",
+      "tr": "Tipler ve değerler"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "db.sql-select",
+    "title": {
+      "en": "SQL SELECT",
+      "tr": "SQL SELECT"
+    },
+    "category": "databases"
+  },
+  {
+    "id": "fe.accessibility",
+    "title": {
+      "en": "Accessibility",
+      "tr": "Erişilebilirlik"
+    },
+    "category": "frontend-mobile"
+  },
+  {
+    "id": "arch.caching",
+    "title": {
+      "en": "Caching",
+      "tr": "Önbellekleme"
+    },
+    "category": "software-architecture"
+  }
 ]
