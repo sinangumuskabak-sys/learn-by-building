@@ -1,0 +1,20 @@
+{
+  "id": "blackjack",
+  "order": 31,
+  "title": { "en": "Blackjack", "tr": "Blackjack" },
+  "description": {
+    "en": "Beat the dealer without going over 21. Cards as objects, a fair Fisher–Yates shuffle, aces worth 11 or 1, a dealer that follows fixed rules, chips and payouts, a turn spread over time, doubling down, and buttons that show what you can do.",
+    "tr": "21'i geçmeden krupiyeyi yen. Nesne olarak kartlar, adil bir Fisher–Yates karıştırması, 11 ya da 1 değerinde aslar, sabit kurallara uyan bir krupiye, fişler ve ödemeler, zamana yayılan bir sıra, ikiye katlama ve ne yapabileceğini gösteren düğmeler."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 480, "height": 460 },
+  "color": "#15803d",
+  "skills": ["prog.arrays", "prog.functions", "game.state", "game.input"],
+  "extend": [
+    { "en": "Let the player choose the bet (5, 10 or 25) before each deal.", "tr": "Oyuncu her dağıtımdan önce bahsi seçsin (5, 10 ya da 25)." },
+    { "en": "Split: two cards of the same rank become two hands with their own bets.", "tr": "Bölme: aynı değerde iki kart, kendi bahisleriyle iki el olsun." },
+    { "en": "Slide each new card in from the deck instead of making it appear.", "tr": "Her yeni kartı belirtmek yerine desteden kaydırarak getir." },
+    { "en": "A hint that shows the basic strategy move for your hand.", "tr": "Elin için temel strateji hamlesini gösteren bir ipucu." },
+    { "en": "Use six decks, like a casino, and show how many cards are left.", "tr": "Bir kumarhane gibi altı deste kullan ve kaç kart kaldığını göster." }
+  ]
+}
