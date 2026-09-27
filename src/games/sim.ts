@@ -636,6 +636,15 @@ export function createSim(size: CanvasSize, seed = 1) {
       pointer('pointermove', x, y)
       pointer('mousemove', x, y)
     },
+    /** Presses the pointer (mouse button or finger) down without releasing it. */
+    pointerDown(x: number, y: number) {
+      pointer('pointerdown', x, y)
+      pointer('mousedown', x, y)
+    },
+    pointerUp(x: number, y: number) {
+      pointer('pointerup', x, y)
+      pointer('mouseup', x, y)
+    },
     /** Restarts the random sequence; the page starts with seed 1. */
     seed(n: number) {
       random = seededRandom(n)

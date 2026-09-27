@@ -83,6 +83,7 @@ variables and functions, plus `assert` (Chai) and `$`:
 | `run(seconds)` | advance by seconds |
 | `press(key)` / `release(key)` / `tap(key)` | keyboard events (`'ArrowUp'`, `' '`, `'a'`…) on `document` |
 | `click(x, y)` / `move(x, y)` | pointer and mouse events on the canvas, in canvas pixels |
+| `pointerDown(x, y)` / `pointerUp(x, y)` | press or release without the other half of a click |
 | `rects(color?)` | filled rectangles in the current picture: `{ x, y, w, h, color }` |
 | `texts()` / `arcs()` | text and circles in the current picture |
 | `screen()` / `calls` | raw draw calls (current picture / since load) |
