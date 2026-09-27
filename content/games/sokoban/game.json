@@ -1,0 +1,19 @@
+{
+  "id": "sokoban",
+  "order": 35,
+  "title": { "en": "Sokoban", "tr": "Sokoban" },
+  "description": {
+    "en": "Push every box onto a goal. Reading a standard level format, sets for walls and goals, the pushing rules, levels, and undo with a history of snapshots.",
+    "tr": "Her kutuyu bir hedefe it. Standart bir bölüm biçimini okumak, duvarlar ve hedefler için kümeler, itme kuralları, bölümler ve anlık görüntü geçmişiyle geri alma."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 480, "height": 520 },
+  "color": "#b45309",
+  "skills": ["prog.arrays", "game.input", "game.state"],
+  "extend": [
+    { "en": "Add your own level: draw it as text in LEVELS. Check it has as many boxes as goals!", "tr": "Kendi bölümünü ekle: LEVELS'a metin olarak çiz. Kutu sayısının hedef sayısına eşit olduğunu kontrol et!" },
+    { "en": "Detect a box stuck in a corner that is not a goal, and suggest undoing.", "tr": "Hedef olmayan bir köşeye sıkışmış kutuyu fark et ve geri almayı öner." },
+    { "en": "Animate the player sliding from tile to tile over 80 ms.", "tr": "Oyuncunun döşemeden döşemeye 80 ms'de kaymasını canlandır." },
+    { "en": "Count pushes separately from moves, like classic Sokoban scoring.", "tr": "Klasik Sokoban puanlaması gibi itmeleri hamlelerden ayrı say." }
+  ]
+}
