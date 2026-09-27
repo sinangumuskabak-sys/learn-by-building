@@ -1,0 +1,20 @@
+{
+  "id": "word-guess",
+  "order": 22,
+  "title": { "en": "Wordle-style Word Guess", "tr": "Wordle Tarzı Kelime Tahmini" },
+  "description": {
+    "en": "Guess the five-letter word in six tries, with green, yellow and gray hints. Keyboard input, string handling, the scoring rules for repeated letters, an on-screen keyboard for phones and saved statistics.",
+    "tr": "Beş harfli kelimeyi yeşil, sarı ve gri ipuçlarıyla altı denemede bul. Klavye girişi, metin işleme, tekrarlanan harfler için puanlama kuralları, telefonlar için ekran klavyesi ve kaydedilen istatistikler."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 360, "height": 560 },
+  "color": "#16a34a",
+  "skills": ["prog.arrays", "game.input", "game.state"],
+  "extend": [
+    { "en": "Only accept guesses that are real words: check them against a bigger word list.", "tr": "Yalnızca gerçek kelime olan tahminleri kabul et: onları daha büyük bir kelime listesine karşı kontrol et." },
+    { "en": "A daily word: pick the answer from today's date, so everyone gets the same one.", "tr": "Günün kelimesi: cevabı bugünün tarihinden seç; herkes aynı kelimeyi alsın." },
+    { "en": "Flip the tiles one after another when a guess is scored.", "tr": "Bir tahmin puanlanınca döşemeleri birbiri ardına çevir." },
+    { "en": "Hard mode: every hint you found must be used in the next guesses.", "tr": "Zor mod: bulduğun her ipucu sonraki tahminlerde kullanılmak zorunda." },
+    { "en": "A Turkish word list, with the Turkish letters on the keyboard.", "tr": "Klavyede Türkçe harflerle bir Türkçe kelime listesi." }
+  ]
+}
