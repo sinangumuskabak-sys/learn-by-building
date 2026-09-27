@@ -1,0 +1,20 @@
+{
+  "id": "hangman",
+  "order": 32,
+  "title": { "en": "Hangman", "tr": "Adam Asmaca" },
+  "description": {
+    "en": "Guess the word one letter at a time before the figure is drawn. A Set of guesses, a masked word in one line, keys filtered down to letters, a drawing made from an array of functions, every() to know when you win, and a keyboard on the screen.",
+    "tr": "Figür çizilmeden kelimeyi harf harf tahmin et. Tahminlerden bir Set, tek satırda gizlenmiş kelime, harflere süzülen tuşlar, bir fonksiyon dizisinden yapılan çizim, ne zaman kazandığını bilmek için every() ve ekranda bir klavye."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 480, "height": 480 },
+  "color": "#a16207",
+  "skills": ["prog.arrays", "prog.functions", "game.input", "game.state"],
+  "extend": [
+    { "en": "Categories (animals, food, places) shown as a hint above the word.", "tr": "Kelimenin üstünde ipucu olarak gösterilen kategoriler (hayvanlar, yiyecek, yerler)." },
+    { "en": "A hint button that reveals one letter but costs a miss.", "tr": "Bir harfi açan ama bir ıskaya mal olan bir ipucu düğmesi." },
+    { "en": "Two players: one types the secret word, the other guesses.", "tr": "İki oyuncu: biri gizli kelimeyi yazar, diğeri tahmin eder." },
+    { "en": "Short phrases with spaces, where the spaces are shown from the start.", "tr": "Boşlukların baştan gösterildiği, boşluklu kısa ifadeler." },
+    { "en": "A Turkish version with Ç, Ğ, I, İ, Ö, Ş and Ü on the keyboard.", "tr": "Klavyede Ç, Ğ, I, İ, Ö, Ş ve Ü olan bir Türkçe sürüm." }
+  ]
+}

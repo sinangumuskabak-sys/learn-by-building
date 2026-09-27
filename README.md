@@ -33,9 +33,9 @@ Build real games step by step: the code editor on the left, the game running on 
 idea, has its own checks, and ends with a playable game.
 
 <!-- games:en:start -->
-33 games, 235 steps:
+34 games, 240 steps:
 
-- **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Conway's Game of Life · Endless Runner · Blackjack · Sokoban · Snake · Pong · Flappy-style Bird
+- **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Conway's Game of Life · Endless Runner · Blackjack · Hangman · Sokoban · Snake · Pong · Flappy-style Bird
 - **Intermediate:** Candy Crush-style Match 3 · Sudoku · Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Missile Command-style Defense · Asteroids
 - **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess · OutRun-style Racer · Zelda-style Dungeon
 <!-- games:en:end -->
@@ -75,9 +75,9 @@ bağımsız bir projedir, freeCodeCamp kodu içermez.
 **Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır.
 
 <!-- games:tr:start -->
-33 oyun, 235 adım:
+34 oyun, 240 adım:
 
-- **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Conway'in Hayat Oyunu · Sonsuz Koşucu · Blackjack · Sokoban · Yılan · Pong · Flappy tarzı kuş
+- **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Conway'in Hayat Oyunu · Sonsuz Koşucu · Blackjack · Adam Asmaca · Sokoban · Yılan · Pong · Flappy tarzı kuş
 - **Orta:** Candy Crush Tarzı Üçlü Eşleştirme · Sudoku · Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Missile Command Tarzı Savunma · Asteroids
 - **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç · OutRun Tarzı Yarış · Zelda Tarzı Zindan
 <!-- games:tr:end -->
