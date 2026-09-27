@@ -1,0 +1,20 @@
+{
+  "id": "racer",
+  "order": 180,
+  "title": { "en": "OutRun-style Racer", "tr": "OutRun Tarzı Yarış" },
+  "description": {
+    "en": "Race down a winding road in fake 3D, the way arcade racers did it before real 3D. Perspective projection, painting from far to near, steering against the pull of curves, cars that shrink into the distance and lap times.",
+    "tr": "Gerçek 3B'den önce atari yarış oyunlarının yaptığı gibi, sahte 3B'de kıvrılan bir yolda yarış. Perspektif izdüşümü, uzaktan yakına boyama, virajların çekişine karşı direksiyon, uzaklaştıkça küçülen arabalar ve tur süreleri."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 480, "height": 320 },
+  "color": "#dc2626",
+  "skills": ["game.physics", "game.loop", "game.collision", "game.input"],
+  "extend": [
+    { "en": "Hills: give each segment a height and project it too; draw from near to far and skip road hidden behind a hill top.", "tr": "Tepeler: her parçaya bir yükseklik ver ve onu da izdüşür; yakından uzağa çiz ve bir tepenin arkasında kalan yolu atla." },
+    { "en": "Trees and signs at the side of the road, scaled like the cars.", "tr": "Yol kenarında arabalar gibi ölçeklenen ağaçlar ve tabelalar." },
+    { "en": "A parallax background (mountains) that slides sideways in curves.", "tr": "Virajlarda yana kayan bir paralaks arka plan (dağlar)." },
+    { "en": "A countdown timer with checkpoints that add time, like the arcade original.", "tr": "Orijinal atari oyunundaki gibi, zaman ekleyen kontrol noktalarıyla geri sayan bir süre." },
+    { "en": "An engine sound whose pitch follows the speed.", "tr": "Perdesi hızı izleyen bir motor sesi." }
+  ]
+}
