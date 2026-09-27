@@ -1,0 +1,20 @@
+{
+  "id": "birds",
+  "order": 200,
+  "title": { "en": "Angry Birds-style Slingshot", "tr": "Angry Birds Tarzı Sapan" },
+  "description": {
+    "en": "Launch birds at towers of wood and stone and knock out the pigs. Aiming with an angle and a pull, gravity and the parabola (drawn before you shoot), boxes that stack, push and bounce by their mass, damage from hard hits, three birds per level, and levels written as data and tested to stand.",
+    "tr": "Tahta ve taş kulelere kuş fırlat ve domuzları devir. Bir açı ve bir çekişle nişan almak, yerçekimi ve (atmadan önce çizilen) parabol, kütlelerine göre yığılan, iten ve seken kutular, sert çarpmalardan gelen hasar, seviye başına üç kuş ve veri olarak yazılıp ayakta durduğu test edilen seviyeler."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 560, "height": 320 },
+  "color": "#dc2626",
+  "skills": ["game.physics", "game.collision", "game.input", "game.state"],
+  "extend": [
+    { "en": "A yellow bird that speeds up when you tap during its flight.", "tr": "Uçuşu sırasında dokununca hızlanan sarı bir kuş." },
+    { "en": "Glass blocks: light and very fragile.", "tr": "Cam bloklar: hafif ve çok kırılgan." },
+    { "en": "Stars: one, two or three depending on the score.", "tr": "Yıldızlar: skora göre bir, iki ya da üç." },
+    { "en": "A fourth level of your own, and a test that it stands.", "tr": "Kendi yaptığın dördüncü bir seviye ve ayakta durduğunun testi." },
+    { "en": "Wind that pushes the bird a little, shown by an arrow.", "tr": "Kuşu biraz iten ve bir okla gösterilen rüzgâr." }
+  ]
+}

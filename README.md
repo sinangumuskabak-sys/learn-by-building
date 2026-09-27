@@ -33,11 +33,11 @@ Build real games step by step: the code editor on the left, the game running on 
 idea, has its own checks, and ends with a playable game.
 
 <!-- games:en:start -->
-37 games, 259 steps:
+38 games, 266 steps:
 
 - **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Blackjack · Hangman · Conway's Game of Life · Typing Rain · Sokoban · Snake · Pong · Flappy-style Bird
 - **Intermediate:** Candy Crush-style Match 3 · Sudoku · Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Missile Command-style Defense · Bomberman-style Arena · Asteroids · Pool
-- **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess · OutRun-style Racer · Zelda-style Dungeon
+- **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess · OutRun-style Racer · Zelda-style Dungeon · Angry Birds-style Slingshot
 <!-- games:en:end -->
 
 Games named “…-style” are original code built around well-known game mechanics; they are not affiliated with the
@@ -75,11 +75,11 @@ bağımsız bir projedir, freeCodeCamp kodu içermez.
 **Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır.
 
 <!-- games:tr:start -->
-37 oyun, 259 adım:
+38 oyun, 266 adım:
 
 - **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Blackjack · Adam Asmaca · Conway'in Hayat Oyunu · Yazı Yağmuru · Sokoban · Yılan · Pong · Flappy tarzı kuş
 - **Orta:** Candy Crush Tarzı Üçlü Eşleştirme · Sudoku · Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Missile Command Tarzı Savunma · Bomberman Tarzı Arena · Asteroids · Bilardo
-- **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç · OutRun Tarzı Yarış · Zelda Tarzı Zindan
+- **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç · OutRun Tarzı Yarış · Zelda Tarzı Zindan · Angry Birds Tarzı Sapan
 <!-- games:tr:end -->
 
 Geliştirme komutları ve yol haritası için yukarıdaki İngilizce bölüme bak.
