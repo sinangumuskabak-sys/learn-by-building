@@ -1,0 +1,20 @@
+{
+  "id": "pong",
+  "order": 50,
+  "title": { "en": "Pong", "tr": "Pong" },
+  "description": {
+    "en": "The first video game hit: two paddles and a ball. Held keys, bouncing, angles, scoring and a simple computer opponent.",
+    "tr": "İlk video oyunu hiti: iki raket ve bir top. Basılı tuşlar, sekme, açılar, skor ve basit bir bilgisayar rakip."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 600, "height": 400 },
+  "color": "#3b82f6",
+  "skills": ["game.input", "game.physics", "game.collision", "game.state"],
+  "extend": [
+    { "en": "Make the computer beatable in a fun way: give it a small random delay before it reacts to each hit.", "tr": "Bilgisayarı eğlenceli biçimde yenilebilir yap: her vuruşa tepki vermeden önce küçük rastgele bir gecikme ver." },
+    { "en": "Add a short serve pause: after a point, keep the ball still in the middle for one second.", "tr": "Kısa bir servis beklemesi ekle: sayıdan sonra top bir saniye ortada dursun." },
+    { "en": "Draw a fading trail behind the ball by remembering its last 8 positions.", "tr": "Topun son 8 konumunu hatırlayıp arkasında solan bir iz çiz." },
+    { "en": "Touch controls: drag on the left half of the canvas to move the left paddle.", "tr": "Dokunmatik kontrol: sol raketi canvas'ın sol yarısında sürükleyerek hareket ettir." },
+    { "en": "Play sounds with the Web Audio API: a short beep on every paddle hit.", "tr": "Web Audio API ile ses çal: her raket vuruşunda kısa bir bip." }
+  ]
+}
