@@ -1,0 +1,20 @@
+{
+  "id": "battleship",
+  "order": 131,
+  "title": { "en": "Battleship", "tr": "Amiral Battı" },
+  "description": {
+    "en": "Sink the enemy fleet before it sinks yours, and teach the computer to hunt. Random fleets that never overlap, one fire function for both sides, turns, and three computer players you can measure: random (about 95 shots), hunt and target (about 56) and a heat map of every possible ship position (about 44).",
+    "tr": "Seninkini batırmadan önce düşman filosunu batır ve bilgisayara avlanmayı öğret. Asla örtüşmeyen rastgele filolar, iki taraf için tek bir ateş fonksiyonu, sıralar ve ölçebileceğin üç bilgisayar oyuncusu: rastgele (yaklaşık 95 atış), avla ve hedefle (yaklaşık 56) ve her olası gemi konumunun ısı haritası (yaklaşık 44)."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 420, "height": 620 },
+  "color": "#1e3a8a",
+  "skills": ["prog.arrays", "prog.loops", "prog.functions", "game.state"],
+  "extend": [
+    { "en": "Let the player place their own ships, turning them with R.", "tr": "Oyuncu kendi gemilerini R ile döndürerek yerleştirsin." },
+    { "en": "Difficulty levels: random, hunt and target, or the heat map.", "tr": "Zorluk seviyeleri: rastgele, avla ve hedefle ya da ısı haritası." },
+    { "en": "A salvo rule: as many shots per turn as ships still afloat.", "tr": "Salvo kuralı: sıra başına hâlâ yüzen gemi sayısı kadar atış." },
+    { "en": "Show your own heat map of the enemy's sea as a hint.", "tr": "İpucu olarak düşman denizinin kendi ısı haritanı göster." },
+    { "en": "Ships that must not touch each other, and a placement that respects it.", "tr": "Birbirine değmemesi gereken gemiler ve buna uyan bir yerleşim." }
+  ]
+}
