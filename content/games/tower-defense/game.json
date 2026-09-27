@@ -1,0 +1,20 @@
+{
+  "id": "tower-defense",
+  "order": 125,
+  "title": { "en": "Tower Defense", "tr": "Kule Savunması" },
+  "description": {
+    "en": "Build towers beside the road and stop the waves before they get through. Walking along a path by distance, turning mouse clicks into tiles, choosing targets, homing bullets, splash damage and waves that grow stronger.",
+    "tr": "Yolun kenarına kuleler kur ve dalgaları geçmeden durdur. Bir yol boyunca mesafeyle yürümek, fare tıklamalarını döşemeye çevirmek, hedef seçmek, güdümlü mermiler, alan hasarı ve güçlenen dalgalar."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 480, "height": 440 },
+  "color": "#65a30d",
+  "skills": ["game.state", "game.input", "game.collision", "prog.arrays"],
+  "extend": [
+    { "en": "Upgrade: clicking a tower you own raises its damage and range for a growing price.", "tr": "Yükseltme: sahip olduğun bir kuleye tıklamak, artan bir fiyata hasarını ve menzilini artırsın." },
+    { "en": "A frost tower that slows the enemies it hits for a second.", "tr": "Vurduğu düşmanları bir saniyeliğine yavaşlatan bir buz kulesi." },
+    { "en": "Fast, weak enemies in some waves and one big boss every fifth wave.", "tr": "Bazı dalgalarda hızlı ama zayıf düşmanlar, her beşinci dalgada bir büyük patron." },
+    { "en": "Sell a tower with a right click for half its price.", "tr": "Sağ tıkla bir kuleyi yarı fiyatına sat." },
+    { "en": "A second road, or a map where the player places walls and the enemies find the shortest way (breadth-first search).", "tr": "İkinci bir yol ya da oyuncunun duvar koyduğu ve düşmanların en kısa yolu bulduğu bir harita (genişlik öncelikli arama)." }
+  ]
+}
