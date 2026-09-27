@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { formatChecks, readContext, useMaymunContext } from './context.ts'
-import { currentPanel } from './tracker.ts'
+import { currentPanel, startTracking } from './tracker.ts'
 
 function panel(name: string, text: string) {
   const el = document.createElement('div')
@@ -53,5 +53,20 @@ describe('Maymun tracker', () => {
     page.getBoundingClientRect = () => rect as DOMRect
     task.getBoundingClientRect = () => rect as DOMRect
     expect(currentPanel()).toBe(task)
+  })
+
+  it('leaves the page for an inner panel once the route adds one', () => {
+    const rect = { width: 100, height: 100, top: 0, left: 0, right: 100, bottom: 100, x: 0, y: 0, toJSON() {} }
+    const page = panel('page', 'settings')
+    page.getBoundingClientRect = () => rect as DOMRect
+    startTracking()
+    page.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    expect(currentPanel()).toBe(page)
+    // The same main element now shows a game page with its own panels.
+    const code = document.createElement('div')
+    code.dataset.maymun = 'code'
+    code.getBoundingClientRect = () => rect as DOMRect
+    page.append(code)
+    expect(currentPanel()).toBe(code)
   })
 })

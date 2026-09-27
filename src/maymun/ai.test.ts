@@ -1,0 +1,83 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ChatError, readSse, streamChat } from './ai.ts'
+
+/** A response body that arrives in the given pieces. */
+function body(...pieces: string[]) {
+  const encoder = new TextEncoder()
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const piece of pieces) controller.enqueue(encoder.encode(piece))
+      controller.close()
+    },
+  })
+}
+
+const chunk = (text: string) => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('Maymun AI', () => {
+  it('reads server-sent events split anywhere, including inside a line', async () => {
+    const seen: string[] = []
+    await readSse(body('data: one\r\n', 'da', 'ta: t', 'wo\n\n: comment\ndata: [DONE]'), undefined, (d) => seen.push(d))
+    expect(seen).toEqual(['one', 'two', '[DONE]'])
+  })
+
+  it('streams an OpenAI-compatible answer and sends the panel as the system message', async () => {
+    const fetch = vi.fn(async () => new Response(body(chunk('Hel'), chunk('lo'), 'data: [DONE]\n\n')))
+    vi.stubGlobal('fetch', fetch)
+    let text = ''
+    await streamChat({
+      provider: 'openrouter',
+      key: 'sk-test',
+      model: 'openrouter/auto',
+      system: 'panel text',
+      messages: [{ role: 'user', text: 'hi' }],
+      onText: (piece) => (text += piece),
+    })
+    expect(text).toBe('Hello')
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk-test')
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      model: 'openrouter/auto',
+      stream: true,
+      messages: [
+        { role: 'system', content: 'panel text' },
+        { role: 'user', content: 'hi' },
+      ],
+    })
+  })
+
+  it('turns HTTP errors into kinds the chat can explain', async () => {
+    const request = { provider: 'deepseek' as const, key: 'k', model: 'm', system: '', messages: [], onText: () => {} }
+    for (const [status, kind] of [
+      [401, 'key'],
+      [429, 'rate'],
+      [404, 'model'],
+      [500, 'other'],
+    ] as const) {
+      vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ error: { message: 'nope' } }), { status }))
+      const error = await streamChat(request).catch((e: unknown) => e)
+      expect(error).toBeInstanceOf(ChatError)
+      expect(error).toMatchObject({ kind, message: `${status} nope` })
+    }
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    await expect(streamChat(request)).rejects.toMatchObject({ kind: 'network' })
+  })
+
+  it('stops quietly when aborted', async () => {
+    const abort = new AbortController()
+    vi.stubGlobal('fetch', async () => {
+      abort.abort()
+      throw new DOMException('aborted', 'AbortError')
+    })
+    await expect(
+      streamChat({ provider: 'openai', key: 'k', model: 'm', system: '', messages: [], signal: abort.signal, onText: () => {} }),
+    ).resolves.toBeUndefined()
+  })
+})

@@ -158,3 +158,104 @@ test('Maymun peeks into the panel under the pointer, its popup stays on screen, 
   await page.getByRole('radiogroup', { name: 'Maymun the cat' }).getByRole('radio', { name: 'Show' }).click()
   await expect(page.getByRole('button', { name: 'Ask Maymun about this panel' })).toBeVisible()
 })
+
+test('Maymun chats about the panel with the learner’s own key, keeps the conversation and its size', async ({ page }) => {
+  const sse = (events: object[]) => events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('')
+  const sent: Record<string, unknown>[] = []
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    sent.push(route.request().postDataJSON())
+    expect(route.request().headers().authorization).toBe('Bearer sk-or-test')
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: sse([{ choices: [{ delta: { content: 'Try **moving** ' } }] }, { choices: [{ delta: { content: 'the snake.' } }] }]) + 'data: [DONE]\n\n',
+    })
+  })
+  await page.route('https://api.anthropic.com/v1/messages*', async (route) => {
+    sent.push(route.request().postDataJSON())
+    expect(route.request().headers()['x-api-key']).toBe('sk-ant-test')
+    const message = { id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 0 } }
+    const events = [
+      { type: 'message_start', message },
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Claude says hi.' } },
+      { type: 'content_block_stop', index: 0 },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 4 } },
+      { type: 'message_stop' },
+    ]
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join(''),
+    })
+  })
+
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  // Opens the chat about the code: on desktop the pointer goes over the editor first, on phones the tab does it.
+  const askAboutCode = async () => {
+    await tab(page, 'Code')
+    if (!isMobile(page)) {
+      const code = (await page.locator('[data-maymun="code"]').boundingBox())!
+      await page.mouse.move(code.x + code.width / 2, code.y + code.height / 2)
+      await expect.poll(async () => (await cat.boundingBox())?.x ?? 0).toBeGreaterThan(code.x + code.width - 100)
+    }
+    await cat.click()
+  }
+  await page.goto('/#/games/snake/01-canvas')
+  await askAboutCode()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  await expect(question).toBeDisabled()
+
+  // First time: pick a service and add a key right in the chat.
+  await popup.getByLabel('API key').fill('sk-or-test')
+  await popup.getByRole('button', { name: 'Save' }).click()
+  await question.fill('What do I do here?')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Try moving the snake.')
+  await expect(popup.locator('.markdown strong')).toHaveText('moving')
+  const first = sent[0] as { model: string; messages: { role: string; content: string }[] }
+  expect(first.model).toBe('openrouter/auto')
+  expect(first.messages[0].role).toBe('system')
+  expect(first.messages[0].content).toContain('Code (game.js)')
+  expect(first.messages[1]).toEqual({ role: 'user', content: 'What do I do here?' })
+
+  // Resizing from the lower left corner grows the box to the left, and the size is kept.
+  const before = (await popup.boundingBox())!
+  if (!isMobile(page)) {
+    const grip = popup.getByRole('separator', { name: 'Resize the chat box' })
+    const g = (await grip.boundingBox())!
+    await page.mouse.move(g.x + 8, g.y + 8)
+    await page.mouse.down()
+    await page.mouse.move(g.x - 92, g.y + 48, { steps: 5 })
+    await page.mouse.up()
+    await expect.poll(async () => Math.round((await popup.boundingBox())!.width)).toBe(Math.round(before.width) + 100)
+  }
+  const size = (await popup.boundingBox())!
+
+  // After a reload the conversation and the size are still there.
+  await page.reload()
+  await askAboutCode()
+  await expect(popup.locator('.markdown').last()).toHaveText('Try moving the snake.')
+  const after = (await popup.boundingBox())!
+  expect(Math.round(after.width)).toBe(Math.round(size.width))
+  expect(Math.round(after.height)).toBe(Math.round(size.height))
+
+  // Claude through Anthropic's SDK in the browser: the whole conversation goes along.
+  await page.goto('/#/settings')
+  await expect(popup).toHaveCount(0)
+  const setup = page.locator('#main form').filter({ has: page.getByLabel('API key') })
+  await setup.getByLabel('Service').selectOption('anthropic')
+  await setup.getByLabel('API key').fill('sk-ant-test')
+  await setup.getByRole('button', { name: 'Save' }).click()
+  await page.goto('/#/games/snake/01-canvas')
+  await askAboutCode()
+  await question.fill('And now?')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Claude says hi.')
+  const claude = sent[1] as { model: string; system: string; messages: { role: string; content: string }[] }
+  expect(claude.model).toBe('claude-opus-5')
+  expect(claude.system).toContain('Code (game.js)')
+  expect(claude.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user'])
+
+  await popup.getByRole('button', { name: 'Clear the conversation' }).click()
+  await expect(popup.locator('.markdown')).toHaveCount(0)
+})

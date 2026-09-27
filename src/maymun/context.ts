@@ -49,3 +49,16 @@ export function formatChecks(result: RunResult): string {
   if (result.error) lines.unshift(`Error: ${result.error}`)
   return lines.join('\n') || 'No checks.'
 }
+
+/** The instructions and the panel the learner is looking at, sent along with every question. */
+export function systemPrompt(context: ReturnType<typeof readContext>, language: string): string {
+  return [
+    'You are Maymun, a friendly orange cat who helps people learn programming on Learn Platform.',
+    `Answer in ${language}. Keep answers short and concrete.`,
+    'Lead the learner to the answer with hints and questions; give a full solution only when they ask for it.',
+    `The learner is looking at the "${context.panel}" panel of the page "${context.page}". What that panel shows:`,
+    `<panel title="${context.title}">`,
+    context.text,
+    '</panel>',
+  ].join('\n')
+}

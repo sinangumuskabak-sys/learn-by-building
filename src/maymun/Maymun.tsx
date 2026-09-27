@@ -1,8 +1,11 @@
 import { X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router'
 import { useI18n } from '../i18n/i18n.ts'
-import { readContext, type PanelContext } from './context.ts'
-import { maymunStore, useMaymunSettings } from './store.ts'
+import { useStore } from '../lib/store.ts'
+import { MaymunChat } from './Chat.tsx'
+import { readContext } from './context.ts'
+import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
 import { currentPanel, pointer, startTracking } from './tracker.ts'
 
 const SIZE = 88 // rendered width and height of the head, in pixels
@@ -11,6 +14,7 @@ const DEAD_ZONE = 60 // the head only moves when the pointer is this far above o
 const MARGIN = 12 // the popup keeps this far from the window edges
 const HEADER = 64 // and stays below the app header
 const TOOLBAR = 48 // the head stays below a panel's toolbar (Run, Show solution, restart)
+const MIN_BOX = { width: 288, height: 320 } // the chat box cannot be dragged smaller than this
 const EYES = [
   { x: 34, y: 53 },
   { x: 66, y: 53 },
@@ -21,7 +25,7 @@ type Mood = 'calm' | 'angry' | 'excited'
 /**
  * Maymun, an orange cat peeking in from the right edge of the panel the pointer is over. The eyes follow the
  * pointer; the head follows it up and down when it goes far; far to the left the cat gets cross, close by it gets
- * excited. A click shows what Maymun knows about that panel (and, later, a chat about it).
+ * excited. A click opens a chat about that panel; the box can be resized from its lower left corner.
  */
 export function Maymun() {
   const { t } = useI18n()
@@ -32,6 +36,8 @@ export function Maymun() {
   const pupils = useRef<(SVGGElement | null)[]>([])
   const [open, setOpen] = useState(false)
   const [context, setContext] = useState<ReturnType<typeof readContext> | null>(null)
+  const [panelEl, setPanelEl] = useState<HTMLElement | null>(null)
+  const box = useStore(boxStore)
   const [anchor, setAnchor] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
@@ -143,7 +149,12 @@ export function Maymun() {
       observer.disconnect()
       window.removeEventListener('resize', place)
     }
-  }, [open, anchor, context])
+  }, [open, anchor, context, box])
+
+  // The chat is about a panel of this page: leaving the page closes it.
+  const { pathname } = useLocation()
+  const [openOn, setOpenOn] = useState(pathname)
+  if (open && openOn !== pathname) setOpen(false)
 
   useEffect(() => {
     if (!open) return
@@ -161,14 +172,11 @@ export function Maymun() {
     const panel = currentPanel()
     if (!panel) return
     setContext(readContext(panel))
+    setPanelEl(panel)
+    setOpenOn(pathname)
     const rect = head.current?.getBoundingClientRect()
     setAnchor({ x: rect ? rect.left : window.innerWidth, y: rect ? rect.top + rect.height / 2 : 120 })
     setOpen(true)
-  }
-
-  const panelName = (name: string) => {
-    const key = `maymun.panel.${name}` as Parameters<typeof t>[0]
-    return t(key)
   }
 
   return (
@@ -192,8 +200,13 @@ export function Maymun() {
           ref={popup}
           role="dialog"
           aria-label={t('maymun.name')}
-          className="fixed top-0 left-0 z-40 flex max-h-[min(70vh,calc(100dvh-24px))] w-[min(22rem,calc(100vw-24px))] flex-col rounded-xl border border-border bg-surface shadow-xl"
+          className="fixed top-0 left-0 z-40 flex flex-col rounded-xl border border-border bg-surface shadow-xl"
+          style={{
+            width: `min(${box.width}px, calc(100vw - ${MARGIN * 2}px))`,
+            height: `min(${box.height}px, calc(100dvh - ${MARGIN * 2}px))`,
+          }}
         >
+          <ResizeGrip label={t('maymun.resize')} />
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
             <span className="text-lg" aria-hidden>
               🐱
@@ -208,13 +221,7 @@ export function Maymun() {
               <X size={16} />
             </button>
           </div>
-          <div className="min-h-0 space-y-2 overflow-y-auto px-4 py-3 text-sm">
-            <p>
-              {t('maymun.sees')} <strong>{panelName(context.panel)}</strong>
-            </p>
-            <ContextPreview context={context} />
-            <p className="text-xs text-muted">{t('maymun.soon')}</p>
-          </div>
+          <MaymunChat panel={panelEl} context={context} />
           <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted">
             <span className="flex-1">{t('maymun.hideHint')}</span>
             <button
@@ -234,12 +241,45 @@ export function Maymun() {
   )
 }
 
-function ContextPreview({ context }: { context: PanelContext }) {
+/** Dragging the lower left corner resizes the chat box (it grows to the left, away from the cat); arrow keys too. */
+function ResizeGrip({ label }: { label: string }) {
+  const resize = (width: number, height: number) =>
+    boxStore.set({
+      width: Math.round(Math.min(Math.max(width, MIN_BOX.width), window.innerWidth - MARGIN * 2)),
+      height: Math.round(Math.min(Math.max(height, MIN_BOX.height), window.innerHeight - MARGIN * 2)),
+    })
   return (
-    <details className="rounded-lg border border-border bg-surface-2 text-xs" open>
-      <summary className="cursor-pointer px-3 py-2 font-medium">{context.title}</summary>
-      <pre className="max-h-60 overflow-y-auto px-3 pb-3 font-mono whitespace-pre-wrap text-muted">{context.text}</pre>
-    </details>
+    <div
+      role="separator"
+      aria-label={label}
+      title={label}
+      tabIndex={0}
+      className="absolute bottom-0 left-0 z-10 size-4 cursor-nesw-resize touch-none rounded-bl-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      style={{ background: 'linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 7px, transparent 7px)' }}
+      onPointerDown={(event) => {
+        event.preventDefault()
+        const start = { x: event.clientX, y: event.clientY, ...boxStore.get() }
+        const el = event.currentTarget
+        el.setPointerCapture(event.pointerId)
+        const move = (e: PointerEvent) => resize(start.width + start.x - e.clientX, start.height + e.clientY - start.y)
+        const up = () => {
+          el.removeEventListener('pointermove', move)
+          el.removeEventListener('pointerup', up)
+          el.removeEventListener('pointercancel', up)
+        }
+        el.addEventListener('pointermove', move)
+        el.addEventListener('pointerup', up)
+        el.addEventListener('pointercancel', up)
+      }}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 64 : 16
+        const { width, height } = boxStore.get()
+        const change = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowDown: [0, step], ArrowUp: [0, -step] }[event.key]
+        if (!change) return
+        event.preventDefault()
+        resize(width + change[0], height + change[1])
+      }}
+    />
   )
 }
 

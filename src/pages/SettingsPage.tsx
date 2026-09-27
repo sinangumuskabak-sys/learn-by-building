@@ -7,6 +7,7 @@ import { useI18n } from '../i18n/i18n.ts'
 import { langs } from '../i18n/messages.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { fontSizes, settingsStore, themeStore, useSettings, useTheme } from '../lib/settings.ts'
+import { ProviderSetup } from '../maymun/Chat.tsx'
 import { maymunStore, useMaymunSettings } from '../maymun/store.ts'
 import { progressActions } from '../progress/progress.ts'
 
@@ -122,6 +123,13 @@ export function SettingsPage() {
             ]}
           />
         </Row>
+        {maymun.visible && (
+          <Row label={t('settings.maymunAi')} hint={t('settings.maymunAiHint')}>
+            <div className="w-full max-w-xs">
+              <ProviderSetup />
+            </div>
+          </Row>
+        )}
       </Section>
 
       <Section title={t('settings.editor')}>

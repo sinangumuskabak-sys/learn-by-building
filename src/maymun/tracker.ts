@@ -31,7 +31,9 @@ const visible = (el: Element) => {
 
 /** The panel the cat belongs in: the last one under the pointer, or the first visible one. */
 export function currentPanel(): HTMLElement | null {
-  if (activePanel && visible(activePanel)) return activePanel
+  // The page itself only counts while it has no inner panels (it stays the same element when the route changes).
+  if (activePanel && visible(activePanel) && !(activePanel.dataset.maymun === 'page' && activePanel.querySelector(PANEL)))
+    return activePanel
   const panels = [...document.querySelectorAll<HTMLElement>(PANEL)].filter(visible)
   // Prefer an inner panel (task, code, game) over the whole page.
   return panels.find((p) => p.dataset.maymun !== 'page') ?? panels[0] ?? null
