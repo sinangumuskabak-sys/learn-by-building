@@ -1,0 +1,20 @@
+{
+  "id": "climber",
+  "order": 80,
+  "title": { "en": "Doodle Jump-style Climber", "tr": "Doodle Jump Tarzı Tırmanış" },
+  "description": {
+    "en": "Bounce from platform to platform and climb as high as you can. One-way platforms, a camera that follows you up, endless platforms generated so they are always reachable, moving platforms and traps.",
+    "tr": "Platformdan platforma sekerek olabildiğince yükseğe tırman. Tek yönlü platformlar, seni yukarı takip eden bir kamera, hep ulaşılabilir olacak biçimde üretilen sonsuz platformlar, hareketli platformlar ve tuzaklar."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 400, "height": 600 },
+  "color": "#16a34a",
+  "skills": ["game.physics", "game.collision", "game.loop", "game.state"],
+  "extend": [
+    { "en": "Springs on some platforms that launch you twice as high.", "tr": "Bazı platformlarda seni iki kat yükseğe fırlatan yaylar." },
+    { "en": "Squash the player a little on every bounce and stretch it while rising fast.", "tr": "Her sekişte oyuncuyu biraz ez, hızla yükselirken uzat." },
+    { "en": "Let the phone's tilt steer, using the deviceorientation event.", "tr": "deviceorientation olayıyla telefonun eğimi yönlendirsin." },
+    { "en": "A monster on some platforms: touching it from the side ends the game, landing on it from above defeats it.", "tr": "Bazı platformlarda bir canavar: yandan dokunmak oyunu bitirir, üstüne konmak onu yener." },
+    { "en": "Show a marker at the height of your best score so you can see when you pass it.", "tr": "En iyi skorunun yüksekliğinde bir işaret göster; onu geçtiğini gör." }
+  ]
+}
