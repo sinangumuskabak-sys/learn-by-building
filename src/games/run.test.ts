@@ -79,6 +79,12 @@ describe('runGameTests', () => {
     expect(runtime.tests[0].error).toMatch(/missing is not defined/)
   })
 
+  it('rejects top-level names the browser does not allow, like let top', () => {
+    expect(run('let top = 0', '').error).toMatch(/Identifier 'top' has already been declared/)
+    expect(run('const location = 1', '').error).toMatch(/'location'/)
+    expect(run('let topRow = 0\nfunction f() {\n  let top = 1\n}', '').error).toBeUndefined()
+  })
+
   it('makes Math.random deterministic and seedable', () => {
     const code = 'const first = Math.random()'
     const result = runGameTests({

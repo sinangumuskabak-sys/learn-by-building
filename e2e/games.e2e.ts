@@ -83,6 +83,22 @@ test('the finished game plays with the real keyboard', async ({ page }) => {
 })
 
 for (const game of games) {
+  // The checks run in a simulator; this runs the finished game in the real page, where e.g. `let top` throws.
+  test(`finished game runs in the real page without errors: ${game.id}`, async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    await page.goto(`./#/games/${game.id}/${game.steps[game.steps.length - 1].id}`)
+    await tab(page, 'Code')
+    await page.getByRole('button', { name: 'Show solution' }).click()
+    await page.getByRole('button', { name: /Replace your code/ }).click()
+    await run(page)
+    await tab(page, 'Game')
+    await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
+    await page.waitForTimeout(500)
+    await expect(page.getByRole('alert').filter({ hasText: 'Your game hit an error' })).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+
   for (const step of game.steps) {
     test(`reference solution passes in the browser: ${game.id}/${step.id}`, async ({ page }) => {
       await page.goto(`./#/games/${game.id}/${step.id}`)

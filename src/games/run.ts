@@ -19,6 +19,10 @@ export interface GameRunInput {
  * visible to the test through the returned closure), then the test drives the page through `$`.
  * Test helpers are closure parameters, so learner names like `game` or `assert` cannot clash with them.
  */
+// In a real page these window properties cannot be redeclared at the top level (`let top` throws), but inside the
+// simulator the code runs in a function where it would work. Fail the same way the browser does.
+const LOCKED_GLOBAL = /^(?:let|const|class)\s+(top|window|document|location)\b/m
+
 export function runGameTests(input: GameRunInput): RunResult {
   const logs: string[] = []
   let capture = true
@@ -32,6 +36,8 @@ export function runGameTests(input: GameRunInput): RunResult {
   const probe = createSim(input.canvas)
   const names = [...Object.keys(probe.globals), 'console']
   try {
+    const locked = LOCKED_GLOBAL.exec(input.code)
+    if (locked) throw new SyntaxError(`Identifier '${locked[1]}' has already been declared`)
     make('', names)
   } catch (error) {
     return { tests: input.tests.map((t) => ({ text: t.text, passed: false })), logs, error: errorMessage(error) }
