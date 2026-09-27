@@ -1,0 +1,20 @@
+{
+  "id": "bomber",
+  "order": 137,
+  "title": { "en": "Bomberman-style Arena", "tr": "Bomberman Tarzı Arena" },
+  "description": {
+    "en": "Blast through crates and trap the enemies. A grid of walls, pillars and crates, sliding from tile to tile, bombs with fuses, cross-shaped explosions that stop at walls and set off chain reactions, wandering enemies, power-ups kept in a Map, and touch controls that reuse the keyboard's rules.",
+    "tr": "Sandıkları patlatarak ilerle ve düşmanları kıstır. Duvarlardan, sütunlardan ve sandıklardan bir ızgara, kareden kareye kayma, fitilli bombalar, duvarlarda duran ve zincirleme tepkimeler başlatan artı şeklinde patlamalar, dolaşan düşmanlar, bir Map'te tutulan güçlendirmeler ve klavyenin kurallarını yeniden kullanan dokunmatik kontroller."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 416, "height": 384 },
+  "color": "#ea580c",
+  "skills": ["game.state", "game.collision", "game.input", "prog.arrays"],
+  "extend": [
+    { "en": "A hidden exit door under one crate that opens when every enemy is gone.", "tr": "Bir sandığın altında, her düşman gidince açılan gizli bir çıkış kapısı." },
+    { "en": "A smarter enemy that walks towards the player when it can see them along a corridor.", "tr": "Oyuncuyu bir koridor boyunca görebildiğinde ona doğru yürüyen daha akıllı bir düşman." },
+    { "en": "A kick power-up that lets you push a bomb until it hits something.", "tr": "Bir bombayı bir şeye çarpana kadar itmeni sağlayan bir tekme güçlendirmesi." },
+    { "en": "Levels with more enemies and more crates, one after another.", "tr": "Birbiri ardına daha çok düşman ve daha çok sandık olan seviyeler." },
+    { "en": "Two players on one keyboard: arrows and Space, WASD and Q.", "tr": "Tek klavyede iki oyuncu: oklar ve Boşluk, WASD ve Q." }
+  ]
+}
