@@ -19,6 +19,7 @@ Early development. Roadmap:
 | F2 | Runners: JS/TS (Web Worker), HTML/CSS (sandboxed iframe), SQL (PGlite), quizzes ✅ |
 | F3 | UI: catalog, category, challenge workspace, skill map, settings ✅ |
 | F4 | All 14 curriculum categories as a template + sample challenges, GitHub Pages release |
+| G | Game Workshop: step-by-step games with a live game next to the editor ✅ |
 
 ## Curriculum categories
 
@@ -26,12 +27,24 @@ Programming Fundamentals · Software Engineering · Software Architecture · AI 
 Testing & Evaluation · Cybersecurity · Databases · Backend / APIs · Frontend / Mobile · DevOps / Cloud ·
 Performance · Product Engineering · Data & Analytics
 
+## Game Workshop
+
+Build real games step by step: the code editor on the left, the game running on the right. Every step explains one
+idea, has its own checks, and ends with a playable game. 26 games, 188 steps:
+
+- **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Sokoban · Snake · Pong · Flappy-style Bird
+- **Intermediate:** Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Missile Command-style Defense · Asteroids
+- **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze
+
+Games named “…-style” are original code built around well-known game mechanics; they are not affiliated with the
+owners of those names. The game format is described in [docs/game-format.md](docs/game-format.md).
+
 ## Development
 
 ```bash
 npm install
 npm run dev        # local dev server
-npm run validate   # check content/ (see docs/challenge-format.md)
+npm run validate   # check content/ (see docs/challenge-format.md and docs/game-format.md)
 npm test           # unit tests (Vitest)
 npm run e2e        # end-to-end tests (Playwright, runs against the production build)
 npm run typecheck
@@ -54,5 +67,11 @@ yazarsın, testler anında çalışır, ilerlemen tarayıcında saklanır. Sunuc
 
 [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp)'in yaparak öğrenme modelinden esinlenmiştir;
 bağımsız bir projedir, freeCodeCamp kodu içermez.
+
+**Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır. 26 oyun, 188 adım:
+
+- **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Sokoban · Yılan · Pong · Flappy tarzı kuş
+- **Orta:** Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Missile Command Tarzı Savunma · Asteroids
+- **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent
 
 Geliştirme komutları ve yol haritası için yukarıdaki İngilizce bölüme bak.
