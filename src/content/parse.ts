@@ -17,7 +17,7 @@ export class ContentError extends Error {
   }
 }
 
-const SECTION = /^# --([a-z]+)--\s*$/
+const SECTION = /^# --([a-z]+(?:-[a-z]+)?)--\s*$/
 const knownSections = [
   'description',
   'instructions',
@@ -41,7 +41,7 @@ const defaultFileNames: Record<string, string> = {
 /** A piece of a section body: either prose or a fenced code block. */
 type Chunk = { kind: 'text'; text: string } | { kind: 'code'; lang: string; meta: string; code: string }
 
-function splitFrontmatter(source: string, raw: string): { data: unknown; body: string } {
+export function splitFrontmatter(source: string, raw: string): { data: unknown; body: string } {
   const text = raw.replace(/\r\n/g, '\n')
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text)
   if (!match) throw new ContentError(source, 'missing frontmatter block (--- ... ---) at the top')
@@ -52,9 +52,13 @@ function splitFrontmatter(source: string, raw: string): { data: unknown; body: s
   }
 }
 
-function splitSections(source: string, body: string): Map<SectionName, string> {
-  const sections = new Map<SectionName, string>()
-  let current: SectionName | null = null
+export function splitSections<T extends string = SectionName>(
+  source: string,
+  body: string,
+  known: readonly T[] = knownSections as unknown as readonly T[],
+): Map<T, string> {
+  const sections = new Map<T, string>()
+  let current: T | null = null
   let buffer: string[] = []
   let fence: string | null = null
 
@@ -71,8 +75,8 @@ function splitSections(source: string, body: string): Map<SectionName, string> {
     }
     const heading = fence === null ? SECTION.exec(line) : null
     if (heading) {
-      const name = heading[1] as SectionName
-      if (!knownSections.includes(name)) throw new ContentError(source, `unknown section "# --${name}--"`)
+      const name = heading[1] as T
+      if (!known.includes(name)) throw new ContentError(source, `unknown section "# --${name}--"`)
       if (sections.has(name) || current === name) throw new ContentError(source, `duplicate section "# --${name}--"`)
       flush()
       current = name
@@ -88,7 +92,7 @@ function splitSections(source: string, body: string): Map<SectionName, string> {
   return sections
 }
 
-function chunks(body: string): Chunk[] {
+export function chunks(body: string): Chunk[] {
   const result: Chunk[] = []
   const lines = body.split('\n')
   let text: string[] = []

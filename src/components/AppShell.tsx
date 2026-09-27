@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { GraduationCap, Languages, Moon, Sun } from 'lucide-react'
+import { Gamepad2, GraduationCap, Languages, LayoutGrid, type LucideIcon, Moon, Network, Settings, Sun } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useI18n } from '../i18n/i18n.ts'
@@ -7,10 +7,12 @@ import type { MessageKey } from '../i18n/messages.ts'
 import { themeStore, useTheme } from '../lib/settings.ts'
 import { IconButton } from './ui.tsx'
 
-const nav: { to: string; label: MessageKey; end: boolean }[] = [
-  { to: '/', label: 'nav.catalog', end: true },
-  { to: '/skills', label: 'nav.skills', end: false },
-  { to: '/settings', label: 'nav.settings', end: false },
+// On narrow screens the items show only their icon, so four sections still fit next to the toggles.
+const nav: { to: string; label: MessageKey; end: boolean; icon: LucideIcon }[] = [
+  { to: '/', label: 'nav.catalog', end: true, icon: LayoutGrid },
+  { to: '/games', label: 'nav.games', end: false, icon: Gamepad2 },
+  { to: '/skills', label: 'nav.skills', end: false, icon: Network },
+  { to: '/settings', label: 'nav.settings', end: false, icon: Settings },
 ]
 
 export function AppShell() {
@@ -43,14 +45,16 @@ export function AppShell() {
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                aria-label={t(item.label)}
                 className={({ isActive }) =>
                   clsx(
-                    'rounded-lg px-2.5 py-1.5 transition-colors sm:px-3',
+                    'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-colors sm:px-3',
                     isActive ? 'bg-surface-2 font-medium text-fg' : 'text-muted hover:text-fg',
                   )
                 }
               >
-                {t(item.label)}
+                <item.icon size={17} className="sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">{t(item.label)}</span>
               </NavLink>
             ))}
           </nav>

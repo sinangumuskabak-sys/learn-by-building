@@ -16,6 +16,11 @@ export const routes: RouteObject[] = [
         path: 'learn/:challengeId',
         lazy: async () => ({ Component: (await import('../pages/ChallengePage')).ChallengePage }),
       },
+      { path: 'games', lazy: async () => ({ Component: (await import('../pages/GamesPage')).GamesPage }) },
+      {
+        path: 'games/:gameId/:stepId?',
+        lazy: async () => ({ Component: (await import('../pages/GameStepPage')).GameStepPage }),
+      },
       { path: 'skills', lazy: async () => ({ Component: (await import('../pages/SkillsPage')).SkillsPage }) },
       { path: 'settings', lazy: async () => ({ Component: (await import('../pages/SettingsPage')).SettingsPage }) },
       { path: '*', element: <NotFoundPage /> },

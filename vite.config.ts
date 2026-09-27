@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import { loadContentFromDisk } from './src/content/load-node.ts'
 import { validateContent } from './src/content/validate.ts'
+import { loadGamesFromDisk } from './src/games/load-node.ts'
+import { validateGames } from './src/games/validate.ts'
 
 const contentRoot = resolve(import.meta.dirname, 'content')
 
@@ -37,10 +39,29 @@ function contentPlugin(): Plugin {
   }
 }
 
+/** Same idea for `content/games/` as `virtual:games`; only the lazily loaded game pages import it. */
+function gamesPlugin(): Plugin {
+  const id = 'virtual:games'
+  const resolvedId = `\0${id}`
+  return {
+    name: 'learn-platform-games',
+    resolveId: (source) => (source === id ? resolvedId : undefined),
+    load(moduleId) {
+      if (moduleId !== resolvedId) return
+      for (const file of contentFiles(contentRoot)) this.addWatchFile(file)
+      const { content, problems } = loadContentFromDisk(contentRoot)
+      const { games, problems: gameProblems } = loadGamesFromDisk(contentRoot)
+      problems.push(...gameProblems, ...validateGames(games, new Set(content.skills.map((s) => s.id))))
+      if (problems.length > 0) this.error(`Invalid games:\n  - ${problems.join('\n  - ')}`)
+      return `export default ${JSON.stringify({ games })}`
+    },
+  }
+}
+
 // Relative base + hash routing lets the build run from any static host (GitHub Pages, forks, file server).
 export default defineConfig({
   base: './',
-  plugins: [contentPlugin(), react(), tailwindcss()],
+  plugins: [contentPlugin(), gamesPlugin(), react(), tailwindcss()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

@@ -246,5 +246,53 @@
       "tr": "Huniler"
     },
     "category": "data-analytics"
+  },
+  {
+    "id": "game.canvas",
+    "title": {
+      "en": "Drawing on a canvas",
+      "tr": "Canvas üzerine çizim"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "game.loop",
+    "title": {
+      "en": "The game loop",
+      "tr": "Oyun döngüsü"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "game.input",
+    "title": {
+      "en": "Keyboard and mouse input",
+      "tr": "Klavye ve fare girdisi"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "game.collision",
+    "title": {
+      "en": "Collision detection",
+      "tr": "Çarpışma tespiti"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "game.physics",
+    "title": {
+      "en": "Velocity and gravity",
+      "tr": "Hız ve yerçekimi"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "game.state",
+    "title": {
+      "en": "Game states",
+      "tr": "Oyun durumları"
+    },
+    "category": "programming-fundamentals"
   }
 ]

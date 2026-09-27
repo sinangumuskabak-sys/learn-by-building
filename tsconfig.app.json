@@ -25,6 +25,9 @@
     "paths": {
       "virtual:content": [
         "./src/content/virtual-content.d.ts"
+      ],
+      "virtual:games": [
+        "./src/games/virtual-games.d.ts"
       ]
     }
   },
@@ -36,6 +39,7 @@
     "src/**/*.test.tsx",
     "src/test",
     "src/content/load-node.ts",
+    "src/games/load-node.ts",
     "src/runners/node.ts"
   ]
 }

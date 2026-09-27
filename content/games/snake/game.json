@@ -1,0 +1,20 @@
+{
+  "id": "snake",
+  "order": 40,
+  "title": { "en": "Snake", "tr": "Yılan" },
+  "description": {
+    "en": "Steer a growing snake to the food without hitting the walls or yourself. Grids, arrays, the game loop and keyboard input.",
+    "tr": "Büyüyen yılanı duvarlara ve kendine çarpmadan yeme götür. Izgara, diziler, oyun döngüsü ve klavye girdisi."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 400 },
+  "color": "#22c55e",
+  "skills": ["game.canvas", "game.loop", "game.input", "game.collision", "prog.arrays"],
+  "extend": [
+    { "en": "Wrap around: leaving one edge brings the snake back on the opposite edge instead of ending the game.", "tr": "Kenardan geçiş: bir kenardan çıkan yılan oyunu bitirmek yerine karşı kenardan geri girsin." },
+    { "en": "Pause with the P key; draw \"Paused\" over the board.", "tr": "P tuşuyla duraklat; tahtanın üstüne \"Duraklatıldı\" yaz." },
+    { "en": "Add a few wall blocks inside the board, and make sure food never spawns on them.", "tr": "Tahtanın içine birkaç duvar bloğu ekle; yem asla onların üstüne düşmesin." },
+    { "en": "Touch controls: swipe on the canvas to turn (pointerdown + pointerup, compare the distance moved).", "tr": "Dokunmatik kontrol: kaydırarak dön (pointerdown + pointerup, gidilen mesafeyi karşılaştır)." },
+    { "en": "Draw the head in a different color and give the snake eyes that face the direction it moves.", "tr": "Başı farklı renkte çiz ve yılana gittiği yöne bakan gözler ekle." }
+  ]
+}

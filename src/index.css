@@ -126,3 +126,8 @@ body {
 .markdown pre code {
   font-family: var(--font-mono);
 }
+/* Learners copy these snippets; show ">=" and "=>" as typed, not as ligature glyphs. */
+.markdown code,
+.markdown-inline code {
+  font-variant-ligatures: none;
+}
