@@ -1,0 +1,20 @@
+{
+  "id": "pool",
+  "order": 145,
+  "title": { "en": "Pool", "tr": "Bilardo" },
+  "description": {
+    "en": "Clear the table in as few shots as you can. Velocity from an angle, friction and cushions, elastic collisions between equal balls (and why they leave at 90 degrees), pockets, a slingshot aim, smaller physics steps for fast shots, and a ghost ball that predicts the hit.",
+    "tr": "Masayı olabildiğince az vuruşla temizle. Bir açıdan hız, sürtünme ve bantlar, eşit toplar arasında esnek çarpışmalar (ve neden 90 derece açıyla ayrıldıkları), cepler, sapan gibi nişan, hızlı vuruşlar için daha küçük fizik adımları ve çarpmayı önceden gösteren bir hayalet top."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 480, "height": 340 },
+  "color": "#15803d",
+  "skills": ["game.physics", "game.collision", "game.input", "game.loop"],
+  "extend": [
+    { "en": "Two players taking turns: keep shooting while you pocket a ball.", "tr": "Sırayla oynayan iki oyuncu: top soktuğun sürece vurmaya devam et." },
+    { "en": "Spin: hitting the cue ball low makes it roll back after a head-on hit.", "tr": "Falso: isteka topuna alttan vurmak, tam karşıdan vuruştan sonra onu geri getirsin." },
+    { "en": "A cue stick drawn behind the ball that pulls back with the power.", "tr": "Topun arkasında çizilen ve güçle birlikte geri çekilen bir isteka." },
+    { "en": "A sound whose volume depends on how hard two balls hit.", "tr": "Sesi iki topun ne kadar sert çarptığına bağlı bir ses." },
+    { "en": "Real 8-ball rules: solids, stripes and the black ball last.", "tr": "Gerçek 8 top kuralları: düzler, çizgililer ve en son siyah top." }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "id": "life",
-  "order": 30,
+  "order": 33,
   "title": { "en": "Conway's Game of Life", "tr": "Conway'in Hayat Oyunu" },
   "description": {
     "en": "Four simple rules, and a world that comes alive. A grid of cells, counting neighbours, why every cell must change at the same moment (double buffering), a world that wraps around, painting with the pointer, and the famous glider gun.",
