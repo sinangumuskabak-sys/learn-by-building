@@ -1,0 +1,20 @@
+{
+  "id": "tic-tac-toe",
+  "order": 10,
+  "title": { "en": "Tic-tac-toe", "tr": "XOX" },
+  "description": {
+    "en": "X and O on a 3×3 board. Mouse clicks, a board as an array, finding the winner, and a computer that never loses, thanks to recursion.",
+    "tr": "3×3 tahtada X ve O. Fare tıklamaları, dizi olarak tahta, kazananı bulmak ve özyineleme sayesinde hiç kaybetmeyen bir bilgisayar."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 300, "height": 300 },
+  "color": "#ec4899",
+  "skills": ["game.input", "game.state", "prog.arrays", "prog.functions"],
+  "extend": [
+    { "en": "Let the player choose to go second, so the computer opens.", "tr": "Oyuncu ikinci oynamayı seçebilsin, bilgisayar açsın." },
+    { "en": "Keep a running score of wins, losses and draws across rounds.", "tr": "Turlar boyunca galibiyet, mağlubiyet ve beraberliklerin skorunu tut." },
+    { "en": "Add a short delay before the computer plays, so it feels like it is thinking.", "tr": "Bilgisayar oynamadan önce kısa bir gecikme ekle, düşünüyormuş gibi hissettirsin." },
+    { "en": "Make minimax prefer faster wins: score a win as `10 - depth` instead of `1`.", "tr": "Minimax daha hızlı kazanmayı tercih etsin: kazancı `1` yerine `10 - derinlik` olarak puanla." },
+    { "en": "Grow the board to 4×4 with four in a row, and see how slow plain minimax gets.", "tr": "Tahtayı dörtlü sıralı 4×4'e büyüt ve düz minimax'ın ne kadar yavaşladığını gör." }
+  ]
+}
