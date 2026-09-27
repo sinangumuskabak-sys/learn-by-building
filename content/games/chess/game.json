@@ -1,0 +1,20 @@
+{
+  "id": "chess",
+  "order": 170,
+  "title": { "en": "Chess", "tr": "Satranç" },
+  "description": {
+    "en": "Build a complete chess game and a computer that plays it. Move patterns as data, check found by looking outwards from the king, legal moves by trying and taking back, castling, en passant, promotion, checkmate, and a minimax search with alpha-beta pruning.",
+    "tr": "Eksiksiz bir satranç oyunu ve onu oynayan bir bilgisayar yap. Veri olarak hamle desenleri, şahtan dışarı bakarak bulunan şah, deneyip geri alarak yasal hamleler, rok, geçerken alma, terfi, mat ve alfa-beta budamalı minimax arama."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 480, "height": 520 },
+  "color": "#b58863",
+  "skills": ["prog.arrays", "prog.functions", "game.state", "game.input"],
+  "extend": [
+    { "en": "Let the player choose the piece to promote to, not always a queen.", "tr": "Oyuncu her zaman vezir değil, terfi edeceği taşı seçsin." },
+    { "en": "Draws by repetition and by the fifty-move rule.", "tr": "Tekrar ve elli hamle kuralıyla beraberlik." },
+    { "en": "Piece-square tables: a bonus table for each kind of piece, so the computer develops and castles.", "tr": "Taş-kare tabloları: her taş türü için bir bonus tablosu; bilgisayar taşlarını geliştirsin ve rok yapsın." },
+    { "en": "A move list in chess notation (e4, Nf3, O-O) next to the board.", "tr": "Tahtanın yanında satranç gösterimiyle (e4, Af3, O-O) bir hamle listesi." },
+    { "en": "Iterative deepening: search depth 1, 2, 3, ... until a time limit, and play the best move found.", "tr": "Yinelemeli derinleştirme: bir zaman sınırına kadar 1, 2, 3, ... derinlikte ara ve bulunan en iyi hamleyi oyna." }
+  ]
+}
