@@ -1,0 +1,20 @@
+{
+  "id": "fifteen",
+  "order": 27,
+  "title": { "en": "15 Puzzle", "tr": "15 Bulmacası" },
+  "description": {
+    "en": "Slide the numbered tiles back into order. Positions in a flat array, neighbours on a grid, why a shuffle must be made of real moves (and the math that proves which puzzles can be solved), and smooth sliding animation.",
+    "tr": "Numaralı taşları kaydırarak yeniden sıraya diz. Düz bir dizide konumlar, bir ızgarada komşular, karıştırmanın neden gerçek hamlelerden yapılması gerektiği (ve hangi bulmacaların çözülebileceğini kanıtlayan matematik) ve akıcı kaydırma animasyonu."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 460 },
+  "color": "#f59e0b",
+  "skills": ["prog.arrays", "game.input", "game.state"],
+  "extend": [
+    { "en": "A timer next to the move counter, with the best time saved too.", "tr": "Hamle sayacının yanında bir süre ve en iyi sürenin de kaydedilmesi." },
+    { "en": "Let the player pick 3 by 3 (easy) or 5 by 5 (hard): everything is written with N.", "tr": "Oyuncu 3'e 3 (kolay) ya da 5'e 5 (zor) seçsin: her şey N ile yazıldı." },
+    { "en": "Cut a picture into the tiles instead of numbers.", "tr": "Sayılar yerine bir resmi taşlara böl." },
+    { "en": "Clicking a tile in the gap's row or column slides the whole line at once.", "tr": "Boşluğun satırındaki ya da sütunundaki bir taşa tıklamak bütün sırayı birden kaydırsın." },
+    { "en": "A solver: breadth-first search for 3 by 3, or A* with the Manhattan distance for 4 by 4.", "tr": "Bir çözücü: 3'e 3 için genişlik öncelikli arama ya da 4'e 4 için Manhattan uzaklığıyla A*." }
+  ]
+}
