@@ -81,7 +81,7 @@ variables and functions, plus `assert` (Chai) and `$`:
 |---|---|
 | `tick(n = 1)` | advance `n` frames (1/60 s each), firing due timers and `requestAnimationFrame` callbacks |
 | `run(seconds)` | advance by seconds |
-| `press(key)` / `release(key)` / `tap(key)` | keyboard events (`'ArrowUp'`, `' '`, `'a'`…) on `document` |
+| `press(key)` / `release(key)` / `tap(key)` | keyboard events (`'ArrowUp'`, `' '`, `'a'`…) on `document`; `press(key, { repeat: true })` is an auto-repeat |
 | `click(x, y)` / `move(x, y)` | pointer and mouse events on the canvas, in canvas pixels |
 | `pointerDown(x, y)` / `pointerUp(x, y)` | press or release without the other half of a click |
 | `rightClick(x, y)` | a right click, ending in a `contextmenu` event |

@@ -570,9 +570,9 @@ export function createSim(size: CanvasSize, seed = 1) {
     return 0
   }
 
-  const key = (type: string, key: string) =>
+  const key = (type: string, key: string, repeat = false) =>
     doc.dispatchEvent(
-      makeEvent(type, { key, code: keyCode(key), keyCode: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), which: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), repeat: false, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false }),
+      makeEvent(type, { key, code: keyCode(key), keyCode: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), which: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), repeat, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false }),
     )
 
   const pointer = (type: string, x: number, y: number, button = 0) =>
@@ -619,7 +619,8 @@ export function createSim(size: CanvasSize, seed = 1) {
     run(seconds: number) {
       $.tick(Math.round(seconds * 60))
     },
-    press: (k: string) => key('keydown', k),
+    /** Presses a key; `{ repeat: true }` sends the auto-repeat `keydown` a held key produces. */
+    press: (k: string, options: { repeat?: boolean } = {}) => key('keydown', k, options.repeat ?? false),
     release: (k: string) => key('keyup', k),
     tap(k: string) {
       key('keydown', k)

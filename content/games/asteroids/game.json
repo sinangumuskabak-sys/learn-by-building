@@ -1,0 +1,20 @@
+{
+  "id": "asteroids",
+  "order": 140,
+  "title": { "en": "Asteroids", "tr": "Asteroids" },
+  "description": {
+    "en": "Rotate, thrust and shoot through a field of breaking rocks. Angles and vectors with cos and sin, inertia, screen wrap, vector drawing and circle collisions.",
+    "tr": "Dön, it ve parçalanan kayalardan oluşan bir alanda ateş et. cos ve sin ile açılar ve vektörler, eylemsizlik, ekran kenarından dolaşma, vektörel çizim ve daire çarpışmaları."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 600, "height": 450 },
+  "color": "#e2e8f0",
+  "skills": ["game.physics", "game.collision", "game.input", "game.state"],
+  "extend": [
+    { "en": "Draw a flickering flame behind the ship while the thrust key is held.", "tr": "İtki tuşu basılıyken geminin arkasında titreyen bir alev çiz." },
+    { "en": "Hyperspace: the H key teleports the ship to a random spot (with a small chance of crashing).", "tr": "Hiperuzay: H tuşu gemiyi rastgele bir yere ışınlasın (küçük bir çarpma olasılığıyla)." },
+    { "en": "Break asteroids into particles as well as smaller rocks.", "tr": "Asteroitleri daha küçük kayaların yanında parçacıklara da ayır." },
+    { "en": "A flying saucer that appears now and then and shoots at the ship.", "tr": "Arada bir çıkıp gemiye ateş eden bir uçan daire." },
+    { "en": "Draw objects near an edge twice (once on each side), so wrapping looks seamless.", "tr": "Kenara yakın nesneleri iki kez çiz (iki yanda da), böylece dolaşma kesintisiz görünsün." }
+  ]
+}
