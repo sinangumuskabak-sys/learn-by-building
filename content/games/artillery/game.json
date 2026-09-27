@@ -1,0 +1,20 @@
+{
+  "id": "artillery",
+  "order": 195,
+  "title": { "en": "Scorched Earth-style Artillery", "tr": "Scorched Earth Tarzı Topçu" },
+  "description": {
+    "en": "Lob shells over the hills at a computer opponent. Hills from added sine waves stored as a height map, aiming by angle and power (and the atan2 trap), flight one frame at a time, round craters dug into the ground, damage that falls off with distance, wind, and a computer that aims by imagining thousands of shots.",
+    "tr": "Tepelerin üstünden bir bilgisayar rakibe mermi at. Toplanan sinüs dalgalarından bir yükseklik haritası olarak saklanan tepeler, açı ve güçle nişan (ve atan2 tuzağı), kare kare uçuş, zemine kazılan yuvarlak kraterler, uzaklıkla azalan hasar, rüzgâr ve binlerce atışı hayal ederek nişan alan bir bilgisayar."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 560, "height": 320 },
+  "color": "#65a30d",
+  "skills": ["game.physics", "game.state", "game.input", "prog.functions"],
+  "extend": [
+    { "en": "Difficulty levels that change the computer's error.", "tr": "Bilgisayarın hatasını değiştiren zorluk seviyeleri." },
+    { "en": "A big bomb with a wider blast, one per game.", "tr": "Oyun başına bir tane, daha geniş patlamalı büyük bir bomba." },
+    { "en": "Fall damage for a tank that drops a long way into a crater.", "tr": "Bir kratere uzun süre düşen bir tank için düşme hasarı." },
+    { "en": "A dotted trail showing where your last shot went.", "tr": "Son atışının nereye gittiğini gösteren noktalı bir iz." },
+    { "en": "Let the tanks drive a few steps left or right each turn.", "tr": "Tanklar her sırada birkaç adım sola ya da sağa sürebilsin." }
+  ]
+}
