@@ -1,0 +1,19 @@
+{
+  "id": "2048",
+  "order": 110,
+  "title": { "en": "2048", "tr": "2048" },
+  "description": {
+    "en": "Slide numbered tiles and merge equal ones to reach 2048. A 2D grid, a pure slide-and-merge function reused in four directions, and swipe input.",
+    "tr": "Numaralı karoları kaydır, eşit olanları birleştirip 2048'e ulaş. 2 boyutlu ızgara, dört yönde yeniden kullanılan saf bir kaydır-birleştir fonksiyonu ve kaydırma girdisi."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 400, "height": 460 },
+  "color": "#edc22e",
+  "skills": ["prog.arrays", "prog.functions", "game.state", "game.input"],
+  "extend": [
+    { "en": "Undo: keep a copy of the board and score before each move, and restore it with the U key.", "tr": "Geri al: her hamleden önce tahtanın ve skorun bir kopyasını tut, U tuşuyla geri yükle." },
+    { "en": "Animate tiles sliding: remember where each tile came from and draw it moving over 100 ms.", "tr": "Karoların kayışını canlandır: her karonun nereden geldiğini hatırla ve 100 ms'de hareket ederek çiz." },
+    { "en": "Make the board size a setting (3×3, 5×5) and check that nothing else needs to change.", "tr": "Tahta boyutunu bir ayar yap (3×3, 5×5) ve başka hiçbir şeyin değişmesi gerekmediğini kontrol et." },
+    { "en": "Pop new tiles in: draw them growing from half size to full size.", "tr": "Yeni karoları büyüterek getir: yarım boydan tam boya büyüyerek çiz." }
+  ]
+}
