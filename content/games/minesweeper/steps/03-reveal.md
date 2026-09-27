@@ -1,0 +1,227 @@
+---
+title: Opening a cell
+title_tr: Bir hücreyi açmak
+skills: [game.input, game.state]
+---
+
+# --explanation--
+
+A click opens the cell under the pointer. Finding it is a direct calculation, like in Tic-tac-toe: scale the click
+into canvas pixels, then `Math.floor(x / CELL)` for the column and `Math.floor((y - TOP) / CELL)` for the row. Clicks
+on the top strip or outside the board give `undefined`.
+
+`reveal(cell)` is where the rules live:
+
+- the **first** reveal places the mines around that cell and starts the game (`'ready'` → `'playing'`);
+- a mine loses the game: every mine is shown, and no more cells can be opened;
+- anything else is opened and shows its number, or nothing if it is `0`.
+
+Colored numbers are part of the design, not decoration: each count has its own color (1 blue, 2 green, 3 red...), so
+experienced players read the board at a glance without reading the digits. A lookup list, `NUMBER_COLORS[count]`, keeps
+that one line of code.
+
+# --explanation-tr--
+
+Bir tıklama işaretçinin altındaki hücreyi açar. Onu bulmak, XOX'taki gibi doğrudan bir hesaptır: tıklamayı canvas
+piksellerine ölçekle, sonra sütun için `Math.floor(x / CELL)`, satır için `Math.floor((y - TOP) / CELL)`. Üst şeritteki
+ya da tahtanın dışındaki tıklamalar `undefined` verir.
+
+Kurallar `reveal(cell)`'in içinde yaşar:
+
+- **ilk** açış mayınları o hücrenin çevresine yerleştirir ve oyunu başlatır (`'ready'` → `'playing'`);
+- bir mayın oyunu kaybettirir: bütün mayınlar gösterilir ve artık hücre açılamaz;
+- diğer her şey açılır ve sayısını gösterir, `0` ise hiçbir şey göstermez.
+
+Renkli sayılar süs değil, tasarımın parçasıdır: her sayının kendi rengi vardır (1 mavi, 2 yeşil, 3 kırmızı...);
+deneyimli oyuncular rakamları okumadan tahtayı bir bakışta okur. Bir arama listesi, `NUMBER_COLORS[count]`, bunu tek
+satırda tutar.
+
+# --task--
+
+1. Add `NUMBER_COLORS` from the solution and `let state` (`'ready'` in `newGame()`).
+2. Write `cellAt(event)` returning the cell under a click (scaled to canvas pixels), or `undefined`.
+3. Write `reveal(start)`: skip already revealed cells; on the first reveal, `placeMines(start)` and switch to
+   `'playing'`; if it is a mine, call `lose()` (`state = 'lost'` and reveal every mine); otherwise mark it revealed.
+4. On `click`, reveal the cell under the pointer unless the game is lost.
+5. Draw revealed cells in `'#e2e8f0'` (mines in `'#fca5a5'` with a `💣`), with their count in
+   `NUMBER_COLORS[count]` when it is above 0, and `Boom!` at the top when lost.
+
+# --task-tr--
+
+1. Çözümdeki `NUMBER_COLORS`'ı ve `let state`'i (`newGame()` içinde `'ready'`) ekle.
+2. Bir tıklamanın altındaki hücreyi (canvas piksellerine ölçekleyerek) ya da `undefined` döndüren `cellAt(event)` yaz.
+3. `reveal(start)` yaz: zaten açık hücreleri atla; ilk açışta `placeMines(start)` çağır ve `'playing'`e geç; mayınsa
+   `lose()` çağır (`state = 'lost'` ve her mayını aç); değilse açık olarak işaretle.
+4. `click`'te, oyun kaybedilmediyse işaretçinin altındaki hücreyi aç.
+5. Açık hücreleri `'#e2e8f0'` ile çiz (mayınları `'#fca5a5'` ve bir `💣` ile); sayısı 0'dan büyükse `NUMBER_COLORS[count]`
+   ile yaz. Kaybedince tepeye `Boom!` yaz.
+
+# --tests--
+
+A click should open the cell under it, and the first click places the mines.
+tr: Bir tıklama altındaki hücreyi açmalı; ilk tıklama da mayınları yerleştirmeli.
+
+```js
+assert.strictEqual(state, 'ready')
+$.click(4 * 40 + 20, 40 + 4 * 40 + 20)
+assert.isTrue(grid[4][4].revealed)
+assert.strictEqual(state, 'playing')
+assert.strictEqual(grid.flat().filter((c) => c.mine).length, 10)
+assert.isUndefined(cellAt({ clientX: 100, clientY: 10 }), 'the top strip is not a cell')
+```
+
+Opening a mine should lose the game and show every mine.
+tr: Bir mayını açmak oyunu kaybettirmeli ve her mayını göstermeli.
+
+```js
+reveal(grid[0][0])
+const mine = grid.flat().find((c) => c.mine)
+reveal(mine)
+assert.strictEqual(state, 'lost')
+assert.isTrue(grid.flat().filter((c) => c.mine).every((c) => c.revealed))
+const hidden = grid.flat().find((c) => !c.revealed)
+$.click(hidden.col * 40 + 20, 40 + hidden.row * 40 + 20)
+assert.isFalse(hidden.revealed, 'no more opening after losing')
+$.tick()
+assert.include($.texts(), 'Boom!')
+```
+
+Numbers should be drawn in their color.
+tr: Sayılar kendi renklerinde çizilmeli.
+
+```js
+reveal(grid[0][0])
+const numbered = grid.flat().find((c) => !c.mine && c.count > 0)
+reveal(numbered)
+$.tick()
+const text = $.screen().find((c) => c.op === 'fillText' && c.args[0] === String(numbered.count) && c.args[1] === numbered.col * 40 + 20)
+assert.strictEqual(text.fill, NUMBER_COLORS[numbered.count])
+```
+
+# --solution--
+
+```js
+// Minesweeper, step by step.
+// The page already has <canvas id="game" width="360" height="400"></canvas>.
+// Write your code below.
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+
+const SIZE = 9
+const CELL = 40
+const TOP = 40 // room for the mine counter and the timer
+const MINES = 10
+const NUMBER_COLORS = [null, '#2563eb', '#16a34a', '#dc2626', '#7c3aed', '#b45309', '#0891b2', '#111827', '#6b7280']
+
+let grid
+let state // 'ready' (before the first click), 'playing' or 'lost'
+
+function newGame() {
+  grid = Array.from({ length: SIZE }, (_, row) =>
+    Array.from({ length: SIZE }, (_, col) => ({ row, col, mine: false, count: 0, revealed: false })),
+  )
+  state = 'ready'
+}
+
+// The up to 8 cells around a cell, skipping the ones that would be off the board.
+function neighbors(cell) {
+  const list = []
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue
+      const row = cell.row + dr
+      const col = cell.col + dc
+      if (row >= 0 && row < SIZE && col >= 0 && col < SIZE) list.push(grid[row][col])
+    }
+  }
+  return list
+}
+
+// Mines are placed on the first click, never on or next to the clicked cell, so the first click always opens space.
+function placeMines(safe) {
+  const forbidden = new Set([safe, ...neighbors(safe)])
+  const candidates = grid.flat().filter((cell) => !forbidden.has(cell))
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[candidates[i], candidates[j]] = [candidates[j], candidates[i]]
+  }
+  for (const cell of candidates.slice(0, MINES)) cell.mine = true
+  for (const cell of grid.flat()) cell.count = neighbors(cell).filter((n) => n.mine).length
+}
+
+function reveal(start) {
+  if (start.revealed) return
+  if (state === 'ready') {
+    placeMines(start)
+    state = 'playing'
+  }
+  if (start.mine) {
+    lose()
+    return
+  }
+  start.revealed = true
+}
+
+function lose() {
+  state = 'lost'
+  for (const cell of grid.flat()) if (cell.mine) cell.revealed = true
+}
+
+function cellAt(event) {
+  // The canvas may be displayed at a different size than its own pixels, so scale the pointer.
+  const rect = canvas.getBoundingClientRect()
+  const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+  const col = Math.floor(x / CELL)
+  const row = Math.floor((y - TOP) / CELL)
+  if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return undefined
+  return grid[row][col]
+}
+
+canvas.addEventListener('click', (event) => {
+  if (state === 'lost') return
+  const cell = cellAt(event)
+  if (cell) reveal(cell)
+})
+
+function draw() {
+  ctx.fillStyle = '#1e293b'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  ctx.font = 'bold 22px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  for (const cell of grid.flat()) {
+    const x = cell.col * CELL
+    const y = TOP + cell.row * CELL
+    if (cell.revealed) {
+      ctx.fillStyle = cell.mine ? '#fca5a5' : '#e2e8f0'
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+      if (cell.mine) ctx.fillText('💣', x + CELL / 2, y + CELL / 2 + 1)
+      else if (cell.count > 0) {
+        ctx.fillStyle = NUMBER_COLORS[cell.count]
+        ctx.fillText(String(cell.count), x + CELL / 2, y + CELL / 2 + 1)
+      }
+    } else {
+      ctx.fillStyle = '#94a3b8'
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+    }
+  }
+
+  ctx.font = 'bold 18px monospace'
+
+  if (state === 'lost') {
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#f87171'
+    ctx.fillText('Boom!', canvas.width / 2, TOP / 2)
+  }
+}
+
+function loop() {
+  draw()
+  requestAnimationFrame(loop)
+}
+
+newGame()
+requestAnimationFrame(loop)
+```

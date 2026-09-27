@@ -575,9 +575,9 @@ export function createSim(size: CanvasSize, seed = 1) {
       makeEvent(type, { key, code: keyCode(key), keyCode: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), which: keyCodes[key] ?? key.toUpperCase().charCodeAt(0), repeat: false, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false }),
     )
 
-  const pointer = (type: string, x: number, y: number) =>
+  const pointer = (type: string, x: number, y: number, button = 0) =>
     canvas.dispatchEvent(
-      makeEvent(type, { clientX: x, clientY: y, offsetX: x, offsetY: y, pageX: x, pageY: y, x, y, button: 0, buttons: type.endsWith('down') ? 1 : 0, pointerId: 1, pointerType: 'mouse', isPrimary: true }),
+      makeEvent(type, { clientX: x, clientY: y, offsetX: x, offsetY: y, pageX: x, pageY: y, x, y, button, buttons: type.endsWith('down') ? 1 << button : 0, pointerId: 1, pointerType: 'mouse', isPrimary: true }),
     )
 
   /** The test driver, available to test code as `$`. */
@@ -635,6 +635,14 @@ export function createSim(size: CanvasSize, seed = 1) {
     move(x: number, y: number) {
       pointer('pointermove', x, y)
       pointer('mousemove', x, y)
+    },
+    /** A right click: pointer and mouse events with button 2, then `contextmenu`. */
+    rightClick(x: number, y: number) {
+      pointer('pointerdown', x, y, 2)
+      pointer('mousedown', x, y, 2)
+      pointer('pointerup', x, y, 2)
+      pointer('mouseup', x, y, 2)
+      pointer('contextmenu', x, y, 2)
     },
     /** Presses the pointer (mouse button or finger) down without releasing it. */
     pointerDown(x: number, y: number) {
