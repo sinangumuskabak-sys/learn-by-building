@@ -4,6 +4,7 @@ import { catalog } from '../content/catalog.ts'
 import { MAX_LEVEL } from '../content/schema.ts'
 import { CategoryIcon } from '../components/icons.tsx'
 import { Page } from '../components/ui.tsx'
+import { gameSkillEvidence } from '../games/catalog.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { useProgress } from '../progress/progress.ts'
@@ -43,7 +44,10 @@ export function SkillsPage() {
             </h2>
             <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
               {skills.map((skill) => {
-                const { level, evidence } = skillLevel(progress, skill.id)
+                const fromChallenges = skillLevel(progress, skill.id)
+                const fromGames = gameSkillEvidence(progress, skill.id)
+                const level = Math.max(fromChallenges.level, fromGames.level)
+                const evidence = fromChallenges.evidence
                 return (
                   <li key={skill.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -69,18 +73,29 @@ export function SkillsPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                       <span className="text-muted">{t('skills.evidence')}:</span>
-                      {evidence.length === 0 ? (
+                      {evidence.length === 0 && fromGames.steps.length === 0 ? (
                         <span className="text-muted">{t('skills.noEvidence')}</span>
                       ) : (
-                        evidence.map((challenge) => (
-                          <Link
-                            key={challenge.id}
-                            to={`/learn/${challenge.id}`}
-                            className="rounded-md bg-success/10 px-2 py-0.5 text-success hover:underline"
-                          >
-                            {challenge.title}
-                          </Link>
-                        ))
+                        <>
+                          {evidence.map((challenge) => (
+                            <Link
+                              key={challenge.id}
+                              to={`/learn/${challenge.id}`}
+                              className="rounded-md bg-success/10 px-2 py-0.5 text-success hover:underline"
+                            >
+                              {challenge.title}
+                            </Link>
+                          ))}
+                          {fromGames.steps.map(({ game, step, index }) => (
+                            <Link
+                              key={`${game.id}/${step.id}`}
+                              to={`/games/${game.id}/${step.id}`}
+                              className="rounded-md bg-success/10 px-2 py-0.5 text-success hover:underline"
+                            >
+                              {l(game.title)} · {t('game.step', { n: index + 1, total: game.steps.length })}
+                            </Link>
+                          ))}
+                        </>
                       )}
                     </div>
                   </li>

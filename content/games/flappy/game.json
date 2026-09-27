@@ -1,0 +1,20 @@
+{
+  "id": "flappy",
+  "order": 60,
+  "title": { "en": "Flappy-style Bird", "tr": "Flappy tarzı kuş" },
+  "description": {
+    "en": "Tap to flap between the pipes. Velocity, gravity, game states, spawning obstacles and a frame-rate-proof loop.",
+    "tr": "Borular arasından geçmek için kanat çırp. Hız, yerçekimi, oyun durumları, engel üretme ve kare hızından bağımsız döngü."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 600 },
+  "color": "#eab308",
+  "skills": ["game.physics", "game.state", "game.collision", "game.loop", "prog.arrays"],
+  "extend": [
+    { "en": "Tilt the bird: rotate it with `ctx.rotate` according to `bird.vy`, nose down when falling.", "tr": "Kuşu eğ: `bird.vy`'ye göre `ctx.rotate` ile döndür, düşerken burnu aşağı baksın." },
+    { "en": "Make it harder over time: shrink `GAP` a little for every 5 points, with a minimum.", "tr": "Zamanla zorlaştır: her 5 puanda `GAP`'i biraz küçült, bir alt sınırla." },
+    { "en": "Draw a scrolling ground strip at the bottom that moves at `PIPE_SPEED`.", "tr": "Altta `PIPE_SPEED` hızında kayan bir zemin şeridi çiz." },
+    { "en": "Add a medal on the game-over screen: bronze at 10, silver at 20, gold at 40.", "tr": "Oyun sonu ekranına madalya ekle: 10'da bronz, 20'de gümüş, 40'ta altın." },
+    { "en": "Parallax: draw two layers of clouds that move slower than the pipes.", "tr": "Paralaks: borulardan daha yavaş kayan iki katman bulut çiz." }
+  ]
+}

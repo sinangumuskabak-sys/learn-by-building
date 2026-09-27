@@ -1,6 +1,6 @@
 import content from 'virtual:games'
 import type { Progress } from '../progress/progress.ts'
-import { referenceStart, stepKey, type Game } from './schema.ts'
+import { referenceStart, stepKey, type Difficulty, type Game, type GameStep } from './schema.ts'
 
 // Game content is parsed and validated at build time (see the games plugin in vite.config.ts).
 export const games: Game[] = content.games
@@ -36,4 +36,18 @@ export function initialCode(progress: Progress, game: Game, index: number): stri
     if (previous !== undefined) return previous
   }
   return referenceStart(game, index)
+}
+
+/** Skill level shown for a passed game step: writing a step's code yourself is at least "implement". */
+const difficultyLevel: Record<Difficulty, number> = { beginner: 3, intermediate: 4, advanced: 5 }
+
+/** Passed game steps that practise a skill, and the level they prove. */
+export function gameSkillEvidence(progress: Progress, skillId: string) {
+  const steps: { game: Game; step: GameStep; index: number }[] = []
+  for (const game of games) {
+    game.steps.forEach((step, index) => {
+      if (step.skills.includes(skillId) && stepPassed(progress, game, index)) steps.push({ game, step, index })
+    })
+  }
+  return { level: Math.max(-1, ...steps.map(({ game }) => difficultyLevel[game.difficulty])), steps }
 }
