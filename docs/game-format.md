@@ -95,3 +95,5 @@ variables and functions, plus `assert` (Chai) and `$`:
 
 Test behaviour, not wording: set up state directly (`food = { x: 6, y: 5 }`) instead of relying on random placement,
 and accept reasonable ranges when timing can differ between correct solutions.
+
+After adding a game, run `npm run readme:games` to update the list of games in the README.

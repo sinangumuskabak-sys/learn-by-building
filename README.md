@@ -30,11 +30,15 @@ Performance · Product Engineering · Data & Analytics
 ## Game Workshop
 
 Build real games step by step: the code editor on the left, the game running on the right. Every step explains one
-idea, has its own checks, and ends with a playable game. 26 games, 188 steps:
+idea, has its own checks, and ends with a playable game.
+
+<!-- games:en:start -->
+27 games, 196 steps:
 
 - **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Sokoban · Snake · Pong · Flappy-style Bird
 - **Intermediate:** Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Missile Command-style Defense · Asteroids
-- **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze
+- **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess
+<!-- games:en:end -->
 
 Games named “…-style” are original code built around well-known game mechanics; they are not affiliated with the
 owners of those names. The game format is described in [docs/game-format.md](docs/game-format.md).
@@ -68,10 +72,14 @@ yazarsın, testler anında çalışır, ilerlemen tarayıcında saklanır. Sunuc
 [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp)'in yaparak öğrenme modelinden esinlenmiştir;
 bağımsız bir projedir, freeCodeCamp kodu içermez.
 
-**Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır. 26 oyun, 188 adım:
+**Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır.
+
+<!-- games:tr:start -->
+27 oyun, 196 adım:
 
 - **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Sokoban · Yılan · Pong · Flappy tarzı kuş
 - **Orta:** Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Missile Command Tarzı Savunma · Asteroids
-- **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent
+- **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç
+<!-- games:tr:end -->
 
 Geliştirme komutları ve yol haritası için yukarıdaki İngilizce bölüme bak.

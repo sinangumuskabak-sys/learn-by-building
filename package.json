@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "preview": "vite preview",
-    "validate": "node scripts/validate.ts"
+    "validate": "node scripts/validate.ts",
+    "readme:games": "node scripts/readme-games.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
