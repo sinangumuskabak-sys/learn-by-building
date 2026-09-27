@@ -1,0 +1,20 @@
+{
+  "id": "raycaster",
+  "order": 160,
+  "title": { "en": "Wolfenstein-style 3D Maze", "tr": "Wolfenstein Tarzı 3B Labirent" },
+  "description": {
+    "en": "Walk through a 3D maze drawn from a flat map, the way the first 3D shooters did it. Angles with sin and cos, sliding along walls, casting rays through a grid (DDA), perspective, the fish-eye fix and shading.",
+    "tr": "İlk 3B nişancı oyunlarının yaptığı gibi, düz bir haritadan çizilen 3B bir labirentte yürü. sin ve cos ile açılar, duvar boyunca kaymak, bir ızgarada ışın göndermek (DDA), perspektif, balık gözü düzeltmesi ve gölgelendirme."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 480, "height": 320 },
+  "color": "#94a3b8",
+  "skills": ["game.physics", "game.collision", "game.loop", "game.input"],
+  "extend": [
+    { "en": "Textured walls: use how far along the wall the ray hit (hit.x or hit.y after the dot) to pick a stripe of a pattern.", "tr": "Dokulu duvarlar: ışının duvarın ne kadar ötesine çarptığını (hit.x ya da hit.y'nin ondalık kısmı) bir desenden şerit seçmek için kullan." },
+    { "en": "Strafe sideways with A and D, and turn with the mouse using pointer lock.", "tr": "A ve D ile yana kay, pointer lock ile fareyle dön." },
+    { "en": "Keys on the floor as sprites that must be collected before the exit opens.", "tr": "Çıkış açılmadan önce toplanması gereken, yerde sprite olarak duran anahtarlar." },
+    { "en": "Doors that slide open when you walk up to them.", "tr": "Yanına yürüyünce kayarak açılan kapılar." },
+    { "en": "Generate a new random maze every game (recursive backtracking).", "tr": "Her oyunda yeni rastgele bir labirent üret (özyinelemeli geri izleme)." }
+  ]
+}
