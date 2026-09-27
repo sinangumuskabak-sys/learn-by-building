@@ -5,7 +5,7 @@ Thanks for helping!
 ## Before opening a pull request
 
 ```bash
-npm run typecheck && npm run lint && npm run validate && npm test && npm run build
+npm run typecheck && npm run lint && npm run validate && npm test && npm run build && npm run e2e
 ```
 
 All five must pass; CI runs the same checks.

@@ -23,6 +23,13 @@ jobs:
       - run: npm run validate
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
         with:

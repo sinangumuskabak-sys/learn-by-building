@@ -97,9 +97,14 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
   const [initialDocument] = useState(() => buildDocument(files))
   const dirty = useRef(false)
 
-  useDebouncedEffect(files, 400, (value) => {
-    if (dirty.current) progressActions.saveFiles(challenge.id, value)
-  })
+  useDebouncedEffect(
+    files,
+    400,
+    (value) => {
+      if (dirty.current) progressActions.saveFiles(challenge.id, value)
+    },
+    { flushOnLeave: true },
+  )
 
   // Live preview for web challenges; the test run reloads the frame itself.
   useDebouncedEffect(files, 500, (value) => {
@@ -179,11 +184,11 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
             </button>
           ))}
         </div>
-        <ConfirmButton confirmLabel={t('challenge.solutionConfirm')} onConfirm={() => replaceFiles(challenge.solutions[0])}>
+        <ConfirmButton confirmLabel={t('challenge.solutionConfirm')} label={t('challenge.solution')} onConfirm={() => replaceFiles(challenge.solutions[0])}>
           <Eye size={15} aria-hidden />
           <span className="hidden xl:inline">{t('challenge.solution')}</span>
         </ConfirmButton>
-        <ConfirmButton confirmLabel={t('challenge.resetConfirm')} onConfirm={() => replaceFiles(challenge.seed)}>
+        <ConfirmButton confirmLabel={t('challenge.resetConfirm')} label={t('challenge.reset')} onConfirm={() => replaceFiles(challenge.seed)}>
           <RotateCcw size={15} aria-hidden />
           <span className="hidden xl:inline">{t('challenge.reset')}</span>
         </ConfirmButton>
@@ -230,7 +235,12 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
             ) : (
               <p className="text-sm text-muted">{t('challenge.noLogs')}</p>
             ))}
-          {outputTab === 'table' && <SqlTable result={result} />}
+          {outputTab === 'table' && (
+            <>
+              {result && <StatusBanner result={result} total={challenge.tests.length} />}
+              <SqlTable result={result} />
+            </>
+          )}
         </div>
       </div>
       {challenge.type === 'web' && (

@@ -41,12 +41,12 @@ export function CategoryPage() {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {category.modules.length === 0 ? (
         <p className="mt-10 rounded-xl border border-dashed border-border p-8 text-center text-muted">
           {t('category.empty')}
         </p>
       ) : (
-        <ol className="mt-8 space-y-8">
+        <ol className="mt-8 space-y-6">
           {category.modules.map((module, moduleIndex) => (
             <li key={module.id}>
               <div className="flex items-baseline gap-3">
@@ -54,12 +54,16 @@ export function CategoryPage() {
                   {String(moduleIndex + 1).padStart(2, '0')}
                 </span>
                 <h2 className="text-lg font-semibold tracking-tight">{l(module.title)}</h2>
-                <span className="text-sm text-muted">
-                  {t('category.challenges', { count: module.challenges.length })}
-                </span>
+                {module.challenges.length > 0 ? (
+                  <span className="text-sm text-muted">
+                    {t('category.challenges', { count: module.challenges.length })}
+                  </span>
+                ) : (
+                  <Badge>{t('category.moduleSoon')}</Badge>
+                )}
               </div>
               {module.description && <p className="mt-1 text-sm text-muted">{l(module.description)}</p>}
-              <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+              <ul hidden={module.challenges.length === 0} className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
                 {module.challenges.map((id) => {
                   const entry = catalog.challenges.get(id)
                   if (!entry) return null

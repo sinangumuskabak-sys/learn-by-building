@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { catalog, categoryChallenges } from '../content/catalog.ts'
 import { CategoryIcon, StatusIcon, TypeIcon } from '../components/icons.tsx'
 import { buttonClass } from '../components/button-class.ts'
-import { Page, ProgressBar } from '../components/ui.tsx'
+import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { statusOf, useProgress } from '../progress/progress.ts'
 
@@ -93,7 +93,7 @@ export function HomePage() {
       )}
 
       <section className="mt-6">
-        {deferredQuery && <h2 className="mb-2 text-sm font-semibold text-muted">{t('home.categories')}</h2>}
+        <h2 className={deferredQuery ? 'mb-2 text-sm font-semibold text-muted' : 'sr-only'}>{t('home.categories')}</h2>
         {categories.length === 0 && challengeHits.length === 0 ? (
           <p className="py-10 text-center text-muted">{t('home.noResults', { query })}</p>
         ) : (
@@ -118,12 +118,16 @@ export function HomePage() {
                     </div>
                     <h3 className="mt-4 font-semibold tracking-tight group-hover:text-accent">{l(category.title)}</h3>
                     <p className="mt-1 flex-1 text-sm text-muted">{l(category.description)}</p>
-                    <div className="mt-4 flex items-center gap-3">
-                      <ProgressBar value={passed} max={items.length} label={l(category.title)} />
-                      <span className="shrink-0 text-xs text-muted tabular-nums">
-                        {items.length === 0 ? '—' : `${passed}/${items.length}`}
-                      </span>
-                    </div>
+                    {items.length === 0 ? (
+                      <div className="mt-4">
+                        <Badge>{t('category.moduleSoon')}</Badge>
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex items-center gap-3">
+                        <ProgressBar value={passed} max={items.length} label={l(category.title)} />
+                        <span className="shrink-0 text-xs text-muted tabular-nums">{`${passed}/${items.length}`}</span>
+                      </div>
+                    )}
                   </Link>
                 </li>
               )

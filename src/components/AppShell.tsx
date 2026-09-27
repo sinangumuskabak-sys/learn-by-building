@@ -31,7 +31,7 @@ export function AppShell() {
       </a>
       <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-surface/85 backdrop-blur">
         <div className="flex h-14 items-center gap-2 px-4 sm:gap-4">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <Link to="/" aria-label={t('app.name')} className="flex items-center gap-2 font-semibold tracking-tight">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg">
               <GraduationCap size={18} aria-hidden />
             </span>

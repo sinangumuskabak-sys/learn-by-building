@@ -20,6 +20,7 @@ const en = {
 
   'category.challenges': '{count} challenges',
   'category.empty': 'Challenges for this category are on the way.',
+  'category.moduleSoon': 'Coming soon',
   'category.notFound': 'Category not found',
   'category.back': 'All categories',
 
@@ -134,6 +135,7 @@ const tr: Record<MessageKey, string> = {
 
   'category.challenges': '{count} görev',
   'category.empty': 'Bu kategorinin görevleri hazırlanıyor.',
+  'category.moduleSoon': 'Yakında',
   'category.notFound': 'Kategori bulunamadı',
   'category.back': 'Tüm kategoriler',
 

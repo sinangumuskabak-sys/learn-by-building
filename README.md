@@ -33,6 +33,7 @@ npm install
 npm run dev        # local dev server
 npm run validate   # check content/ (see docs/challenge-format.md)
 npm test           # unit tests (Vitest)
+npm run e2e        # end-to-end tests (Playwright, runs against the production build)
 npm run typecheck
 npm run lint
 npm run build      # static build in dist/

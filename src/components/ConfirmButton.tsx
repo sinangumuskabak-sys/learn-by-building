@@ -9,6 +9,7 @@ import { buttonClass } from './button-class.ts'
 export function ConfirmButton({
   children,
   confirmLabel,
+  label,
   onConfirm,
   variant = 'ghost',
   size = 'sm',
@@ -16,6 +17,8 @@ export function ConfirmButton({
 }: {
   children: ReactNode
   confirmLabel: string
+  /** Accessible name for buttons whose visible content can shrink to an icon. */
+  label?: string
   onConfirm: () => void
   variant?: 'ghost' | 'secondary' | 'danger'
   size?: 'sm' | 'md'
@@ -32,6 +35,8 @@ export function ConfirmButton({
     <button
       type="button"
       aria-live="polite"
+      aria-label={armed ? undefined : label}
+      title={armed ? undefined : label}
       onClick={() => {
         if (armed) {
           setArmed(false)

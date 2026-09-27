@@ -21,9 +21,14 @@ export function DesignPanel({ challenge }: { challenge: Challenge }) {
   const [ticked, setTicked] = useState<number[]>(saved?.rubric ?? [])
   const [dirty, setDirty] = useState(false)
 
-  useDebouncedEffect(answer, 500, (value) => {
-    if (dirty) progressActions.saveAnswer(challenge.id, value)
-  })
+  useDebouncedEffect(
+    answer,
+    500,
+    (value) => {
+      if (dirty) progressActions.saveAnswer(challenge.id, value)
+    },
+    { flushOnLeave: true },
+  )
 
   const toggle = (index: number) => {
     const next = ticked.includes(index) ? ticked.filter((i) => i !== index) : [...ticked, index]

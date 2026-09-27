@@ -33,6 +33,108 @@
           "challenges": [
             "typed-sum"
           ]
+        },
+        {
+          "id": "functions",
+          "title": {
+            "en": "Functions",
+            "tr": "Fonksiyonlar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "data-structures",
+          "title": {
+            "en": "Data structures",
+            "tr": "Veri yapıları"
+          },
+          "challenges": []
+        },
+        {
+          "id": "algorithms",
+          "title": {
+            "en": "Algorithms",
+            "tr": "Algoritmalar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "async",
+          "title": {
+            "en": "Async programming",
+            "tr": "Asenkron programlama"
+          },
+          "challenges": []
+        },
+        {
+          "id": "errors",
+          "title": {
+            "en": "Error handling",
+            "tr": "Hata yönetimi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "debugging",
+          "title": {
+            "en": "Debugging",
+            "tr": "Hata ayıklama"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "software-engineering",
+      "title": {
+        "en": "Software Engineering",
+        "tr": "Yazılım Mühendisliği"
+      },
+      "description": {
+        "en": "Version control, code organization, refactoring and review.",
+        "tr": "Sürüm denetimi, kod düzeni, yeniden düzenleme ve inceleme."
+      },
+      "icon": "wrench",
+      "modules": [
+        {
+          "id": "git",
+          "title": {
+            "en": "Git and version control",
+            "tr": "Git ve sürüm denetimi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "code-organization",
+          "title": {
+            "en": "Code organization",
+            "tr": "Kod düzeni"
+          },
+          "challenges": []
+        },
+        {
+          "id": "dependencies",
+          "title": {
+            "en": "Dependency management",
+            "tr": "Bağımlılık yönetimi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "refactoring",
+          "title": {
+            "en": "Refactoring and clean code",
+            "tr": "Yeniden düzenleme ve temiz kod"
+          },
+          "challenges": []
+        },
+        {
+          "id": "code-review",
+          "title": {
+            "en": "Code review",
+            "tr": "Kod incelemesi"
+          },
+          "challenges": []
         }
       ]
     },
@@ -57,6 +159,286 @@
           "challenges": [
             "design-cache-policy"
           ]
+        },
+        {
+          "id": "layers",
+          "title": {
+            "en": "Layers and modular monoliths",
+            "tr": "Katmanlar ve modüler monolit"
+          },
+          "challenges": []
+        },
+        {
+          "id": "events-queues",
+          "title": {
+            "en": "Events and queues",
+            "tr": "Olaylar ve kuyruklar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "state",
+          "title": {
+            "en": "State management",
+            "tr": "Durum yönetimi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "scalability",
+          "title": {
+            "en": "Scalability and fault tolerance",
+            "tr": "Ölçeklenebilirlik ve hata toleransı"
+          },
+          "challenges": []
+        },
+        {
+          "id": "observability",
+          "title": {
+            "en": "Observability",
+            "tr": "Gözlemlenebilirlik"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "ai-engineering",
+      "title": {
+        "en": "AI Engineering",
+        "tr": "Yapay Zekâ Mühendisliği"
+      },
+      "description": {
+        "en": "LLM APIs, context, structured output, RAG and evaluation.",
+        "tr": "LLM API'leri, bağlam, yapılandırılmış çıktı, RAG ve değerlendirme."
+      },
+      "icon": "brain",
+      "modules": [
+        {
+          "id": "llm-apis",
+          "title": {
+            "en": "LLM APIs",
+            "tr": "LLM API'leri"
+          },
+          "challenges": []
+        },
+        {
+          "id": "prompt-context",
+          "title": {
+            "en": "Prompt and context engineering",
+            "tr": "İstem ve bağlam mühendisliği"
+          },
+          "challenges": []
+        },
+        {
+          "id": "structured-output",
+          "title": {
+            "en": "Structured outputs and tool calling",
+            "tr": "Yapılandırılmış çıktı ve araç çağırma"
+          },
+          "challenges": []
+        },
+        {
+          "id": "rag",
+          "title": {
+            "en": "Embeddings and RAG",
+            "tr": "Gömme vektörleri ve RAG"
+          },
+          "challenges": []
+        },
+        {
+          "id": "model-choice",
+          "title": {
+            "en": "Model selection and cost",
+            "tr": "Model seçimi ve maliyet"
+          },
+          "challenges": []
+        },
+        {
+          "id": "ai-evals",
+          "title": {
+            "en": "AI evaluation",
+            "tr": "Yapay zekâ değerlendirmesi"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "agent-engineering",
+      "title": {
+        "en": "Agent Engineering",
+        "tr": "Ajan Mühendisliği"
+      },
+      "description": {
+        "en": "Agent loops, tools, permissions, memory and orchestration.",
+        "tr": "Ajan döngüleri, araçlar, izinler, bellek ve orkestrasyon."
+      },
+      "icon": "bot",
+      "modules": [
+        {
+          "id": "agent-architecture",
+          "title": {
+            "en": "Agent architecture",
+            "tr": "Ajan mimarisi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "tool-design",
+          "title": {
+            "en": "Tool design and MCP",
+            "tr": "Araç tasarımı ve MCP"
+          },
+          "challenges": []
+        },
+        {
+          "id": "permissions",
+          "title": {
+            "en": "Permissions and human-in-the-loop",
+            "tr": "İzinler ve insan onayı"
+          },
+          "challenges": []
+        },
+        {
+          "id": "memory-planning",
+          "title": {
+            "en": "Memory and planning",
+            "tr": "Bellek ve planlama"
+          },
+          "challenges": []
+        },
+        {
+          "id": "multi-agent",
+          "title": {
+            "en": "Multi-agent systems",
+            "tr": "Çok ajanlı sistemler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "agent-evals",
+          "title": {
+            "en": "Agent evaluation",
+            "tr": "Ajan değerlendirmesi"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "testing-evaluation",
+      "title": {
+        "en": "Testing & Evaluation",
+        "tr": "Test ve Değerlendirme"
+      },
+      "description": {
+        "en": "\"It works\" is not a test result: unit, integration, E2E and evals.",
+        "tr": "\"Çalışıyor\" bir test sonucu değildir: birim, entegrasyon, uçtan uca ve değerlendirme."
+      },
+      "icon": "flask",
+      "modules": [
+        {
+          "id": "unit-tests",
+          "title": {
+            "en": "Unit tests",
+            "tr": "Birim testleri"
+          },
+          "challenges": []
+        },
+        {
+          "id": "integration-e2e",
+          "title": {
+            "en": "Integration and E2E tests",
+            "tr": "Entegrasyon ve uçtan uca testler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "test-design",
+          "title": {
+            "en": "Test design and mocking",
+            "tr": "Test tasarımı ve taklit"
+          },
+          "challenges": []
+        },
+        {
+          "id": "regression",
+          "title": {
+            "en": "Regression and failure testing",
+            "tr": "Gerileme ve hata testleri"
+          },
+          "challenges": []
+        },
+        {
+          "id": "load-tests",
+          "title": {
+            "en": "Performance and load testing",
+            "tr": "Performans ve yük testleri"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "cybersecurity",
+      "title": {
+        "en": "Cybersecurity",
+        "tr": "Siber Güvenlik"
+      },
+      "description": {
+        "en": "Auth, secrets, OWASP risks, injection and supply-chain security.",
+        "tr": "Kimlik doğrulama, gizli anahtarlar, OWASP riskleri, enjeksiyon ve tedarik zinciri güvenliği."
+      },
+      "icon": "shield",
+      "modules": [
+        {
+          "id": "authn-authz",
+          "title": {
+            "en": "Authentication and authorization",
+            "tr": "Kimlik doğrulama ve yetkilendirme"
+          },
+          "challenges": []
+        },
+        {
+          "id": "secrets",
+          "title": {
+            "en": "Secrets",
+            "tr": "Gizli anahtarlar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "web-attacks",
+          "title": {
+            "en": "XSS, CSRF and SSRF",
+            "tr": "XSS, CSRF ve SSRF"
+          },
+          "challenges": []
+        },
+        {
+          "id": "injection",
+          "title": {
+            "en": "SQL and prompt injection",
+            "tr": "SQL ve istem enjeksiyonu"
+          },
+          "challenges": []
+        },
+        {
+          "id": "supply-chain",
+          "title": {
+            "en": "Dependency and supply-chain security",
+            "tr": "Bağımlılık ve tedarik zinciri güvenliği"
+          },
+          "challenges": []
+        },
+        {
+          "id": "privacy",
+          "title": {
+            "en": "Data privacy",
+            "tr": "Veri gizliliği"
+          },
+          "challenges": []
         }
       ]
     },
@@ -81,6 +463,100 @@
           "challenges": [
             "filter-active-users"
           ]
+        },
+        {
+          "id": "joins",
+          "title": {
+            "en": "Joins",
+            "tr": "Birleştirmeler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "indexes",
+          "title": {
+            "en": "Indexes and query plans",
+            "tr": "İndeksler ve sorgu planları"
+          },
+          "challenges": []
+        },
+        {
+          "id": "constraints-transactions",
+          "title": {
+            "en": "Constraints and transactions",
+            "tr": "Kısıtlar ve işlemler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "modeling-migrations",
+          "title": {
+            "en": "Data modeling and migrations",
+            "tr": "Veri modelleme ve göçler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "rls",
+          "title": {
+            "en": "Row-level security",
+            "tr": "Satır düzeyi güvenlik"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "backend-apis",
+      "title": {
+        "en": "Backend / APIs",
+        "tr": "Arka Uç / API'ler"
+      },
+      "description": {
+        "en": "HTTP, REST design, webhooks, retries, idempotency and jobs.",
+        "tr": "HTTP, REST tasarımı, webhook'lar, yeniden deneme, idempotency ve arka plan işleri."
+      },
+      "icon": "server",
+      "modules": [
+        {
+          "id": "http",
+          "title": {
+            "en": "HTTP and REST",
+            "tr": "HTTP ve REST"
+          },
+          "challenges": []
+        },
+        {
+          "id": "api-design",
+          "title": {
+            "en": "API design",
+            "tr": "API tasarımı"
+          },
+          "challenges": []
+        },
+        {
+          "id": "webhooks",
+          "title": {
+            "en": "Webhooks",
+            "tr": "Webhook'lar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "retries-idempotency",
+          "title": {
+            "en": "Retries and idempotency",
+            "tr": "Yeniden deneme ve idempotency"
+          },
+          "challenges": []
+        },
+        {
+          "id": "jobs",
+          "title": {
+            "en": "Background jobs and queues",
+            "tr": "Arka plan işleri ve kuyruklar"
+          },
+          "challenges": []
         }
       ]
     },
@@ -105,6 +581,262 @@
           "challenges": [
             "accessible-button"
           ]
+        },
+        {
+          "id": "components",
+          "title": {
+            "en": "Components",
+            "tr": "Bileşenler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "ui-state",
+          "title": {
+            "en": "State and rendering",
+            "tr": "Durum ve çizim"
+          },
+          "challenges": []
+        },
+        {
+          "id": "navigation",
+          "title": {
+            "en": "Navigation",
+            "tr": "Gezinme"
+          },
+          "challenges": []
+        },
+        {
+          "id": "offline",
+          "title": {
+            "en": "Offline and local storage",
+            "tr": "Çevrimdışı ve yerel depolama"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "devops-cloud",
+      "title": {
+        "en": "DevOps / Cloud",
+        "tr": "DevOps / Bulut"
+      },
+      "description": {
+        "en": "Linux, containers, CI/CD, DNS, TLS, logging and deployment.",
+        "tr": "Linux, konteynerler, CI/CD, DNS, TLS, günlükleme ve dağıtım."
+      },
+      "icon": "cloud",
+      "modules": [
+        {
+          "id": "linux",
+          "title": {
+            "en": "Linux",
+            "tr": "Linux"
+          },
+          "challenges": []
+        },
+        {
+          "id": "docker",
+          "title": {
+            "en": "Docker",
+            "tr": "Docker"
+          },
+          "challenges": []
+        },
+        {
+          "id": "ci-cd",
+          "title": {
+            "en": "CI/CD",
+            "tr": "CI/CD"
+          },
+          "challenges": []
+        },
+        {
+          "id": "dns-tls",
+          "title": {
+            "en": "DNS and TLS",
+            "tr": "DNS ve TLS"
+          },
+          "challenges": []
+        },
+        {
+          "id": "config",
+          "title": {
+            "en": "Environment and configuration",
+            "tr": "Ortam ve yapılandırma"
+          },
+          "challenges": []
+        },
+        {
+          "id": "monitoring",
+          "title": {
+            "en": "Logging and monitoring",
+            "tr": "Günlükleme ve izleme"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "title": {
+        "en": "Performance",
+        "tr": "Performans"
+      },
+      "description": {
+        "en": "Profiling, rendering, network, memory and bundle size.",
+        "tr": "Profil çıkarma, çizim, ağ, bellek ve paket boyutu."
+      },
+      "icon": "gauge",
+      "modules": [
+        {
+          "id": "profiling",
+          "title": {
+            "en": "Profiling",
+            "tr": "Profil çıkarma"
+          },
+          "challenges": []
+        },
+        {
+          "id": "rendering-perf",
+          "title": {
+            "en": "Rendering performance",
+            "tr": "Çizim performansı"
+          },
+          "challenges": []
+        },
+        {
+          "id": "network",
+          "title": {
+            "en": "Network and latency",
+            "tr": "Ağ ve gecikme"
+          },
+          "challenges": []
+        },
+        {
+          "id": "memory-cpu",
+          "title": {
+            "en": "Memory and CPU",
+            "tr": "Bellek ve CPU"
+          },
+          "challenges": []
+        },
+        {
+          "id": "bundle",
+          "title": {
+            "en": "Bundle size and lazy loading",
+            "tr": "Paket boyutu ve tembel yükleme"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "product-engineering",
+      "title": {
+        "en": "Product Engineering",
+        "tr": "Ürün Mühendisliği"
+      },
+      "description": {
+        "en": "User problems, MVPs, activation, retention and pricing.",
+        "tr": "Kullanıcı sorunları, MVP, aktivasyon, elde tutma ve fiyatlandırma."
+      },
+      "icon": "rocket",
+      "modules": [
+        {
+          "id": "user-problems",
+          "title": {
+            "en": "User problems and research",
+            "tr": "Kullanıcı sorunları ve araştırma"
+          },
+          "challenges": []
+        },
+        {
+          "id": "mvp",
+          "title": {
+            "en": "MVP and iteration",
+            "tr": "MVP ve yineleme"
+          },
+          "challenges": []
+        },
+        {
+          "id": "ux",
+          "title": {
+            "en": "UX",
+            "tr": "Kullanıcı deneyimi"
+          },
+          "challenges": []
+        },
+        {
+          "id": "growth",
+          "title": {
+            "en": "Activation and retention",
+            "tr": "Aktivasyon ve elde tutma"
+          },
+          "challenges": []
+        },
+        {
+          "id": "monetization",
+          "title": {
+            "en": "Monetization and pricing",
+            "tr": "Gelir modeli ve fiyatlandırma"
+          },
+          "challenges": []
+        }
+      ]
+    },
+    {
+      "id": "data-analytics",
+      "title": {
+        "en": "Data & Analytics",
+        "tr": "Veri ve Analitik"
+      },
+      "description": {
+        "en": "Event tracking, funnels, cohorts, metrics and experiments.",
+        "tr": "Olay izleme, huniler, kohortlar, metrikler ve deneyler."
+      },
+      "icon": "chart",
+      "modules": [
+        {
+          "id": "events",
+          "title": {
+            "en": "Event tracking",
+            "tr": "Olay izleme"
+          },
+          "challenges": []
+        },
+        {
+          "id": "funnels-cohorts",
+          "title": {
+            "en": "Funnels and cohorts",
+            "tr": "Huniler ve kohortlar"
+          },
+          "challenges": []
+        },
+        {
+          "id": "sql-analytics",
+          "title": {
+            "en": "SQL analytics",
+            "tr": "SQL analitiği"
+          },
+          "challenges": []
+        },
+        {
+          "id": "experiments",
+          "title": {
+            "en": "Experimentation",
+            "tr": "Deneyler"
+          },
+          "challenges": []
+        },
+        {
+          "id": "data-quality",
+          "title": {
+            "en": "Data quality",
+            "tr": "Veri kalitesi"
+          },
+          "challenges": []
         }
       ]
     }

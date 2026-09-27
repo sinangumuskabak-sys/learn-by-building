@@ -38,5 +38,213 @@
       "tr": "Önbellekleme"
     },
     "category": "software-architecture"
+  },
+  {
+    "id": "prog.functions",
+    "title": {
+      "en": "Functions",
+      "tr": "Fonksiyonlar"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "prog.arrays",
+    "title": {
+      "en": "Arrays and objects",
+      "tr": "Diziler ve nesneler"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "prog.async",
+    "title": {
+      "en": "Async code",
+      "tr": "Asenkron kod"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "prog.errors",
+    "title": {
+      "en": "Error handling",
+      "tr": "Hata yönetimi"
+    },
+    "category": "programming-fundamentals"
+  },
+  {
+    "id": "se.git",
+    "title": {
+      "en": "Git",
+      "tr": "Git"
+    },
+    "category": "software-engineering"
+  },
+  {
+    "id": "se.refactoring",
+    "title": {
+      "en": "Refactoring",
+      "tr": "Yeniden düzenleme"
+    },
+    "category": "software-engineering"
+  },
+  {
+    "id": "arch.state",
+    "title": {
+      "en": "State management",
+      "tr": "Durum yönetimi"
+    },
+    "category": "software-architecture"
+  },
+  {
+    "id": "arch.queues",
+    "title": {
+      "en": "Queues and events",
+      "tr": "Kuyruklar ve olaylar"
+    },
+    "category": "software-architecture"
+  },
+  {
+    "id": "ai.structured-output",
+    "title": {
+      "en": "Structured outputs",
+      "tr": "Yapılandırılmış çıktı"
+    },
+    "category": "ai-engineering"
+  },
+  {
+    "id": "ai.rag",
+    "title": {
+      "en": "Retrieval (RAG)",
+      "tr": "Getirme (RAG)"
+    },
+    "category": "ai-engineering"
+  },
+  {
+    "id": "agent.tools",
+    "title": {
+      "en": "Tool design",
+      "tr": "Araç tasarımı"
+    },
+    "category": "agent-engineering"
+  },
+  {
+    "id": "agent.permissions",
+    "title": {
+      "en": "Agent permissions",
+      "tr": "Ajan izinleri"
+    },
+    "category": "agent-engineering"
+  },
+  {
+    "id": "test.unit",
+    "title": {
+      "en": "Unit testing",
+      "tr": "Birim testi"
+    },
+    "category": "testing-evaluation"
+  },
+  {
+    "id": "test.e2e",
+    "title": {
+      "en": "End-to-end testing",
+      "tr": "Uçtan uca test"
+    },
+    "category": "testing-evaluation"
+  },
+  {
+    "id": "sec.auth",
+    "title": {
+      "en": "Authentication",
+      "tr": "Kimlik doğrulama"
+    },
+    "category": "cybersecurity"
+  },
+  {
+    "id": "sec.injection",
+    "title": {
+      "en": "Injection attacks",
+      "tr": "Enjeksiyon saldırıları"
+    },
+    "category": "cybersecurity"
+  },
+  {
+    "id": "db.joins",
+    "title": {
+      "en": "Joins",
+      "tr": "Birleştirmeler"
+    },
+    "category": "databases"
+  },
+  {
+    "id": "db.indexes",
+    "title": {
+      "en": "Indexes",
+      "tr": "İndeksler"
+    },
+    "category": "databases"
+  },
+  {
+    "id": "api.http",
+    "title": {
+      "en": "HTTP",
+      "tr": "HTTP"
+    },
+    "category": "backend-apis"
+  },
+  {
+    "id": "api.idempotency",
+    "title": {
+      "en": "Idempotency",
+      "tr": "Idempotency"
+    },
+    "category": "backend-apis"
+  },
+  {
+    "id": "fe.components",
+    "title": {
+      "en": "Components",
+      "tr": "Bileşenler"
+    },
+    "category": "frontend-mobile"
+  },
+  {
+    "id": "ops.ci-cd",
+    "title": {
+      "en": "CI/CD",
+      "tr": "CI/CD"
+    },
+    "category": "devops-cloud"
+  },
+  {
+    "id": "ops.docker",
+    "title": {
+      "en": "Docker",
+      "tr": "Docker"
+    },
+    "category": "devops-cloud"
+  },
+  {
+    "id": "perf.profiling",
+    "title": {
+      "en": "Profiling",
+      "tr": "Profil çıkarma"
+    },
+    "category": "performance"
+  },
+  {
+    "id": "product.mvp",
+    "title": {
+      "en": "MVP",
+      "tr": "MVP"
+    },
+    "category": "product-engineering"
+  },
+  {
+    "id": "data.funnels",
+    "title": {
+      "en": "Funnels",
+      "tr": "Huniler"
+    },
+    "category": "data-analytics"
   }
 ]
