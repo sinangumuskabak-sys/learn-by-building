@@ -39,21 +39,44 @@ function contentPlugin(): Plugin {
   }
 }
 
-/** Same idea for `content/games/` as `virtual:games`; only the lazily loaded game pages import it. */
+/**
+ * Games as `virtual:games`: a light list for the games page (no step texts, tests or solutions) plus one lazily loaded
+ * module per game, `virtual:game/<id>`, so the list stays small however many games there are.
+ */
 function gamesPlugin(): Plugin {
-  const id = 'virtual:games'
-  const resolvedId = `\0${id}`
+  const listId = 'virtual:games'
+  const gamePrefix = 'virtual:game/'
+  const load = (addWatchFile: (file: string) => void, error: (message: string) => never) => {
+    for (const file of contentFiles(contentRoot)) addWatchFile(file)
+    const { content, problems } = loadContentFromDisk(contentRoot)
+    const { games, problems: gameProblems } = loadGamesFromDisk(contentRoot)
+    problems.push(...gameProblems, ...validateGames(games, new Set(content.skills.map((s) => s.id))))
+    if (problems.length > 0) error(`Invalid games:\n  - ${problems.join('\n  - ')}`)
+    return games
+  }
   return {
     name: 'learn-platform-games',
-    resolveId: (source) => (source === id ? resolvedId : undefined),
+    resolveId: (source) => (source === listId || source.startsWith(gamePrefix) ? `\0${source}` : undefined),
     load(moduleId) {
-      if (moduleId !== resolvedId) return
-      for (const file of contentFiles(contentRoot)) this.addWatchFile(file)
-      const { content, problems } = loadContentFromDisk(contentRoot)
-      const { games, problems: gameProblems } = loadGamesFromDisk(contentRoot)
-      problems.push(...gameProblems, ...validateGames(games, new Set(content.skills.map((s) => s.id))))
-      if (problems.length > 0) this.error(`Invalid games:\n  - ${problems.join('\n  - ')}`)
-      return `export default ${JSON.stringify({ games })}`
+      if (moduleId === `\0${listId}`) {
+        const games = load(this.addWatchFile.bind(this), this.error.bind(this))
+        const summaries = games.map((game) => ({
+          ...game,
+          steps: game.steps.map(({ id, title, skills }) => ({ id, title, skills })),
+        }))
+        const loaders = games.map((game) => `${JSON.stringify(game.id)}: () => import(${JSON.stringify(gamePrefix + game.id)})`)
+        return `export default ${JSON.stringify({ games: summaries })}
+const loaders = { ${loaders.join(', ')} }
+export function loadGame(id) {
+  return loaders[id] ? loaders[id]().then((module) => module.default) : Promise.resolve(undefined)
+}`
+      }
+      if (moduleId.startsWith(`\0${gamePrefix}`)) {
+        const id = moduleId.slice(`\0${gamePrefix}`.length)
+        const game = load(this.addWatchFile.bind(this), this.error.bind(this)).find((g) => g.id === id)
+        if (!game) this.error(`Unknown game "${id}"`)
+        return `export default ${JSON.stringify(game)}`
+      }
     },
   }
 }

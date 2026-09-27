@@ -58,6 +58,13 @@ export interface Game extends GameMeta {
   steps: GameStep[]
 }
 
+/** What the games list needs about a step; the full step loads with its game. */
+export type GameStepSummary = Pick<GameStep, 'id' | 'title' | 'skills'>
+
+export interface GameSummary extends GameMeta {
+  steps: GameStepSummary[]
+}
+
 /** Progress key for one game step, stored alongside challenge progress. */
 export const stepKey = (gameId: string, stepId: string) => `game:${gameId}/${stepId}`
 

@@ -22,9 +22,9 @@ import { ResizeHandle } from '../challenge/CodeWorkspace.tsx'
 import { ConfirmButton } from '../components/ConfirmButton.tsx'
 import { InlineMarkdown, Markdown } from '../components/Markdown.tsx'
 import { Button, IconButton } from '../components/ui.tsx'
-import { findGame, initialCode, resumeStep, stepPassed } from '../games/catalog.ts'
+import { findGame, initialCode, loadGame, resumeStep, stepPassed } from '../games/catalog.ts'
 import { buildPlayDocument } from '../games/play-document.ts'
-import { referenceStart, stepKey, type Game, type GameStep } from '../games/schema.ts'
+import { referenceStart, stepKey, type Game, type GameStep, type GameSummary } from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDebouncedEffect, useDocumentTitle, useMediaQuery } from '../lib/hooks.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
@@ -35,19 +35,43 @@ const CodeEditor = lazy(() => import('../editor/CodeEditor.tsx'))
 
 type MobileTab = 'task' | 'code' | 'game'
 
+/** A game's full steps (texts, tests, solutions) load on demand; the games list only ships summaries. */
+function useFullGame(id: string): Game | undefined {
+  const [game, setGame] = useState<Game>()
+  useEffect(() => {
+    let active = true
+    void loadGame(id).then((loaded) => {
+      if (active) setGame(loaded)
+    })
+    return () => {
+      active = false
+    }
+  }, [id])
+  return game?.id === id ? game : undefined
+}
+
 export function GameStepPage() {
   const { gameId = '', stepId } = useParams()
   const { t, l } = useI18n()
   const progress = useProgress()
-  const game = findGame(gameId)
-  const index = game ? game.steps.findIndex((s) => s.id === stepId) : -1
-  useDocumentTitle(game ? l(game.title) : t('game.notFound'))
-  if (!game) return <NotFoundPage title={t('game.notFound')} />
-  if (index === -1) return <Navigate to={`/games/${game.id}/${game.steps[resumeStep(progress, game)].id}`} replace />
+  const summary = findGame(gameId)
+  const game = useFullGame(gameId)
+  const index = summary ? summary.steps.findIndex((s) => s.id === stepId) : -1
+  useDocumentTitle(summary ? l(summary.title) : t('game.notFound'))
+  if (!summary) return <NotFoundPage title={t('game.notFound')} />
+  if (index === -1) return <Navigate to={`/games/${summary.id}/${summary.steps[resumeStep(progress, summary)].id}`} replace />
+  if (!game) {
+    return (
+      <div className="flex h-full flex-col">
+        <StepHeader game={summary} index={index} />
+        <p className="p-6 text-sm text-muted">…</p>
+      </div>
+    )
+  }
   return <StepWorkspace key={`${game.id}/${stepId}`} game={game} index={index} />
 }
 
-function StepHeader({ game, index }: { game: Game; index: number }) {
+function StepHeader({ game, index }: { game: GameSummary; index: number }) {
   const { t, l } = useI18n()
   const navigate = useNavigate()
   const progress = useProgress()
