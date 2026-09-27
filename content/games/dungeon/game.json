@@ -1,0 +1,20 @@
+{
+  "id": "dungeon",
+  "order": 190,
+  "title": { "en": "Zelda-style Dungeon", "tr": "Zelda Tarzı Zindan" },
+  "description": {
+    "en": "Explore four rooms, fight with a sword, find the key, open the door and escape. Rooms written as text, walking and sliding along walls, moving between rooms, a sword hitbox, enemies that wander and chase, hearts, keys and a world that remembers what you took.",
+    "tr": "Dört odayı keşfet, kılıçla savaş, anahtarı bul, kapıyı aç ve kaç. Metin olarak yazılan odalar, duvar boyunca yürüyüp kaymak, odalar arasında geçiş, bir kılıç çarpışma kutusu, dolaşan ve kovalayan düşmanlar, kalpler, anahtarlar ve aldıklarını hatırlayan bir dünya."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 480, "height": 400 },
+  "color": "#16a34a",
+  "skills": ["game.collision", "game.state", "game.input", "prog.arrays"],
+  "extend": [
+    { "en": "Remember defeated enemies per room, so cleared rooms stay cleared.", "tr": "Yenilen düşmanları oda oda hatırla; temizlenen odalar temiz kalsın." },
+    { "en": "A slide animation between rooms instead of an instant switch.", "tr": "Odalar arasında anında geçiş yerine kayan bir animasyon." },
+    { "en": "A second kind of enemy that shoots in the direction it faces.", "tr": "Baktığı yöne ateş eden ikinci bir düşman türü." },
+    { "en": "A minimap of the rooms you have visited.", "tr": "Ziyaret ettiğin odaların bir mini haritası." },
+    { "en": "A boss room behind the door that needs three sword hits and fights back.", "tr": "Kapının arkasında üç kılıç darbesi gerektiren ve karşılık veren bir patron odası." }
+  ]
+}
