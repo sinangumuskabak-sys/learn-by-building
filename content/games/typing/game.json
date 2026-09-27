@@ -1,0 +1,20 @@
+{
+  "id": "typing",
+  "order": 34,
+  "title": { "en": "Typing Rain", "tr": "Yazı Yağmuru" },
+  "description": {
+    "en": "Type the falling words before they land. Measuring text to place it, locking on to the most urgent word, drawing half a word in another color, lives, levels tuned by measuring real typing speeds, words per minute and accuracy, and a keyboard that lights up the next key.",
+    "tr": "Düşen kelimeleri yere inmeden yaz. Metni yerleştirmek için ölçmek, en acil kelimeye kilitlenmek, bir kelimenin yarısını başka renkte çizmek, canlar, gerçek yazma hızları ölçülerek ayarlanan seviyeler, dakikada kelime ve doğruluk, ve sıradaki tuşu yakan bir klavye."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 480, "height": 480 },
+  "color": "#0ea5e9",
+  "skills": ["game.input", "game.state", "game.loop", "prog.arrays"],
+  "extend": [
+    { "en": "Longer words at higher levels, from a list sorted by length.", "tr": "Uzunluğa göre sıralı bir listeden, yüksek seviyelerde daha uzun kelimeler." },
+    { "en": "A burst of particles when a word is cleared.", "tr": "Bir kelime temizlendiğinde bir parçacık patlaması." },
+    { "en": "Backspace to let go of the current word and pick another.", "tr": "Şimdiki kelimeyi bırakıp başka birini seçmek için Backspace." },
+    { "en": "A word list of your own: programming keywords, or Turkish words.", "tr": "Kendi kelime listen: programlama anahtar kelimeleri ya da Türkçe kelimeler." },
+    { "en": "Show which letters you miss most at the end of the game.", "tr": "Oyun sonunda en çok hangi harfleri kaçırdığını göster." }
+  ]
+}
