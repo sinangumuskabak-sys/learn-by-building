@@ -292,7 +292,7 @@ function update() {
   pickUp()
   for (const e of enemies) updateEnemy(e)
   for (const b of bombs) b.fuse -= 1
-  for (const b of bombs.filter((b) => b.fuse <= 0)) explode(b)
+  for (const bomb of bombs.filter((b) => b.fuse <= 0)) explode(bomb)
   for (const f of flames) f.time -= 1
   flames = flames.filter((f) => f.time > 0)
   enemies = enemies.filter((e) => !inFlames(e))

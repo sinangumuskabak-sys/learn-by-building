@@ -280,7 +280,7 @@ function draw() {
     .map((car) => ({ car, gap: ahead(position, car.z) }))
     .filter((c) => c.gap > PLAYER_Z * 0.5 && c.gap < DRAW * SEG)
     .sort((a, b) => b.gap - a.gap)
-  for (const { car, gap } of visible) {
+  for (const { car } of visible) {
     const seg = shown.find((s) => s.index === Math.floor(car.z / SEG) % segments.length)
     if (!seg) continue
     const w = seg.near.w * 0.35

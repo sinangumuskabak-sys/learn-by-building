@@ -244,7 +244,7 @@ function update() {
   if (state !== 'playing') return
   updatePlayer()
   for (const b of bombs) b.fuse -= 1
-  for (const b of bombs.filter((b) => b.fuse <= 0)) explode(b)
+  for (const bomb of bombs.filter((b) => b.fuse <= 0)) explode(bomb)
   for (const f of flames) f.time -= 1
   flames = flames.filter((f) => f.time > 0)
   if (safe > 0) safe -= 1
