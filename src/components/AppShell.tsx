@@ -77,7 +77,7 @@ export function AppShell() {
           </div>
         </div>
       </header>
-      <main id="main" className="min-h-0 flex-1 overflow-y-auto">
+      <main id="main" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </main>
     </div>

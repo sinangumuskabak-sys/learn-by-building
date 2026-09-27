@@ -264,7 +264,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
     return (
       <Group orientation="horizontal" className="h-full">
         <Panel defaultSize="32%" minSize="20%">
-          <div className="h-full overflow-y-auto border-r border-border">
+          <div tabIndex={0} className="h-full overflow-y-auto border-r border-border">
             <TaskPanel challenge={challenge}>{footer}</TaskPanel>
           </div>
         </Panel>
@@ -294,7 +294,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
         label={challenge.title}
       />
       <div className="min-h-0 flex-1">
-        <div className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
+        <div tabIndex={0} className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
           <TaskPanel challenge={challenge}>{footer}</TaskPanel>
         </div>
         <div className={clsx('h-full', mobileTab !== 'code' && 'hidden')}>{editorPanel}</div>

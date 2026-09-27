@@ -483,7 +483,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
         <Panel defaultSize="50%" minSize="30%">
           <Group orientation="vertical" className="h-full">
             <Panel defaultSize="45%" minSize="15%">
-              <div className="h-full overflow-y-auto">
+              <div tabIndex={0} className="h-full overflow-y-auto">
                 <StepText game={game} index={index} />
               </div>
             </Panel>
@@ -533,7 +533,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
           ))}
         </div>
         <div className="min-h-0 flex-1">
-          <div className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
+          <div tabIndex={0} className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
             <StepText game={game} index={index} />
           </div>
           <div className={clsx('h-full', mobileTab !== 'code' && 'hidden')}>{editor}</div>

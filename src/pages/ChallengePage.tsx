@@ -105,7 +105,7 @@ function ReadWorkspace({ entry }: { entry: ChallengeEntry }) {
 
   if (!isDesktop) {
     return (
-      <div className="h-full overflow-y-auto">
+      <div tabIndex={0} className="h-full overflow-y-auto">
         <TaskPanel challenge={challenge}>
           <div className="h-80">{code}</div>
           {questions}
@@ -123,7 +123,7 @@ function ReadWorkspace({ entry }: { entry: ChallengeEntry }) {
       </Panel>
       <ResizeHandle />
       <Panel defaultSize="45%" minSize="30%">
-        <div className="h-full overflow-y-auto p-5 sm:p-6">{questions}</div>
+        <div tabIndex={0} className="h-full overflow-y-auto p-5 sm:p-6">{questions}</div>
       </Panel>
     </Group>
   )
@@ -144,7 +144,7 @@ export function ChallengePage() {
     body = <ReadWorkspace key={challenge.id} entry={entry} />
   } else {
     body = (
-      <div className="h-full overflow-y-auto">
+      <div tabIndex={0} className="h-full overflow-y-auto">
         <div className="mx-auto max-w-3xl">
           <TaskPanel challenge={challenge}>
             {challenge.type === 'quiz' ? (

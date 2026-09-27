@@ -7,7 +7,14 @@ import { useMemo } from 'react'
  * pull requests can add arbitrary text.
  */
 export function Markdown({ source, className }: { source: string; className?: string }) {
-  const html = useMemo(() => DOMPurify.sanitize(marked.parse(source, { async: false, gfm: true })), [source])
+  // Code blocks and tables can scroll sideways, so they must be reachable with the keyboard too.
+  const html = useMemo(
+    () =>
+      DOMPurify.sanitize(marked.parse(source, { async: false, gfm: true }))
+        .replaceAll('<pre>', '<pre tabindex="0">')
+        .replaceAll('<table>', '<table tabindex="0">'),
+    [source],
+  )
   return <div className={`markdown ${className ?? ''}`} dangerouslySetInnerHTML={{ __html: html }} />
 }
 
