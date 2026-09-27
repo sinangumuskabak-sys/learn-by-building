@@ -1,0 +1,20 @@
+{
+  "id": "life",
+  "order": 30,
+  "title": { "en": "Conway's Game of Life", "tr": "Conway'in Hayat Oyunu" },
+  "description": {
+    "en": "Four simple rules, and a world that comes alive. A grid of cells, counting neighbours, why every cell must change at the same moment (double buffering), a world that wraps around, painting with the pointer, and the famous glider gun.",
+    "tr": "Dört basit kural ve canlanan bir dünya. Hücrelerden bir ızgara, komşuları saymak, her hücrenin neden aynı anda değişmesi gerektiği (çift tamponlama), başa saran bir dünya, işaretçiyle boyamak ve ünlü planör topu."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 480, "height": 480 },
+  "color": "#22c55e",
+  "skills": ["prog.arrays", "prog.loops", "game.state", "game.input"],
+  "extend": [
+    { "en": "Color cells by age: new cells bright, old ones darker.", "tr": "Hücreleri yaşa göre renklendir: yeni hücreler parlak, yaşlılar daha koyu." },
+    { "en": "Speed buttons (+ and -) that change SPEED while it runs.", "tr": "Çalışırken SPEED'i değiştiren hız düğmeleri (+ ve -)." },
+    { "en": "More patterns from text: a pulsar, a spaceship, the R-pentomino.", "tr": "Metinden daha çok desen: bir pulsar, bir uzay gemisi, R-pentomino." },
+    { "en": "Other rules: HighLife (born with 3 or 6) and see what changes.", "tr": "Başka kurallar: HighLife (3 ya da 6 ile doğar) ve neyin değiştiğine bak." },
+    { "en": "Detect when the world has become still, and show the generation it happened.", "tr": "Dünyanın ne zaman durağanlaştığını algıla ve bunun hangi nesilde olduğunu göster." }
+  ]
+}
