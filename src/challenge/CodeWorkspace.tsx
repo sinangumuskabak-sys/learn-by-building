@@ -8,6 +8,7 @@ import { Button } from '../components/ui.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import type { MessageKey } from '../i18n/messages.ts'
 import { useDebouncedEffect, useMediaQuery } from '../lib/hooks.ts'
+import { formatChecks, useMaymunContext } from '../maymun/context.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
 import { buildDocument } from '../runners/web-document.ts'
 import { allPassed, type RunResult } from '../runners/types.ts'
@@ -164,8 +165,28 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
     </Button>
   )
 
+  const codeText = () => files.map((file) => `File ${file.name}:\n${file.contents}`).join('\n\n')
+  useMaymunContext('code', () => ({
+    title: `${challenge.title} — ${files[activeFile]?.name ?? ''}`,
+    text: [
+      `Task:\n${challenge.description}\n\n${challenge.instructions}`,
+      codeText(),
+      result ? `Checks:\n${formatChecks(result)}` : 'Checks: not run yet.',
+    ].join('\n\n'),
+  }))
+  useMaymunContext('results', () => ({
+    title: `${challenge.title} — ${t('challenge.tabResult')}`,
+    text: [
+      result ? formatChecks(result) : 'Checks: not run yet.',
+      result && result.logs.length > 0 ? `Console:\n${result.logs.join('\n')}` : '',
+      codeText(),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  }))
+
   const editorPanel = (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
+    <div data-maymun="code" className="flex h-full min-h-0 flex-col bg-surface">
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
         <div role="tablist" aria-label={t('challenge.tabCode')} className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
           {files.map((f, index) => (
@@ -219,7 +240,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
   ]
 
   const outputPanel = (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
+    <div data-maymun="results" className="flex h-full min-h-0 flex-col bg-surface">
       <TabBar tabs={outputTabs} active={outputTab} onChange={setOutputTab} label={t('challenge.tabResult')} />
       <div className={clsx('min-h-0 flex-1 overflow-y-auto', outputTab === 'preview' && 'hidden')}>
         <div className="space-y-4 p-4">
@@ -264,7 +285,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
     return (
       <Group orientation="horizontal" className="h-full">
         <Panel defaultSize="32%" minSize="20%">
-          <div tabIndex={0} className="h-full overflow-y-auto border-r border-border">
+          <div tabIndex={0} data-maymun="task" className="h-full overflow-y-auto border-r border-border">
             <TaskPanel challenge={challenge}>{footer}</TaskPanel>
           </div>
         </Panel>
@@ -294,7 +315,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
         label={challenge.title}
       />
       <div className="min-h-0 flex-1">
-        <div tabIndex={0} className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
+        <div tabIndex={0} data-maymun="task" className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
           <TaskPanel challenge={challenge}>{footer}</TaskPanel>
         </div>
         <div className={clsx('h-full', mobileTab !== 'code' && 'hidden')}>{editorPanel}</div>

@@ -119,3 +119,42 @@ test('no horizontal scroll on the games pages', async ({ page }) => {
     expect(overflow, path).toBeLessThanOrEqual(0)
   }
 })
+
+test('Maymun peeks into the panel under the pointer, its popup stays on screen, and it can be hidden', async ({ page }) => {
+  await page.goto('/#/games/snake/01-canvas')
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  await expect(cat).toBeVisible()
+  const viewport = page.viewportSize()!
+
+  if (!isMobile(page)) {
+    // The cat follows the pointer to the game panel (inside the iframe) and to the checks below it.
+    const game = page.locator('[data-maymun="game"]')
+    const gameBox = (await game.boundingBox())!
+    await page.mouse.move(gameBox.x + gameBox.width / 2, gameBox.y + gameBox.height / 2)
+    await expect.poll(async () => (await cat.boundingBox())!.x).toBeGreaterThan(gameBox.x + gameBox.width - 100)
+    const checks = (await page.locator('[data-maymun="results"]').boundingBox())!
+    await page.mouse.move(checks.x + 40, checks.y + checks.height - 10)
+    await expect.poll(async () => (await cat.boundingBox())!.y).toBeGreaterThan(checks.y)
+  }
+
+  // On phones the cat moves along with the tabs.
+  await tab(page, 'Code')
+  // Opened from wherever the cat is (low on the screen on desktop), the whole popup is visible.
+  await cat.click()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await expect(popup).toContainText('Code (game.js)')
+  const box = (await popup.boundingBox())!
+  expect(box.y).toBeGreaterThanOrEqual(0)
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height)
+  expect(box.x).toBeGreaterThanOrEqual(0)
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width)
+
+  await popup.getByRole('button', { name: 'Hide Maymun' }).click()
+  await expect(cat).toHaveCount(0)
+  await page.reload()
+  await expect(page.locator('.maymun-head')).toHaveCount(0)
+
+  await page.goto('/#/settings')
+  await page.getByRole('radiogroup', { name: 'Maymun the cat' }).getByRole('radio', { name: 'Show' }).click()
+  await expect(page.getByRole('button', { name: 'Ask Maymun about this panel' })).toBeVisible()
+})

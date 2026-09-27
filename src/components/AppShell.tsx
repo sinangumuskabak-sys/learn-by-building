@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet } from 'react-router'
 import { useI18n } from '../i18n/i18n.ts'
 import type { MessageKey } from '../i18n/messages.ts'
 import { themeStore, useTheme } from '../lib/settings.ts'
+import { Maymun } from '../maymun/Maymun.tsx'
 import { IconButton } from './ui.tsx'
 
 // On narrow screens the items show only their icon, so four sections still fit next to the toggles.
@@ -77,9 +78,10 @@ export function AppShell() {
           </div>
         </div>
       </header>
-      <main id="main" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
+      <main id="main" tabIndex={0} data-maymun="page" className="min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </main>
+      <Maymun />
     </div>
   )
 }

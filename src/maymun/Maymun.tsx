@@ -1,0 +1,311 @@
+import { X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n/i18n.ts'
+import { readContext, type PanelContext } from './context.ts'
+import { maymunStore, useMaymunSettings } from './store.ts'
+import { currentPanel, pointer, startTracking } from './tracker.ts'
+
+const SIZE = 88 // rendered width and height of the head, in pixels
+const HIDDEN = 20 // how much of the head stays behind the panel's right edge
+const DEAD_ZONE = 60 // the head only moves when the pointer is this far above or below it
+const MARGIN = 12 // the popup keeps this far from the window edges
+const HEADER = 64 // and stays below the app header
+const TOOLBAR = 48 // the head stays below a panel's toolbar (Run, Show solution, restart)
+const EYES = [
+  { x: 34, y: 53 },
+  { x: 66, y: 53 },
+]
+
+type Mood = 'calm' | 'angry' | 'excited'
+
+/**
+ * Maymun, an orange cat peeking in from the right edge of the panel the pointer is over. The eyes follow the
+ * pointer; the head follows it up and down when it goes far; far to the left the cat gets cross, close by it gets
+ * excited. A click shows what Maymun knows about that panel (and, later, a chat about it).
+ */
+export function Maymun() {
+  const { t } = useI18n()
+  const { visible } = useMaymunSettings()
+  const layer = useRef<HTMLDivElement>(null)
+  const head = useRef<HTMLButtonElement>(null)
+  const svg = useRef<SVGSVGElement>(null)
+  const pupils = useRef<(SVGGElement | null)[]>([])
+  const [open, setOpen] = useState(false)
+  const [context, setContext] = useState<ReturnType<typeof readContext> | null>(null)
+  const [anchor, setAnchor] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    if (!visible) return
+    startTracking()
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    let headY = -1
+    let mood: Mood = 'calm'
+    let nextBlink = performance.now() + 2500
+    let frame = 0
+    let lastRect = ''
+    let settledAt = Infinity
+
+    const tick = (now: number) => {
+      frame = requestAnimationFrame(tick)
+      const box = layer.current
+      const button = head.current
+      if (!box || !button) return
+      const panel = currentPanel()
+      const rect = panel?.getBoundingClientRect()
+      if (!panel || !rect || rect.height < TOOLBAR + SIZE + 8) {
+        box.style.display = 'none'
+        return
+      }
+      // While the layout moves (page load, panel resize, tab switch) the cat waits, so it never lands on a button.
+      const key = `${panel.dataset.maymun} ${rect.left} ${rect.top} ${rect.width} ${rect.height}`
+      if (key !== lastRect) {
+        lastRect = key
+        settledAt = now + 250
+      }
+      box.style.display = now < settledAt ? 'none' : 'block'
+      box.style.left = `${rect.left}px`
+      box.style.top = `${rect.top}px`
+      box.style.width = `${rect.width}px`
+      box.style.height = `${rect.height}px`
+
+      // Up and down: stay put while the pointer is near, glide to its height when it goes far.
+      const min = TOOLBAR + SIZE / 2
+      const max = rect.height - SIZE / 2 - 6
+      if (headY < 0) headY = min + (max - min) * 0.3
+      // Near the right edge the pointer is probably after something there: the cat stays put instead of sitting on it.
+      if (pointer.seen && pointer.x < rect.right - SIZE * 2) {
+        const wanted = pointer.y - rect.top
+        const target = Math.abs(wanted - headY) > DEAD_ZONE ? wanted : headY
+        headY += (Math.min(max, Math.max(min, target)) - headY) * (reduced ? 1 : 0.12)
+      }
+      headY = Math.min(max, Math.max(min, headY))
+      button.style.top = `${headY - SIZE / 2}px`
+
+      // Eyes: each pupil moves a little towards the pointer.
+      const left = rect.right + HIDDEN - SIZE
+      const top = rect.top + headY - SIZE / 2
+      const scale = SIZE / 100
+      EYES.forEach((eye, i) => {
+        const g = pupils.current[i]
+        if (!g) return
+        let dx = 0
+        let dy = 0
+        if (pointer.seen) {
+          const ex = pointer.x - (left + eye.x * scale)
+          const ey = pointer.y - (top + eye.y * scale)
+          const d = Math.hypot(ex, ey) || 1
+          const reach = Math.min(3.6, d / 25)
+          dx = (ex / d) * reach
+          dy = (ey / d) * reach
+        }
+        g.setAttribute('transform', `translate(${dx.toFixed(2)} ${dy.toFixed(2)})`)
+      })
+
+      // Mood: cross when the pointer runs far off to the left, excited when it comes close.
+      const cx = left + SIZE / 2
+      const cy = top + SIZE / 2
+      let next: Mood = 'calm'
+      if (pointer.seen) {
+        if (Math.hypot(pointer.x - cx, pointer.y - cy) < 150) next = 'excited'
+        else if (cx - pointer.x > Math.max(360, rect.width * 0.65)) next = 'angry'
+      }
+      if (next !== mood) {
+        mood = next
+        svg.current?.setAttribute('data-mood', mood)
+      }
+
+      if (!reduced && now > nextBlink) {
+        svg.current?.setAttribute('data-blink', 'true')
+        window.setTimeout(() => svg.current?.removeAttribute('data-blink'), 130)
+        nextBlink = now + 2500 + Math.random() * 4000
+      }
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [visible])
+
+  // Keep the popup fully on screen, next to the cat: measured after it renders, again when it or the window resizes.
+  const popup = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = popup.current
+    if (!open || !el) return
+    const place = () => {
+      const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max))
+      const top = Math.min(HEADER, Math.max(MARGIN, window.innerHeight - MARGIN - el.offsetHeight))
+      el.style.left = `${clamp(anchor.x - MARGIN - el.offsetWidth, MARGIN, window.innerWidth - MARGIN - el.offsetWidth)}px`
+      el.style.top = `${clamp(anchor.y - el.offsetHeight / 2, top, window.innerHeight - MARGIN - el.offsetHeight)}px`
+    }
+    place()
+    const observer = new ResizeObserver(place)
+    observer.observe(el)
+    window.addEventListener('resize', place)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', place)
+    }
+  }, [open, anchor, context])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  if (!visible) return null
+
+  const toggle = () => {
+    if (open) return setOpen(false)
+    const panel = currentPanel()
+    if (!panel) return
+    setContext(readContext(panel))
+    const rect = head.current?.getBoundingClientRect()
+    setAnchor({ x: rect ? rect.left : window.innerWidth, y: rect ? rect.top + rect.height / 2 : 120 })
+    setOpen(true)
+  }
+
+  const panelName = (name: string) => {
+    const key = `maymun.panel.${name}` as Parameters<typeof t>[0]
+    return t(key)
+  }
+
+  return (
+    <>
+      <div ref={layer} className="pointer-events-none fixed z-20 hidden overflow-hidden print:hidden">
+        <button
+          ref={head}
+          type="button"
+          onClick={toggle}
+          aria-label={t('maymun.ask')}
+          aria-expanded={open}
+          title={t('maymun.ask')}
+          className="maymun-head pointer-events-auto absolute cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          style={{ width: SIZE, height: SIZE, right: -HIDDEN, top: 0 }}
+        >
+          <MaymunFace svgRef={svg} pupilRefs={pupils} />
+        </button>
+      </div>
+      {open && context && (
+        <div
+          ref={popup}
+          role="dialog"
+          aria-label={t('maymun.name')}
+          className="fixed top-0 left-0 z-40 flex max-h-[min(70vh,calc(100dvh-24px))] w-[min(22rem,calc(100vw-24px))] flex-col rounded-xl border border-border bg-surface shadow-xl"
+        >
+          <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+            <span className="text-lg" aria-hidden>
+              🐱
+            </span>
+            <span className="flex-1 font-semibold">{t('maymun.name')}</span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label={t('maymun.close')}
+              className="rounded-md p-1 text-muted hover:text-fg"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="min-h-0 space-y-2 overflow-y-auto px-4 py-3 text-sm">
+            <p>
+              {t('maymun.sees')} <strong>{panelName(context.panel)}</strong>
+            </p>
+            <ContextPreview context={context} />
+            <p className="text-xs text-muted">{t('maymun.soon')}</p>
+          </div>
+          <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted">
+            <span className="flex-1">{t('maymun.hideHint')}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                maymunStore.set({ visible: false })
+              }}
+              className="rounded-md border border-border px-2 py-1 font-medium text-fg hover:bg-surface-2"
+            >
+              {t('maymun.hide')}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function ContextPreview({ context }: { context: PanelContext }) {
+  return (
+    <details className="rounded-lg border border-border bg-surface-2 text-xs" open>
+      <summary className="cursor-pointer px-3 py-2 font-medium">{context.title}</summary>
+      <pre className="max-h-60 overflow-y-auto px-3 pb-3 font-mono whitespace-pre-wrap text-muted">{context.text}</pre>
+    </details>
+  )
+}
+
+function MaymunFace({
+  svgRef,
+  pupilRefs,
+}: {
+  svgRef: React.RefObject<SVGSVGElement | null>
+  pupilRefs: React.RefObject<(SVGGElement | null)[]>
+}) {
+  const line = { stroke: '#7c2d12', strokeWidth: 2, strokeLinecap: 'round' as const, fill: 'none' }
+  return (
+    <svg ref={svgRef} viewBox="0 0 100 100" className="maymun size-full" data-mood="calm" aria-hidden>
+      <g className="m-part m-ear-l">
+        <path d="M14 44 L20 5 L44 26 Z" fill="#fb923c" stroke="#9a3412" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M21 34 L23 15 L36 26 Z" fill="#fda4af" />
+      </g>
+      <g className="m-part m-ear-r">
+        <path d="M56 26 L80 5 L86 44 Z" fill="#fb923c" stroke="#9a3412" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M64 26 L77 15 L79 34 Z" fill="#fda4af" />
+      </g>
+      <ellipse cx="50" cy="57" rx="41" ry="34" fill="#fb923c" stroke="#9a3412" strokeWidth="2" />
+      <g stroke="#c2410c" strokeWidth="3" strokeLinecap="round">
+        <path d="M44 25 L45 36" />
+        <path d="M50 24 L50 37" />
+        <path d="M56 25 L55 36" />
+        <path d="M10 58 L20 60" />
+        <path d="M11 67 L20 66" />
+        <path d="M90 58 L80 60" />
+        <path d="M89 67 L80 66" />
+      </g>
+      <ellipse cx="50" cy="72" rx="17" ry="12" fill="#fff7ed" />
+      {[0, 1].map((i) => (
+        <g key={i} className="m-part m-lid">
+          <g className="m-part m-eye">
+            <ellipse cx={EYES[i].x} cy={EYES[i].y} rx="9" ry="10" fill="#ffffff" stroke="#7c2d12" strokeWidth="1.5" />
+            <g
+              ref={(el) => {
+                pupilRefs.current[i] = el
+              }}
+            >
+              <g className="m-part m-pupil">
+                <circle cx={EYES[i].x} cy={EYES[i].y + 1} r="4.8" fill="#1c1917" />
+                <circle cx={EYES[i].x + 1.6} cy={EYES[i].y - 1} r="1.6" fill="#ffffff" />
+              </g>
+            </g>
+          </g>
+        </g>
+      ))}
+      <path className="m-part m-brow" d="M24 37 L42 43" {...line} strokeWidth="3" />
+      <path className="m-part m-brow" d="M76 37 L58 43" {...line} strokeWidth="3" />
+      <ellipse className="m-part m-blush" cx="23" cy="67" rx="6" ry="3.5" fill="#f472b6" />
+      <ellipse className="m-part m-blush" cx="77" cy="67" rx="6" ry="3.5" fill="#f472b6" />
+      <path d="M46 65 L54 65 L50 69 Z" fill="#f472b6" />
+      <path className="m-part m-mouth" d="M50 69 Q46 75 42 73 M50 69 Q54 75 58 73" {...line} strokeWidth="1.8" />
+      <path className="m-part m-mouth-open" d="M43 71 Q50 83 57 71 Q50 75 43 71 Z" fill="#9f1239" />
+      <g {...line} strokeWidth="1.2" stroke="#7c2d12" opacity="0.7">
+        <path d="M34 72 L14 70" />
+        <path d="M34 75 L15 78" />
+        <path d="M66 72 L86 70" />
+        <path d="M66 75 L85 78" />
+      </g>
+      <g className="m-part m-paw">
+        <ellipse cx="18" cy="93" rx="12" ry="7" fill="#fb923c" stroke="#9a3412" strokeWidth="2" />
+        <path d="M14 89 L14 96 M19 88 L19 97 M24 89 L24 96" stroke="#9a3412" strokeWidth="1.2" />
+      </g>
+    </svg>
+  )
+}

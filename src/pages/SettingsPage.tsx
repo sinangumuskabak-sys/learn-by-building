@@ -7,6 +7,7 @@ import { useI18n } from '../i18n/i18n.ts'
 import { langs } from '../i18n/messages.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { fontSizes, settingsStore, themeStore, useSettings, useTheme } from '../lib/settings.ts'
+import { maymunStore, useMaymunSettings } from '../maymun/store.ts'
 import { progressActions } from '../progress/progress.ts'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -66,6 +67,7 @@ export function SettingsPage() {
   const { t, lang, setLang } = useI18n()
   const theme = useTheme()
   const { fontSize } = useSettings()
+  const maymun = useMaymunSettings()
   const fileInput = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   useDocumentTitle(t('settings.title'))
@@ -107,6 +109,17 @@ export function SettingsPage() {
             value={lang}
             onChange={setLang}
             options={langs.map((code) => ({ value: code, label: code === 'en' ? 'English' : 'Türkçe' }))}
+          />
+        </Row>
+        <Row label={t('settings.maymun')} hint={t('settings.maymunHint')}>
+          <Segmented
+            label={t('settings.maymun')}
+            value={maymun.visible ? 'show' : 'hide'}
+            onChange={(value) => maymunStore.set({ visible: value === 'show' })}
+            options={[
+              { value: 'show', label: t('settings.show') },
+              { value: 'hide', label: t('settings.hide') },
+            ]}
           />
         </Row>
       </Section>

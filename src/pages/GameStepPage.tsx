@@ -27,6 +27,8 @@ import { buildPlayDocument } from '../games/play-document.ts'
 import { referenceStart, stepKey, type Game, type GameStep, type GameSummary } from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDebouncedEffect, useDocumentTitle, useMediaQuery } from '../lib/hooks.ts'
+import { formatChecks, useMaymunContext } from '../maymun/context.ts'
+import { trackFrame } from '../maymun/tracker.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
 import { allPassed, type RunResult } from '../runners/types.ts'
 import { NotFoundPage } from './NotFoundPage.tsx'
@@ -296,6 +298,7 @@ function GameFrame({
         srcDoc={doc}
         sandbox="allow-scripts allow-same-origin"
         onLoad={() => {
+          if (frame.current) trackFrame(frame.current)
           if (focusOnLoad) focusGame()
         }}
         className="absolute inset-0 size-full border-0"
@@ -400,8 +403,34 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     </Button>
   )
 
+  useMaymunContext('code', () => ({
+    title: `${l(game.title)} — ${l(step.title)} — game.js`,
+    text: [
+      `Task:\n${l(step.task)}`,
+      `Code (game.js):\n${code}`,
+      result ? `Checks:\n${formatChecks(result)}` : 'Checks: not run yet.',
+      crash ? `Game crashed: ${crash}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  }))
+  useMaymunContext('game', () => ({
+    title: `${l(game.title)} — ${l(step.title)}`,
+    text: [
+      crash ? `Game crashed: ${crash}` : 'The game is running.',
+      result && result.logs.length > 0 ? `Console:\n${result.logs.join('\n')}` : '',
+      `Code (game.js):\n${code}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  }))
+  useMaymunContext('results', () => ({
+    title: `${l(game.title)} — ${l(step.title)} — ${t('game.checks')}`,
+    text: [result ? formatChecks(result) : 'Checks: not run yet.', `Code (game.js):\n${code}`].join('\n\n'),
+  }))
+
   const editor = (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
+    <div data-maymun="code" className="flex h-full min-h-0 flex-col bg-surface">
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
         <span className="min-w-0 flex-1 truncate px-2 font-mono text-xs text-muted">game.js</span>
         <ConfirmButton
@@ -441,7 +470,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   )
 
   const gameView = (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-maymun="game" className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
         <span className="flex-1 text-xs font-semibold tracking-wide text-muted uppercase">{t('game.preview')}</span>
         <IconButton label={t('game.restart')} onClick={restart}>
@@ -462,7 +491,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   )
 
   const checks = (
-    <section className="h-full space-y-3 overflow-y-auto bg-surface p-4">
+    <section data-maymun="results" className="h-full space-y-3 overflow-y-auto bg-surface p-4">
       <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">{t('game.checks')}</h2>
       <ResultSummary step={step} result={result} />
       {result && allPassed(result) && <StepDone game={game} index={index} />}
@@ -483,7 +512,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
         <Panel defaultSize="50%" minSize="30%">
           <Group orientation="vertical" className="h-full">
             <Panel defaultSize="45%" minSize="15%">
-              <div tabIndex={0} className="h-full overflow-y-auto">
+              <div tabIndex={0} data-maymun="task" className="h-full overflow-y-auto">
                 <StepText game={game} index={index} />
               </div>
             </Panel>
@@ -533,7 +562,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
           ))}
         </div>
         <div className="min-h-0 flex-1">
-          <div tabIndex={0} className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
+          <div tabIndex={0} data-maymun="task" className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
             <StepText game={game} index={index} />
           </div>
           <div className={clsx('h-full', mobileTab !== 'code' && 'hidden')}>{editor}</div>

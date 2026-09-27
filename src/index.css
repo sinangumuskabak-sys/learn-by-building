@@ -149,3 +149,75 @@ body {
 .markdown-inline code {
   font-variant-ligatures: none;
 }
+
+/* Maymun the cat: moods switch through data attributes on the svg, each part eases on its own. */
+.maymun .m-part {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+.maymun .m-mouth-open,
+.maymun .m-brow {
+  opacity: 0;
+}
+.maymun[data-mood='angry'] .m-brow {
+  opacity: 1;
+}
+.maymun[data-mood='angry'] .m-eye {
+  transform: scale(1.18);
+}
+.maymun[data-mood='angry'] .m-pupil {
+  transform: scale(0.7);
+}
+.maymun[data-mood='angry'] .m-ear-l {
+  transform: rotate(-14deg);
+}
+.maymun[data-mood='angry'] .m-ear-r {
+  transform: rotate(14deg);
+}
+.maymun[data-mood='angry'] .m-blush {
+  opacity: 0;
+}
+.maymun[data-mood='excited'] .m-pupil {
+  transform: scale(1.3);
+}
+.maymun[data-mood='excited'] .m-mouth {
+  opacity: 0;
+}
+.maymun[data-mood='excited'] .m-mouth-open {
+  opacity: 1;
+}
+.maymun[data-mood='excited'] .m-blush {
+  transform: scale(1.3);
+}
+.maymun[data-mood='excited'] .m-paw {
+  animation: maymun-wave 0.6s ease-in-out infinite alternate;
+}
+.maymun .m-lid {
+  transition-duration: 0.07s;
+}
+.maymun[data-blink] .m-lid {
+  transform: scaleY(0.1);
+}
+.maymun-head {
+  transition: transform 0.2s ease;
+}
+.maymun-head:hover {
+  transform: translateX(-6px);
+}
+@keyframes maymun-wave {
+  to {
+    transform: translateY(-5px) rotate(-10deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .maymun .m-part,
+  .maymun-head {
+    transition: none;
+  }
+  .maymun[data-mood='excited'] .m-paw {
+    animation: none;
+  }
+}
