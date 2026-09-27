@@ -1,0 +1,20 @@
+{
+  "id": "solitaire",
+  "order": 38,
+  "title": { "en": "Klondike Solitaire", "tr": "Klondike Solitaire" },
+  "description": {
+    "en": "The classic card game, built from piles. Thirteen piles in one object, overlapping columns, the rules as pure functions, tap to move, drag and drop with a grab offset, a win check after every move, and undo with a stack of snapshots.",
+    "tr": "Yığınlardan kurulan klasik kart oyunu. Tek nesnede on üç yığın, üst üste binen sütunlar, saf fonksiyon olarak kurallar, dokunarak taşıma, tutma noktası korunan sürükle-bırak, her hamleden sonra kazanma kontrolü ve anlık görüntü yığınıyla geri alma."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 480, "height": 560 },
+  "color": "#166534",
+  "skills": ["prog.arrays", "prog.functions", "game.input", "game.state"],
+  "extend": [
+    { "en": "Draw three: turn over three cards at a time, playing only the top one.", "tr": "Üçlü çekiş: kartları üçer üçer çevir, yalnızca üsttekini oyna." },
+    { "en": "When every card is face up, finish the game automatically, one card per few frames.", "tr": "Her kart açıkken oyunu birkaç karede bir kartla kendiliğinden bitir." },
+    { "en": "A hint key that shows one legal move.", "tr": "Geçerli bir hamle gösteren bir ipucu tuşu." },
+    { "en": "Slide cards to their new place instead of jumping.", "tr": "Kartları zıplatmak yerine yeni yerlerine kaydır." },
+    { "en": "A cascade of bouncing cards when you win.", "tr": "Kazanınca seken kartlardan bir şelale." }
+  ]
+}
