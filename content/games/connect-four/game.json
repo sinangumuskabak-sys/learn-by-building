@@ -1,0 +1,20 @@
+{
+  "id": "connect-four",
+  "order": 15,
+  "title": { "en": "Connect Four", "tr": "Dört Bağla" },
+  "description": {
+    "en": "Drop discs into the columns and get four in a row before the computer does. A 2D array with gravity, a falling animation, checking lines in four directions, and a computer opponent that wins, blocks and thinks one move ahead.",
+    "tr": "Diskleri sütunlara bırak ve bilgisayardan önce dördünü yan yana getir. Yerçekimli iki boyutlu bir dizi, düşme animasyonu, dört yönde çizgi kontrolü ve kazanan, engelleyen, bir hamle ileriyi düşünen bir bilgisayar rakip."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 448, "height": 520 },
+  "color": "#1d4ed8",
+  "skills": ["prog.arrays", "game.state", "game.input"],
+  "extend": [
+    { "en": "A harder computer: look two or more moves ahead with minimax, like the tic-tac-toe game.", "tr": "Daha zor bir bilgisayar: XOX oyunundaki gibi minimax ile iki ya da daha fazla hamle ileriye bak." },
+    { "en": "Let the loser of the last game start the next one.", "tr": "Son oyunu kaybeden sonrakine başlasın." },
+    { "en": "Make the disc bounce a little when it lands.", "tr": "Disk yere inince biraz zıplasın." },
+    { "en": "An undo button for games against a friend.", "tr": "Arkadaşla oynanan oyunlar için bir geri al düğmesi." },
+    { "en": "A bigger board, 9 by 7, where you need five in a row.", "tr": "Beş tane yan yana gereken 9'a 7 daha büyük bir tahta." }
+  ]
+}
