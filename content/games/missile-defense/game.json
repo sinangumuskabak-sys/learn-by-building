@@ -1,0 +1,20 @@
+{
+  "id": "missile-defense",
+  "order": 135,
+  "title": { "en": "Missile Command-style Defense", "tr": "Missile Command Tarzı Savunma" },
+  "description": {
+    "en": "Click the sky to fire interceptors and protect six cities from falling missiles. Moving towards a target at a set speed, explosions that grow and shrink, chain reactions, limited ammo, waves and missiles that split.",
+    "tr": "Gökyüzüne tıklayarak önleyici füzeler at ve altı şehri düşen füzelerden koru. Bir hedefe belirli bir hızla ilerlemek, büyüyüp küçülen patlamalar, zincirleme tepkimeler, sınırlı cephane, dalgalar ve bölünen füzeler."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 480, "height": 400 },
+  "color": "#f87171",
+  "skills": ["game.input", "game.collision", "game.state", "game.loop"],
+  "extend": [
+    { "en": "Three bases instead of one: fire from the base closest to where you click.", "tr": "Bir yerine üç üs: tıkladığın yere en yakın üsten ateş et." },
+    { "en": "A bomber plane that flies across the sky dropping missiles.", "tr": "Gökyüzünü geçerken füze bırakan bir bombardıman uçağı." },
+    { "en": "Rebuild one lost city every 10000 points.", "tr": "Her 10000 puanda kaybedilen bir şehri yeniden kur." },
+    { "en": "Show a crosshair where the mouse is.", "tr": "Farenin olduğu yerde bir nişangâh göster." },
+    { "en": "Screen shake when a city is hit.", "tr": "Bir şehir vurulunca ekran sarsıntısı." }
+  ]
+}
