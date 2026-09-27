@@ -1,0 +1,20 @@
+{
+  "id": "rhythm",
+  "order": 39,
+  "title": { "en": "Rhythm Lanes", "tr": "Ritim Şeritleri" },
+  "description": {
+    "en": "Hit the notes as they reach the line. A song written as text, notes placed by time and drawn from the clock, timing windows for perfect and good, misses, combos that raise a multiplier, accuracy and a grade, and lanes you can tap on a phone.",
+    "tr": "Notalar çizgiye ulaştıkça onlara vur. Metin olarak yazılmış bir şarkı, zamana göre yerleştirilip saatten çizilen notalar, kusursuz ve iyi için zamanlama pencereleri, ıskalar, çarpanı yükselten kombolar, doğruluk ve not, ve telefonda dokunulabilen şeritler."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 560 },
+  "color": "#f43f5e",
+  "skills": ["game.input", "game.state", "game.loop", "prog.arrays"],
+  "extend": [
+    { "en": "Use performance.now() instead of frames, so the song keeps time on a 120 Hz screen too.", "tr": "Şarkı 120 Hz bir ekranda da zamanı tutsun diye kareler yerine performance.now() kullan." },
+    { "en": "A beep for every hit with the Web Audio API, higher for each lane.", "tr": "Web Audio API ile her vuruşta, her şerit için daha tiz bir bip." },
+    { "en": "Long notes that must be held until their tail passes the line.", "tr": "Kuyruğu çizgiyi geçene kadar basılı tutulması gereken uzun notalar." },
+    { "en": "A second, harder chart, and a menu to choose one.", "tr": "İkinci, daha zor bir çizelge ve birini seçmek için bir menü." },
+    { "en": "A speed setting that changes SPEED without changing the timing.", "tr": "Zamanlamayı değiştirmeden SPEED'i değiştiren bir hız ayarı." }
+  ]
+}
