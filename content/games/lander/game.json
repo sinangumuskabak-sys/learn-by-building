@@ -1,0 +1,20 @@
+{
+  "id": "lander",
+  "order": 85,
+  "title": { "en": "Lunar Lander", "tr": "Ay'a İniş" },
+  "description": {
+    "en": "Fire the engine and tilt the lander to touch down gently on the pad. Random terrain, gravity and thrust along an angle with sin and cos, rotating drawings, the rules of a safe landing, and debris when it goes wrong.",
+    "tr": "Motoru çalıştır ve iniş aracını eğerek pistin üstüne yumuşakça in. Rastgele arazi, sin ve cos ile bir açı boyunca yerçekimi ve itki, döndürülen çizimler, güvenli inişin kuralları ve işler ters gidince enkaz."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 480, "height": 360 },
+  "color": "#94a3b8",
+  "skills": ["game.physics", "game.input", "game.collision", "game.state"],
+  "extend": [
+    { "en": "Stars in the sky, and a camera that zooms in as the lander gets close to the ground.", "tr": "Gökyüzünde yıldızlar ve iniş aracı yere yaklaştıkça yakınlaşan bir kamera." },
+    { "en": "Several pads worth different points: narrow ones pay more.", "tr": "Farklı puanlı birkaç pist: dar olanlar daha çok kazandırır." },
+    { "en": "Wind that pushes the lander sideways, changing every few seconds.", "tr": "İniş aracını yana iten, birkaç saniyede bir değişen rüzgâr." },
+    { "en": "A short engine sound while thrusting, using the Web Audio API.", "tr": "İtki sırasında Web Audio API ile kısa bir motor sesi." },
+    { "en": "Smoother hills: add a little random noise between the points.", "tr": "Daha yumuşak tepeler: noktaların arasına biraz rastgele gürültü ekle." }
+  ]
+}
