@@ -1,0 +1,20 @@
+{
+  "id": "simon",
+  "order": 12,
+  "title": { "en": "Simon Says Colors", "tr": "Renk Hafızası (Simon)" },
+  "description": {
+    "en": "Watch the pads light up and repeat the sequence, one more color every round. Timers that drive a show, turns between the computer and the player, checking answers step by step, and a game that speeds up.",
+    "tr": "Tuşların yanışını izle ve diziyi tekrarla; her turda bir renk daha. Bir gösteriyi yöneten sayaçlar, bilgisayar ile oyuncu arasında sıralar, cevapları adım adım kontrol etmek ve hızlanan bir oyun."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 440 },
+  "color": "#22c55e",
+  "skills": ["game.state", "game.loop", "prog.arrays"],
+  "extend": [
+    { "en": "A tone for each pad with the Web Audio API: an oscillator at a different frequency per color.", "tr": "Web Audio API ile her tuş için bir ses: her renk için farklı frekansta bir osilatör." },
+    { "en": "Round pads arranged in a circle, drawn with arc.", "tr": "arc ile çizilen, bir daire üzerinde dizili yuvarlak tuşlar." },
+    { "en": "A strict mode where waiting too long in your turn also loses.", "tr": "Sırandayken fazla beklemenin de kaybettirdiği katı bir mod." },
+    { "en": "Replay the whole sequence slowly when the player makes a mistake, so they see what it was.", "tr": "Oyuncu hata yapınca bütün diziyi yavaşça yeniden göster; ne olduğunu görsün." },
+    { "en": "Six pads instead of four for experts.", "tr": "Uzmanlar için dört yerine altı tuş." }
+  ]
+}
