@@ -1,0 +1,20 @@
+{
+  "id": "memory",
+  "order": 20,
+  "title": { "en": "Memory", "tr": "Hafıza Kartları" },
+  "description": {
+    "en": "Flip cards two at a time and find the pairs. Shuffling fairly, finding what was clicked, timers, and a card-flip animation.",
+    "tr": "Kartları ikişer ikişer çevir ve eşlerini bul. Adil karıştırma, neye tıklandığını bulma, zamanlayıcılar ve kart çevirme animasyonu."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 400, "height": 440 },
+  "color": "#8b5cf6",
+  "skills": ["prog.arrays", "game.input", "game.state", "game.loop"],
+  "extend": [
+    { "en": "Save the best (fewest) moves in `localStorage` and show it next to the move counter.", "tr": "En iyi (en az) hamle sayısını `localStorage`'a kaydet ve hamle sayacının yanında göster." },
+    { "en": "Add a timer that starts on the first flip and stops when the last pair is found.", "tr": "İlk çevirişte başlayıp son eş bulununca duran bir zamanlayıcı ekle." },
+    { "en": "Difficulty levels: a 6×6 board with 18 pairs. Only the constants and the symbol list should need to change.", "tr": "Zorluk seviyeleri: 18 çiftli 6×6 tahta. Yalnızca sabitler ve sembol listesi değişmeli." },
+    { "en": "Make a wrong pair shake left and right before flipping back.", "tr": "Yanlış çift geri dönmeden önce sağa sola sallansın." },
+    { "en": "Keyboard play: move a highlight with the arrow keys and flip with Enter.", "tr": "Klavyeyle oyun: ok tuşlarıyla bir vurguyu gezdir, Enter ile çevir." }
+  ]
+}
