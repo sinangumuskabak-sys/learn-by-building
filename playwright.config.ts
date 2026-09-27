@@ -6,7 +6,9 @@ export default defineConfig({
   testMatch: '*.e2e.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // One retry everywhere: locally the preview server on Windows now and then refuses a single connection when four
+  // browsers load at once (a trace showed ERR_CONNECTION_REFUSED on an asset). Retried tests are still reported as flaky.
+  retries: 1,
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: 'http://localhost:4173', locale: 'en-US', trace: 'retain-on-failure' },
   projects: [
