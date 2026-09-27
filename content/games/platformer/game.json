@@ -1,0 +1,21 @@
+{
+  "id": "platformer",
+  "order": 100,
+  "title": { "en": "Mario-style Platformer", "tr": "Mario Tarzı Platform" },
+  "description": {
+    "en": "Run, jump and stomp through a scrolling level to the flag. A level made of text, tile collisions, acceleration, coyote time, a camera, enemies and stomping.",
+    "tr": "Kayan bir bölümde koş, zıpla, düşmanları ez ve bayrağa ulaş. Metinden bir bölüm, döşeme çarpışmaları, ivme, coyote time, kamera, düşmanlar ve ezme."
+  },
+  "difficulty": "advanced",
+  "canvas": { "width": 640, "height": 352 },
+  "color": "#dc2626",
+  "skills": ["game.physics", "game.collision", "game.input", "game.state", "game.loop", "prog.arrays"],
+  "extend": [
+    { "en": "Question blocks: a '?' tile that gives a coin when you hit it from below (check the tile above the player's head in moveY).", "tr": "Soru blokları: alttan vurunca altın veren bir '?' döşemesi (moveY'de oyuncunun başının üstündeki döşemeye bak)." },
+    { "en": "Parallax: draw hills that scroll at a third of the camera speed behind the tiles.", "tr": "Paralaks: döşemelerin arkasında kamera hızının üçte biriyle kayan tepeler çiz." },
+    { "en": "Jump buffering: remember a jump pressed up to 6 frames before landing and do it on landing.", "tr": "Zıplama tamponu: yere inmeden en fazla 6 kare önce basılan zıplamayı hatırla ve inince uygula." },
+    { "en": "A second level: make LEVEL an array of levels and load the next one at the flag.", "tr": "İkinci bölüm: LEVEL'ı bölümlerden oluşan bir diziye çevir ve bayrakta bir sonrakini yükle." },
+    { "en": "Invincibility after respawning: blink the player and ignore enemies for 2 seconds.", "tr": "Yeniden doğunca dokunulmazlık: oyuncuyu yakıp söndür ve 2 saniye düşmanları yok say." },
+    { "en": "Draw sprites instead of rectangles: load a PNG with new Image() and use ctx.drawImage.", "tr": "Dikdörtgenler yerine görseller çiz: new Image() ile bir PNG yükle ve ctx.drawImage kullan." }
+  ]
+}
