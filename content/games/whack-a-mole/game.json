@@ -1,0 +1,20 @@
+{
+  "id": "whack-a-mole",
+  "order": 25,
+  "title": { "en": "Whack-a-Mole", "tr": "Köstebek Vurmaca" },
+  "description": {
+    "en": "Moles pop out of holes; click them before they hide. Time-based state, circle hit tests, a timed round and a difficulty curve.",
+    "tr": "Köstebekler deliklerden çıkar; saklanmadan önce onlara tıkla. Zamana dayalı durum, daire isabet testi, süreli tur ve zorluk eğrisi."
+  },
+  "difficulty": "beginner",
+  "canvas": { "width": 360, "height": 400 },
+  "color": "#a16207",
+  "skills": ["game.input", "game.collision", "game.state", "game.loop"],
+  "extend": [
+    { "en": "Add a golden mole that appears rarely, stays up briefly and is worth 5 points.", "tr": "Nadiren çıkan, kısa süre kalan ve 5 puan değerinde altın bir köstebek ekle." },
+    { "en": "Add bombs: clicking one costs 3 points. Draw them in a different color.", "tr": "Bombalar ekle: birine tıklamak 3 puan götürsün. Farklı renkte çiz." },
+    { "en": "Animate moles rising out of the hole instead of appearing instantly.", "tr": "Köstebekleri bir anda belirmek yerine delikten yükselerek çıkacak şekilde canlandır." },
+    { "en": "Show a hammer at the pointer position that swings down on each click.", "tr": "İşaretçinin olduğu yerde her tıklamada aşağı inen bir çekiç göster." },
+    { "en": "Combos: three hits in a row without a miss give a bonus point.", "tr": "Kombolar: ıskalamadan arka arkaya üç vuruş bir bonus puan versin." }
+  ]
+}
