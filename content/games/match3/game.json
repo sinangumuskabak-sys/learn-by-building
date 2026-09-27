@@ -1,0 +1,20 @@
+{
+  "id": "match3",
+  "order": 28,
+  "title": { "en": "Candy Crush-style Match 3", "tr": "Candy Crush Tarzı Üçlü Eşleştirme" },
+  "description": {
+    "en": "Swap neighbouring gems to line up three of a color. A starting board with no matches, finding runs with a Set, gravity with two pointers, cascades that score more and more, a state machine for flashing and falling, a hint found by trying every move, and a move budget.",
+    "tr": "Aynı renkten üçünü sıraya dizmek için yan yana mücevherleri takas et. Eşleşmesiz bir başlangıç tahtası, bir Set ile sıraları bulmak, iki işaretçiyle yerçekimi, giderek daha çok puan getiren zincirlemeler, yanıp sönme ve düşüş için bir durum makinesi, her hamleyi deneyerek bulunan bir ipucu ve bir hamle bütçesi."
+  },
+  "difficulty": "intermediate",
+  "canvas": { "width": 400, "height": 480 },
+  "color": "#ec4899",
+  "skills": ["prog.arrays", "game.state", "game.input", "prog.loops"],
+  "extend": [
+    { "en": "Swap the gems with a short sliding animation, and slide them back when the swap fails.", "tr": "Mücevherleri kısa bir kayma animasyonuyla takas et ve takas başarısız olunca geri kaydır." },
+    { "en": "A match of four creates a striped gem that clears its whole row when it is matched.", "tr": "Dörtlü bir eşleşme, eşleştiğinde bütün satırını temizleyen çizgili bir mücevher yaratsın." },
+    { "en": "Swipe to swap on a phone: pointerdown on one gem, pointerup towards a neighbour.", "tr": "Telefonda kaydırarak takas: bir mücevherde pointerdown, bir komşuya doğru pointerup." },
+    { "en": "Levels with a target score: reach it within the moves to unlock the next level.", "tr": "Hedef puanlı seviyeler: sonraki seviyeyi açmak için hamleler bitmeden ona ulaş." },
+    { "en": "Floating +30 numbers where the gems were cleared.", "tr": "Mücevherlerin temizlendiği yerde yükselen +30 sayıları." }
+  ]
+}
