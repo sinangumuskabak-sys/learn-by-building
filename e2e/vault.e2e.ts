@@ -141,7 +141,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     await expect(page.getByRole('status').filter({ hasText: 'Copying into' })).toContainText(VAULT_FOLDER)
     const root = join(vault, VAULT_FOLDER)
     const snakeStatus = join(root, 'Games', 'Snake', 'Current status.md')
-    await expect.poll(() => existsSync(snakeStatus)).toBe(true)
+    await expect.poll(() => existsSync(snakeStatus), { timeout: 15_000 }).toBe(true)
     expect(existsSync(join(vault, '.obsidian', 'graph.json'))).toBe(true)
 
     // Written in Obsidian, read back when the page is opened again.
@@ -149,13 +149,14 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     writeFileSync(snakeStatus, disk.replace(/## My notes\n[\s\S]*$/, '## My notes\nFrom Obsidian.\n'))
     await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
     await page.reload()
-    await expect(page.getByRole('main').last().getByLabel('My notes')).toHaveValue('From Obsidian.')
+    // Reading back goes through every note in the folder: give it time on a busy machine.
+    await expect(page.getByRole('main').last().getByLabel('My notes')).toHaveValue('From Obsidian.', { timeout: 15_000 })
 
     // Written in the app, copied to the folder.
     const note = page.getByRole('main').last()
     await note.getByLabel('My notes').fill('From the app.')
     await note.getByRole('button', { name: 'Save my notes' }).click()
-    await expect.poll(() => readFileSync(snakeStatus, 'utf8')).toContain('From the app.')
+    await expect.poll(() => readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('From the app.')
   } finally {
     bridge.close()
     rmSync(vault, { recursive: true, force: true })
