@@ -30,7 +30,7 @@ function NextStep({ entry }: { entry: ChallengeEntry }) {
   const link = useRef<HTMLAnchorElement>(null)
   const wasPassed = useRef(passed)
   useEffect(() => {
-    if (passed && !wasPassed.current) link.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    if (passed && !wasPassed.current) link.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
     wasPassed.current = passed
   }, [passed])
   if (!passed || !next) return null
