@@ -94,6 +94,7 @@ const en = {
   'challenge.solutionConfirm': 'Replace your code with the reference solution?',
 
   'skills.title': 'Skill map',
+  'skills.levels': 'Levels',
   'skills.subtitle':
     'Each skill’s level is the highest level among the challenges you completed for it. Levels go from 0 (Awareness) to 8 (Teach).',
   'skills.evidence': 'Evidence',
@@ -116,7 +117,7 @@ const en = {
   'settings.reset': 'Reset progress',
   'settings.resetConfirm': 'Delete all progress on this device? This cannot be undone.',
   'settings.maymun': 'Maymun the cat',
-  'settings.maymunHint': 'An orange cat that peeks in beside the panel you are working in and knows what is on it.',
+  'settings.maymunHint': 'An orange cat peeking in from the right edge of the screen. Click it to ask about the panel you are working in.',
   'settings.show': 'Show',
   'settings.hide': 'Hide',
   'maymun.name': 'Maymun',
@@ -325,6 +326,7 @@ const tr: Record<MessageKey, string> = {
   'challenge.solutionConfirm': 'Kodun örnek çözümle değiştirilsin mi?',
 
   'skills.title': 'Beceri haritası',
+  'skills.levels': 'Seviyeler',
   'skills.subtitle':
     'Her becerinin seviyesi, o beceride tamamladığın görevlerin en yüksek seviyesidir. Seviyeler 0 (Farkındalık) ile 8 (Öğretme) arasındadır.',
   'skills.evidence': 'Kanıt',
@@ -347,7 +349,7 @@ const tr: Record<MessageKey, string> = {
   'settings.reset': 'İlerlemeyi sıfırla',
   'settings.resetConfirm': 'Bu cihazdaki tüm ilerleme silinsin mi? Geri alınamaz.',
   'settings.maymun': 'Kedi Maymun',
-  'settings.maymunHint': 'Çalıştığın panelin yanından başını uzatan, o panelde ne olduğunu bilen turuncu bir kedi.',
+  'settings.maymunHint': 'Ekranın sağ kenarından başını uzatan turuncu bir kedi. Tıklayıp çalıştığın panel hakkında soru sorabilirsin.',
   'settings.show': 'Göster',
   'settings.hide': 'Gizle',
   'maymun.name': 'Maymun',

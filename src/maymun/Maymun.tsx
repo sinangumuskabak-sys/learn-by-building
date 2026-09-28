@@ -9,8 +9,6 @@ import { readContext } from './context.ts'
 import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
 import { currentPanel, pointer, startTracking } from './tracker.ts'
 
-const SIZE = 88 // rendered width and height of the head, in pixels
-const HIDDEN = 20 // how much of the head stays behind the window's right edge
 const MARGIN = 12 // the popup keeps this far from the window edges
 const HEADER = 64 // and stays below the app header
 const MIN_BOX = { width: 288, height: 320 } // the chat box cannot be dragged smaller than this
@@ -54,7 +52,7 @@ export function Maymun() {
 
       // Eyes: each pupil moves a little towards the pointer.
       const rect = button.getBoundingClientRect()
-      const scale = SIZE / 100
+      const scale = rect.width / 100
       EYES.forEach((eye, i) => {
         const g = pupils.current[i]
         if (!g) return
@@ -141,7 +139,6 @@ export function Maymun() {
           aria-expanded={open}
           title={t('maymun.ask')}
           className="maymun-head pointer-events-auto absolute cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          style={{ width: SIZE, height: SIZE, right: -HIDDEN, top: `calc(50% - ${SIZE / 2}px)` }}
         >
           <MaymunFace svgRef={svg} pupilRefs={pupils} />
         </button>

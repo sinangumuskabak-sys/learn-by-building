@@ -187,8 +187,9 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
 
   const editorPanel = (
     <div data-maymun="code" className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-        <div role="tablist" aria-label={t('challenge.tabCode')} className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
+      {/* Every file tab stays visible (a task may send the learner to any file); the buttons wrap below if needed. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
+        <div role="tablist" aria-label={t('challenge.tabCode')} className="flex min-w-fit flex-1 flex-wrap gap-1">
           {files.map((f, index) => (
             <button
               key={f.name}

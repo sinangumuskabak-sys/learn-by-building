@@ -26,9 +26,13 @@ export function SkillsPage() {
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('skills.title')}</h1>
       <p className="mt-2 max-w-2xl text-muted">{t('skills.subtitle')}</p>
 
-      <ol className="mt-6 grid grid-cols-3 gap-2 text-xs sm:grid-cols-9" aria-label="Levels">
+      <ol className="mt-6 grid grid-cols-3 gap-2 text-xs sm:grid-cols-9" aria-label={t('skills.levels')}>
         {levels.map((level) => (
-          <li key={level} className="rounded-lg border border-border bg-surface px-2 py-1.5 text-center">
+          <li
+            key={level}
+            title={t(`level.${level}.hint` as `level.0.hint`)}
+            className="rounded-lg border border-border bg-surface px-2 py-1.5 text-center"
+          >
             <span className="block font-semibold text-accent tabular-nums">L{level}</span>
             <span className="block truncate text-muted">{t(`level.${level}` as `level.0`)}</span>
           </li>

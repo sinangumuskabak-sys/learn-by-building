@@ -34,7 +34,7 @@ Give the button the accessible name `Close dialog`, and make the script set the 
    `aria-label="Close dialog"` ekle (metni aynen böyle, İngilizce yaz; test bunu arıyor).
 2. **index.js** dosyasına, sayfadaki `<p id="status">` paragrafının yazısını `ready` yapan tek satırı yaz:
    `document.querySelector('#status').textContent = 'ready'`
-3. Çalıştır.
+3. **Testleri çalıştır** düğmesine bas (ya da `Ctrl + Enter`). Sağdaki **Testler** sekmesinde iki test de yeşil olmalı.
 
 # --hints--
 

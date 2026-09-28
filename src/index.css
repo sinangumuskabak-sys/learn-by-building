@@ -202,7 +202,20 @@ body {
   transform: scaleY(0.1);
 }
 .maymun-head {
-  transition: transform 0.2s ease;
+  /* In the middle of the right edge; smaller on phones, where it would cover the ends of lines. */
+  --maymun-size: 88px;
+  --maymun-hidden: 20px;
+  width: var(--maymun-size);
+  height: var(--maymun-size);
+  right: calc(-1 * var(--maymun-hidden));
+  top: calc(50% - var(--maymun-size) / 2);
+  transition: filter 0.2s ease;
+}
+@media (max-width: 639px) {
+  .maymun-head {
+    --maymun-size: 56px;
+    --maymun-hidden: 12px;
+  }
 }
 .maymun-head:hover {
   filter: brightness(1.08);
