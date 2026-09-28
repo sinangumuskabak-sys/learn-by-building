@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { useI18n } from '../i18n/i18n.ts'
 import { useStore } from '../lib/store.ts'
+import { UI_ATTRIBUTE } from './capture.ts'
 import { MaymunChat } from './Chat.tsx'
 import { readContext } from './context.ts'
 import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
@@ -35,6 +36,7 @@ export function Maymun() {
   const svg = useRef<SVGSVGElement>(null)
   const pupils = useRef<(SVGGElement | null)[]>([])
   const [open, setOpen] = useState(false)
+  const [snipping, setSnipping] = useState(false)
   const [context, setContext] = useState<ReturnType<typeof readContext> | null>(null)
   const [panelEl, setPanelEl] = useState<HTMLElement | null>(null)
   const box = useStore(boxStore)
@@ -181,7 +183,7 @@ export function Maymun() {
 
   return (
     <>
-      <div ref={layer} className="pointer-events-none fixed z-20 hidden overflow-hidden print:hidden">
+      <div ref={layer} {...{ [UI_ATTRIBUTE]: '' }} className="pointer-events-none fixed z-20 hidden overflow-hidden print:hidden">
         <button
           ref={head}
           type="button"
@@ -200,7 +202,8 @@ export function Maymun() {
           ref={popup}
           role="dialog"
           aria-label={t('maymun.name')}
-          className="fixed top-0 left-0 z-40 flex flex-col rounded-xl border border-border bg-surface shadow-xl"
+          {...{ [UI_ATTRIBUTE]: '' }}
+          className={`fixed top-0 left-0 z-40 flex flex-col rounded-xl border border-border bg-surface shadow-xl ${snipping ? 'invisible' : ''}`}
           style={{
             width: `min(${box.width}px, calc(100vw - ${MARGIN * 2}px))`,
             height: `min(${box.height}px, calc(100dvh - ${MARGIN * 2}px))`,
@@ -221,7 +224,7 @@ export function Maymun() {
               <X size={16} />
             </button>
           </div>
-          <MaymunChat panel={panelEl} context={context} />
+          <MaymunChat panel={panelEl} context={context} onSnip={setSnipping} />
           <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted">
             <span className="flex-1">{t('maymun.hideHint')}</span>
             <button

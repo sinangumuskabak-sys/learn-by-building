@@ -218,6 +218,24 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(first.messages[0].content).toContain('Code (game.js)')
   expect(first.messages[1]).toEqual({ role: 'user', content: 'What do I do here?' })
 
+  // A picture of the screen goes along with the next question (a click takes the whole screen); Escape only cancels it.
+  const camera = popup.getByRole('button', { name: 'Take a picture of the screen' })
+  await camera.click()
+  const snip = page.getByRole('dialog', { name: 'Choose what to take a picture of' })
+  await page.keyboard.press('Escape')
+  await expect(snip).toHaveCount(0)
+  await expect(popup).toBeVisible()
+  await camera.click()
+  await expect(popup).toBeHidden()
+  await snip.click({ position: { x: 20, y: 20 } })
+  await expect(popup.getByText('This picture goes with your next question:')).toBeVisible({ timeout: 15_000 })
+  await question.press('Enter')
+  await expect(popup.locator('.markdown')).toHaveCount(2)
+  const withShot = sent[1] as { messages: { content: unknown }[] }
+  const shotContent = withShot.messages.at(-1)!.content as { type: string; text?: string; image_url?: { url: string } }[]
+  expect(shotContent[0]).toEqual({ type: 'text', text: 'Look at this picture.' })
+  expect(shotContent[1].image_url!.url).toMatch(/^data:image\/(png|jpeg);base64,/)
+
   // Resizing from the lower left corner grows the box to the left, and the size is kept.
   const before = (await popup.boundingBox())!
   if (!isMobile(page)) {
@@ -235,6 +253,8 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await page.reload()
   await askAboutCode()
   await expect(popup.locator('.markdown').last()).toHaveText('Try moving the snake.')
+  // The picture itself is gone after a reload (it is big); the chat still says there was one.
+  await expect(popup.getByText('Screenshot (kept only until the page is closed)')).toBeVisible()
   const after = (await popup.boundingBox())!
   expect(Math.round(after.width)).toBe(Math.round(size.width))
   expect(Math.round(after.height)).toBe(Math.round(size.height))
@@ -251,10 +271,10 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await question.fill('And now?')
   await question.press('Enter')
   await expect(popup.locator('.markdown').last()).toHaveText('Claude says hi.')
-  const claude = sent[1] as { model: string; system: string; messages: { role: string; content: string }[] }
+  const claude = sent[2] as { model: string; system: string; messages: { role: string; content: string }[] }
   expect(claude.model).toBe('claude-opus-5')
   expect(claude.system).toContain('Code (game.js)')
-  expect(claude.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user'])
+  expect(claude.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user'])
 
   await popup.getByRole('button', { name: 'Clear the conversation' }).click()
   await expect(popup.locator('.markdown')).toHaveCount(0)

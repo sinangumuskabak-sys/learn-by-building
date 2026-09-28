@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ChatError, readSse, streamChat } from './ai.ts'
+import { ChatError, readSse, streamChat, withImages } from './ai.ts'
 
 /** A response body that arrives in the given pieces. */
 function body(...pieces: string[]) {
@@ -79,5 +79,22 @@ describe('Maymun AI', () => {
     await expect(
       streamChat({ provider: 'openai', key: 'k', model: 'm', system: '', messages: [], signal: abort.signal, onText: () => {} }),
     ).resolves.toBeUndefined()
+  })
+
+  it('sends a picture with its question, and only the latest few pictures again', async () => {
+    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(body('data: [DONE]\n\n')))
+    vi.stubGlobal('fetch', fetch)
+    const pic = (n: number) => `data:image/png;base64,${n}`
+    const messages = [1, 2, 3, 4].map((n) => ({ role: 'user' as const, text: `q${n}`, image: pic(n) }))
+    await streamChat({ provider: 'openai', key: 'k', model: 'm', system: 's', messages, onText: () => {} })
+    const sent = JSON.parse(String(fetch.mock.calls[0][1].body)) as { messages: { content: unknown }[] }
+    expect(sent.messages[1].content).toBe('q1')
+    expect(sent.messages[4].content).toEqual([
+      { type: 'text', text: 'q4' },
+      { type: 'image_url', image_url: { url: pic(4) } },
+    ])
+    expect(sent.messages.filter((m) => Array.isArray(m.content))).toHaveLength(3)
+    // A service that cannot see pictures gets the text only.
+    expect(withImages('deepseek', messages).some((m) => m.image)).toBe(false)
   })
 })

@@ -1,3 +1,5 @@
+import { splitDataUrl } from './capture.ts'
+
 /** The AI services Maymun can talk to with the learner's own key (BYOK). The key never leaves this browser. */
 export type ProviderId = 'openrouter' | 'anthropic' | 'openai' | 'deepseek'
 
@@ -10,13 +12,15 @@ export interface Provider {
   keys: string
   /** OpenAI-compatible chat completions base URL (the Anthropic provider uses its SDK instead). */
   base?: string
+  /** Whether its default models can look at pictures. */
+  images: boolean
 }
 
 export const providers: Provider[] = [
-  { id: 'openrouter', name: 'OpenRouter', model: 'openrouter/auto', keys: 'https://openrouter.ai/keys', base: 'https://openrouter.ai/api/v1' },
-  { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys' },
-  { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1' },
-  { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com' },
+  { id: 'openrouter', name: 'OpenRouter', model: 'openrouter/auto', keys: 'https://openrouter.ai/keys', base: 'https://openrouter.ai/api/v1', images: true },
+  { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys', images: true },
+  { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
+  { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
 ]
 
 export const provider = (id: ProviderId) => providers.find((p) => p.id === id) ?? providers[0]
@@ -24,6 +28,23 @@ export const provider = (id: ProviderId) => providers.find((p) => p.id === id) ?
 export interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
+  /** A picture that went with the message, as a data URL; kept for this visit only. */
+  image?: string
+  /** The message had a picture (still known after a reload, when the picture itself is gone). */
+  shot?: boolean
+}
+
+/** Only the latest pictures go along again with later questions; older ones would cost a lot and rarely help. */
+const MAX_IMAGES = 3
+
+/** The messages with the pictures that should be sent to this provider. */
+export function withImages(id: ProviderId, messages: ChatMessage[]): ChatMessage[] {
+  let left = provider(id).images ? MAX_IMAGES : 0
+  return messages
+    .slice()
+    .reverse()
+    .map((m) => (m.image && left-- > 0 ? m : { ...m, image: undefined }))
+    .reverse()
 }
 
 export interface ChatRequest {
@@ -53,6 +74,7 @@ const kindOf = (status: number): ChatErrorKind =>
 
 /** Streams one answer; resolves when it is complete. Aborting the signal stops it quietly. */
 export async function streamChat(request: ChatRequest): Promise<void> {
+  request = { ...request, messages: withImages(request.provider, request.messages) }
   if (request.provider === 'anthropic') return streamAnthropic(request)
   return streamOpenAiCompatible(request)
 }
@@ -72,7 +94,7 @@ async function streamOpenAiCompatible({ provider: id, key, model, system, messag
       body: JSON.stringify({
         model,
         stream: true,
-        messages: [{ role: 'system', content: system }, ...messages.map((m) => ({ role: m.role, content: m.text }))],
+        messages: [{ role: 'system', content: system }, ...messages.map(openAiMessage)],
       }),
     })
   } catch (error) {
@@ -90,6 +112,23 @@ async function streamOpenAiCompatible({ provider: id, key, model, system, messag
     const text = json.choices?.[0]?.delta?.content
     if (text) onText(text)
   })
+}
+
+const openAiMessage = (m: ChatMessage) => ({
+  role: m.role,
+  content: m.image ? [{ type: 'text', text: m.text }, { type: 'image_url', image_url: { url: m.image } }] : m.text,
+})
+
+const anthropicMessage = (m: ChatMessage) => {
+  if (!m.image) return { role: m.role, content: m.text }
+  const { type, data } = splitDataUrl(m.image)
+  return {
+    role: m.role,
+    content: [
+      { type: 'image' as const, source: { type: 'base64' as const, media_type: type as 'image/png' | 'image/jpeg', data } },
+      { type: 'text' as const, text: m.text },
+    ],
+  }
 }
 
 /** The message inside a provider's JSON error body, or the body itself. */
@@ -137,7 +176,7 @@ async function streamAnthropic({ key, model, system, messages, signal, onText }:
         model,
         max_tokens: 16000,
         system,
-        messages: messages.map((m) => ({ role: m.role, content: m.text })),
+        messages: messages.map(anthropicMessage),
         ...(fallback ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
       },
       { signal },

@@ -48,13 +48,18 @@ export const modelFor = (ai: MaymunAi, id: ProviderId) => ai.models[id] || provi
 
 const MAX_MESSAGES = 60
 
-/** The conversation, kept on this device (the latest messages only). */
-export const chatStore = createPersistedStore<ChatMessage[]>('lp.maymun.chat', [], (raw) =>
-  Array.isArray(raw)
-    ? raw
-        .filter((m): m is ChatMessage => (m?.role === 'user' || m?.role === 'assistant') && typeof m.text === 'string')
-        .slice(-MAX_MESSAGES)
-    : null,
+/** The conversation, kept on this device (the latest messages only; pictures only for this visit, they are big). */
+export const chatStore = createPersistedStore<ChatMessage[]>(
+  'lp.maymun.chat',
+  [],
+  (raw) =>
+    Array.isArray(raw)
+      ? raw
+          .filter((m): m is ChatMessage => (m?.role === 'user' || m?.role === 'assistant') && typeof m.text === 'string')
+          .map((m) => (m.shot === true ? { role: m.role, text: m.text, shot: true } : { role: m.role, text: m.text }))
+          .slice(-MAX_MESSAGES)
+      : null,
+  (messages) => messages.map(({ image, ...m }) => (image ? { ...m, shot: true } : m)),
 )
 
 export const addMessages = (...messages: ChatMessage[]) => chatStore.set((all) => [...all, ...messages].slice(-MAX_MESSAGES))

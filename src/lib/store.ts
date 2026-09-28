@@ -10,7 +10,13 @@ export interface Store<T> {
  * A tiny observable value persisted to localStorage. Storage failures (private mode, quota) are ignored so
  * the app keeps working for the current visit.
  */
-export function createPersistedStore<T>(key: string, fallback: T, parse: (raw: unknown) => T | null): Store<T> {
+export function createPersistedStore<T>(
+  key: string,
+  fallback: T,
+  parse: (raw: unknown) => T | null,
+  /** What is written to storage, when it should differ from the value itself. */
+  save: (value: T) => unknown = (value) => value,
+): Store<T> {
   let value = fallback
   try {
     const raw = localStorage.getItem(key)
@@ -24,7 +30,7 @@ export function createPersistedStore<T>(key: string, fallback: T, parse: (raw: u
     set(next) {
       value = typeof next === 'function' ? (next as (current: T) => T)(value) : next
       try {
-        localStorage.setItem(key, JSON.stringify(value))
+        localStorage.setItem(key, JSON.stringify(save(value)))
       } catch {
         // Keep the in-memory value even when it cannot be saved.
       }

@@ -1,9 +1,11 @@
-import { Send, Square, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Camera, Send, Square, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
-import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ProviderId } from './ai.ts'
+import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ChatMessage, type ProviderId } from './ai.ts'
+import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
+import { Snip } from './Snip.tsx'
 import { addMessages, aiStore, chatStore, modelFor, useMaymunAi } from './store.ts'
 import { useStore } from '../lib/store.ts'
 
@@ -11,9 +13,18 @@ type Context = ReturnType<typeof readContext>
 
 /**
  * The chat with Maymun about one panel. Each question goes with that panel's context as it is when the question is
- * sent; the conversation is kept on this device.
+ * sent; the conversation is kept on this device. A picture of any part of the screen can go along with a question;
+ * `onSnip` hides the chat box while the learner chooses the area.
  */
-export function MaymunChat({ panel, context }: { panel: HTMLElement | null; context: Context }) {
+export function MaymunChat({
+  panel,
+  context,
+  onSnip,
+}: {
+  panel: HTMLElement | null
+  context: Context
+  onSnip?: (active: boolean) => void
+}) {
   const { t, lang } = useI18n()
   const ai = useMaymunAi()
   const messages = useStore(chatStore)
@@ -24,6 +35,30 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
   const controller = useRef<AbortController | null>(null)
   const list = useRef<HTMLDivElement>(null)
   const key = ai.keys[ai.provider]
+  const [shot, setShot] = useState<string | null>(null)
+  const [snipping, setSnipping] = useState(false)
+  const [shotFailed, setShotFailed] = useState(false)
+  const seesImages = provider(ai.provider).images
+
+  const startSnip = () => {
+    setShotFailed(false)
+    setSnipping(true)
+    onSnip?.(true)
+  }
+  const cancelSnip = useCallback(() => {
+    setSnipping(false)
+    onSnip?.(false)
+  }, [onSnip])
+  const pick = async (region: Region) => {
+    setSnipping(false)
+    try {
+      setShot(await captureRegion(region))
+    } catch {
+      setShotFailed(true)
+    } finally {
+      onSnip?.(false)
+    }
+  }
 
   useEffect(() => () => controller.current?.abort(), [])
   useEffect(() => {
@@ -31,12 +66,14 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
   }, [messages, answer, error])
 
   const send = async () => {
-    const question = draft.trim()
+    const image = shot && seesImages ? shot : undefined
+    const question = draft.trim() || (image ? t('maymun.shotQuestion') : '')
     if (!question || !key || controller.current) return
     const current = panel?.isConnected ? readContext(panel) : context
-    const history = [...chatStore.get(), { role: 'user' as const, text: question }]
+    const history = [...chatStore.get(), { role: 'user' as const, text: question, ...(image ? { image } : {}) }]
     addMessages(history[history.length - 1])
     setDraft('')
+    setShot(null)
     setError(null)
     setAnswer('')
     const abort = new AbortController()
@@ -79,7 +116,7 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
         {!key && <ProviderSetup compact />}
         {messages.length === 0 && key && <p className="text-muted">{t('maymun.empty')}</p>}
         {messages.map((message, i) => (
-          <Bubble key={i} role={message.role} text={message.text} />
+          <Bubble key={i} {...message} />
         ))}
         {busy && <Bubble role="assistant" text={answer || '…'} />}
         {error && (
@@ -88,7 +125,30 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
             {detail && <span className="mt-1 block font-mono break-words text-muted">{detail}</span>}
           </p>
         )}
+        {shotFailed && (
+          <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs">
+            {t('maymun.shotFailed')}
+          </p>
+        )}
       </div>
+      {shot && (
+        <div className="flex items-start gap-2 border-t border-border px-3 pt-2 text-xs">
+          <span className="flex-1">
+            {seesImages ? t('maymun.shotAttached') : t('maymun.shotNoImages')}
+            <img src={shot} alt={t('maymun.shot')} className="mt-1 max-h-24 rounded border border-border" />
+          </span>
+          <button
+            type="button"
+            onClick={() => setShot(null)}
+            aria-label={t('maymun.shotRemove')}
+            title={t('maymun.shotRemove')}
+            className="rounded-md p-1 text-muted hover:text-fg"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      {snipping && <Snip onPick={(region) => void pick(region)} onCancel={cancelSnip} />}
       <form
         className="flex items-end gap-2 border-t border-border px-3 py-2"
         onSubmit={(event) => {
@@ -111,6 +171,16 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
           aria-label={t('maymun.question')}
           className="min-h-0 flex-1 resize-none rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
         />
+        <button
+          type="button"
+          onClick={startSnip}
+          disabled={!key || busy || !seesImages}
+          aria-label={t('maymun.shot')}
+          title={seesImages ? t('maymun.shot') : t('maymun.shotNoImages')}
+          className="rounded-lg p-2 text-muted hover:text-fg disabled:opacity-40"
+        >
+          <Camera size={16} />
+        </button>
         {busy ? (
           <button
             type="button"
@@ -124,7 +194,7 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
         ) : (
           <button
             type="submit"
-            disabled={!key || !draft.trim()}
+            disabled={!key || (!draft.trim() && !(shot && seesImages))}
             aria-label={t('maymun.send')}
             title={t('maymun.send')}
             className="rounded-lg bg-accent p-2 text-accent-fg disabled:opacity-40"
@@ -150,9 +220,17 @@ export function MaymunChat({ panel, context }: { panel: HTMLElement | null; cont
   )
 }
 
-function Bubble({ role, text }: { role: 'user' | 'assistant'; text: string }) {
+function Bubble({ role, text, image, shot }: ChatMessage) {
+  const { t } = useI18n()
   return role === 'user' ? (
-    <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">{text}</div>
+    <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">
+      {image ? (
+        <img src={image} alt={t('maymun.shot')} className="mb-1 max-h-40 rounded border border-border" />
+      ) : (
+        shot && <span className="mb-1 block text-xs text-muted">📷 {t('maymun.shotGone')}</span>
+      )}
+      {text}
+    </div>
   ) : (
     <Markdown source={text} className="mr-4 rounded-lg bg-surface-2 px-3 py-2" />
   )
