@@ -23,12 +23,13 @@ import { ConfirmButton } from '../components/ConfirmButton.tsx'
 import { InlineMarkdown, Markdown } from '../components/Markdown.tsx'
 import { Button, IconButton } from '../components/ui.tsx'
 import { findGame, initialCode, loadGame, resumeStep, stepPassed } from '../games/catalog.ts'
+import { gameStorageSnapshot, saveGameStorage } from '../games/frame-storage.ts'
 import { buildPlayDocument } from '../games/play-document.ts'
 import { referenceStart, stepKey, type Game, type GameStep, type GameSummary } from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDebouncedEffect, useDocumentTitle, useMediaQuery } from '../lib/hooks.ts'
 import { formatChecks, useMaymunContext } from '../maymun/context.ts'
-import { trackFrame } from '../maymun/tracker.ts'
+import { framePointer } from '../maymun/tracker.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
 import { allPassed, type RunResult } from '../runners/types.ts'
 import { NotFoundPage } from './NotFoundPage.tsx'
@@ -274,7 +275,9 @@ function GameFrame({
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return
-      const data = event.data as { __lpGame?: string; text?: string }
+      const data = event.data as { __lpGame?: string; text?: string; x?: number; y?: number; down?: boolean; key?: unknown; value?: unknown }
+      if (data?.__lpGame === 'pointer' && frame.current) framePointer(frame.current, Number(data.x), Number(data.y))
+      if (data?.__lpGame === 'storage') saveGameStorage(data.key, data.value)
       if (data?.__lpGame === 'focus') setFocused(true)
       if (data?.__lpGame === 'blur') setFocused(false)
       if (data?.__lpGame === 'error') handlers.current.onError(String(data.text))
@@ -284,10 +287,11 @@ function GameFrame({
     return () => window.removeEventListener('message', onMessage)
   }, [])
 
+  // The frame is not on the site's origin: it is asked to focus its canvas.
   const focusGame = () => {
     const win = frame.current?.contentWindow
     win?.focus()
-    ;(win?.document.querySelector('canvas') as HTMLCanvasElement | null)?.focus()
+    win?.postMessage({ __lpGame: 'focus-canvas' }, '*')
   }
 
   return (
@@ -296,9 +300,10 @@ function GameFrame({
         ref={frame}
         title={title}
         srcDoc={doc}
-        sandbox="allow-scripts allow-same-origin"
+        // No allow-same-origin: the learner's code must not reach the site's storage (progress, AI keys).
+        sandbox="allow-scripts"
+        data-snapshot=""
         onLoad={() => {
-          if (frame.current) trackFrame(frame.current)
           if (focusOnLoad) focusGame()
         }}
         className="absolute inset-0 size-full border-0"
@@ -360,7 +365,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   const step = game.steps[index]
   const key = stepKey(game.id, step.id)
   const [code, setCode] = useState(() => initialCode(progress, game, index))
-  const [doc, setDoc] = useState(() => buildPlayDocument(code, game.canvas))
+  const [doc, setDoc] = useState(() => buildPlayDocument(code, game.canvas, gameStorageSnapshot()))
   const [result, setResult] = useState<RunResult | null>(null)
   const [crash, setCrash] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
@@ -381,7 +386,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     setCrash(null)
     setFocusOnLoad(true)
     // A new document string reloads the frame even when the code did not change.
-    setDoc(`${buildPlayDocument(code, game.canvas)}<!-- ${Date.now()} -->`)
+    setDoc(`${buildPlayDocument(code, game.canvas, gameStorageSnapshot())}<!-- ${Date.now()} -->`)
   }, [code, game.canvas])
 
   const run = useCallback(async () => {

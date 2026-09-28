@@ -65,6 +65,72 @@ test('a crashing game shows the error with its line number', async ({ page }) =>
   await expect(alert).toContainText('line 2')
 })
 
+test('the game cannot reach the site’s storage, but keeps its own saved values between runs', async ({ page }) => {
+  await page.goto('./#/games/snake/01-canvas')
+  await page.evaluate(() => {
+    localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-secret' } }))
+    localStorage.removeItem('runs')
+  })
+  await setCode(
+    page,
+    [
+      "let leak = 'blocked'",
+      "try { leak = String(parent.localStorage.getItem('lp.maymun.ai')) } catch (e) {}",
+      "localStorage.setItem('leak', leak + ' / ' + localStorage.getItem('lp.maymun.ai'))",
+      "localStorage.setItem('lp.progress.v1', 'overwritten')",
+      "localStorage.setItem('runs', String(Number(localStorage.getItem('runs') || 0) + 1))",
+      '',
+    ].join('\n'),
+  )
+  await run(page)
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('runs'))).toBe('1')
+  expect(await page.evaluate(() => localStorage.getItem('leak'))).toBe('blocked / null')
+  expect(await page.evaluate(() => localStorage.getItem('lp.progress.v1'))).not.toBe('overwritten')
+  // The next run starts with the value the game saved.
+  await run(page)
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('runs'))).toBe('2')
+  await page.evaluate(() => ['leak', 'runs', 'lp.maymun.ai'].forEach((k) => localStorage.removeItem(k)))
+})
+
+test('Maymun’s picture of the screen shows the game, which draws its own picture', async ({ page }) => {
+  test.skip(isMobile(page), 'the game and the chat are on different tabs on phones')
+  await page.route('https://openrouter.ai/api/v1/chat/completions', (route) =>
+    route.fulfill({ headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' }, body: 'data: [DONE]\n\n' }),
+  )
+  await page.goto('./#/games/snake/01-canvas')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
+  await page.reload()
+  await setCode(page, step1)
+  await run(page)
+  const frame = page.locator('iframe[title="Game"]')
+  const game = (await frame.boundingBox())!
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
+  await expect(async () => {
+    await page.mouse.move(game.x + game.width / 2 + Math.random() * 20, game.y + game.height / 2)
+    expect((await cat.boundingBox())?.x ?? 0).toBeGreaterThan(game.x + game.width - 100)
+  }).toPass({ timeout: 10_000 })
+  await cat.click()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await popup.getByRole('button', { name: 'Take a picture of the screen' }).click()
+  await page.getByRole('dialog', { name: 'Choose what to take a picture of' }).click({ position: { x: 20, y: 20 } })
+  const shot = popup.getByRole('img', { name: 'Take a picture of the screen' })
+  await expect(shot).toBeVisible({ timeout: 15_000 })
+  const viewport = page.viewportSize()!
+  const pixel = await shot.evaluate(async (img: HTMLImageElement, spot) => {
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const g = c.getContext('2d')!
+    g.drawImage(img, 0, 0)
+    const d = g.getImageData(Math.round(spot.x * c.width), Math.round(spot.y * c.height), 1, 1).data
+    return [d[0], d[1], d[2]]
+  }, { x: (game.x + game.width / 2) / viewport.width, y: (game.y + game.height / 2) / viewport.height })
+  // The board is #111 after Run; without the frame's own picture that spot would not be the game.
+  expect(Math.max(...pixel)).toBeLessThan(30)
+})
+
 test('the finished game plays with the real keyboard', async ({ page }) => {
   test.skip(isMobile(page), 'keyboard play is a desktop check')
   const snake = games.find((g) => g.id === 'snake')!
@@ -154,8 +220,12 @@ test('Maymun peeks into the panel under the pointer at its middle, its popup sta
       const box = (await cat.boundingBox())!
       return Math.round(box.y + box.height / 2)
     }
-    await page.mouse.move(gameBox.x + gameBox.width / 2, gameBox.y + 60)
-    await expect.poll(async () => (await cat.boundingBox())!.x).toBeGreaterThan(gameBox.x + gameBox.width - 100)
+    // The game frame reports the pointer once its page has loaded; keep moving until it does.
+    await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
+    await expect(async () => {
+      await page.mouse.move(gameBox.x + gameBox.width / 2 + Math.random() * 20, gameBox.y + 60)
+      expect((await cat.boundingBox())?.x ?? 0).toBeGreaterThan(gameBox.x + gameBox.width - 100)
+    }).toPass({ timeout: 10_000 })
     await expect.poll(catMiddle).toBeCloseTo(gameBox.y + gameBox.height / 2, -1)
     await page.mouse.move(gameBox.x + gameBox.width / 2, gameBox.y + gameBox.height - 20, { steps: 4 })
     await expect.poll(catMiddle).toBeCloseTo(gameBox.y + gameBox.height / 2, -1)

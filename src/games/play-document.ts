@@ -2,11 +2,14 @@ import type { CanvasSize } from './sim.ts'
 
 /**
  * The page the game runs in for real play: a canvas scaled to fit the frame, plus a small bridge that reports
- * console output, errors (with line numbers in the learner's code) and focus to the parent, and keeps arrow keys
- * and space from scrolling the frame.
+ * console output, errors (with line numbers in the learner's code), focus and the pointer to the parent, keeps arrow
+ * keys and space from scrolling the frame, and answers the parent's requests (focus the canvas, a picture of the
+ * frame). The frame is sandboxed without the site's origin, so it gets `localStorage` as a copy of the games' saved
+ * values (`storage`) whose changes go to the parent (see frame-storage.ts).
  */
-export function buildPlayDocument(code: string, canvas: CanvasSize): string {
+export function buildPlayDocument(code: string, canvas: CanvasSize, storage: Record<string, string> = {}): string {
   const safe = code.replace(/<\/script/gi, '<\\/script')
+  const saved = JSON.stringify(storage).replace(/</g, '\\u003c')
   const head = `<!doctype html>
 <html>
 <head>
@@ -40,6 +43,55 @@ export function buildPlayDocument(code: string, canvas: CanvasSize): string {
     })
     window.addEventListener('focus', function () { send('focus', 1) })
     window.addEventListener('blur', function () { send('blur', 1) })
+    // Maymun's eyes follow the pointer inside the game too.
+    ;['pointermove', 'pointerdown'].forEach(function (type) {
+      window.addEventListener(type, function (e) {
+        parent.postMessage({ __lpGame: 'pointer', x: e.clientX, y: e.clientY, down: type === 'pointerdown' }, '*')
+      }, { capture: true, passive: true })
+    })
+    window.addEventListener('message', function (e) {
+      var d = e.data
+      if (e.source !== parent || !d) return
+      if (d.__lpGame === 'focus-canvas') {
+        var c = document.querySelector('canvas')
+        if (c) c.focus()
+      }
+      if (d.__lpGame === 'snapshot') {
+        // A picture of the whole frame as it looks now, for a question to Maymun.
+        var out = document.createElement('canvas')
+        out.width = window.innerWidth
+        out.height = window.innerHeight
+        var g = out.getContext('2d')
+        g.fillStyle = getComputedStyle(document.body).backgroundColor
+        g.fillRect(0, 0, out.width, out.height)
+        var game = document.querySelector('canvas')
+        if (game) {
+          var r = game.getBoundingClientRect()
+          try { g.drawImage(game, r.left, r.top, r.width, r.height) } catch (err) {}
+        }
+        var url = ''
+        try { url = out.toDataURL('image/png') } catch (err) {}
+        parent.postMessage({ __lpGame: 'snapshot', id: d.id, url: url }, '*')
+      }
+    })
+    // localStorage: the games' saved values, kept by the parent.
+    var saved = ${saved}
+    var own = function (k) { return Object.prototype.hasOwnProperty.call(saved, k) }
+    var storage = {
+      getItem: function (k) { k = String(k); return own(k) ? saved[k] : null },
+      setItem: function (k, v) {
+        k = String(k); v = String(v); saved[k] = v
+        parent.postMessage({ __lpGame: 'storage', key: k, value: v }, '*')
+      },
+      removeItem: function (k) {
+        k = String(k); delete saved[k]
+        parent.postMessage({ __lpGame: 'storage', key: k, value: null }, '*')
+      },
+      clear: function () { Object.keys(saved).forEach(function (k) { storage.removeItem(k) }) },
+      key: function (i) { var keys = Object.keys(saved); return i < keys.length ? keys[i] : null },
+      get length() { return Object.keys(saved).length },
+    }
+    try { Object.defineProperty(window, 'localStorage', { value: storage, configurable: true }) } catch (err) {}
   })()
 </script>
 </head>

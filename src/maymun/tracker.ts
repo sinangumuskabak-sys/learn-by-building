@@ -1,7 +1,7 @@
 /**
  * Where the pointer is and which panel it is over, for Maymun the cat. Panels mark themselves with
  * `data-maymun="task" | "code" | "game" | "results" | "page"`; the cat moves to the panel the pointer was last over.
- * Iframes (the game) swallow pointer events, so each one reports its own through `trackFrame`.
+ * Iframes (the game) swallow pointer events; the game frame posts its own, passed on through `framePointer`.
  */
 export interface PointerState {
   x: number
@@ -49,19 +49,9 @@ export function startTracking() {
   document.addEventListener('pointerdown', onPointer, { capture: true, passive: true })
 }
 
-/** Follow the pointer inside a same-origin iframe too, converting its coordinates to the page's. */
-export function trackFrame(frame: HTMLIFrameElement) {
-  let doc: Document | null = null
-  try {
-    doc = frame.contentDocument
-  } catch {
-    return
-  }
-  if (!doc) return
-  const onPointer = (event: PointerEvent) => {
-    const rect = frame.getBoundingClientRect()
-    note(rect.left + event.clientX, rect.top + event.clientY, frame)
-  }
-  doc.addEventListener('pointermove', onPointer, { capture: true, passive: true })
-  doc.addEventListener('pointerdown', onPointer, { capture: true, passive: true })
+/** A pointer event from inside a frame (it posts them, being on another origin), in the frame's coordinates. */
+export function framePointer(frame: HTMLIFrameElement, x: number, y: number) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return
+  const rect = frame.getBoundingClientRect()
+  note(rect.left + x, rect.top + y, frame)
 }
