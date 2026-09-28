@@ -11,7 +11,7 @@ import { addToThread, forModel, getThread, markSummarized, newTopic, useThread, 
 import { aiStore, baseFor, isReady, modelFor, useMaymunAi } from './store.ts'
 import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
 import { SESSION_GAP, summarize } from '../vault/sessions.ts'
-import { applyMemory, memoryFor, saveSession } from '../vault/store.ts'
+import { applyMemory, memoryFor, saveSession, welcomeFor, type Welcome } from '../vault/store.ts'
 
 type Context = ReturnType<typeof readContext>
 
@@ -85,6 +85,19 @@ export function MaymunChat({
     list.current?.scrollTo({ top: list.current.scrollHeight })
   }, [messages, answer, error])
 
+  // Coming back to a project after a break (or for the first time): where they were, and a skill due for review.
+  const [welcome, setWelcome] = useState<Welcome | null>(null)
+  // Measured from when the chat opened, so a message sent now ends the greeting.
+  const [openedAt] = useState(() => Date.now())
+  const lastAt = messages.at(-1)?.at
+  const returning = !lastAt || openedAt - lastAt > SESSION_GAP
+  useEffect(() => {
+    let live = true
+    void welcomeFor(project.key).then((w) => live && setWelcome(w))
+    return () => {
+      live = false
+    }
+  }, [project.key])
   const language = lang === 'tr' ? 'Turkish' : 'English'
   /**
    * Sums up the project's last session into the memory vault, in the background: when the learner comes back after a
@@ -171,6 +184,9 @@ export function MaymunChat({
           {memoryPreview && <ContextText context={{ title: t('maymun.memory'), text: memoryPreview }} />}
         </details>
         {!ready && <ProviderSetup compact />}
+        {returning && welcome && (welcome.now || welcome.next || welcome.due.length > 0) && (
+          <WelcomeBack welcome={welcome} onAsk={(text) => setDraft(text)} onClose={() => setWelcome(null)} />
+        )}
         {messages.length === 0 && ready && <p className="text-muted">{t('maymun.empty')}</p>}
         {messages.map((message, i) => (
           <Bubble key={i} {...message} />
@@ -313,6 +329,39 @@ function Bubble({ role, text, image, shot, tag, remembered }: StoredMessage) {
           ))}
         </p>
       )}
+    </div>
+  )
+}
+
+/** "Last time you were…", "next…", and a skill due for review with a one-question offer; from the memory vault. */
+function WelcomeBack({ welcome, onAsk, onClose }: { welcome: Welcome; onAsk: (text: string) => void; onClose: () => void }) {
+  const { t } = useI18n()
+  return (
+    <div role="note" className="relative space-y-1.5 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={t('maymun.dismiss')}
+        title={t('maymun.dismiss')}
+        className="absolute top-1 right-1 rounded p-1 text-muted hover:text-fg"
+      >
+        <X size={12} />
+      </button>
+      <p className="pr-5 font-semibold">{t('maymun.welcome')}</p>
+      {welcome.now && <p>{t('maymun.welcomeNow', { text: welcome.now })}</p>}
+      {welcome.next && <p>{t('maymun.welcomeNext', { text: welcome.next })}</p>}
+      {welcome.due.map((skill) => (
+        <p key={skill.path} className="flex flex-wrap items-center gap-2">
+          <span>{t('maymun.reviewDue', { skill: skill.title, last: skill.last })}</span>
+          <button
+            type="button"
+            onClick={() => onAsk(t('maymun.reviewAsk', { skill: skill.title }))}
+            className="rounded border border-border px-2 py-0.5 font-medium hover:bg-surface-2"
+          >
+            {t('maymun.reviewButton')}
+          </button>
+        </p>
+      ))}
     </div>
   )
 }

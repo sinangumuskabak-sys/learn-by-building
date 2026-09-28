@@ -4,7 +4,7 @@ import { games } from '../games/catalog.ts'
 import { langStore } from '../i18n/i18n.ts'
 import { progressStore, type Progress } from '../progress/progress.ts'
 import { applyOps, memoryPrompt, type MemoryOp, type NoteText } from './maymun-memory.ts'
-import { writeSection } from './sections.ts'
+import { readSections, writeSection } from './sections.ts'
 import { sessionNote, withSessionList, type Summary } from './sessions.ts'
 import { applyAuto, instructionsText, journalNotes, vaultNotes, type NoteSpec, type VaultSource } from './skeleton.ts'
 
@@ -247,6 +247,36 @@ export async function saveSession(project: string, projectTitle: string, summary
   emit()
   await writeMany(written)
   return note.path
+}
+
+export interface Welcome {
+  /** Where the learner was, and what comes next, as Maymun last noted it. */
+  now?: string
+  next?: string
+  /** Skills whose review day has come, the most overdue first. */
+  due: { title: string; path: string; last: string }[]
+}
+
+/** What to greet a learner with when they come back to a project; read from the vault, no AI call. */
+export async function welcomeFor(project: string, today = new Date().toISOString().slice(0, 10)): Promise<Welcome> {
+  const notes = await notesFor(project)
+  const text = (id: string) => {
+    for (const note of notes) {
+      const type = front(note.content, 'type')
+      if (type !== 'game' && type !== 'challenge' && type !== 'overview') continue
+      const body = readSections(note.content).find((s) => s.owner === 'maymun' && s.id === id)?.body.trim()
+      if (body && !EMPTY.test(body)) return body
+    }
+    return undefined
+  }
+  const due = [...files.values()]
+    .filter((f) => front(f.content, 'type') === 'skill')
+    .map((f) => ({ file: f, next: front(f.content, 'next_review'), last: front(f.content, 'last_practised') ?? '' }))
+    .filter((s): s is typeof s & { next: string } => !!s.next && s.next <= today)
+    .sort((a, b) => a.next.localeCompare(b.next))
+    .slice(0, 2)
+    .map((s) => ({ title: s.file.path.split('/').at(-1)!.replace(/\.md$/, ''), path: s.file.path, last: s.last }))
+  return { now: text('now'), next: text('next'), due }
 }
 
 export function useVault(): VaultFile[] {

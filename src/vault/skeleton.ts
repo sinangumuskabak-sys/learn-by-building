@@ -79,6 +79,8 @@ const words = {
       item: 'Item',
       state: 'Status',
     },
+    reviewLine: (last: string, next: string, times: number) =>
+      `Practised on ${times} day${times === 1 ? '' : 's'}, last on ${last}. Next review: ${next}.`,
     overview: (o: Overview) =>
       [
         `- Games: ${o.gamesDone} finished, ${o.gamesStarted} in progress, ${o.games} in total`,
@@ -138,6 +140,7 @@ const words = {
       item: 'Öğe',
       state: 'Durum',
     },
+    reviewLine: (last: string, next: string, times: number) => `${times} gün çalıştın, en son ${last}. Sonraki tekrar: ${next}.`,
     overview: (o: Overview) =>
       [
         `- Oyunlar: ${o.gamesDone} bitti, ${o.gamesStarted} devam ediyor, toplam ${o.games}`,
@@ -364,11 +367,24 @@ export function vaultNotes(source: VaultSource): NoteSpec[] {
       auto: (p) => {
         const done = practice.filter((x) => status(p, x.key)?.status === 'passed')
         const level = Math.max(-1, ...done.map((x) => x.level))
+        const review = reviewOf(done.map((x) => day(status(p, x.key)?.passedAt ?? status(p, x.key)?.updatedAt)))
         return {
-          front: [`type: skill`, `id: ${skill.id}`, `category: ${skill.category}`, `level: ${level < 0 ? 'none' : level}`].join('\n'),
+          front: [
+            `type: skill`,
+            `id: ${skill.id}`,
+            `category: ${skill.category}`,
+            `level: ${level < 0 ? 'none' : level}`,
+            ...(review ? [`last_practised: ${review.last}`, `next_review: ${review.next}`] : []),
+          ].join('\n'),
           sections: {
             practised: practice.length ? practice.map((x) => `- ${link(x.path!, x.label)} — ${statusText(p, x.key)}`).join('\n') : w.none,
-            mastery: level < 0 ? w.none : `L${level} · ${translate(lang, `level.${level}` as 'level.0')} — ${translate(lang, `level.${level}.hint` as 'level.0.hint')}`,
+            mastery:
+              level < 0
+                ? w.none
+                : [
+                    `L${level} · ${translate(lang, `level.${level}` as 'level.0')} — ${translate(lang, `level.${level}.hint` as 'level.0.hint')}`,
+                    ...(review ? ['', w.reviewLine(review.last, review.next, review.times)] : []),
+                  ].join('\n'),
           },
         }
       },
@@ -424,6 +440,19 @@ export function vaultNotes(source: VaultSource): NoteSpec[] {
   notes.push({ path: `${w.readme}.md`, template: readme(lang), auto: () => ({ front: 'type: readme', sections: {} }) })
   notes.push({ path: `${w.instructions}.md`, template: instructionsNote(lang), auto: () => ({ front: 'type: instructions', sections: {} }) })
   return notes
+}
+
+/** Days until the next review after practising a skill on 1, 2, 3, 4, 5+ days: spaced repetition. */
+const REVIEW_DAYS = [1, 3, 7, 14, 30]
+
+/** When a skill was last practised and when to look at it again; null when it was never practised. */
+export function reviewOf(dates: string[]): { last: string; next: string; times: number } | null {
+  const days = [...new Set(dates.filter(Boolean))].sort()
+  const last = days.at(-1)
+  if (!last) return null
+  const next = new Date(`${last}T00:00:00Z`)
+  next.setUTCDate(next.getUTCDate() + REVIEW_DAYS[Math.min(days.length, REVIEW_DAYS.length) - 1])
+  return { last, next: next.toISOString().slice(0, 10), times: days.length }
 }
 
 /** Journal notes: one per day with activity, derived from progress dates. */

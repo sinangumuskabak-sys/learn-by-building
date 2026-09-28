@@ -161,3 +161,52 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     rmSync(vault, { recursive: true, force: true })
   }
 })
+
+test('coming back: where you were, what is next, and a skill due for review', async ({ page }) => {
+  const statusNote = 'Games/Snake/Current status.md'
+  const memory = JSON.stringify([
+    { file: statusNote, section: 'now', set: 'Board painted, grid next.' },
+    { file: statusNote, section: 'next', set: 'Step 2: the grid.' },
+  ])
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    const body = route.request().postDataJSON() as { messages: { content: string }[] }
+    const summing = body.messages[0].content.startsWith('You sum up')
+    const text = summing ? '{"asked": [], "learned": [], "hard": [], "done": ["Board"], "next": "Step 2: the grid."}' : `Nice.\n<memory>${memory}</memory>`
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n`,
+    })
+  })
+  // The first step was passed ten days ago, so its skills are due for review.
+  await page.goto('./#/games/snake/01-canvas')
+  await page.evaluate(() => {
+    const at = new Date(Date.now() - 10 * 86_400_000).toISOString()
+    localStorage.setItem('lp.progress.v1', JSON.stringify({ version: 1, challenges: { 'game:snake/01-canvas': { status: 'passed', passedAt: at, updatedAt: at } } }))
+    localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } }))
+  })
+  await page.reload()
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const open = async () => {
+    if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
+    await cat.click()
+  }
+  await open()
+  const welcome = popup.getByRole('note')
+  await expect(welcome).toContainText('Welcome back!')
+  await expect(welcome).toContainText('Time to review')
+  await welcome.getByRole('button', { name: 'One quick question' }).first().click()
+  await expect(popup.getByRole('textbox', { name: 'Your question' })).toHaveValue(/^Ask me one quick review question about /)
+
+  // A conversation ends the greeting; after a new topic, it comes back with what Maymun noted.
+  await popup.getByRole('textbox', { name: 'Your question' }).press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Nice.')
+  await expect(welcome).toHaveCount(0)
+  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
+  await popup.getByRole('button', { name: 'Close' }).click()
+  await open()
+  await expect(welcome).toContainText('Last time: Board painted, grid next.')
+  await expect(welcome).toContainText('Next: Step 2: the grid.')
+  await welcome.getByRole('button', { name: 'Hide' }).click()
+  await expect(welcome).toHaveCount(0)
+})
