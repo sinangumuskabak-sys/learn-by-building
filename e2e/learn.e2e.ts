@@ -155,3 +155,12 @@ test('Maymun’s picture of the screen shows a web challenge’s preview, which 
   expect(pixel[0]).toBeLessThan(60)
 })
 
+test('a page that fails to load says so and leads back', async ({ page }) => {
+  await page.route('**/*SettingsPage*', (route) => route.abort())
+  await page.goto('./#/settings')
+  await expect(page.getByRole('heading', { name: 'This page ran into a problem' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reload the page' })).toBeVisible()
+  await page.unroute('**/*SettingsPage*')
+  await page.getByRole('link', { name: 'Back to catalog' }).click()
+  await expect(page.locator('a[href^="#/c/"]').first()).toBeVisible()
+})

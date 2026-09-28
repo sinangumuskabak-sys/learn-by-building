@@ -273,6 +273,9 @@ const en = {
 
   'notFound.title': 'Page not found',
   'notFound.back': 'Back to catalog',
+  'error.title': 'This page ran into a problem',
+  'error.body': 'Your progress is saved. Reloading usually fixes it (for example after the site was updated).',
+  'error.reload': 'Reload the page',
 }
 
 export type MessageKey = keyof typeof en
@@ -552,6 +555,9 @@ const tr: Record<MessageKey, string> = {
 
   'notFound.title': 'Sayfa bulunamadı',
   'notFound.back': 'Kataloğa dön',
+  'error.title': 'Bu sayfada bir sorun çıktı',
+  'error.body': 'İlerlemen kayıtlı. Sayfayı yenilemek genellikle düzeltir (örneğin site güncellendiyse).',
+  'error.reload': 'Sayfayı yenile',
 }
 
 export const messages = { en, tr }
