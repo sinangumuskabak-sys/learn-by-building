@@ -25,9 +25,11 @@ const oldKey = oldBridgeKey()
 export const mirrorStore = createPersistedStore<{ enabled: boolean; key?: string }>('lp.vault.mirror', { enabled: false, ...(oldKey ? { key: oldKey } : {}) }, (raw) => {
   const value = raw as { enabled?: unknown; key?: unknown } | null
   if (!value || typeof value !== 'object') return null
-  const key = typeof value.key === 'string' && value.key.trim() ? value.key.trim() : oldBridgeKey()
+  const key = typeof value.key === 'string' && value.key.trim() ? value.key.trim() : oldKey
   return { enabled: value.enabled === true, ...(key ? { key } : {}) }
 })
+// Kept under the copy's own name at once: Maymun's settings leave the old key out the next time they are saved.
+if (oldKey) mirrorStore.set((value) => ({ ...value, key: value.key ?? oldKey }))
 
 /**
  * Per note, the "My notes" text the app and the folder last agreed on (empty ones are not kept). Comparing against it

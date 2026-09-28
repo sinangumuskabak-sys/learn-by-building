@@ -173,6 +173,8 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     await page.evaluate((key) => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'bridge', keys: { bridge: key } })), key)
     await page.reload()
     await expect(page.getByLabel('Bridge key')).toHaveValue(key)
+    // It is kept under the copy's own name, so it stays after Maymun's settings drop the old service.
+    expect(await page.evaluate(() => localStorage.getItem('lp.vault.mirror'))).toContain(key)
     await expect(page.getByRole('link', { name: 'maymun-bridge.mjs' })).toHaveAttribute('download', '')
     await page.getByRole('button', { name: 'Turn on' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Copying into' })).toContainText(VAULT_FOLDER)
