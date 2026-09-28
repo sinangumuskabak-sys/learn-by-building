@@ -4,7 +4,7 @@ import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
-import { groupModels, rankModels } from './models.ts'
+import { canChat, groupModels, rankModels, type ListedModel } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
@@ -419,8 +419,17 @@ function ProviderForm({ compact }: { compact: boolean }) {
     const root = savedBase.replace(/\/+$/, '')
     fetch(`${root}/models`, { headers })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { data?: { id?: unknown }[] } | null) => {
-        if (live && data?.data) setOffered(data.data.map((m) => String(m.id)).filter(Boolean))
+      .then((data: { data?: ListedModel[] } | null) => {
+        if (!live || !data?.data) return
+        setOffered(data.data.filter(canChat).map((m) => String(m.id)).filter(Boolean))
+        // Picture or video models turned on before they were left out of the list would only fail when their turn came.
+        const cannot = new Set(data.data.filter((m) => !canChat(m)).map((m) => String(m.id)))
+        if ((aiStore.get().active[current.id] ?? []).some((m) => cannot.has(m))) {
+          aiStore.set((value) => ({
+            ...value,
+            active: { ...value.active, [current.id]: (value.active[current.id] ?? []).filter((m) => !cannot.has(m)) },
+          }))
+        }
       })
       .catch(() => {})
     if (current.id === 'bridge') {

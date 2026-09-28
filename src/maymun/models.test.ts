@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { groupModels, groupOf, rankModels } from './models.ts'
+import { canChat, groupModels, groupOf, rankModels } from './models.ts'
 
 describe('gateway models', () => {
+  it('leaves out models that cannot chat (pictures, video, speech, embeddings)', () => {
+    expect(canChat({ id: 'tllm/GPT_5_4' })).toBe(true)
+    expect(canChat({ id: 'x/vision', output_modalities: ['text'] })).toBe(true)
+    expect(canChat({ id: 'aihorde/2DN', type: 'image', output_modalities: ['image'] })).toBe(false)
+    expect(canChat({ id: 'veo-free/veo', type: 'video', output_modalities: ['video'] })).toBe(false)
+    expect(canChat({ id: 'x/tts', output_modalities: ['audio'] })).toBe(false)
+    expect(canChat({ id: 'x/embed', type: 'embedding' })).toBe(false)
+  })
+
   it('groups OmniRoute models by the connection they come through', () => {
     expect(groupOf('cc/claude-opus-4-7')).toBe('Claude (Claude Code)')
     expect(groupOf('gemini-cli/gemini-3-flash-preview')).toBe('Gemini (Gemini CLI)')

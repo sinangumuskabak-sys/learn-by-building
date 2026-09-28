@@ -38,6 +38,19 @@ const GROUPS: Record<string, string> = {
   cohere: 'Cohere',
 }
 
+/** A model as a gateway lists it; OmniRoute also says what it makes (`type`, `output_modalities`). */
+export interface ListedModel {
+  id?: unknown
+  type?: unknown
+  output_modalities?: unknown
+}
+
+/** Whether a model can answer in a chat: gateways also list models that only make pictures, video, speech or embeddings. */
+export function canChat(model: ListedModel): boolean {
+  if (typeof model.type === 'string' && /^(image|video|audio|speech|tts|transcription|embedding|moderation)s?$/i.test(model.type)) return false
+  return !Array.isArray(model.output_modalities) || model.output_modalities.length === 0 || model.output_modalities.includes('text')
+}
+
 export function groupOf(id: string): string {
   const prefix = id.includes('/') ? id.split('/')[0] : ''
   return prefix ? (GROUPS[prefix.toLowerCase()] ?? prefix) : 'Other'
