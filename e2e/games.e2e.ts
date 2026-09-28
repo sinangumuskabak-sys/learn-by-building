@@ -416,6 +416,37 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 })
 
+test('Maymun asks for the map of the whole app when the question needs it, and answers with it', async ({ page }) => {
+  const systems: string[] = []
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    const system = (route.request().postDataJSON() as { messages: { content: string }[] }).messages[0].content
+    systems.push(system)
+    // Without the map, this model asks for it (in two pieces, as a stream may cut it); with it, it answers.
+    const pieces = system.includes('# Learn Platform: the map of the app') ? ['Try [Snake](#/games/snake).'] : ['<app-', 'map/>']
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: [...pieces.map((p) => `data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`), 'data: [DONE]\n\n'].join(''),
+    })
+  })
+  await page.goto('/#/')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
+  await page.reload()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  await question.fill('Which game should I play to learn?')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Try Snake.')
+  await expect(popup.getByRole('link', { name: 'Snake' })).toHaveAttribute('href', '#/games/snake')
+  await expect(popup).not.toContainText('app-map')
+  // Only the second request carries the map, and it lists the games with their links.
+  expect(systems).toHaveLength(2)
+  expect(systems[0]).toContain('answer with exactly `<app-map/>`')
+  expect(systems[0]).not.toContain('# Learn Platform: the map of the app')
+  expect(systems[1]).toContain('(#/games/snake)')
+  expect(systems[1]).toContain('do not ask for it again')
+})
+
 test('OmniRoute: models grouped by connection, the best active one answers, the next takes over', async ({ page }) => {
   const asked: string[] = []
   await page.route('http://localhost:20128/v1/models', (route) =>

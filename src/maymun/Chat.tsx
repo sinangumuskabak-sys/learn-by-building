@@ -6,11 +6,13 @@ import { useI18n } from '../i18n/i18n.ts'
 import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
 import { canChat, groupModels, rankModels, type ListedModel } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
+import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
 import { addToThread, forModel, getThread, markSummarized, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
 import { aiStore, baseFor, isReady, modelFor, modelsFor, useMaymunAi } from './store.ts'
+import { progressStore } from '../progress/progress.ts'
 import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
 import { SESSION_GAP, summarize } from '../vault/sessions.ts'
 import { applyMemory, memoryFor, saveSession, welcomeFor, type Welcome } from '../vault/store.ts'
@@ -145,8 +147,8 @@ export function MaymunChat({
     let text = ''
     let answeredBy = ''
     const memory = await memoryFor(project.key, project.step).catch(() => null)
-    try {
-      await streamChatWithFallback({
+    const ask = (map?: string) =>
+      streamChatWithFallback({
         provider: ai.provider,
         key: key ?? '',
         base: baseFor(ai, ai.provider),
@@ -155,15 +157,24 @@ export function MaymunChat({
           path: pathname,
           title: pageTitle(),
           previous: previousPage && previousPage !== pageTitle() ? previousPage : undefined,
-        }),
+        }, map),
         messages: forModel(history),
         signal: abort.signal,
         onText: (piece) => {
           text += piece
-          // The memory block at the end is for the app, not for the learner.
-          setAnswer(visibleText(text))
+          // A request for the app map is for the app; so is the memory block at the end.
+          if (!map && mayAskForMap(text)) return
+          setAnswer(visibleText(map ? text.replace(APP_MAP_MARKER, '') : text))
         },
       }, modelsFor(ai, ai.provider), (model) => (answeredBy = model))
+    try {
+      await ask()
+      // Maymun asked for the map of the whole app: ask again with it, once.
+      if (asksForMap(text) && !abort.signal.aborted) {
+        text = ''
+        await ask(appMap(lang, progressStore.get()))
+        text = text.replace(APP_MAP_MARKER, '')
+      }
     } catch (caught) {
       setError(caught instanceof ChatError ? caught.kind : 'other')
       setDetail(caught instanceof Error ? caught.message : String(caught))

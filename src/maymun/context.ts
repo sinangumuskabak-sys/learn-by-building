@@ -109,6 +109,8 @@ export function systemPrompt(
   /** The memory vault part: its instructions, the notes that matter now, where Maymun may write. */
   memory?: string,
   page?: PagePlace,
+  /** The map of the whole app, when Maymun asked for it (see app-map.ts). */
+  map?: string,
 ): string {
   const block = (c: NamedContext) => [`<panel name="${c.panel}" title="${c.title}">`, c.text, '</panel>']
   return [
@@ -147,5 +149,6 @@ export function systemPrompt(
     ...block(context),
     ...(context.others.length ? ['', 'The other panels of the page:', ...context.others.flatMap(block)] : []),
     ...(memory ? ['', memory] : []),
+    ...(map ? ['', map, '', 'You asked for the map above: answer the question with it now; do not ask for it again.'] : []),
   ].join('\n')
 }
