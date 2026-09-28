@@ -317,7 +317,7 @@ update()
 assert.strictEqual(lives, 3)
 draw()
 assert.lengthOf($.rects('#7c2d12'), 0)
-assert.include($.texts(), 'Coins: 0   Lives: 3')
+assert.include($.texts(), 'Coins: 0 Lives: 3')
 ```
 
 # --solution--

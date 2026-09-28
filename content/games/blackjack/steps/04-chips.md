@@ -190,7 +190,7 @@ deal()
 stand()
 assert.strictEqual(bank, 100)
 $.tick(1)
-assert.include($.texts(), 'Chips 100  Bet 10')
+assert.include($.texts(), 'Chips 100 Bet 10')
 ```
 
 A blackjack should end the round at once and pay 3 to 2; only two cards make one.

@@ -85,6 +85,11 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
                     {verdict ? t('challenge.quizCorrect') : t('challenge.quizWrong')}
                   </p>
                 )}
+                {verdict === false && question.hint && (
+                  <p className="mt-1.5 text-sm text-muted">
+                    <InlineMarkdown source={question.hint} />
+                  </p>
+                )}
               </fieldset>
             </li>
           )

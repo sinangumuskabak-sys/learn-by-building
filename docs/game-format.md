@@ -86,7 +86,7 @@ variables and functions, plus `assert` (Chai) and `$`:
 | `pointerDown(x, y)` / `pointerUp(x, y)` | press or release without the other half of a click |
 | `rightClick(x, y)` | a right click, ending in a `contextmenu` event |
 | `rects(color?)` | filled rectangles in the current picture: `{ x, y, w, h, color }` |
-| `texts()` / `arcs()` | text and circles in the current picture |
+| `texts()` / `arcs()` | text (runs of spaces as one, trimmed) and circles in the current picture |
 | `screen()` / `calls` | raw draw calls (current picture / since load) |
 | `seed(n)` | restart the random sequence |
 | `time`, `frames`, `pendingFrames`, `timers` | clock and loop state |

@@ -150,7 +150,7 @@ assert.strictEqual(best, 1230)
 assert.strictEqual(localStorage.getItem('maze-best'), '1230')
 $.press(' ')
 $.tick(1)
-assert.include($.texts(), 'Score: 0  Best: 1230')
+assert.include($.texts(), 'Score: 0 Best: 1230')
 ```
 
 # --solution--

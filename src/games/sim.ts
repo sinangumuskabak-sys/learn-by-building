@@ -670,8 +670,14 @@ export function createSim(size: CanvasSize, seed = 1) {
         })
         .filter((r) => color === undefined || r.color === color.toLowerCase())
     },
-    /** Text drawn on screen. */
-    texts: () => $.screen().filter((c) => c.op === 'fillText' || c.op === 'strokeText').map((c) => String(c.args[0])),
+    /**
+     * Text drawn on screen, with runs of spaces shown as one and the ends trimmed: `'Score 3  Best 9'` reads as
+     * `'Score 3 Best 9'`, so a learner is not failed for typing one space where the reference used two.
+     */
+    texts: () =>
+      $.screen()
+        .filter((c) => c.op === 'fillText' || c.op === 'strokeText')
+        .map((c) => String(c.args[0]).replace(/ {2,}/g, ' ').trim()),
     /** Circles/arcs drawn on screen, as `{x, y, r, color}`. */
     arcs: () =>
       $.screen()

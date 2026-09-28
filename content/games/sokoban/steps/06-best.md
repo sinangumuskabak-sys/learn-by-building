@@ -116,7 +116,7 @@ const keys = { R: 'ArrowRight', L: 'ArrowLeft', U: 'ArrowUp', D: 'ArrowDown' }
 for (const m of 'RUUULDULD') $.press(keys[m])
 assert.strictEqual(best[1], 9)
 assert.deepEqual(JSON.parse(localStorage.getItem('sokoban-best')), { 1: 9 })
-assert.include($.texts(), 'Moves: 9  (best 9)')
+assert.include($.texts(), 'Moves: 9 (best 9)')
 ```
 
 A longer solution should not replace a better record.

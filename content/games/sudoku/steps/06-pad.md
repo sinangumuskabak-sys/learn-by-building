@@ -188,7 +188,7 @@ tr: Saat dakika ve saniye olarak ilerlemeli.
 ```js
 $.tick(1)
 assert.include($.texts(), 'Time 0:00')
-assert.include($.texts(), 'Best -  Hints 0')
+assert.include($.texts(), 'Best - Hints 0')
 $.tick(125)
 assert.include($.texts(), 'Time 0:02')
 ```

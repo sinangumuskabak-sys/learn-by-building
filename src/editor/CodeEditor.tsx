@@ -42,7 +42,16 @@ export default function CodeEditor({ path, lang, value, onChange, onRun, readOnl
     if (!editor || !model) return
     const line = model.getLineCount()
     editor.setPosition({ lineNumber: line, column: model.getLineMaxColumn(line) })
-    editor.revealLine(line)
+    // Scroll as far down as the editor allows (short code stays fully visible); before the first layout the
+    // editor has no height yet, so do it again once it has one.
+    const toBottom = () => editor.setScrollTop(editor.getScrollHeight())
+    if (editor.getLayoutInfo().height > 0) toBottom()
+    const once = editor.onDidLayoutChange((layout) => {
+      if (layout.height === 0) return
+      once.dispose()
+      toBottom()
+    })
+    window.setTimeout(() => once.dispose(), 2000)
   }
   // A value that did not come from typing (a new step, the solution, a reset) is shown from its end.
   useEffect(() => {

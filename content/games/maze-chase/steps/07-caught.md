@@ -200,7 +200,7 @@ assert.strictEqual(state, 'ready')
 assert.deepEqual([player.col, player.row], [9, 15])
 assert.deepEqual([ghosts[0].col, ghosts[0].row], [9, 7])
 $.tick(1)
-assert.include($.texts(), 'Level 1   Lives: 2')
+assert.include($.texts(), 'Level 1 Lives: 2')
 ```
 
 A ghost still in the house should not catch anyone.

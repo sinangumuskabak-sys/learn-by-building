@@ -170,7 +170,7 @@ assert.strictEqual(best, 4200)
 assert.strictEqual(localStorage.getItem('missile-best'), '4200')
 $.click(240, 100)
 $.tick(1)
-assert.include($.texts(), 'Score 0  Best 4200')
+assert.include($.texts(), 'Score 0 Best 4200')
 ```
 
 # --solution--

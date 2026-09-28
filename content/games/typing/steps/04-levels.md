@@ -194,8 +194,8 @@ $.tick(1)
 assert.strictEqual(best, 42)
 assert.strictEqual(localStorage.getItem('typing-best'), '42')
 $.tick(1)
-assert.include($.texts(), '  Best 42')
-assert.include($.texts(), 'Score 42  Level 1')
+assert.include($.texts(), 'Best 42')
+assert.include($.texts(), 'Score 42 Level 1')
 ```
 
 # --solution--

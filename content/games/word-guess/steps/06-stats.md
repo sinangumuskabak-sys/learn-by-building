@@ -115,7 +115,7 @@ tr: Galibiyetler bir seri oluşturmalı ve kaydedilmeli.
 
 ```js
 $.tick(1)
-assert.include($.texts(), 'Played 0  Won 0%  Streak 0')
+assert.include($.texts(), 'Played 0 Won 0% Streak 0')
 for (let i = 0; i < 2; i++) {
   answer = 'crane'
   for (const k of 'crane') $.press(k)
@@ -125,7 +125,7 @@ for (let i = 0; i < 2; i++) {
 assert.deepEqual(stats, { played: 2, won: 2, streak: 2 })
 assert.deepEqual(JSON.parse(localStorage.getItem('word-stats')), { played: 2, won: 2, streak: 2 })
 $.tick(1)
-assert.include($.texts(), 'Played 2  Won 100%  Streak 2')
+assert.include($.texts(), 'Played 2 Won 100% Streak 2')
 ```
 
 A loss should end the streak.
@@ -141,7 +141,7 @@ for (let i = 0; i < 6; i++) {
 assert.deepEqual(stats, { played: 3, won: 2, streak: 0 })
 $.press('Enter')
 $.tick(1)
-assert.include($.texts(), 'Played 3  Won 67%  Streak 0')
+assert.include($.texts(), 'Played 3 Won 67% Streak 0')
 ```
 
 # --solution--

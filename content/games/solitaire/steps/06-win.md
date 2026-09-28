@@ -185,7 +185,7 @@ tr: Saat saymalı ve kazandıktan sonra durmalı; bir dokunuş yeni oyun dağıt
 
 ```js
 $.tick(120)
-assert.include($.texts(), 'Moves 0  Time 2')
+assert.include($.texts(), 'Moves 0 Time 2')
 won = true
 const t = frames
 $.tick(30)

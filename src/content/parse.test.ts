@@ -114,6 +114,7 @@ describe('parseChallenge', () => {
         '## Pick one',
         '- [x] yes',
         '- [ ] no',
+        '> Think it over.',
         '# --questions-tr--',
         '## Birini seç',
         '- [x] evet',
@@ -122,6 +123,7 @@ describe('parseChallenge', () => {
     )
     const challenge = parseChallenge('tr.md', raw)
     expect(challenge.tests[0]).toMatchObject({ text: 'First requirement.', tr: 'İlk koşul.' })
+    expect(challenge.questions[0].hint).toBe('Think it over.')
     expect(localizeChallenge(challenge, 'en')).toBe(challenge)
     const tr = localizeChallenge(challenge, 'tr')
     expect(tr).toMatchObject({ title: 'Örnek', description: 'Merhaba', instructions: '' })

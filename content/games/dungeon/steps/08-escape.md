@@ -137,7 +137,7 @@ assert.include($.texts(), 'You escaped in 10.0 s!')
 $.press(' ')
 assert.deepEqual([state, frames], ['playing', 0])
 $.tick(1)
-assert.include($.texts(), 'Time 0.0  Best 10.0')
+assert.include($.texts(), 'Time 0.0 Best 10.0')
 ```
 
 A slower escape should not replace the best time.

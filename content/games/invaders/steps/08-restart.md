@@ -122,7 +122,7 @@ endGame()
 assert.strictEqual(best, 480)
 assert.strictEqual(localStorage.getItem('invaders-best'), '480')
 draw()
-assert.include($.texts(), 'BEST 480   SPACE TO PLAY AGAIN')
+assert.include($.texts(), 'BEST 480 SPACE TO PLAY AGAIN')
 ```
 
 A lower score should not replace the best.

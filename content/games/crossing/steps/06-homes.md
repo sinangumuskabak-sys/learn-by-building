@@ -233,7 +233,7 @@ assert.strictEqual(level, 2)
 assert.deepEqual(filled, [false, false, false, false])
 $.tick(1)
 assert.closeTo(laneAt(7).offset, -0.0625, 1e-9, 'a quarter faster')
-assert.include($.texts(), 'Level 2   Lives: 3')
+assert.include($.texts(), 'Level 2 Lives: 3')
 level = 20
 $.tick(1)
 assert.closeTo(laneAt(7).offset, -0.0625 - 0.1, 1e-9, 'never more than twice as fast')

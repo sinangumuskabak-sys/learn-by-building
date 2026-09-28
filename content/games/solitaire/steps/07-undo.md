@@ -170,7 +170,7 @@ tr: Yeni bir oyun eski geçmişi unutmalı.
 
 ```js
 $.tick(1)
-assert.include($.texts(), 'Best -  Z undo')
+assert.include($.texts(), 'Best - Z undo')
 deal()
 assert.lengthOf(history, 0, 'a new game forgets the old one')
 ```

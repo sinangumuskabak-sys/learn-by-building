@@ -182,7 +182,7 @@ for (let i = 0; i < 200 && state === 'rolling'; i++) $.tick(1)
 assert.notInclude(balls, one, 'the ball dropped into the pocket')
 assert.lengthOf(balls, 10)
 $.tick(1)
-assert.include($.texts(), 'Shots 0  Left 9')
+assert.include($.texts(), 'Shots 0 Left 9')
 cue.x = 440
 cue.y = 60
 cue.vx = 3

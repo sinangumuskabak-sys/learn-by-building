@@ -131,6 +131,12 @@ test('a step opens at the end of its text and code, where the newest part is', a
   const code = page.locator('[data-maymun="code"] .view-lines')
   await expect(code.getByText('requestAnimationFrame(loop)').last()).toBeInViewport()
   await expect(code.getByText('// Snake, step by step.')).not.toBeInViewport()
+
+  // Short code fits, so nothing is scrolled away.
+  await page.goto('/#/games/tic-tac-toe/01-board')
+  await tab(page, 'Code')
+  await expect(page.locator('[data-maymun="code"] .view-lines').getByText('Write your code below.')).toBeInViewport()
+  await expect(page.locator('[data-maymun="code"] .view-lines').getByText('Tic-tac-toe', { exact: false }).first()).toBeInViewport()
 })
 
 test('Maymun stays in the middle of the right edge, its popup stays on screen, and it can be hidden', async ({ page }) => {

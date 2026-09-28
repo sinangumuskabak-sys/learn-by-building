@@ -6,10 +6,12 @@ import { CategoryIcon, StatusIcon, TypeIcon } from '../components/icons.tsx'
 import { buttonClass } from '../components/button-class.ts'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { useI18n } from '../i18n/i18n.ts'
+import { useDocumentTitle } from '../lib/hooks.ts'
 import { statusOf, useProgress } from '../progress/progress.ts'
 
 export function HomePage() {
   const { t, l, ct } = useI18n()
+  useDocumentTitle('')
   const progress = useProgress()
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())

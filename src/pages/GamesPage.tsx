@@ -104,7 +104,7 @@ function GameArt({ color, title }: { color: string; title: string }) {
           backgroundSize: '20px 20px',
         }}
       />
-      <span className="absolute right-5 bottom-3 left-5 truncate text-4xl font-black tracking-tight opacity-90" style={{ color }}>
+      <span className="absolute right-5 bottom-3 left-5 line-clamp-2 text-3xl leading-[1.05] font-black tracking-tight text-balance opacity-90" style={{ color }}>
         {title}
       </span>
     </div>

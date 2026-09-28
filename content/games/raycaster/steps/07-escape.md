@@ -223,7 +223,7 @@ $.release('ArrowUp')
 $.press(' ')
 assert.deepEqual([state, frames, player.x, player.y], ['playing', 0, 1.5, 1.5])
 $.tick(1)
-assert.include($.texts(), 'Time 0.0  Best 0.1')
+assert.include($.texts(), 'Time 0.0 Best 0.1')
 ```
 
 # --solution--

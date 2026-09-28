@@ -186,7 +186,7 @@ assert.strictEqual(state, 'won')
 assert.strictEqual(best, 42)
 assert.strictEqual(localStorage.getItem('bomber-best'), '42')
 $.tick(1)
-assert.include($.texts(), 'Time 42  Best 42')
+assert.include($.texts(), 'Time 42 Best 42')
 ```
 
 A tap after the end should start again.

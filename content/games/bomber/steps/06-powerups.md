@@ -216,7 +216,7 @@ $.press('ArrowRight')
 $.tick(10)
 assert.strictEqual(power, 3)
 $.tick(1)
-assert.include($.texts(), '♥♥♥  Bombs 1  Fire 3')
+assert.include($.texts(), '♥♥♥ Bombs 1 Fire 3')
 ```
 
 # --solution--

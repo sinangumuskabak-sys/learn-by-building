@@ -212,7 +212,7 @@ $.click(280, 150)
 assert.strictEqual(state, 'aiming', 'a tap plays again')
 assert.strictEqual(score, 0)
 $.tick(1)
-assert.include($.texts(), 'Birds 3  Score 0')
+assert.include($.texts(), 'Birds 3 Score 0')
 ```
 
 # --solution--

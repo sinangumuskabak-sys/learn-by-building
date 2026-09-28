@@ -187,12 +187,17 @@ function parseQuestions(source: string, body: string | undefined): QuizQuestion[
   for (const line of body.split('\n')) {
     const prompt = /^## (.+)$/.exec(line)
     const option = /^- \[( |x)\] (.+)$/.exec(line)
+    const hint = /^> ?(.*)$/.exec(line)
     if (prompt) {
       questions.push({ prompt: prompt[1].trim(), options: [] })
     } else if (option) {
       const current = questions.at(-1)
       if (!current) throw new ContentError(source, 'quiz option before any "## question"')
       current.options.push({ text: option[2].trim(), correct: option[1] === 'x' })
+    } else if (hint) {
+      const current = questions.at(-1)
+      if (!current) throw new ContentError(source, 'quiz hint ("> ...") before any "## question"')
+      current.hint = current.hint ? `${current.hint} ${hint[1]}` : hint[1]
     } else if (line.trim() !== '') {
       throw new ContentError(source, `unexpected line in "# --questions--": ${line}`)
     }

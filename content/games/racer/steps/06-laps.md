@@ -178,7 +178,7 @@ assert.strictEqual(lapTime, 0)
 assert.strictEqual(best, 1501)
 assert.strictEqual(localStorage.getItem('racer-best'), '1501')
 $.tick(1)
-assert.include($.texts(), 'Lap 2/3  0.0  Best 25.0')
+assert.include($.texts(), 'Lap 2/3 0.0 Best 25.0')
 ```
 
 A slower lap should not replace the best one.

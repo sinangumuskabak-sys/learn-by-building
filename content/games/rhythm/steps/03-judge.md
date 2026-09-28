@@ -168,7 +168,7 @@ assert.strictEqual(judged.miss, 0, 'still inside the window')
 $.tick(1)
 assert.strictEqual(judged.miss, 1)
 $.tick(1)
-assert.include($.texts(), '0 perfect  0 good  1 missed')
+assert.include($.texts(), '0 perfect 0 good 1 missed')
 ```
 
 # --solution--

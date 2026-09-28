@@ -208,7 +208,7 @@ $.press(' ')
 assert.deepEqual([state, level, score], ['flying', 2, 350])
 assert.closeTo(gravity, 0.03, 1e-9)
 $.tick(1)
-assert.include($.texts(), 'Level 2  Score 350  Best 0')
+assert.include($.texts(), 'Level 2 Score 350 Best 0')
 ```
 
 From level 3 the pad should be narrower.

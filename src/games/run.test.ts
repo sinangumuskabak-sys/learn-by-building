@@ -67,6 +67,11 @@ describe('runGameTests', () => {
     expect(result.tests.map((t) => t.passed)).toEqual([true, true])
   })
 
+  it('reads text with runs of spaces as one, so the spacing a learner types does not fail a check', () => {
+    const code = "const ctx = document.getElementById('game').getContext('2d'); ctx.fillText('  Score 3   Best 9 ', 0, 0)"
+    expect(run(code, "assert.deepEqual($.texts(), ['Score 3 Best 9'])").tests[0].passed).toBe(true)
+  })
+
   it('lets learners use names like game, assert and $ without clashing', () => {
     const result = run('let game = 1; const assert = 2; var $ = 3', 'assert.equal(game, 1)')
     expect(result.tests[0].passed).toBe(true)

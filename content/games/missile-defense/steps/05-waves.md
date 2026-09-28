@@ -210,7 +210,7 @@ ammo = 0
 fire(100, 100)
 assert.lengthOf(shots, 1)
 $.tick(1)
-assert.include($.texts(), 'Wave 1  Ammo 0')
+assert.include($.texts(), 'Wave 1 Ammo 0')
 ```
 
 A cleared wave should pay a bonus, then the next wave should be faster.

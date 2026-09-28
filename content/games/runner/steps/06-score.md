@@ -200,7 +200,7 @@ tr: Skor beş haneye doldurularak rekorun yanında gösterilmeli.
 best = 120
 distance = 425
 draw()
-assert.include($.texts(), 'HI 00120  00042')
+assert.include($.texts(), 'HI 00120 00042')
 ```
 
 A new best should be saved when the run ends.

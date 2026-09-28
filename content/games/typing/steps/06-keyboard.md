@@ -170,7 +170,7 @@ assert.strictEqual(state, 'over')
 $.click(240, 200)
 assert.strictEqual(state, 'playing', 'a tap starts again')
 $.tick(1)
-assert.include($.texts(), 'Score 0  Level 1')
+assert.include($.texts(), 'Score 0 Level 1')
 ```
 
 # --solution--

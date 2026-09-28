@@ -4,6 +4,7 @@ import { catalog, categoryChallenges } from '../content/catalog.ts'
 import { CategoryIcon, StatusIcon, TypeIcon } from '../components/icons.tsx'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { useI18n } from '../i18n/i18n.ts'
+import { useDocumentTitle } from '../lib/hooks.ts'
 import { statusOf, useProgress } from '../progress/progress.ts'
 import { NotFoundPage } from './NotFoundPage.tsx'
 
@@ -12,6 +13,7 @@ export function CategoryPage() {
   const { t, l, ct } = useI18n()
   const progress = useProgress()
   const category = catalog.curriculum.categories.find((c) => c.id === categoryId)
+  useDocumentTitle(category ? l(category.title) : t('category.notFound'))
   if (!category) return <NotFoundPage title={t('category.notFound')} />
 
   const items = categoryChallenges(category)

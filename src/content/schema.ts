@@ -69,6 +69,8 @@ export interface TestCase {
 export interface QuizQuestion {
   prompt: string
   options: { text: string; correct: boolean }[]
+  /** Shown after a wrong answer: a nudge towards the reasoning (a "> " line under the options). */
+  hint?: string
 }
 
 export interface Challenge extends Frontmatter {

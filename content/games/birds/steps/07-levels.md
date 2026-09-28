@@ -206,7 +206,7 @@ assert.strictEqual(level, 1, 'on to level 2')
 assert.strictEqual(birdsLeft, 3)
 assert.strictEqual(score, kept, 'the score carries on')
 $.tick(1)
-assert.include($.texts(), 'Level 2  Birds 3  Score ' + kept)
+assert.include($.texts(), 'Level 2 Birds 3 Score ' + kept)
 state = 'lost'
 $.press(' ')
 assert.strictEqual(level, 1, 'try the same level again')

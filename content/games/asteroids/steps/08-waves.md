@@ -253,7 +253,7 @@ assert.strictEqual(state, 'over')
 assert.strictEqual(best, 1200)
 assert.strictEqual(localStorage.getItem('asteroids-best'), '1200')
 draw()
-assert.includeMembers($.texts(), ['GAME OVER', 'BEST 1200   SPACE TO PLAY AGAIN'])
+assert.includeMembers($.texts(), ['GAME OVER', 'BEST 1200 SPACE TO PLAY AGAIN'])
 ```
 
 Space after game over should start a fresh game.

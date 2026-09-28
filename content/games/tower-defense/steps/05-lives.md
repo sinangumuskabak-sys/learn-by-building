@@ -221,7 +221,7 @@ $.tick(1)
 assert.strictEqual(lives, 19)
 assert.lengthOf(enemies, 0)
 assert.strictEqual(gold, 120)
-assert.include($.texts(), 'Gold 120  Lives 19')
+assert.include($.texts(), 'Gold 120 Lives 19')
 ```
 
 The health bar should show the health that is left.

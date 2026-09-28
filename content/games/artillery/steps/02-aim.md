@@ -235,7 +235,7 @@ tr: Açı, güç ve namlu çizilmeli.
 
 ```js
 $.tick(1)
-assert.include($.texts(), 'Angle 45°  Power 8.0')
+assert.include($.texts(), 'Angle 45° Power 8.0')
 const t = tanks[0]
 const ends = $.screen().filter((c) => c.op === 'lineTo').map((c) => c.args.map((v) => Math.round(v)).join())
 assert.include(ends, [Math.round(t.x + Math.cos(t.angle) * 14), Math.round(t.y - 8 + Math.sin(t.angle) * 14)].join(), 'the barrel')

@@ -164,7 +164,7 @@ combo = 5
 $.tick(LEAD + GOOD + 1)
 assert.strictEqual(combo, 0, 'a miss breaks the combo')
 $.tick(1)
-assert.include($.texts(), 'Combo 0  x1')
+assert.include($.texts(), 'Combo 0 x1')
 ```
 
 # --solution--

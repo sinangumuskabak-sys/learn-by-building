@@ -217,7 +217,7 @@ assert.strictEqual(best, 490)
 assert.strictEqual(localStorage.getItem('frogger-best'), '490')
 $.press(' ')
 $.tick(1)
-assert.include($.texts(), 'Score: 0  Best: 490')
+assert.include($.texts(), 'Score: 0 Best: 490')
 ```
 
 # --solution--

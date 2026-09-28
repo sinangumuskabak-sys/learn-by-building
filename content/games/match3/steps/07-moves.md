@@ -138,7 +138,7 @@ tr: Bir oyun 20 hamleyle başlamalı ve yalnızca eşleşen bir takas bir hamle 
 ```js
 $.tick(1)
 assert.strictEqual(movesLeft, 20)
-assert.include($.texts(), 'Moves 20  Best 0')
+assert.include($.texts(), 'Moves 20 Best 0')
 const move = hasMove()
 assert.isFalse(trySwap({ r: 0, c: 0 }, { r: 7, c: 7 }))
 assert.strictEqual(movesLeft, 20, 'a failed swap is free')
