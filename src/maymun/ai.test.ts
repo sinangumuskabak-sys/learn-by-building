@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ChatError, readSse, streamChat, withImages } from './ai.ts'
+import { ChatError, readSse, START_TIMEOUT, streamChat, streamChatWithFallback, withImages } from './ai.ts'
 
 /** A response body that arrives in the given pieces. */
 function body(...pieces: string[]) {
@@ -68,6 +68,58 @@ describe('Maymun AI', () => {
       throw new TypeError('Failed to fetch')
     })
     await expect(streamChat(request)).rejects.toMatchObject({ kind: 'network' })
+  })
+
+  it('moves on to the next model when one hangs without starting', async () => {
+    vi.useFakeTimers()
+    const asked: string[] = []
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const { model } = JSON.parse(String(init.body)) as { model: string }
+      asked.push(model)
+      if (model === 'hangs') {
+        // Never answers, like a gateway stuck on a model it cannot reach; only the abort ends it.
+        return new Promise<Response>((_, reject) => init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+      }
+      return new Response(body(chunk('Hi'), 'data: [DONE]\n\n'))
+    })
+    let text = ''
+    let answered = ''
+    const done = streamChatWithFallback(
+      { provider: 'omniroute', key: 'k', model: '', system: '', messages: [], onText: (t) => (text += t) },
+      ['hangs', 'works'],
+      (m) => (answered = m),
+    )
+    await vi.advanceTimersByTimeAsync(START_TIMEOUT)
+    await done
+    expect(asked).toEqual(['hangs', 'works'])
+    expect(answered).toBe('works')
+    expect(text).toBe('Hi')
+    vi.useRealTimers()
+  })
+
+  it('does not wait for an error that is never finished, and skips a connection that refused the key', async () => {
+    vi.useFakeTimers()
+    const asked: string[] = []
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const { model } = JSON.parse(String(init.body)) as { model: string }
+      asked.push(model)
+      if (model.startsWith('free/')) {
+        // A refusal whose body the gateway keeps open.
+        return new Response(new ReadableStream({ start: () => {} }), { status: 403 })
+      }
+      return new Response(body(chunk('Hi'), 'data: [DONE]\n\n'))
+    })
+    let answered = ''
+    const done = streamChatWithFallback(
+      { provider: 'omniroute', key: 'k', model: '', system: '', messages: [], onText: () => {} },
+      ['free/a', 'free/b', 'free/c', 'paid/x'],
+      (m) => (answered = m),
+    )
+    await vi.advanceTimersByTimeAsync(10_000)
+    await done
+    expect(asked).toEqual(['free/a', 'paid/x'])
+    expect(answered).toBe('paid/x')
+    vi.useRealTimers()
   })
 
   it('stops quietly when aborted', async () => {

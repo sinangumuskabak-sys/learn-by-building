@@ -69,6 +69,8 @@ export interface ChatRequest {
   signal?: AbortSignal
   /** Called with each piece of the answer as it arrives. */
   onText: (text: string) => void
+  /** Called when the server starts its answer, which can be well before the first word (a model that thinks first). */
+  onStart?: () => void
 }
 
 /** Why a request failed, in terms the chat can explain. */
@@ -92,28 +94,60 @@ const kindOf = (status: number): ChatErrorKind =>
  */
 export async function streamChatWithFallback(request: ChatRequest, models: string[], onModel?: (model: string) => void): Promise<void> {
   let last: unknown = new ChatError('model', 'No model is active.')
-  for (const model of models.length ? models : [request.model]) {
+  const list = models.length ? models : [request.model]
+  // A connection that refuses the key (e.g. a free tier only open to its own app) refuses all its models: skip the rest.
+  const refused = new Set<string>()
+  const connection = (model: string) => (model.includes('/') ? model.split('/')[0] : '')
+  for (const [index, model] of list.entries()) {
+    if (refused.has(connection(model))) continue
     let started = false
+    let answering = false
+    let slow = false
+    const attempt = new AbortController()
+    const stop = () => attempt.abort()
+    request.signal?.addEventListener('abort', stop)
+    // A gateway can hang on a model it cannot reach instead of saying so; while another model is left to ask, one that
+    // has not even started its answer in time is given up on. The last one gets all the time it needs.
+    const timer =
+      index < list.length - 1
+        ? setTimeout(() => {
+            if (answering) return
+            slow = true
+            attempt.abort()
+          }, START_TIMEOUT)
+        : undefined
     try {
       await streamChat({
         ...request,
         model,
+        signal: attempt.signal,
+        onStart: () => {
+          answering = true
+        },
         onText: (piece) => {
           if (!started) onModel?.(model)
-          started = true
+          started = answering = true
           request.onText(piece)
         },
       })
+      if (slow) throw new ChatError('network', `${model} did not start answering in time.`)
       if (!started) onModel?.(model)
       return
     } catch (error) {
       // Stopped by the learner, or failed halfway through an answer: no second answer on top of it.
       if (started || request.signal?.aborted) throw error
       last = error
+      if (error instanceof ChatError && error.kind === 'key' && connection(model)) refused.add(connection(model))
+    } finally {
+      clearTimeout(timer)
+      request.signal?.removeEventListener('abort', stop)
     }
   }
   throw last
 }
+
+/** How long a model may take to start its answer before the next one takes over (see streamChatWithFallback). */
+export const START_TIMEOUT = 30_000
 
 export async function streamChat(request: ChatRequest): Promise<void> {
   request = { ...request, messages: withImages(request.provider, request.messages) }
@@ -121,7 +155,7 @@ export async function streamChat(request: ChatRequest): Promise<void> {
   return streamOpenAiCompatible(request)
 }
 
-async function streamOpenAiCompatible({ provider: id, key, base, model, system, messages, signal, onText }: ChatRequest) {
+async function streamOpenAiCompatible({ provider: id, key, base, model, system, messages, signal, onText, onStart }: ChatRequest) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (key) headers.Authorization = `Bearer ${key}`
   if (id === 'openrouter') {
@@ -145,9 +179,11 @@ async function streamOpenAiCompatible({ provider: id, key, base, model, system, 
     throw new ChatError('network', String(error))
   }
   if (!response.ok || !response.body) {
-    const body = await response.text().catch(() => '')
+    // A gateway can keep an error response open long after its status: the status is what counts, the text only explains.
+    const body = await Promise.race([response.text(), new Promise<string>((resolve) => setTimeout(() => resolve(''), 5_000))]).catch(() => '')
     throw new ChatError(kindOf(response.status), `${response.status} ${errorText(body)}`.trim())
   }
+  onStart?.()
   await readSse(response.body, signal, (data) => {
     if (data === '[DONE]') return
     const json = JSON.parse(data) as { choices?: { delta?: { content?: string | null } }[]; error?: { message?: string } }
