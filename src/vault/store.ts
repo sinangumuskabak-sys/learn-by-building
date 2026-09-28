@@ -7,7 +7,7 @@ import { progressStore, type Progress } from '../progress/progress.ts'
 import { applyOps, memoryPrompt, type MemoryOp, type NoteText } from './maymun-memory.ts'
 import { readSections, writeSection } from './sections.ts'
 import { sessionNote, withSessionList, type Summary } from './sessions.ts'
-import { applyAuto, instructionsText, journalNotes, readmePath, vaultNotes, type NoteSpec, type VaultSource } from './skeleton.ts'
+import { applyAuto, instructionsText, journalNotes, localDay, readmePath, vaultNotes, type NoteSpec, type VaultSource } from './skeleton.ts'
 
 /**
  * The memory vault: Markdown notes kept in IndexedDB on this device (no server, no Obsidian needed). On first use the
@@ -269,7 +269,7 @@ export interface Welcome {
 }
 
 /** What to greet a learner with when they come back to a project; read from the vault, no AI call. */
-export async function welcomeFor(project: string, today = new Date().toISOString().slice(0, 10)): Promise<Welcome> {
+export async function welcomeFor(project: string, today = localDay(new Date())): Promise<Welcome> {
   const notes = await notesFor(project)
   const text = (id: string) => {
     for (const note of notes) {

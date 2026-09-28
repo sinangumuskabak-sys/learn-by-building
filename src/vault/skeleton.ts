@@ -175,7 +175,9 @@ export function safeName(name: string): string {
 const pad = (n: number) => String(n).padStart(2, '0')
 /** A wiki link to another note (without `.md`), as Obsidian writes it. */
 export const link = (path: string, label: string) => `[[${path.replace(/\.md$/, '')}|${label.replace(/[|\]]/g, '-')}]]`
-const day = (iso?: string) => (iso ? iso.slice(0, 10) : '')
+/** The learner's own calendar day (not UTC), so work done after midnight lands on the day it was done. */
+export const localDay = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+const day = (iso?: string) => (iso ? localDay(new Date(iso)) : '')
 
 const skillLevelOf: Record<Difficulty, number> = { beginner: 3, intermediate: 4, advanced: 5 }
 
