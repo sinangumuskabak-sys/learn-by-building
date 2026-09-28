@@ -1,5 +1,6 @@
 import { Camera, MessageSquarePlus, Send, Square, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ProviderId } from './ai.ts'
@@ -36,6 +37,7 @@ export function MaymunChat({
   onSnip?: (active: boolean) => void
 }) {
   const { t, lang } = useI18n()
+  const { pathname } = useLocation()
   const ai = useMaymunAi()
   const { messages } = useThread(project.key)
   const [draft, setDraft] = useState('')
@@ -119,16 +121,18 @@ export function MaymunChat({
     const question = draft.trim() || (image ? t('maymun.shotQuestion') : '')
     if (!question || !ready || controller.current) return
     // The panel the chat was opened on may be gone (the learner moved to another step): ask about what is there now.
+    // The panel the chat was opened on; after moving to another page (it is gone), the panels of the page shown now.
     const el = panel?.isConnected ? panel : currentPanel()
     const current = el ? readContext(el) : context
     const asked: StoredMessage = {
       role: 'user',
       text: question,
       ...(image ? { image } : {}),
-      tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}) },
+      tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}), page: pageTitle() },
       at: Date.now(),
     }
     closeSession(false)
+    const previousPage = [...getThread(project.key).messages].reverse().find((m) => m.role === 'user')?.tag?.page
     const history = [...getThread(project.key).messages, asked]
     addToThread(project.key, asked)
     setDraft('')
@@ -145,7 +149,11 @@ export function MaymunChat({
         key: key ?? '',
         base: baseFor(ai, ai.provider),
         model: modelFor(ai, ai.provider),
-        system: systemPrompt(current, language, projectTitle, memory?.text),
+        system: systemPrompt(current, language, project.key === 'general' ? undefined : projectTitle, memory?.text, {
+          path: pathname,
+          title: pageTitle(),
+          previous: previousPage && previousPage !== pageTitle() ? previousPage : undefined,
+        }),
         messages: forModel(history),
         signal: abort.signal,
         onText: (piece) => {
@@ -332,6 +340,9 @@ function Bubble({ role, text, image, shot, tag, remembered }: StoredMessage) {
     </div>
   )
 }
+
+/** The page's title as the tab shows it, without the site name. */
+const pageTitle = () => document.title.replace(/ · Learn Platform$/, '') || 'Learn Platform'
 
 /** "Last time you were…", "next…", and a skill due for review with a one-question offer; from the memory vault. */
 function WelcomeBack({ welcome, onAsk, onClose }: { welcome: Welcome; onAsk: (text: string) => void; onClose: () => void }) {

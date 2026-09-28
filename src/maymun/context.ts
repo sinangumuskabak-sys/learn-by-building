@@ -71,12 +71,44 @@ export function formatChecks(result: RunResult): string {
 }
 
 /** Maymun's own instructions (`prompt.md`) and what the learner sees, sent along with every question. */
+/** What each page of the app is for, so Maymun knows where the learner is even when the page shows little text. */
+export function pagePurpose(path: string): string {
+  if (path === '/' || path === '') {
+    return 'The catalog (home page): the categories of short coding challenges, a search box, and "Continue" for the next unfinished challenge.'
+  }
+  if (path.startsWith('/c/')) return 'A category page: its modules and the challenges in each, with the learner\'s status and level for each challenge.'
+  if (path.startsWith('/learn/')) {
+    return 'A challenge: the task on one side; depending on its kind a code editor with tests, quiz questions, code to read, or a design answer.'
+  }
+  if (/^\/games\/[^/]+/.test(path)) {
+    return 'A step of a game the learner builds step by step: the lesson (task panel), their code (game.js), the running game and the checks for this step.'
+  }
+  if (path === '/games') return 'The Game Workshop: the list of games built step by step, with the learner\'s progress in each.'
+  if (path === '/skills') return 'The skill map: every skill with the learner\'s level (L0-L8) and the challenges or game steps that show it.'
+  if (path === '/memory') {
+    return 'The memory vault: the learner\'s Markdown notes (status, what they learned, their own notes) for every category, challenge, game, step and skill; they can download it or copy it into Obsidian.'
+  }
+  if (path === '/settings') {
+    return 'Settings: theme, language, showing Maymun, the AI service and key Maymun answers through, the editor font size, exporting or importing progress, and resetting all data.'
+  }
+  return 'A page of Learn Platform.'
+}
+
+/** Where the learner is: the page's title, address and purpose, and the page of their previous question if it differs. */
+export interface PagePlace {
+  path: string
+  title: string
+  /** The page of the learner's previous question, when it was another one. */
+  previous?: string
+}
+
 export function systemPrompt(
   context: ReturnType<typeof readContext>,
   language: string,
   project?: string,
   /** The memory vault part: its instructions, the notes that matter now, where Maymun may write. */
   memory?: string,
+  page?: PagePlace,
 ): string {
   const block = (c: NamedContext) => [`<panel name="${c.panel}" title="${c.title}">`, c.text, '</panel>']
   return [
@@ -91,6 +123,21 @@ export function systemPrompt(
           'The conversation below is the whole project so far: it goes on across its panels (lesson, code, game,',
           'checks) and steps. Each learner message starts with where it was asked, like "[code panel, step',
           '03-gravity]". Connect to earlier questions when it helps ("the error you asked about in the code panel").',
+        ]
+      : []),
+    ...(page
+      ? [
+          '',
+          '# The page they are on now',
+          '',
+          `"${page.title}" (${page.path || '/'}): ${pagePurpose(page.path)}`,
+          ...(page.previous
+            ? [
+                `They moved here from "${page.previous}" since their previous question. Answer about this page and what it shows`,
+                'now, not the previous one, unless they ask about it.',
+              ]
+            : []),
+          'Learner messages also say on which page they were asked.',
         ]
       : []),
     '',

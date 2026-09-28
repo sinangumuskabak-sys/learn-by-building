@@ -315,7 +315,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(first.messages[0].content).toContain('Code (game.js)')
   expect(first.messages[0].content).toContain('# This project: Snake')
   // Each question carries where it was asked.
-  expect(first.messages[1]).toEqual({ role: 'user', content: '[code panel, step 01-canvas] What do I do here?' })
+  expect(first.messages[1]).toEqual({ role: 'user', content: '[code panel, step 01-canvas, page "Snake"] What do I do here?' })
 
   // A picture of the screen goes along with the next question (a click takes the whole screen); Escape only cancels it.
   const camera = popup.getByRole('button', { name: 'Take a picture of the screen' })
@@ -332,7 +332,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await expect(popup.locator('.markdown')).toHaveCount(2)
   const withShot = sent[1] as { messages: { content: unknown }[] }
   const shotContent = withShot.messages.at(-1)!.content as { type: string; text?: string; image_url?: { url: string } }[]
-  expect(shotContent[0]).toEqual({ type: 'text', text: '[code panel, step 01-canvas] Look at this picture.' })
+  expect(shotContent[0]).toEqual({ type: 'text', text: '[code panel, step 01-canvas, page "Snake"] Look at this picture.' })
   expect(shotContent[1].image_url!.url).toMatch(/^data:image\/(png|jpeg);base64,/)
 
   // Resizing from the lower left corner grows the box to the left, and the size is kept.
@@ -377,6 +377,40 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
 
   await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
   await expect(popup.locator('.markdown')).toHaveCount(0)
+})
+
+test('Maymun knows when the learner moves to another page, and what that page is for', async ({ page }) => {
+  const sent: { messages: { role: string; content: string }[] }[] = []
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    sent.push(route.request().postDataJSON())
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`,
+    })
+  })
+  await page.goto('/#/')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
+  await page.reload()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  const ask = async (text: string) => {
+    await question.fill(text)
+    await question.press('Enter')
+    await expect(popup.locator('.markdown').last()).toHaveText('ok')
+  }
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  await ask('What is here?')
+  expect(sent[0].messages[0].content).toContain('The catalog (home page)')
+
+  // The chat stays open on another page of the app, and knows it: the header, the page's text and what it is for.
+  await page.goto('/#/settings')
+  await expect(popup).toContainText('Settings')
+  await ask('And what can I do here?')
+  const system = sent[1].messages[0].content
+  expect(system).toContain('"Settings" (/settings): Settings: theme, language')
+  expect(system).toContain('They moved here from "Learn Platform" since their previous question.')
+  expect(system).toContain('Reset all data')
+  expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 })
 
 test('Maymun keeps one conversation per project, across panels, steps and reloads', async ({ page }) => {
@@ -427,8 +461,8 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   await ask('What does this sentence mean?')
   expect(lastUserMessages()).toEqual([
     'An old question',
-    '[code panel, step 01-canvas] Why is it black?',
-    '[task panel, step 01-canvas] What does this sentence mean?',
+    '[code panel, step 01-canvas, page "Snake"] Why is it black?',
+    '[task panel, step 01-canvas, page "Snake"] What does this sentence mean?',
   ])
 
   // The next step of the same game keeps the chat open and the conversation going.
@@ -436,14 +470,14 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   await expect(page).toHaveURL(/02-grid/)
   await expect(popup).toBeVisible()
   await ask('And here?')
-  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-grid\] And here\?$/)
+  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-grid, page "Snake"\] And here\?$/)
 
   // Another game has its own, empty conversation.
   await page.goto('/#/games/pong/01-court')
   await openOn('code', 'Code')
   await expect(popup).not.toContainText('Why is it black?')
   await ask('Pong question')
-  expect(lastUserMessages()).toEqual(['[code panel, step 01-court] Pong question'])
+  expect(lastUserMessages()).toEqual(['[code panel, step 01-court, page "Pong"] Pong question'])
 
   // Back in Snake after a reload, everything is still there; a new topic starts clean.
   await page.goto('/#/games/snake/02-grid')
@@ -454,7 +488,7 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
   await expect(popup).not.toContainText('Why is it black?')
   await ask('Fresh start')
-  expect(lastUserMessages()).toEqual(['[code panel, step 02-grid] Fresh start'])
+  expect(lastUserMessages()).toEqual(['[code panel, step 02-grid, page "Snake"] Fresh start'])
 })
 
 test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, the bridge)', async ({ page }) => {

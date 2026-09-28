@@ -166,7 +166,8 @@ export function Maymun() {
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
-  const titleOf = (key: string) => (key === 'general' ? t('maymun.general') : document.title.replace(/ · Learn Platform$/, ''))
+  // The game or challenge; elsewhere the page itself, so the header follows the learner from page to page.
+  const titleOf = (_key: string) => document.title.replace(/ · Learn Platform$/, '') || t('maymun.general')
 
   useEffect(() => {
     if (!open) return

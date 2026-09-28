@@ -26,6 +26,8 @@ export function projectOf(pathname: string): Project {
 export interface MessageTag {
   panel: string
   step?: string
+  /** The title of the page it was asked on. */
+  page?: string
 }
 
 export interface StoredMessage extends ChatMessage {
@@ -210,7 +212,9 @@ export function useThread(project: string): Thread {
  */
 export function forModel(messages: StoredMessage[]): ChatMessage[] {
   return messages.slice(-MAX_SENT).map(({ tag, at: _at, remembered: _r, ...m }) =>
-    m.role === 'user' && tag ? { ...m, text: `[${tag.panel} panel${tag.step ? `, step ${tag.step}` : ''}] ${m.text}` } : m,
+    m.role === 'user' && tag
+      ? { ...m, text: `[${tag.panel} panel${tag.step ? `, step ${tag.step}` : ''}${tag.page ? `, page "${tag.page}"` : ''}] ${m.text}` }
+      : m,
   )
 }
 
