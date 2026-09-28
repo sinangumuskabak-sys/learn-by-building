@@ -1,5 +1,6 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import './monaco-setup.ts'
 import { useSettings, useTheme } from '../lib/settings.ts'
 
@@ -31,8 +32,12 @@ export default function CodeEditor({ path, lang, value, onChange, onRun, readOnl
   const theme = useTheme()
   // The shortcut is registered once on mount, so read the latest callback through a ref.
   const onRunRef = useRef(onRun)
-  useEffect(() => {
+  const onChangeRef = useRef(onChange)
+  const rendered = useRef(value)
+  useLayoutEffect(() => {
     onRunRef.current = onRun
+    onChangeRef.current = onChange
+    rendered.current = value
   })
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const typed = useRef(value)
@@ -71,7 +76,13 @@ export default function CodeEditor({ path, lang, value, onChange, onRun, readOnl
       }}
       onMount={(editor, monaco) => {
         editorRef.current = editor
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRunRef.current?.())
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+          // Typing reaches React as a non-urgent update, so a quick Ctrl+Enter can come before the last keystrokes
+          // are rendered; hand the text over synchronously first so the run sees what is on screen.
+          const current = editor.getValue()
+          if (current !== rendered.current) flushSync(() => onChangeRef.current?.(current))
+          onRunRef.current?.()
+        })
         if (startAtEnd) revealEnd()
       }}
       options={{
