@@ -3,13 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
-import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ProviderId } from './ai.ts'
+import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
+import { groupModels, rankModels } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
 import { addToThread, forModel, getThread, markSummarized, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
-import { aiStore, baseFor, isReady, modelFor, useMaymunAi } from './store.ts'
+import { aiStore, baseFor, isReady, modelFor, modelsFor, useMaymunAi } from './store.ts'
 import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
 import { SESSION_GAP, summarize } from '../vault/sessions.ts'
 import { applyMemory, memoryFor, saveSession, welcomeFor, type Welcome } from '../vault/store.ts'
@@ -142,9 +143,10 @@ export function MaymunChat({
     const abort = new AbortController()
     controller.current = abort
     let text = ''
+    let answeredBy = ''
     const memory = await memoryFor(project.key, project.step).catch(() => null)
     try {
-      await streamChat({
+      await streamChatWithFallback({
         provider: ai.provider,
         key: key ?? '',
         base: baseFor(ai, ai.provider),
@@ -161,7 +163,7 @@ export function MaymunChat({
           // The memory block at the end is for the app, not for the learner.
           setAnswer(visibleText(text))
         },
-      })
+      }, modelsFor(ai, ai.provider), (model) => (answeredBy = model))
     } catch (caught) {
       setError(caught instanceof ChatError ? caught.kind : 'other')
       setDetail(caught instanceof Error ? caught.message : String(caught))
@@ -169,7 +171,8 @@ export function MaymunChat({
       if (text) {
         const { visible, ops } = parseMemory(text)
         const remembered = ops.length && memory ? await applyMemory(ops, memory.allowed).catch(() => []) : []
-        if (visible) addToThread(project.key, { role: 'assistant', text: visible, at: Date.now(), ...(remembered.length ? { remembered } : {}) })
+        const via = provider(ai.provider).gateway && answeredBy ? { model: answeredBy } : {}
+        if (visible) addToThread(project.key, { role: 'assistant', text: visible, at: Date.now(), ...via, ...(remembered.length ? { remembered } : {}) })
       }
       setAnswer(null)
       controller.current = null
@@ -304,7 +307,7 @@ export function MaymunChat({
   )
 }
 
-function Bubble({ role, text, image, shot, tag, remembered }: StoredMessage) {
+function Bubble({ role, text, image, shot, tag, remembered, model }: StoredMessage) {
   const { t } = useI18n()
   return role === 'user' ? (
     <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">
@@ -324,6 +327,7 @@ function Bubble({ role, text, image, shot, tag, remembered }: StoredMessage) {
   ) : (
     <div className="mr-4">
       <Markdown source={text} className="rounded-lg bg-surface-2 px-3 py-2" />
+      {model && <p className="mt-1 font-mono text-[11px] text-muted">{t('maymun.answeredBy', { model })}</p>}
       {remembered && remembered.length > 0 && (
         <p className="mt-1 text-[11px] text-muted">
           📝 {t('maymun.remembered')}{' '}
@@ -464,6 +468,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
       </label>
       {current.id === 'bridge' && <BridgeHelp />}
       {current.id === 'custom' && <p className="text-xs text-muted">{t('maymun.custom.help')}</p>}
+      {current.id === 'omniroute' && <p className="text-xs text-muted">{t('maymun.omniroute.help')}</p>}
       {current.local && (
         <label className="block text-xs font-medium">
           {t('maymun.address')}
@@ -493,7 +498,8 @@ function ProviderForm({ compact }: { compact: boolean }) {
           className={`${field} mt-1 font-mono`}
         />
       </label>
-      <label className="block text-xs font-medium">
+      {current.gateway && ai.keys[ai.provider] && <GatewayModels id={current.id} offered={offered} />}
+      <label className={`block text-xs font-medium ${current.gateway ? 'hidden' : ''}`}>
         {t('maymun.model')}
         <input
           value={model}
@@ -504,7 +510,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
           className={`${field} mt-1 font-mono`}
         />
       </label>
-      {offered.length > 0 && (
+      {offered.length > 0 && !current.gateway && (
         <>
           <datalist id={`models-${current.id}`}>
             {offered.map((id) => (
@@ -544,6 +550,66 @@ function ProviderForm({ compact }: { compact: boolean }) {
       </div>
       <p className="text-xs text-muted">{current.local ? t('maymun.privacyLocal') : t('maymun.privacy')}</p>
     </form>
+  )
+}
+
+/**
+ * A gateway's models grouped by the connection they come through (OmniRoute: Claude, Gemini, Codex…). The learner turns
+ * on the ones Maymun may use; the best active one answers and the next takes over when it fails.
+ */
+function GatewayModels({ id, offered }: { id: ProviderId; offered: string[] }) {
+  const { t } = useI18n()
+  const ai = useMaymunAi()
+  const active = ai.active[id] ?? []
+  const order = rankModels(active)
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const set = (next: string[]) => aiStore.set((value) => ({ ...value, active: { ...value.active, [id]: [...new Set(next)] } }))
+  const toggle = (model: string) => set(active.includes(model) ? active.filter((m) => m !== model) : [...active, model])
+  if (!offered.length) return <p className="rounded-lg border border-border p-2 text-xs text-muted">{t('maymun.gateway.none')}</p>
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-2 text-xs">
+      <p className="font-medium">{t('maymun.gateway.title')}</p>
+      <p className="text-muted">
+        {order.length ? t('maymun.gateway.order', { models: order.slice(0, 4).join(' → ') }) : t('maymun.gateway.pick')}
+      </p>
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={t('maymun.gateway.search')}
+        aria-label={t('maymun.gateway.search')}
+        className="h-8 w-full rounded-md border border-border bg-surface px-2"
+      />
+      <div className="max-h-64 space-y-2 overflow-y-auto">
+        {groupModels(offered)
+          .map(({ group, models }) => ({ group, models: models.filter((m) => !q || m.toLowerCase().includes(q) || group.toLowerCase().includes(q)) }))
+          .filter(({ models }) => models.length)
+          .map(({ group, models }) => {
+            const all = models.every((m) => active.includes(m))
+            return (
+              <fieldset key={group} className="rounded-md bg-surface-2 p-2">
+                <legend className="flex w-full items-center gap-2 font-semibold">
+                  <span className="flex-1">{group}</span>
+                  <button
+                    type="button"
+                    onClick={() => set(all ? active.filter((m) => !models.includes(m)) : [...active, ...models])}
+                    className="font-normal text-accent underline"
+                  >
+                    {all ? t('maymun.gateway.none-in-group') : t('maymun.gateway.all')}
+                  </button>
+                </legend>
+                {models.map((model) => (
+                  <label key={model} className="flex items-center gap-2 py-0.5">
+                    <input type="checkbox" checked={active.includes(model)} onChange={() => toggle(model)} className="size-3.5 accent-[var(--accent)]" />
+                    <span className="flex-1 truncate font-mono">{model}</span>
+                    {active.includes(model) && <span className="text-muted tabular-nums">#{order.indexOf(model) + 1}</span>}
+                  </label>
+                ))}
+              </fieldset>
+            )
+          })}
+      </div>
+    </div>
   )
 }
 

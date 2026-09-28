@@ -34,6 +34,8 @@ export interface StoredMessage extends ChatMessage {
   tag?: MessageTag
   /** Notes of the memory vault this answer wrote to. */
   remembered?: string[]
+  /** The model that answered (shown when a gateway picked it). */
+  model?: string
   /** When it was sent, in ms since 1970. */
   at?: number
 }
@@ -211,7 +213,7 @@ export function useThread(project: string): Thread {
  * Maymun can connect "the question you asked in the code panel" to what is on screen now.
  */
 export function forModel(messages: StoredMessage[]): ChatMessage[] {
-  return messages.slice(-MAX_SENT).map(({ tag, at: _at, remembered: _r, ...m }) =>
+  return messages.slice(-MAX_SENT).map(({ tag, at: _at, remembered: _r, model: _m, ...m }) =>
     m.role === 'user' && tag
       ? { ...m, text: `[${tag.panel} panel${tag.step ? `, step ${tag.step}` : ''}${tag.page ? `, page "${tag.page}"` : ''}] ${m.text}` }
       : m,

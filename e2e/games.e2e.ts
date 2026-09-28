@@ -413,6 +413,50 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 })
 
+test('OmniRoute: models grouped by connection, the best active one answers, the next takes over', async ({ page }) => {
+  const asked: string[] = []
+  await page.route('http://localhost:20128/v1/models', (route) =>
+    route.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: { object: 'list', data: ['cc/claude-sonnet-4-5', 'cc/claude-opus-4-7', 'gemini-cli/gemini-3.1-pro', 'gemini-cli/gemini-2.5-flash'].map((id) => ({ id, object: 'model' })) },
+    }),
+  )
+  await page.route('http://localhost:20128/v1/chat/completions', async (route) => {
+    const body = route.request().postDataJSON() as { model: string }
+    asked.push(body.model)
+    expect(route.request().headers().authorization).toBe('Bearer omni-key')
+    // Claude's connection in OmniRoute is down: the next active model takes over.
+    if (body.model.startsWith('cc/')) return route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' }, json: { error: { message: 'Claude connection unavailable' } } })
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'Gemini here.' } }] })}\n\ndata: [DONE]\n\n`,
+    })
+  })
+  await page.goto('/#/settings')
+  const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
+  await setup.getByLabel('Service').selectOption('omniroute')
+  await setup.getByLabel('API key').fill('omni-key')
+  await setup.getByRole('button', { name: 'Save' }).click()
+  const claude = setup.locator('fieldset').filter({ hasText: 'Claude (Claude Code)' })
+  const gemini = setup.locator('fieldset').filter({ hasText: 'Gemini (Gemini CLI)' })
+  await claude.getByRole('button', { name: 'all' }).click()
+  await gemini.getByRole('button', { name: 'all' }).click()
+  await expect(setup).toContainText('Order: cc/claude-opus-4-7 → gemini-cli/gemini-3.1-pro → cc/claude-sonnet-4-5 → gemini-cli/gemini-2.5-flash')
+  // Turning one off takes it out of the order.
+  await claude.getByRole('checkbox', { name: 'cc/claude-sonnet-4-5' }).uncheck()
+  await expect(setup).toContainText('Order: cc/claude-opus-4-7 → gemini-cli/gemini-3.1-pro → gemini-cli/gemini-2.5-flash')
+
+  await page.goto('/#/games/snake/01-canvas')
+  if (isMobile(page)) await tab(page, 'Code')
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await popup.getByRole('textbox', { name: 'Your question' }).fill('Hello?')
+  await popup.getByRole('textbox', { name: 'Your question' }).press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Gemini here.')
+  await expect(popup).toContainText('answered by gemini-cli/gemini-3.1-pro')
+  expect(asked).toEqual(['cc/claude-opus-4-7', 'gemini-cli/gemini-3.1-pro'])
+})
+
 test('Maymun keeps one conversation per project, across panels, steps and reloads', async ({ page }) => {
   const sent: { messages: { role: string; content: string }[] }[] = []
   await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {

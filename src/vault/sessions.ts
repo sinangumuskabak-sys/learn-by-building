@@ -1,7 +1,7 @@
 import type { Lang } from '../i18n/messages.ts'
-import { streamChat } from '../maymun/ai.ts'
+import { streamChatWithFallback } from '../maymun/ai.ts'
 import { forModel, type StoredMessage } from '../maymun/memory.ts'
-import { aiStore, baseFor, isReady, modelFor } from '../maymun/store.ts'
+import { aiStore, baseFor, isReady, modelFor, modelsFor } from '../maymun/store.ts'
 import { safeName } from './skeleton.ts'
 import { marker, writeFrontMatter, writeSection } from './sections.ts'
 
@@ -105,7 +105,7 @@ export async function summarize(messages: StoredMessage[], language: string): Pr
     .join('\n\n')
   let text = ''
   try {
-    await streamChat({
+    await streamChatWithFallback({
       provider: ai.provider,
       key: ai.keys[ai.provider] ?? '',
       base: baseFor(ai, ai.provider),
@@ -115,7 +115,7 @@ export async function summarize(messages: StoredMessage[], language: string): Pr
       onText: (piece) => {
         text += piece
       },
-    })
+    }, modelsFor(ai, ai.provider))
   } catch {
     return null
   }
