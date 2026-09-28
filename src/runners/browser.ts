@@ -1,5 +1,6 @@
 import type { Challenge, CodeFile } from '../content/schema.ts'
-import { buildDocument, jsInput, sqlInput } from './challenge-input.ts'
+import { jsInput, sqlInput } from './challenge-input.ts'
+import { previewDocument } from './web-document.ts'
 import harness from 'virtual:web-harness'
 import { formatValue, type JsRunInput } from './js-core.ts'
 import type { RunResult } from './types.ts'
@@ -45,7 +46,7 @@ export async function runWebInIframe(
   const logs: string[] = []
   await new Promise<void>((resolve) => {
     iframe.onload = () => resolve()
-    iframe.srcdoc = buildDocument(files).replace(
+    iframe.srcdoc = previewDocument(files).replace(
       /<head>/i,
       // Forward the page's console and uncaught errors to the parent before learner scripts run.
       `<head><script>for (const k of ['log','info','warn','error']) { const o = console[k]; console[k] = (...a) => { parent.postMessage({ __lpLog: a.map(String).join(' ') }, '*'); o(...a) } }

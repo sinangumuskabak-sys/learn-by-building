@@ -17,6 +17,9 @@ const GROUPS: Record<string, string> = {
   'gemini-cli': 'Gemini (Gemini CLI)',
   gemini: 'Gemini',
   antigravity: 'Gemini (Antigravity)',
+  agy: 'Antigravity CLI',
+  oc: 'OpenCode Free',
+  kc: 'Kilo Code',
   qw: 'Qwen',
   if: 'Qoder',
   glm: 'GLM',
@@ -27,6 +30,12 @@ const GROUPS: Record<string, string> = {
   groq: 'Groq',
   openrouter: 'OpenRouter',
   mistral: 'Mistral',
+  cerebras: 'Cerebras',
+  nvidia: 'NVIDIA NIM',
+  cf: 'Cloudflare Workers AI',
+  hf: 'Hugging Face',
+  xai: 'xAI (Grok)',
+  cohere: 'Cohere',
 }
 
 export function groupOf(id: string): string {
@@ -58,7 +67,7 @@ export function rankScore(id: string): number {
   else if (/gemini[\w.-]*pro/.test(name)) tier = 93
   else if (/sonnet/.test(name)) tier = 90
   else if (/deepseek[\w.-]*(r1|reasoner)|kimi-k2|glm-4\.[5-9]|qwen3?-?(max|coder)/.test(name)) tier = 80
-  else if (/gpt-4|deepseek|grok|mistral-large|devstral/.test(name)) tier = 75
+  else if (/gpt-4|deepseek|grok|mistral-(large|medium)|magistral|devstral/.test(name)) tier = 75
   else if (/flash(?!-lite)/.test(name)) tier = 65
   else if (/haiku/.test(name)) tier = 60
   // Whole words only ("gemini" is not "mini").

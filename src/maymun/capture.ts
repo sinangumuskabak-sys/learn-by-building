@@ -15,8 +15,8 @@ const MAX_PNG = 1_500_000
 export const UI_ATTRIBUTE = 'data-maymun-ui'
 
 /**
- * Asks a frame on another origin (the game, marked `data-snapshot`) for a picture of itself; null when it does not
- * answer in time.
+ * Asks a frame on another origin (marked `data-snapshot`) for a picture of itself; null when it does not answer in
+ * time. The game draws its own canvas; a web preview draws a copy of its page.
  */
 function frameSnapshot(frame: HTMLIFrameElement): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -36,7 +36,8 @@ function frameSnapshot(frame: HTMLIFrameElement): Promise<HTMLImageElement | nul
       image.src = data.url
     }
     window.addEventListener('message', onMessage)
-    const timer = window.setTimeout(() => done(null), 1500)
+    // Drawing a page takes longer than copying a canvas.
+    const timer = window.setTimeout(() => done(null), 3000)
     frame.contentWindow?.postMessage({ __lpGame: 'snapshot', id }, '*')
   })
 }

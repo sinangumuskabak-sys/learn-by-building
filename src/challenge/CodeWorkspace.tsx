@@ -10,7 +10,7 @@ import type { MessageKey } from '../i18n/messages.ts'
 import { useDebouncedEffect, useMediaQuery } from '../lib/hooks.ts'
 import { formatChecks, useMaymunContext } from '../maymun/context.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
-import { buildDocument } from '../runners/web-document.ts'
+import { previewDocument } from '../runners/web-document.ts'
 import { allPassed, type RunResult } from '../runners/types.ts'
 import { TaskPanel, TestList } from './TaskPanel.tsx'
 
@@ -95,7 +95,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
   const [mobileTab, setMobileTab] = useState<MobileTab>('task')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   // Only the first document goes through React; later updates are debounced to avoid reloading on every keystroke.
-  const [initialDocument] = useState(() => buildDocument(files))
+  const [initialDocument] = useState(() => previewDocument(files))
   const dirty = useRef(false)
 
   useDebouncedEffect(
@@ -109,7 +109,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
 
   // Live preview for web challenges; the test run reloads the frame itself.
   useDebouncedEffect(files, 500, (value) => {
-    if (challenge.type === 'web' && iframeRef.current && !running) iframeRef.current.srcdoc = buildDocument(value)
+    if (challenge.type === 'web' && iframeRef.current && !running) iframeRef.current.srcdoc = previewDocument(value)
   })
 
   const run = useCallback(async () => {
@@ -271,6 +271,7 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
           title={t('challenge.preview')}
           // No allow-same-origin: the learner's page must not reach the site's storage (progress, AI keys).
           sandbox="allow-scripts allow-modals"
+          data-snapshot=""
           srcDoc={initialDocument}
           className={clsx('min-h-0 w-full flex-1 bg-white', outputTab !== 'preview' && 'hidden')}
         />

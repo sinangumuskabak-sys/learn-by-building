@@ -5,6 +5,8 @@ describe('gateway models', () => {
   it('groups OmniRoute models by the connection they come through', () => {
     expect(groupOf('cc/claude-opus-4-7')).toBe('Claude (Claude Code)')
     expect(groupOf('gemini-cli/gemini-3-flash-preview')).toBe('Gemini (Gemini CLI)')
+    expect(groupOf('oc/big-pickle')).toBe('OpenCode Free')
+    expect(groupOf('agy/gemini-3.1-pro-high')).toBe('Antigravity CLI')
     expect(groupOf('newthing/model')).toBe('newthing')
     expect(groupOf('plain-model')).toBe('Other')
     expect(groupModels(['gemini-cli/gemini-2.5-flash', 'cc/claude-sonnet-4-5', 'gemini-cli/gemini-2.5-pro', 'cc/claude-opus-4-7'])).toEqual([

@@ -116,3 +116,40 @@ test('a web challenge’s page cannot reach the site’s storage', async ({ page
   await page.getByRole('button', { name: /^Run tests/ }).click()
   await expect(page.frameLocator('iframe[title="Preview"]').locator('#status')).toHaveText('blocked / blocked')
 })
+
+test('Maymun’s picture of the screen shows a web challenge’s preview, which draws its own picture', async ({ page }) => {
+  test.skip(isMobile(page), 'the preview and the chat are on different tabs on phones')
+  await page.goto('./#/learn/accessible-button')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
+  await page.reload()
+  await page.getByRole('tab', { name: 'index.js' }).click()
+  const editor = page.locator('.monaco-editor').first()
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press('Delete')
+  await page.keyboard.insertText("document.body.style.cssText = 'margin:0;min-height:100vh;background:rgb(0, 200, 0)'\n")
+  const preview = page.locator('iframe[title="Preview"]')
+  await expect(page.frameLocator('iframe[title="Preview"]').locator('body')).toHaveCSS('background-color', 'rgb(0, 200, 0)')
+  const box = (await preview.boundingBox())!
+  await page.getByRole('button', { name: /^Ask Maymun/ }).first().click()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await popup.getByRole('button', { name: 'Take a picture of the screen' }).click()
+  await page.getByRole('dialog', { name: 'Choose what to take a picture of' }).click({ position: { x: 20, y: 20 } })
+  const shot = popup.getByRole('img', { name: 'Take a picture of the screen' })
+  await expect(shot).toBeVisible({ timeout: 15_000 })
+  const viewport = page.viewportSize()!
+  const pixel = await shot.evaluate(async (img: HTMLImageElement, spot) => {
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const g = c.getContext('2d')!
+    g.drawImage(img, 0, 0)
+    const d = g.getImageData(Math.round(spot.x * c.width), Math.round(spot.y * c.height), 1, 1).data
+    return [d[0], d[1], d[2]]
+  }, { x: (box.x + box.width / 2) / viewport.width, y: (box.y + box.height - 20) / viewport.height })
+  // Without the preview's own page that spot would be empty.
+  expect(pixel[1]).toBeGreaterThan(150)
+  expect(pixel[0]).toBeLessThan(60)
+})
+
