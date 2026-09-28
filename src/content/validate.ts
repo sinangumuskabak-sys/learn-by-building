@@ -42,6 +42,15 @@ export function validateChallenge(challenge: Challenge): string[] {
       }
     }
   }
+  // A Turkish version must be the same quiz: same questions, same options, same answers.
+  const { questions: trQuestions, rubric: trRubric } = challenge.tr ?? {}
+  if (trQuestions) {
+    const shape = (qs: Challenge['questions']) => qs.map((q) => q.options.map((o) => (o.correct ? 'x' : '-')).join('')).join('|')
+    if (shape(trQuestions) !== shape(challenge.questions)) {
+      add('"# --questions-tr--" must have the same questions, options and correct answers as "# --questions--"')
+    }
+  }
+  if (trRubric && trRubric.length !== challenge.rubric.length) add('"# --rubric-tr--" must have as many lines as "# --rubric--"')
   if (challenge.type === 'read' && challenge.seed.length === 0) add('"read" challenge needs code to read in "# --seed--"')
   if (challenge.type === 'design' && challenge.rubric.length === 0) add('"design" challenge needs "# --rubric--"')
 

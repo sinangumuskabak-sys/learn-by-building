@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { localizeChallenge } from './localize.ts'
 import { ContentError, parseChallenge } from './parse.ts'
 
 const fence = '```'
@@ -93,5 +94,38 @@ describe('parseChallenge', () => {
   it('accepts Windows line endings', () => {
     const raw = doc(base, '# --description--\nHello').replace(/\n/g, '\r\n')
     expect(parseChallenge('crlf.md', raw).description).toBe('Hello')
+  })
+
+  it('reads Turkish texts and swaps them in for Turkish', () => {
+    const raw = doc(
+      `${base}\ntitle_tr: Örnek`,
+      [
+        '# --description--',
+        'Hello',
+        '# --description-tr--',
+        'Merhaba',
+        '# --hints--',
+        'First requirement.',
+        'tr: İlk koşul.',
+        `${fence}js`,
+        'assert.ok(true)',
+        fence,
+        '# --questions--',
+        '## Pick one',
+        '- [x] yes',
+        '- [ ] no',
+        '# --questions-tr--',
+        '## Birini seç',
+        '- [x] evet',
+        '- [ ] hayır',
+      ].join('\n'),
+    )
+    const challenge = parseChallenge('tr.md', raw)
+    expect(challenge.tests[0]).toMatchObject({ text: 'First requirement.', tr: 'İlk koşul.' })
+    expect(localizeChallenge(challenge, 'en')).toBe(challenge)
+    const tr = localizeChallenge(challenge, 'tr')
+    expect(tr).toMatchObject({ title: 'Örnek', description: 'Merhaba', instructions: '' })
+    expect(tr.tests[0].text).toBe('İlk koşul.')
+    expect(tr.questions[0]).toEqual({ prompt: 'Birini seç', options: [{ text: 'evet', correct: true }, { text: 'hayır', correct: false }] })
   })
 })

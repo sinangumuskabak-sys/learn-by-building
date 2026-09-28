@@ -1,4 +1,4 @@
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { useEffect, useRef } from 'react'
 import './monaco-setup.ts'
 import { useSettings, useTheme } from '../lib/settings.ts'
@@ -21,10 +21,12 @@ export interface CodeEditorProps {
   onRun?: () => void
   readOnly?: boolean
   label: string
+  /** Show the end of the file on open and whenever the code is replaced from outside (new work goes at the bottom). */
+  startAtEnd?: boolean
 }
 
 /** Monaco editor; loaded lazily because it is by far the largest part of the app. */
-export default function CodeEditor({ path, lang, value, onChange, onRun, readOnly, label }: CodeEditorProps) {
+export default function CodeEditor({ path, lang, value, onChange, onRun, readOnly, label, startAtEnd }: CodeEditorProps) {
   const { fontSize } = useSettings()
   const theme = useTheme()
   // The shortcut is registered once on mount, so read the latest callback through a ref.
@@ -32,15 +34,36 @@ export default function CodeEditor({ path, lang, value, onChange, onRun, readOnl
   useEffect(() => {
     onRunRef.current = onRun
   })
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const typed = useRef(value)
+  const revealEnd = () => {
+    const editor = editorRef.current
+    const model = editor?.getModel()
+    if (!editor || !model) return
+    const line = model.getLineCount()
+    editor.setPosition({ lineNumber: line, column: model.getLineMaxColumn(line) })
+    editor.revealLine(line)
+  }
+  // A value that did not come from typing (a new step, the solution, a reset) is shown from its end.
+  useEffect(() => {
+    if (value === typed.current) return
+    typed.current = value
+    if (startAtEnd) revealEnd()
+  })
   return (
     <Editor
       path={path}
       language={languages[lang] ?? 'plaintext'}
       value={value}
       theme={theme === 'dark' ? 'vs-dark' : 'light'}
-      onChange={(next) => onChange?.(next ?? '')}
+      onChange={(next) => {
+        typed.current = next ?? ''
+        onChange?.(next ?? '')
+      }}
       onMount={(editor, monaco) => {
+        editorRef.current = editor
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRunRef.current?.())
+        if (startAtEnd) revealEnd()
       }}
       options={{
         readOnly,

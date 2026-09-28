@@ -19,6 +19,8 @@ export type LocalizedText = z.infer<typeof localizedText>
 export const frontmatterSchema = z.object({
   id,
   title: z.string().min(1),
+  /** Turkish title; the other Turkish texts live in `-tr` sections next to their English ones. */
+  title_tr: z.string().min(1).optional(),
   type: z.enum(challengeTypes),
   skills: z.array(id).min(1),
   level: z.number().int().min(MIN_LEVEL).max(MAX_LEVEL),
@@ -60,6 +62,8 @@ export interface TestCase {
   text: string
   /** Assertion code run by the challenge's runner. */
   code: string
+  /** Turkish requirement text (a `tr:` line under the English one). */
+  tr?: string
 }
 
 export interface QuizQuestion {
@@ -79,4 +83,12 @@ export interface Challenge extends Frontmatter {
   solutions: CodeFile[][]
   questions: QuizQuestion[]
   rubric: string[]
+  /** Turkish texts, each optional; the UI falls back to English (see `localizeChallenge`). */
+  tr?: {
+    description?: string
+    instructions?: string
+    /** Same questions in the same order, with translated prompts and options. */
+    questions?: QuizQuestion[]
+    rubric?: string[]
+  }
 }

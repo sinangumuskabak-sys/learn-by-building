@@ -9,7 +9,7 @@ import { useI18n } from '../i18n/i18n.ts'
 import { statusOf, useProgress } from '../progress/progress.ts'
 
 export function HomePage() {
-  const { t, l } = useI18n()
+  const { t, l, ct } = useI18n()
   const progress = useProgress()
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())
@@ -26,7 +26,7 @@ export function HomePage() {
     (c) => !deferredQuery || matches(l(c.title)) || matches(l(c.description)),
   )
   const challengeHits = deferredQuery
-    ? catalog.order.map((id) => catalog.challenges.get(id)!).filter((e) => matches(e.challenge.title))
+    ? catalog.order.map((id) => catalog.challenges.get(id)!).filter((e) => matches(ct(e.challenge)))
     : []
 
   return (
@@ -81,7 +81,7 @@ export function HomePage() {
                     className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-2"
                   >
                     <StatusIcon status={status} label={t(`status.${status}`)} />
-                    <span className="min-w-0 flex-1 truncate font-medium">{challenge.title}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{ct(challenge)}</span>
                     <span className="hidden text-muted sm:inline">{l(category.title)}</span>
                     <TypeIcon type={challenge.type} className="text-muted" />
                   </Link>

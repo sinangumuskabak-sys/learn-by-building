@@ -1,4 +1,5 @@
-import type { LocalizedText } from '../content/schema.ts'
+import { localizeChallenge } from '../content/localize.ts'
+import type { Challenge, LocalizedText } from '../content/schema.ts'
 import { createPersistedStore, useStore } from '../lib/store.ts'
 import { langs, messages, type Lang, type MessageKey } from './messages.ts'
 
@@ -24,5 +25,9 @@ export function useI18n() {
     t: (key: MessageKey, params?: Record<string, string | number>) => translate(lang, key, params),
     /** Picks the current language from content text, falling back to English. */
     l: (text: LocalizedText) => (lang === 'tr' && text.tr) || text.en,
+    /** A challenge's title in the current language. */
+    ct: (challenge: Pick<Challenge, 'title' | 'title_tr'>) => (lang === 'tr' && challenge.title_tr) || challenge.title,
+    /** A challenge with all its texts in the current language. */
+    lc: (challenge: Challenge) => localizeChallenge(challenge, lang),
   }
 }

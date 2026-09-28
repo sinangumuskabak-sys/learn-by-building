@@ -10,23 +10,19 @@ import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
 import { currentPanel, pointer, startTracking } from './tracker.ts'
 
 const SIZE = 88 // rendered width and height of the head, in pixels
-const HIDDEN = 20 // how much of the head stays behind the panel's right edge
-const DEAD_ZONE = 60 // the head only moves when the pointer is this far above or below it
+const HIDDEN = 20 // how much of the head stays behind the window's right edge
 const MARGIN = 12 // the popup keeps this far from the window edges
 const HEADER = 64 // and stays below the app header
-const TOOLBAR = 48 // the head stays below a panel's toolbar (Run, Show solution, restart)
 const MIN_BOX = { width: 288, height: 320 } // the chat box cannot be dragged smaller than this
 const EYES = [
   { x: 34, y: 53 },
   { x: 66, y: 53 },
 ]
 
-type Mood = 'calm' | 'angry' | 'excited'
-
 /**
- * Maymun, an orange cat peeking in from the right edge of the panel the pointer is over. The eyes follow the
- * pointer; the head follows it up and down when it goes far; far to the left the cat gets cross, close by it gets
- * excited. A click opens a chat about that panel; the box can be resized from its lower left corner.
+ * Maymun, an orange cat peeking in from the middle of the window's right edge. It stays put on every page; only
+ * its eyes follow the pointer (and blink now and then). A click opens a chat about the panel the learner last
+ * worked in; the box can be resized from its lower left corner.
  */
 export function Maymun() {
   const { t } = useI18n()
@@ -46,52 +42,18 @@ export function Maymun() {
     if (!visible) return
     startTracking()
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    let headY = -1
-    let mood: Mood = 'calm'
     let nextBlink = performance.now() + 2500
     let frame = 0
-    let lastRect = ''
-    let settledAt = Infinity
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick)
       const box = layer.current
       const button = head.current
       if (!box || !button) return
-      const panel = currentPanel()
-      const rect = panel?.getBoundingClientRect()
-      if (!panel || !rect || rect.height < TOOLBAR + SIZE + 8) {
-        box.style.display = 'none'
-        return
-      }
-      // While the layout moves (page load, panel resize, tab switch) the cat waits, so it never lands on a button.
-      const key = `${panel.dataset.maymun} ${rect.left} ${rect.top} ${rect.width} ${rect.height}`
-      if (key !== lastRect) {
-        lastRect = key
-        settledAt = now + 250
-      }
-      box.style.display = now < settledAt ? 'none' : 'block'
-      box.style.left = `${rect.left}px`
-      box.style.top = `${rect.top}px`
-      box.style.width = `${rect.width}px`
-      box.style.height = `${rect.height}px`
-
-      // Up and down: stay put while the pointer is near, glide to its height when it goes far.
-      const min = TOOLBAR + SIZE / 2
-      const max = rect.height - SIZE / 2 - 6
-      if (headY < 0) headY = min + (max - min) * 0.3
-      // Near the right edge the pointer is probably after something there: the cat stays put instead of sitting on it.
-      if (pointer.seen && pointer.x < rect.right - SIZE * 2) {
-        const wanted = pointer.y - rect.top
-        const target = Math.abs(wanted - headY) > DEAD_ZONE ? wanted : headY
-        headY += (Math.min(max, Math.max(min, target)) - headY) * (reduced ? 1 : 0.12)
-      }
-      headY = Math.min(max, Math.max(min, headY))
-      button.style.top = `${headY - SIZE / 2}px`
+      box.style.display = currentPanel() ? 'block' : 'none'
 
       // Eyes: each pupil moves a little towards the pointer.
-      const left = rect.right + HIDDEN - SIZE
-      const top = rect.top + headY - SIZE / 2
+      const rect = button.getBoundingClientRect()
       const scale = SIZE / 100
       EYES.forEach((eye, i) => {
         const g = pupils.current[i]
@@ -99,8 +61,8 @@ export function Maymun() {
         let dx = 0
         let dy = 0
         if (pointer.seen) {
-          const ex = pointer.x - (left + eye.x * scale)
-          const ey = pointer.y - (top + eye.y * scale)
+          const ex = pointer.x - (rect.left + eye.x * scale)
+          const ey = pointer.y - (rect.top + eye.y * scale)
           const d = Math.hypot(ex, ey) || 1
           const reach = Math.min(3.6, d / 25)
           dx = (ex / d) * reach
@@ -108,19 +70,6 @@ export function Maymun() {
         }
         g.setAttribute('transform', `translate(${dx.toFixed(2)} ${dy.toFixed(2)})`)
       })
-
-      // Mood: cross when the pointer runs far off to the left, excited when it comes close.
-      const cx = left + SIZE / 2
-      const cy = top + SIZE / 2
-      let next: Mood = 'calm'
-      if (pointer.seen) {
-        if (Math.hypot(pointer.x - cx, pointer.y - cy) < 150) next = 'excited'
-        else if (cx - pointer.x > Math.max(360, rect.width * 0.65)) next = 'angry'
-      }
-      if (next !== mood) {
-        mood = next
-        svg.current?.setAttribute('data-mood', mood)
-      }
 
       if (!reduced && now > nextBlink) {
         svg.current?.setAttribute('data-blink', 'true')
@@ -183,7 +132,7 @@ export function Maymun() {
 
   return (
     <>
-      <div ref={layer} {...{ [UI_ATTRIBUTE]: '' }} className="pointer-events-none fixed z-20 hidden overflow-hidden print:hidden">
+      <div ref={layer} {...{ [UI_ATTRIBUTE]: '' }} className="pointer-events-none fixed inset-0 z-20 hidden overflow-hidden print:hidden">
         <button
           ref={head}
           type="button"
@@ -192,7 +141,7 @@ export function Maymun() {
           aria-expanded={open}
           title={t('maymun.ask')}
           className="maymun-head pointer-events-auto absolute cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          style={{ width: SIZE, height: SIZE, right: -HIDDEN, top: 0 }}
+          style={{ width: SIZE, height: SIZE, right: -HIDDEN, top: `calc(50% - ${SIZE / 2}px)` }}
         >
           <MaymunFace svgRef={svg} pupilRefs={pupils} />
         </button>

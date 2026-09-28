@@ -205,7 +205,7 @@ body {
   transition: transform 0.2s ease;
 }
 .maymun-head:hover {
-  transform: translateX(-6px);
+  filter: brightness(1.08);
 }
 @keyframes maymun-wave {
   to {

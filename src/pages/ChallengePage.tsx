@@ -22,7 +22,7 @@ function neighbours(entry: ChallengeEntry) {
 
 /** Shown under the task once the challenge is completed. */
 function NextStep({ entry }: { entry: ChallengeEntry }) {
-  const { t } = useI18n()
+  const { t, ct } = useI18n()
   const passed = useProgress().challenges[entry.challenge.id]?.status === 'passed'
   const { next } = neighbours(entry)
   if (!passed || !next) return null
@@ -34,7 +34,7 @@ function NextStep({ entry }: { entry: ChallengeEntry }) {
     >
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-medium text-success">{t('challenge.next')}</span>
-        <span className="block truncate font-medium">{nextEntry.challenge.title}</span>
+        <span className="block truncate font-medium">{ct(nextEntry.challenge)}</span>
       </span>
       <ArrowRight size={18} className="text-success transition-transform group-hover:translate-x-0.5" aria-hidden />
     </Link>
@@ -42,7 +42,7 @@ function NextStep({ entry }: { entry: ChallengeEntry }) {
 }
 
 function ChallengeHeader({ entry }: { entry: ChallengeEntry }) {
-  const { t, l } = useI18n()
+  const { t, l, ct } = useI18n()
   const navigate = useNavigate()
   const { previous, next } = neighbours(entry)
   return (
@@ -55,7 +55,7 @@ function ChallengeHeader({ entry }: { entry: ChallengeEntry }) {
         <span className="hidden shrink-0 text-muted sm:inline">{l(entry.module.title)}</span>
         <ChevronRight size={14} className="hidden shrink-0 text-muted sm:inline" aria-hidden />
         <span className="truncate font-medium" aria-current="page">
-          {entry.challenge.title}
+          {ct(entry.challenge)}
         </span>
       </nav>
       <IconButton label={t('challenge.previous')} disabled={!previous} onClick={() => navigate(`/learn/${previous}`)}>
@@ -72,9 +72,9 @@ function ChallengeHeader({ entry }: { entry: ChallengeEntry }) {
 }
 
 function ReadWorkspace({ entry }: { entry: ChallengeEntry }) {
-  const { t } = useI18n()
+  const { t, lc } = useI18n()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
-  const { challenge } = entry
+  const challenge = lc(entry.challenge)
   const code = (
     <section className="flex h-full min-h-72 flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <h2 className="shrink-0 border-b border-border px-4 py-2 text-xs font-semibold tracking-wide text-muted uppercase">
@@ -131,11 +131,11 @@ function ReadWorkspace({ entry }: { entry: ChallengeEntry }) {
 
 export function ChallengePage() {
   const { challengeId = '' } = useParams()
-  const { t } = useI18n()
+  const { t, ct, lc } = useI18n()
   const entry = catalog.challenges.get(challengeId)
-  useDocumentTitle(entry?.challenge.title ?? t('challenge.notFound'))
+  useDocumentTitle(entry ? ct(entry.challenge) : t('challenge.notFound'))
   if (!entry) return <NotFoundPage title={t('challenge.notFound')} />
-  const { challenge } = entry
+  const challenge = lc(entry.challenge)
 
   let body
   if (runnableTypes.includes(challenge.type)) {

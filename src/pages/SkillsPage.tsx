@@ -13,7 +13,7 @@ import { skillLevel } from '../progress/skills.ts'
 const levels = Array.from({ length: MAX_LEVEL + 1 }, (_, level) => level)
 
 export function SkillsPage() {
-  const { t, l } = useI18n()
+  const { t, l, ct } = useI18n()
   const progress = useProgress()
   useDocumentTitle(t('skills.title'))
 
@@ -83,7 +83,7 @@ export function SkillsPage() {
                               to={`/learn/${challenge.id}`}
                               className="rounded-md bg-success/10 px-2 py-0.5 text-success hover:underline"
                             >
-                              {challenge.title}
+                              {ct(challenge)}
                             </Link>
                           ))}
                           {fromGames.steps.map(({ game, step, index }) => (

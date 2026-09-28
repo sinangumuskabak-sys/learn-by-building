@@ -9,7 +9,7 @@ import { NotFoundPage } from './NotFoundPage.tsx'
 
 export function CategoryPage() {
   const { categoryId } = useParams()
-  const { t, l } = useI18n()
+  const { t, l, ct } = useI18n()
   const progress = useProgress()
   const category = catalog.curriculum.categories.find((c) => c.id === categoryId)
   if (!category) return <NotFoundPage title={t('category.notFound')} />
@@ -77,7 +77,7 @@ export function CategoryPage() {
                       >
                         <StatusIcon status={status} label={t(`status.${status}`)} />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{challenge.title}</span>
+                          <span className="block truncate font-medium">{ct(challenge)}</span>
                           <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                             <TypeIcon type={challenge.type} size={13} />
                             {t(`type.${challenge.type}`)}

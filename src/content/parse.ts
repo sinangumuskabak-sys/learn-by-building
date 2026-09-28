@@ -27,6 +27,10 @@ const knownSections = [
   'solutions',
   'questions',
   'rubric',
+  'description-tr',
+  'instructions-tr',
+  'questions-tr',
+  'rubric-tr',
 ] as const
 type SectionName = (typeof knownSections)[number]
 
@@ -151,7 +155,16 @@ function parseTests(source: string, body: string | undefined): TestCase[] {
       pending = chunk.text
     } else {
       if (pending === null) throw new ContentError(source, 'test code block without a hint text above it')
-      tests.push({ text: pending, code: chunk.code })
+      // An optional line starting with "tr:" gives the Turkish text of the hint above it.
+      const lines = pending.split('\n')
+      const trIndex = lines.findIndex((line) => line.startsWith('tr:'))
+      if (trIndex === 0) throw new ContentError(source, 'hint needs an English line before "tr:"')
+      if (trIndex < 0) tests.push({ text: pending, code: chunk.code })
+      else {
+        const text = lines.slice(0, trIndex).join('\n').trim()
+        const tr = lines.slice(trIndex).join('\n').slice(3).trim()
+        tests.push({ text, code: chunk.code, ...(tr ? { tr } : {}) })
+      }
       pending = null
     }
   }
@@ -219,5 +232,11 @@ export function parseChallenge(source: string, raw: string): Challenge {
     solutions: parseSolutions(source, sections.get('solutions')),
     questions: parseQuestions(source, sections.get('questions')),
     rubric: parseRubric(source, sections.get('rubric')),
+    tr: {
+      description: sections.get('description-tr'),
+      instructions: sections.get('instructions-tr'),
+      questions: sections.has('questions-tr') ? parseQuestions(source, sections.get('questions-tr')) : undefined,
+      rubric: sections.has('rubric-tr') ? parseRubric(source, sections.get('rubric-tr')) : undefined,
+    },
   }
 }

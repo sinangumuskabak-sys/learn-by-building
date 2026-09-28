@@ -317,6 +317,34 @@ function GameFrame({
   )
 }
 
+/**
+ * The step text opens scrolled to its end, where the newest part (the task, then the link to the next step) is, and
+ * stays there while it grows or is shown again, unless the learner scrolled up to read.
+ */
+function stickToBottom(el: HTMLDivElement | null) {
+  if (!el) return
+  let atEnd = true
+  let placed = 0 // where toEnd last put the scroll position
+  const toEnd = () => {
+    if (!atEnd || el.clientHeight === 0) return
+    el.scrollTop = el.scrollHeight
+    placed = el.scrollTop
+  }
+  // Only scrolling up from where the text was placed counts as the learner leaving the end (growing text does not).
+  const onScroll = () => {
+    if (el.clientHeight > 0) atEnd = el.scrollTop >= placed - 2 || el.scrollHeight - el.scrollTop - el.clientHeight < 24
+  }
+  el.addEventListener('scroll', onScroll, { passive: true })
+  const observer = new ResizeObserver(toEnd)
+  observer.observe(el)
+  if (el.firstElementChild) observer.observe(el.firstElementChild)
+  toEnd()
+  return () => {
+    observer.disconnect()
+    el.removeEventListener('scroll', onScroll)
+  }
+}
+
 function HResizeHandle() {
   return (
     <Separator className="group relative h-px shrink-0 bg-border outline-none data-[separator=active]:bg-accent">
@@ -463,6 +491,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
             }}
             onRun={() => void run()}
             label={t('game.editorLabel', { game: l(game.title) })}
+            startAtEnd
           />
         </Suspense>
       </div>
@@ -512,7 +541,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
         <Panel defaultSize="50%" minSize="30%">
           <Group orientation="vertical" className="h-full">
             <Panel defaultSize="45%" minSize="15%">
-              <div tabIndex={0} data-maymun="task" className="h-full overflow-y-auto">
+              <div ref={stickToBottom} tabIndex={0} data-maymun="task" className="h-full overflow-y-auto">
                 <StepText game={game} index={index} />
               </div>
             </Panel>
@@ -562,7 +591,12 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
           ))}
         </div>
         <div className="min-h-0 flex-1">
-          <div tabIndex={0} data-maymun="task" className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}>
+          <div
+            ref={stickToBottom}
+            tabIndex={0}
+            data-maymun="task"
+            className={clsx('h-full overflow-y-auto', mobileTab !== 'task' && 'hidden')}
+          >
             <StepText game={game} index={index} />
           </div>
           <div className={clsx('h-full', mobileTab !== 'code' && 'hidden')}>{editor}</div>

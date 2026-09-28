@@ -54,6 +54,16 @@ Reference solution with the same files as the seed. Separate alternative solutio
 - One review criterion per line (design / critique challenges).
 ````
 
+## Turkish
+
+Every learner-facing text can have a Turkish version; missing ones fall back to English.
+
+- `title_tr:` in the frontmatter.
+- `# --description-tr--`, `# --instructions-tr--`: the same sections in Turkish.
+- In `# --hints--`, a line starting with `tr:` right under the English requirement.
+- `# --questions-tr--`: the same questions in the same order, with the same options and answers (validated).
+- `# --rubric-tr--`: the same number of lines as `# --rubric--`.
+
 ## Required sections by type
 
 | Type | Needs |
