@@ -98,10 +98,27 @@ Kamerayı sonra ekleyeceğiz.
 # --task--
 
 1. Store the canvas and context in `canvas` and `ctx`, and add `const TILE = 32`.
-2. Add the `LEVEL` array from the solution below (copy it exactly), `const ROWS = LEVEL.length`,
+2. Add the `LEVEL` array below (copy it exactly: `'#'` ground, `'B'` brick, `'o'` coin, `'e'` enemy, `'P'` player
+   start, `'F'` flag), `const ROWS = LEVEL.length`,
    `const COLS = LEVEL[0].length` and `const COLORS = { '#': '#78350f', B: '#c2410c' }`.
 3. Write `draw()`: fill the canvas with the sky color `'#7dd3fc'`, then for every row and column, draw a `TILE` ×
    `TILE` square in `COLORS[tile]` when the tile is `'#'` or `'B'`. Call `draw()`.
+
+   ```js
+   const LEVEL = [
+     '................................................................',
+     '................................................................',
+     '................................................................',
+     '................................................................',
+     '....................................oooo........................',
+     '.........oooo........................e..........................',
+     '.........BBBB.................ooo...BBBB....##..................',
+     '....ooo...............#....................###.......oooo.......',
+     '..P...................#...e...............####.....e.....e...F..',
+     '################..############...#############..################',
+     '################..############...#############..################',
+   ]
+   ```
 
 # --task-tr--
 

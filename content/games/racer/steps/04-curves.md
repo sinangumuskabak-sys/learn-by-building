@@ -64,7 +64,24 @@ virajlarda tam hızda itme direksiyondan güçlüdür, gazı bırakman gerekir.
 
 # --task--
 
-1. Build the track from the stretches in the solution with `add(count, curve)`.
+1. In `buildTrack()`, replace `add(800, 0)` with these stretches:
+
+   ```js
+   add(80, 0)
+   add(60, 2)
+   add(50, 0)
+   add(80, -3)
+   add(40, 0)
+   add(50, 4)
+   add(30, -1)
+   add(60, -2)
+   add(70, 0)
+   add(90, 3)
+   add(40, 0)
+   add(60, -4)
+   add(90, 0)
+   ```
+
 2. Add `segmentAt(z)`, the segment at a distance `z` along the track. In `update()`, the curve under the car
    (`segmentAt(position + PLAYER_Z)`) pulls it: `playerX -= curve × 0.012 × ratio²`, before clamping.
 3. When drawing, start with `x = 0` and `dx = -curve × (position % SEG) / SEG` of the current segment; each segment's near edge

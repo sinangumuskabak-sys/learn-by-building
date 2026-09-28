@@ -62,7 +62,16 @@ piksel içeride başlar (`inset`, iç boşluk).
 
 # --task--
 
-1. Add the five river lanes from the solution (rows 1-5, with `log: true`) at the start of `LANES`.
+1. Add the five river lanes at the start of `LANES`:
+
+   ```js
+     { row: 1, speed: 0.025, len: 3, spacing: 5, log: true },
+     { row: 2, speed: -0.035, len: 4, spacing: 6, log: true },
+     { row: 3, speed: 0.02, len: 2, spacing: 4, log: true },
+     { row: 4, speed: -0.03, len: 3, spacing: 5, log: true },
+     { row: 5, speed: 0.04, len: 4, spacing: 6, log: true },
+   ```
+
 2. Write `onLog(lane)`: whether the frog's middle, `frog.x + 0.5`, is strictly inside one of the lane's logs.
 3. In `update()`: in a car lane, check for cars as before. In a log lane, `die()` if the frog is not on a log;
    otherwise carry it by `lane.speed`, and `die()` if that puts `frog.x` below `-0.5` or above `COLS - 0.5`.

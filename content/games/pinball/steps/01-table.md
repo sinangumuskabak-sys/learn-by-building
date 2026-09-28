@@ -84,7 +84,17 @@ der. `loop` her seferinde çizip kendini yeniden ister; böylece saniyede yakla�
 
 # --task--
 
-1. Add `R = 8`, `LANE_X = 375` and `WALLS` (the list in the solution: the outline, the launch lane and the two slopes).
+1. Add `R = 8`, `LANE_X = 375` and `WALLS`, line segments `[x1, y1, x2, y2]`: the outline, the launch lane and the two
+   slopes.
+
+   ```js
+   const WALLS = [
+     [20, 470, 20, 120], [20, 120, 60, 55], [60, 55, 140, 22], [140, 22, 260, 22], [260, 22, 340, 50], [340, 50, 390, 120],
+     [390, 120, 390, 590], [360, 590, 360, 170], [360, 590, 390, 590], // the launch lane
+     [20, 470, 128, 530], [360, 470, 272, 530], // the slopes down to the flippers
+   ]
+   ```
+
 2. Write `newBall()`, which puts `ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }`, and `reset()`, which calls it.
 3. Draw the table `'#0c0a09'`, every wall as a `'#a8a29e'` line 4 wide with round caps, and the ball as a `'#e7e5e4'` circle.
 

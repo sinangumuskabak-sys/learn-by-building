@@ -89,7 +89,12 @@ koyu bir dış çizgi alır. Dış çizgi **önce**, beyaz dolgu **üstüne** ç
 # --task--
 
 1. Add `SQ = 56`, `LEFT = 16`, `TOP = 56`, `GLYPHS = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' }` and the `START`
-   rows from the solution.
+   rows (row 0 is black's back rank at the top, capitals are white):
+
+   ```js
+   const START = ['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR']
+   ```
+
 2. `reset()` builds `board` from `START`: `''` for a dot, otherwise `'w'` or `'b'` (capital or not) followed by the letter in
    capitals.
 3. Draw every frame: a `'#1c1917'` background and the 64 squares from `(LEFT, TOP)`, `'#e7d8b8'` when `row + col` is even and

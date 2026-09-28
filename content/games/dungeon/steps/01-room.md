@@ -98,7 +98,71 @@ gibi çizebiliriz. `ctx.save()` ayarları kaydeder, `ctx.restore()` eski hâline
 
 # --task--
 
-1. Add `T = 32`, `TOP = 48`, `SIZE = 22`, the `ROOMS` from the solution, `COLS = 15` and `ROWS = 11`.
+1. Add `T = 32`, `TOP = 48`, `SIZE = 22`, `COLS = 15`, `ROWS = 11` and the `ROOMS` below: four rooms in a 2 by 2 grid
+   (`#` wall, `D` locked door, `k` key, `h` heart, `e` enemy, `E` the stairs out, `P` the start; a gap in the wall at the
+   edge of a room leads to the room next to it).
+
+   ```js
+   const ROOMS = [
+     [
+       [
+         '###############',
+         '#.............#',
+         '#..P..........#',
+         '#....###......#',
+         '#....#.....e..#',
+         '#....#.........',
+         '#.............#',
+         '#..........h..#',
+         '#.............#',
+         '#.............#',
+         '#######.#######',
+       ],
+       [
+         '###############',
+         '#.............#',
+         '#..e......e...#',
+         '#....#####....#',
+         '#.............#',
+         '..............#',
+         '#.............#',
+         '#...##...##...#',
+         '#.......e.....#',
+         '#.............#',
+         '#######D#######',
+       ],
+     ],
+     [
+       [
+         '#######.#######',
+         '#.............#',
+         '#..e..........#',
+         '#...#######...#',
+         '#.............#',
+         '#.....k.......#',
+         '#.............#',
+         '#...#######...#',
+         '#..........e..#',
+         '#.............#',
+         '###############',
+       ],
+       [
+         '#######.#######',
+         '#.............#',
+         '#.e.........e.#',
+         '#.............#',
+         '#....#####....#',
+         '#....#.E.#....#',
+         '#....#...#....#',
+         '#.............#',
+         '#......e......#',
+         '#.............#',
+         '###############',
+       ],
+     ],
+   ]
+   ```
+
 2. Write `findIn(lines, ch)` returning the `{ row, col }` of a character in a room. `reset()` puts the player, as
    `{ x, y, dir: [0, 1] }`, centered on the `P` tile of the first room, and makes `tiles` from that room as arrays of characters
    (the `P` becomes floor).

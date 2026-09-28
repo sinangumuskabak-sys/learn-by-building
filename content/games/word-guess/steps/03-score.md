@@ -64,8 +64,17 @@ Yeşiller önce gelmeli; yoksa öndeki bir sarı, arkadaki yeşilin ihtiyaç duy
 
 # --task--
 
-1. Add the `WORDS` list from the solution, `COLORS = { green: '#16a34a', yellow: '#ca8a04', gray: '#3f3f46' }`, `answer`
+1. Add the `WORDS` list below, `COLORS = { green: '#16a34a', yellow: '#ca8a04', gray: '#3f3f46' }`, `answer`
    (a random word in `reset()`) and `guesses` (`[]`), each guess being `{ word, marks }`.
+
+   ```js
+   const WORDS = ['apple', 'beach', 'brain', 'bread', 'brick', 'chair', 'chess', 'clock', 'cloud', 'crane', 'dance', 'dream',
+     'drink', 'eagle', 'earth', 'flame', 'fruit', 'ghost', 'glass', 'grape', 'green', 'heart', 'horse', 'house', 'juice',
+     'knife', 'laugh', 'lemon', 'light', 'magic', 'money', 'mouse', 'music', 'night', 'ocean', 'paint', 'party', 'piano',
+     'pilot', 'plane', 'plant', 'pride', 'queen', 'radio', 'river', 'robot', 'sheep', 'shirt', 'smile', 'snake', 'space',
+     'spoon', 'storm', 'sugar', 'table', 'tiger', 'toast', 'train', 'water', 'whale', 'world', 'zebra']
+   ```
+
 2. Write `score(guess, word)` returning 5 marks with the two passes above.
 3. Enter with 5 letters typed (and fewer than 6 guesses so far) adds the scored guess and clears `current`. Enter is now
    one of the keys `keydown` handles.

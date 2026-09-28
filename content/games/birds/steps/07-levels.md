@@ -59,8 +59,27 @@ rekordan **yüksekse** kaydedilir (burada çok olan iyidir).
 
 # --task--
 
-1. Replace `LEVEL` with `LEVELS`, the three levels in the solution, and add `level`. Write `startLevel(n)` (everything
+1. Replace `LEVEL` with `LEVELS`, the three levels below, and add `level`. Write `startLevel(n)` (everything
    `reset()` did except the score); `reset()` sets the score to 0 and starts level 0.
+
+   ```js
+   const LEVELS = [
+     [
+       ['wood', 380, 230, 12, 60], ['wood', 440, 230, 12, 60], ['wood', 370, 218, 94, 12], ['pig', 406, 196, 22, 22],
+       ['pig', 480, 268, 22, 22],
+     ],
+     [
+       ['stone', 360, 250, 14, 40], ['stone', 450, 250, 14, 40], ['wood', 350, 238, 124, 12], ['pig', 400, 268, 22, 22],
+       ['wood', 380, 188, 12, 50], ['wood', 432, 188, 12, 50], ['wood', 372, 176, 80, 12], ['pig', 400, 216, 22, 22],
+     ],
+     [
+       ['wood', 340, 230, 12, 60], ['wood', 400, 230, 12, 60], ['wood', 460, 230, 12, 60], ['stone', 330, 218, 152, 12],
+       ['pig', 362, 268, 22, 22], ['pig', 424, 268, 22, 22], ['wood', 360, 168, 12, 50], ['wood', 440, 168, 12, 50],
+       ['wood', 352, 156, 108, 12], ['pig', 396, 196, 22, 22], ['stone', 500, 250, 40, 40],
+     ],
+   ]
+   ```
+
 2. `next()`: after a win, the next level (or `reset()` after the last); after a loss, the score goes back to 0 and the same level
    starts again.
 3. Keep `best` in `localStorage` under `'birds-best'`, saved when the last level is won with a higher score.

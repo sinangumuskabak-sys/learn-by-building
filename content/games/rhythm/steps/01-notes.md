@@ -102,7 +102,20 @@ atla, sıradakine geç": vurulmuş (`n.hit`) ya da ekranın dışında kalan (`|
 # --task--
 
 1. Add `LANES = 4`, `LANE_W = 70`, `LEFT` (the lanes centered), `HIT_Y = 480`, `SPEED = 4`, `STEP = 15`, `LEAD = 120`, the four lane
-   `COLORS` and the `CHART` from the solution.
+   `COLORS` and the `CHART` (the song, one row per eighth note: a `1` is a note in that lane):
+
+   ```js
+   const COLORS = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6']
+   const CHART = [
+     '1000', '0000', '0100', '0000', '0010', '0000', '0001', '0000',
+     '1000', '0100', '0010', '0001', '1001', '0000', '0110', '0000',
+     '1000', '0010', '0100', '0001', '1000', '0010', '0100', '0001',
+     '1100', '0000', '0011', '0000', '1100', '0000', '0011', '0000',
+     '1000', '0100', '0010', '0001', '0010', '0100', '1000', '0000',
+     '1010', '0101', '1010', '0101', '1001', '0110', '1001', '0000',
+   ]
+   ```
+
 2. In `reset()`, build `notes`: for row `i` and lane `lane` with a `'1'`, `{ lane, time: LEAD + i * STEP, hit: false }`; and
    `frame = 0`. `update()` counts `frame` up.
 3. Write `noteY(note)` as above.

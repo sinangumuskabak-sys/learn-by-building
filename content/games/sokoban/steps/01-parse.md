@@ -100,13 +100,47 @@ diğerleri kahverengi: `koşul ? a : b` "doğruysa `a`, değilse `b`".
 
 # --task--
 
-1. Store the canvas and context in `canvas` and `ctx`, add `TILE = 48`, `TOP = 48`, `BOTTOM = 40` and the `LEVELS` array from the
-   solution (three levels, each a list of strings).
+1. Store the canvas and context in `canvas` and `ctx`, add `TILE = 48`, `TOP = 48`, `BOTTOM = 40` and the `LEVELS` array (three levels,
+   each a list of strings: `#` wall, `.` goal, `$` box, `*` box on a goal, `@` player, `+` player on a goal):
+
+   ```js
+   const LEVELS = [
+     [
+       '#####',
+       '#@$.#',
+       '#####',
+     ],
+     [
+       '######',
+       '#    #',
+       '# $$ #',
+       '# .. #',
+       '#  @ #',
+       '######',
+     ],
+     [
+       '  #####',
+       '###   #',
+       '#.@$  #',
+       '### $.#',
+       '#.##$ #',
+       '# # . ##',
+       '#$ *$$.#',
+       '#   .  #',
+       '########',
+     ],
+   ]
+   ```
+
 2. Add `let level = 0`, `let walls`, `let goals`, `let boxes`, `let player` and `const key = (x, y) => x + ',' + y`.
 3. Write `loadLevel(index)`: set `level`, make `walls` and `goals` new `Set`s and `boxes` an empty array, then read every
    character of `LEVELS[level]`: `#` adds a wall; `.`, `*` and `+` add a goal; `$` and `*` add a box; `@` and `+` set
    `player`.
-4. Write `draw()` as in the solution (level centered; walls, goals, boxes, player) and call `loadLevel(0)` and `draw()`.
+4. Write `draw()`: fill the canvas with `'#1c1917'`, then center the level: with `rows` its number of lines and `cols` its
+   longest line, `ox = (canvas.width - cols * TILE) / 2` and `oy = TOP + (canvas.height - TOP - BOTTOM - rows * TILE) / 2`.
+   Draw every tile at `(ox + x * TILE, oy + y * TILE)` as a square `inset` pixels in from each side: walls `'#78716c'`
+   (inset 1), goals `'#f59e0b'` (18), boxes `'#22c55e'` on a goal and `'#b45309'` otherwise (6), then the player
+   `'#38bdf8'` (10). Call `loadLevel(0)` and `draw()`.
 
 # --task-tr--
 

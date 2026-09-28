@@ -96,7 +96,22 @@ gri, değilse yeşil".
 
 # --task--
 
-1. Add `TILE = 40`, `COLS = 12`, `ROWS = 9`, `TOP = 40` and the `PATH` from the solution.
+1. Add `TILE = 40`, `COLS = 12`, `ROWS = 9`, `TOP = 40` and the `PATH`: the road as corners in tiles,
+   starting off the left edge and ending off the right edge.
+
+   ```js
+   const PATH = [
+     [-1, 1],
+     [3, 1],
+     [3, 6],
+     [7, 6],
+     [7, 2],
+     [10, 2],
+     [10, 7],
+     [12, 7],
+   ]
+   ```
+
 2. Write `key(col, row)` and `findRoad()`: for each pair of neighbouring corners, walk from the first to the second with
    `Math.sign` steps, adding every tile (both corners included) to the `road` set. `reset()` calls it.
 3. Draw every frame: a `'#0f172a'` background, then each map tile as a full tile, `'#a8a29e'` if it is road and

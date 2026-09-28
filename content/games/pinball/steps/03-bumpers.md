@@ -49,7 +49,7 @@ gelen vuruşlar puan vermez; yoksa tampona sıkışan bir top her karede değip 
 
 # --task--
 
-1. Add `BUMPERS` (three circles in the solution), `score` and `flash` (`0` and three zeros in `reset()`).
+1. Add `BUMPERS` (three circles of radius 22, at `(100, 160)`, `(200, 120)` and `(280, 280)`, as `{ x, y, r }`), `score` and `flash` (`0` and three zeros in `reset()`).
 2. Write `hitBumper(b, i)`: if the ball overlaps the bumper, push it out along the line from the centre, add `(-vn + 6)` along the
    normal to its velocity, and if `flash[i]` is 0 add 100 to `score`; then set `flash[i] = 10`. `step()` calls it for every bumper.
 3. `update()` counts every `flash` down to 0.

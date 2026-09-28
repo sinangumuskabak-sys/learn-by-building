@@ -71,9 +71,17 @@ değiştiği için top paleti dönüşün tam o anındaki yerinde bulur.
 
 # --task--
 
-1. Add `FLIPPER_LENGTH = 62`, `FLIP_SPEED = 0.25` and `FLIPPERS` (pivots at `(130, 530)` and `(270, 530)`, angles as in the
-   solution, with a `key` of `'left'` or `'right'`). In `reset()`, make `flippers` from them with `angle` at rest and `speed: 0`, and
+1. Add `FLIPPER_LENGTH = 62`, `FLIP_SPEED = 0.25` and `FLIPPERS` (pivots at `(130, 530)` and `(270, 530)`, rest and up angles
+   as below, with a `key` of `'left'` or `'right'`). In `reset()`, make `flippers` from them with `angle` at rest and `speed: 0`, and
    `pressed = { left: false, right: false }`.
+
+   ```js
+   const FLIPPERS = [
+     { x: 130, y: 530, rest: 0.45, up: -0.45, key: 'left' },
+     { x: 270, y: 530, rest: Math.PI - 0.45, up: Math.PI + 0.45, key: 'right' },
+   ]
+   ```
+
 2. Write `tip(f)`. Each frame, set each flipper's `speed` towards its target as above; `step()` turns it by `speed / SUB` and
    collides the ball with it (`bounce` 0.3). While ready, turn it by the whole `speed`.
 3. `keydown` and `keyup` set `pressed.left` (Left, Z) and `pressed.right` (Right, `/`, M); Space and Down still launch.

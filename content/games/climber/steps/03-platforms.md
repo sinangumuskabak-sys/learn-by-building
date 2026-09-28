@@ -70,7 +70,19 @@ Zemin sekişi şimdilik kalıyor; ileride kaldıracağız.
 
 # --task--
 
-1. Add the `platforms` array from the solution (six platforms, each `{ x, y, w: 60, h: 12 }`).
+1. Add the `platforms` array (six platforms, each `{ x, y, w: 60, h: 12 }`):
+
+   ```js
+   const platforms = [
+     { x: 170, y: 500, w: 60, h: 12 },
+     { x: 50, y: 410, w: 60, h: 12 },
+     { x: 250, y: 320, w: 60, h: 12 },
+     { x: 120, y: 230, w: 60, h: 12 },
+     { x: 290, y: 140, w: 60, h: 12 },
+     { x: 30, y: 60, w: 60, h: 12 },
+   ]
+   ```
+
 2. In `update()`, remember `oldBottom = player.y + player.h` before the physics, and `bottom` after. If the player is
    falling, look for a platform where `player.x + player.w - 8 > p.x`, `player.x + 8 < p.x + p.w`,
    `oldBottom <= p.y` and `bottom >= p.y`: put the player on it and set `vy` to `JUMP`.

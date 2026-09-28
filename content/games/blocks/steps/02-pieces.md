@@ -87,7 +87,49 @@ Kuyudaki dolu hücreler de artık gri değil, kendi sayılarının rengiyle çiz
 
 # --task--
 
-1. Add the `COLORS` and `SHAPES` constants from the solution (seven square matrices).
+1. Add the `COLORS` and `SHAPES` constants (seven square matrices; the number in a cell is its color):
+
+   ```js
+   const COLORS = [null, '#22d3ee', '#facc15', '#a855f7', '#22c55e', '#ef4444', '#3b82f6', '#f97316']
+   const SHAPES = [
+     [
+       [0, 0, 0, 0],
+       [1, 1, 1, 1],
+       [0, 0, 0, 0],
+       [0, 0, 0, 0],
+     ],
+     [
+       [2, 2],
+       [2, 2],
+     ],
+     [
+       [0, 3, 0],
+       [3, 3, 3],
+       [0, 0, 0],
+     ],
+     [
+       [0, 4, 4],
+       [4, 4, 0],
+       [0, 0, 0],
+     ],
+     [
+       [5, 5, 0],
+       [0, 5, 5],
+       [0, 0, 0],
+     ],
+     [
+       [6, 0, 0],
+       [6, 6, 6],
+       [0, 0, 0],
+     ],
+     [
+       [0, 0, 7],
+       [7, 7, 7],
+       [0, 0, 0],
+     ],
+   ]
+   ```
+
 2. Add `let piece = { shape: SHAPES[2].map((row) => [...row]), x: 3, y: 0 }` (the T piece, near the middle).
 3. Write `drawShape(shape, x, y, color)` that draws every non-zero cell of `shape` at `(x + c, y + r)`, in `color` if
    given, otherwise `COLORS[value]`. Draw board cells in `COLORS[value]` too, and draw the piece at the end of `draw()`.

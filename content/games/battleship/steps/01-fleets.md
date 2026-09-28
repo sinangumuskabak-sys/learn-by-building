@@ -93,7 +93,8 @@ kendini yeniden çağırdığı için ekran saniyede 60 kez yeniden boyanır. En
    ships as `{ cells }`. `reset()` places `enemyFleet` and `myFleet`.
 4. Write `drawSea(origin, size, fleet, showShips)`: every square `'#1e3a8a'` (1 pixel in from its sides), or `'#64748b'` for a ship
    square when `showShips`. Draw the enemy sea with `BIG` squares and ships hidden, and yours with `SMALL` squares and ships shown,
-   with the titles in the solution.
+   on a `'#0f172a'` background. Titles, white and left-aligned: `The enemy fleet is hidden here` at `(SEA.x, 34)` in
+   `'bold 16px sans-serif'`, and `Your fleet` at `(HOME.x, HOME.y - 10)` in `'bold 14px sans-serif'`.
 
 # --task-tr--
 

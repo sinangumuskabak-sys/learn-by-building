@@ -72,7 +72,8 @@ x'i düğmenin sol kenarı ile sağ kenarı arasında mı? `if (button)` "bir d�
 
 # --task--
 
-1. Add `splash: 0` to the arrow and the cannon from the solution to `TOWERS`.
+1. Add `splash: 0` to the arrow, and add the cannon to `TOWERS`:
+   `cannon: { cost: 70, range: 2, damage: 8, reload: 60, splash: 1.2, color: '#f97316' }`.
 2. Rewrite `hit(bullet)`: every enemy that is the target, or whose point is within the kind's `splash` of the target's
    point, loses the kind's `damage`.
 3. Keys `1` and `2` select `'arrow'` and `'cannon'`. Add `BUTTONS` (`arrow` at `x: 250`, `cannon` at `x: 364`, both

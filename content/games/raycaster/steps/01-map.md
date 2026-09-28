@@ -92,12 +92,30 @@ ve her ışın bu iki sayıdan çıkar.
 
 # --task--
 
-1. Add the `MAP` from the solution and `MINI = 24` (map pixels per tile). `reset()` puts the player at
+1. Add the `MAP` below (`#` stone wall, `2` brick wall, `E` the exit, a wall you walk into, `.` floor) and `MINI = 24`
+   (map pixels per tile). `reset()` puts the player at
    `{ x: 1.5, y: 1.5, angle: 0 }`.
 2. Draw every frame: a `'#0f172a'` background, then every tile of the map as a `MINI` square: floor
    `'rgba(15, 23, 42, 0.6)'`, exit `'#22c55e'`, any wall `'rgba(226, 232, 240, 0.8)'`.
 3. Draw the player as a `'#facc15'` square half a tile wide, centered on its position, and a `'#facc15'` line from the
    player to 1 tile ahead in the direction of `angle`.
+
+   ```js
+   const MAP = [
+     '############',
+     '#....#.....#',
+     '#.##.#.###.#',
+     '#.#..#...#.#',
+     '#.#.###2#..#',
+     '#.#.....#.##',
+     '#.#22#.##..#',
+     '#..........#',
+     '###.##.#.#.#',
+     '#...#..#.#.#',
+     '#.#...##.#E#',
+     '############',
+   ]
+   ```
 
 # --task-tr--
 

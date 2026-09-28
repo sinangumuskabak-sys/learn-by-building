@@ -97,7 +97,35 @@ düzendir.
 
 # --task--
 
-1. Add `TILE = 24`, `TOP = 40` and the `MAZE` from the solution, with `ROWS` and `COLS` taken from it.
+1. Add `TILE = 24`, `TOP = 40` and the `MAZE` below (`#` wall, `-` the ghost house, `.` pellet, `o` power pellet, `P`
+   player start; row 9 is a tunnel with open ends), with `ROWS` and `COLS` taken from it.
+
+   ```js
+   const MAZE = [
+     '###################',
+     '#........#........#',
+     '#o##.###.#.###.##o#',
+     '#.................#',
+     '#.##.#.#####.#.##.#',
+     '#....#...#...#....#',
+     '####.### # ###.####',
+     '   #.#       #.#   ',
+     '####.# #---# #.####',
+     '    .  #---#  .    ',
+     '####.# ##### #.####',
+     '   #.#       #.#   ',
+     '####.# ##### #.####',
+     '#........#........#',
+     '#.##.###.#.###.##.#',
+     '#o.#.....P.....#.o#',
+     '##.#.#.#####.#.#.##',
+     '#....#...#...#....#',
+     '#.######.#.######.#',
+     '#.................#',
+     '###################',
+   ]
+   ```
+
 2. Write `key(col, row)` returning `'col,row'`, and `fillPellets()` that makes `pellets` (every `.`) and `powers` (every
    `o`) new `Set`s of keys.
 3. Write `placeActors()` that puts `player = { col, row }` on the `P`, and `reset()` that calls both.

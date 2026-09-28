@@ -69,8 +69,18 @@ labirentin başı sakin geçer, sonra kalabalıklaşır. Bekleme sayacı 0'a ini
 
 # --task--
 
-1. Replace `GHOSTS` with the four ghosts from the solution (each with a `corner` and a `delay`), and add `SCATTER = 420`
-   and `CYCLE = 1620`.
+1. Replace `GHOSTS` with these four ghosts (each with a `corner` and a `delay`), and add `SCATTER = 420` and
+   `CYCLE = 1620`.
+
+   ```js
+   const GHOSTS = [
+     { name: 'red', color: '#ef4444', corner: { col: 18, row: 0 }, delay: 0 },
+     { name: 'pink', color: '#f9a8d4', corner: { col: 0, row: 0 }, delay: 120 },
+     { name: 'orange', color: '#fb923c', corner: { col: 0, row: 20 }, delay: 300 },
+     { name: 'cyan', color: '#22d3ee', corner: { col: 18, row: 20 }, delay: 480 },
+   ]
+   ```
+
 2. In `placeActors()`, ghosts start in the house (`col: 8 + (i % 3)`, `row: 9`, `dir: STOP`) with `waiting: g.delay`;
    write `release(g)` that puts a ghost on `EXIT` heading left, and release at once those with nothing to wait for. Reset
    `clock` to `0`.
