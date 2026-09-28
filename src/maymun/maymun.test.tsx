@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { formatChecks, readContext, useMaymunContext } from './context.ts'
+import { formatChecks, readContext, systemPrompt, useMaymunContext } from './context.ts'
 import { currentPanel, startTracking } from './tracker.ts'
 
 function panel(name: string, text: string) {
@@ -25,6 +25,21 @@ describe('Maymun context', () => {
     expect(readContext(el)).toMatchObject({ panel: 'code', title: 'game.js', text: 'let a = 2' })
     unmount()
     expect(readContext(el).text).toBe('what the screen shows')
+  })
+
+  it('sends Maymun’s teaching instructions and every panel of the page, the one looked at first', () => {
+    panel('page', 'outer')
+    panel('task', 'Make the snake move')
+    const code = panel('code', 'let x = 1')
+    panel('results', 'FAIL moves right')
+    const context = readContext(code)
+    expect(context.others.map((o) => o.panel)).toEqual(['task', 'results'])
+    const prompt = systemPrompt(context, 'Turkish')
+    expect(prompt).toContain('You are Maymun')
+    expect(prompt).toContain('## How you teach')
+    expect(prompt).toContain("The learner's interface language: Turkish.")
+    expect(prompt.indexOf('let x = 1')).toBeLessThan(prompt.indexOf('Make the snake move'))
+    expect(prompt).toContain('FAIL moves right')
   })
 
   it('clips long text', () => {

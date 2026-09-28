@@ -1,7 +1,7 @@
 import { splitDataUrl } from './capture.ts'
 
 /** The AI services Maymun can talk to with the learner's own key (BYOK). The key never leaves this browser. */
-export type ProviderId = 'openrouter' | 'anthropic' | 'openai' | 'deepseek'
+export type ProviderId = 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'bridge' | 'custom'
 
 export interface Provider {
   id: ProviderId
@@ -14,6 +14,10 @@ export interface Provider {
   base?: string
   /** Whether its default models can look at pictures. */
   images: boolean
+  /** Runs on the learner's own computer: the address can be changed. */
+  local?: boolean
+  /** Works without a key (a local model server). */
+  keyOptional?: boolean
 }
 
 export const providers: Provider[] = [
@@ -21,6 +25,10 @@ export const providers: Provider[] = [
   { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys', images: true },
   { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
+  // A subscription (Claude Code) or a gateway through `public/maymun-bridge.mjs` on the learner's computer.
+  { id: 'bridge', name: 'Maymun bridge (your subscription)', model: 'claude-code/sonnet', keys: '', base: 'http://127.0.0.1:8787/v1', images: true, local: true },
+  // Any OpenAI-compatible server the browser may call directly: OmniRoute, Ollama, LM Studio…
+  { id: 'custom', name: 'OpenAI-compatible (OmniRoute, Ollama…)', model: '', keys: '', base: 'http://localhost:20128/v1', images: true, local: true, keyOptional: true },
 ]
 
 export const provider = (id: ProviderId) => providers.find((p) => p.id === id) ?? providers[0]
@@ -49,7 +57,10 @@ export function withImages(id: ProviderId, messages: ChatMessage[]): ChatMessage
 
 export interface ChatRequest {
   provider: ProviderId
+  /** Empty for a local server that needs none. */
   key: string
+  /** Overrides the provider's address (local servers). */
+  base?: string
   model: string
   system: string
   messages: ChatMessage[]
@@ -79,15 +90,16 @@ export async function streamChat(request: ChatRequest): Promise<void> {
   return streamOpenAiCompatible(request)
 }
 
-async function streamOpenAiCompatible({ provider: id, key, model, system, messages, signal, onText }: ChatRequest) {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }
+async function streamOpenAiCompatible({ provider: id, key, base, model, system, messages, signal, onText }: ChatRequest) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (key) headers.Authorization = `Bearer ${key}`
   if (id === 'openrouter') {
     headers['HTTP-Referer'] = location.origin
     headers['X-Title'] = 'Learn Platform'
   }
   let response: Response
   try {
-    response = await fetch(`${provider(id).base}/chat/completions`, {
+    response = await fetch(`${(base || provider(id).base || '').replace(/\/+$/, '')}/chat/completions`, {
       method: 'POST',
       headers,
       signal,

@@ -23,6 +23,8 @@ export interface MaymunAi {
   keys: Partial<Record<ProviderId, string>>
   /** Model ids the learner typed, by provider. */
   models: Partial<Record<ProviderId, string>>
+  /** Addresses the learner typed for servers on their computer, by provider. */
+  bases: Partial<Record<ProviderId, string>>
 }
 
 const isProvider = (value: unknown): value is ProviderId => providers.some((p) => p.id === value)
@@ -33,11 +35,20 @@ const strings = (value: unknown) =>
     ),
   ) as Partial<Record<ProviderId, string>>
 
-export const aiStore = createPersistedStore<MaymunAi>('lp.maymun.ai', { provider: 'openrouter', keys: {}, models: {} }, (raw) => {
-  const value = raw as Partial<MaymunAi> | null
-  if (!value || typeof value !== 'object') return null
-  return { provider: isProvider(value.provider) ? value.provider : 'openrouter', keys: strings(value.keys), models: strings(value.models) }
-})
+export const aiStore = createPersistedStore<MaymunAi>(
+  'lp.maymun.ai',
+  { provider: 'openrouter', keys: {}, models: {}, bases: {} },
+  (raw) => {
+    const value = raw as Partial<MaymunAi> | null
+    if (!value || typeof value !== 'object') return null
+    return {
+      provider: isProvider(value.provider) ? value.provider : 'openrouter',
+      keys: strings(value.keys),
+      models: strings(value.models),
+      bases: strings(value.bases),
+    }
+  },
+)
 
 export function useMaymunAi(): MaymunAi {
   return useStore(aiStore)
@@ -45,6 +56,13 @@ export function useMaymunAi(): MaymunAi {
 
 /** The model to use for a provider: the one the learner typed, or the provider's default. */
 export const modelFor = (ai: MaymunAi, id: ProviderId) => ai.models[id] || provider(id).model
+
+/** The address to use for a provider: the one the learner typed, or the provider's default. */
+export const baseFor = (ai: MaymunAi, id: ProviderId) => ai.bases[id] || provider(id).base || ''
+
+/** Whether Maymun can answer: a key is set (or not needed) and there is a model to ask. */
+export const isReady = (ai: MaymunAi) =>
+  Boolean((ai.keys[ai.provider] || provider(ai.provider).keyOptional) && modelFor(ai, ai.provider))
 
 const MAX_MESSAGES = 60
 

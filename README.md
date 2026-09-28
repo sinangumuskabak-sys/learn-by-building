@@ -43,6 +43,29 @@ idea, has its own checks, and ends with a playable game.
 Games named “…-style” are original code built around well-known game mechanics; they are not affiliated with the
 owners of those names. The game format is described in [docs/game-format.md](docs/game-format.md).
 
+## Maymun, the cat tutor
+
+An orange cat peeks out of the panel under your pointer. Click it to ask about what you are looking at: the lesson,
+your code and the check results go along with the question, and you can add a picture of any part of the screen.
+Maymun teaches rather than hands out answers; its instructions are in
+[src/maymun/prompt.md](src/maymun/prompt.md).
+
+Maymun answers through AI you choose, and your key never leaves the browser:
+
+- **Your own API key:** OpenRouter, Anthropic (Claude), OpenAI or DeepSeek, called straight from the browser.
+- **An OpenAI-compatible server on your computer:** OmniRoute (connects your subscriptions), Ollama, LM Studio.
+- **The Maymun bridge** ([public/maymun-bridge.mjs](public/maymun-bridge.mjs), one file, no dependencies): uses the
+  Claude Code subscription you are logged in with, or forwards to a gateway with `--upstream`. It listens on
+  127.0.0.1 only, answers only allowed sites, and needs the key it prints at start.
+
+  ```bash
+  node maymun-bridge.mjs                                   # this site on localhost
+  node maymun-bridge.mjs --origin https://your.site        # a deployed copy
+  node maymun-bridge.mjs --upstream http://localhost:20128/v1   # also OmniRoute models
+  ```
+
+  Using a subscription this way is subject to its provider's terms.
+
 ## Development
 
 ```bash

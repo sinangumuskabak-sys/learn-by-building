@@ -6,7 +6,7 @@ import { ChatError, provider, providers, streamChat, type ChatErrorKind, type Ch
 import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
-import { addMessages, aiStore, chatStore, modelFor, useMaymunAi } from './store.ts'
+import { addMessages, aiStore, baseFor, chatStore, isReady, modelFor, useMaymunAi } from './store.ts'
 import { useStore } from '../lib/store.ts'
 
 type Context = ReturnType<typeof readContext>
@@ -35,6 +35,7 @@ export function MaymunChat({
   const controller = useRef<AbortController | null>(null)
   const list = useRef<HTMLDivElement>(null)
   const key = ai.keys[ai.provider]
+  const ready = isReady(ai)
   const [shot, setShot] = useState<string | null>(null)
   const [snipping, setSnipping] = useState(false)
   const [shotFailed, setShotFailed] = useState(false)
@@ -68,7 +69,7 @@ export function MaymunChat({
   const send = async () => {
     const image = shot && seesImages ? shot : undefined
     const question = draft.trim() || (image ? t('maymun.shotQuestion') : '')
-    if (!question || !key || controller.current) return
+    if (!question || !ready || controller.current) return
     const current = panel?.isConnected ? readContext(panel) : context
     const history = [...chatStore.get(), { role: 'user' as const, text: question, ...(image ? { image } : {}) }]
     addMessages(history[history.length - 1])
@@ -82,7 +83,8 @@ export function MaymunChat({
     try {
       await streamChat({
         provider: ai.provider,
-        key,
+        key: key ?? '',
+        base: baseFor(ai, ai.provider),
         model: modelFor(ai, ai.provider),
         system: systemPrompt(current, lang === 'tr' ? 'Turkish' : 'English'),
         messages: history,
@@ -112,16 +114,21 @@ export function MaymunChat({
             {t('maymun.sends')} <strong>{t(`maymun.panel.${context.panel}` as Parameters<typeof t>[0])}</strong>
           </summary>
           <ContextText context={context} />
+          {context.others.map((other) => (
+            <ContextText key={other.panel} context={other} />
+          ))}
         </details>
-        {!key && <ProviderSetup compact />}
-        {messages.length === 0 && key && <p className="text-muted">{t('maymun.empty')}</p>}
+        {!ready && <ProviderSetup compact />}
+        {messages.length === 0 && ready && <p className="text-muted">{t('maymun.empty')}</p>}
         {messages.map((message, i) => (
           <Bubble key={i} {...message} />
         ))}
         {busy && <Bubble role="assistant" text={answer || '…'} />}
         {error && (
           <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs">
-            {t(`maymun.error.${error}`)}
+            {error === 'network' && provider(ai.provider).local
+              ? t('maymun.error.local', { address: baseFor(ai, ai.provider) })
+              : t(`maymun.error.${error}`)}
             {detail && <span className="mt-1 block font-mono break-words text-muted">{detail}</span>}
           </p>
         )}
@@ -166,15 +173,15 @@ export function MaymunChat({
             }
           }}
           rows={2}
-          disabled={!key}
-          placeholder={key ? t('maymun.placeholder') : t('maymun.needKey')}
+          disabled={!ready}
+          placeholder={ready ? t('maymun.placeholder') : t('maymun.needKey')}
           aria-label={t('maymun.question')}
           className="min-h-0 flex-1 resize-none rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-60"
         />
         <button
           type="button"
           onClick={startSnip}
-          disabled={!key || busy || !seesImages}
+          disabled={!ready || busy || !seesImages}
           aria-label={t('maymun.shot')}
           title={seesImages ? t('maymun.shot') : t('maymun.shotNoImages')}
           className="rounded-lg p-2 text-muted hover:text-fg disabled:opacity-40"
@@ -194,7 +201,7 @@ export function MaymunChat({
         ) : (
           <button
             type="submit"
-            disabled={!key || (!draft.trim() && !(shot && seesImages))}
+            disabled={!ready || (!draft.trim() && !(shot && seesImages))}
             aria-label={t('maymun.send')}
             title={t('maymun.send')}
             className="rounded-lg bg-accent p-2 text-accent-fg disabled:opacity-40"
@@ -260,12 +267,14 @@ function ProviderForm({ compact }: { compact: boolean }) {
   const current = provider(ai.provider)
   const [key, setKey] = useState(ai.keys[ai.provider] ?? '')
   const [model, setModel] = useState(ai.models[ai.provider] ?? '')
+  const [base, setBase] = useState(ai.bases[ai.provider] ?? '')
 
   const save = () =>
     aiStore.set((value) => ({
       ...value,
       keys: { ...value.keys, [value.provider]: key.trim() || undefined },
       models: { ...value.models, [value.provider]: model.trim() || undefined },
+      bases: { ...value.bases, [value.provider]: base.trim() || undefined },
     }))
 
   const field = 'h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm'
@@ -287,16 +296,33 @@ function ProviderForm({ compact }: { compact: boolean }) {
         >
           {providers.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {p.local ? t(`maymun.service.${p.id}` as Parameters<typeof t>[0]) : p.name}
             </option>
           ))}
         </select>
       </label>
+      {current.id === 'bridge' && <BridgeHelp />}
+      {current.id === 'custom' && <p className="text-xs text-muted">{t('maymun.custom.help')}</p>}
+      {current.local && (
+        <label className="block text-xs font-medium">
+          {t('maymun.address')}
+          <input
+            value={base}
+            onChange={(event) => setBase(event.target.value)}
+            placeholder={current.base}
+            spellCheck={false}
+            className={`${field} mt-1 font-mono`}
+          />
+        </label>
+      )}
       <label className="block text-xs font-medium">
-        {t('maymun.key')}{' '}
-        <a href={current.keys} target="_blank" rel="noreferrer" className="font-normal text-accent underline">
-          {t('maymun.getKey')}
-        </a>
+        {current.id === 'bridge' ? t('maymun.bridge.key') : t('maymun.key')}
+        {current.keyOptional && <span className="font-normal text-muted"> {t('maymun.optional')}</span>}{' '}
+        {current.keys && (
+          <a href={current.keys} target="_blank" rel="noreferrer" className="font-normal text-accent underline">
+            {t('maymun.getKey')}
+          </a>
+        )}
         <input
           type="password"
           value={key}
@@ -311,7 +337,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
         <input
           value={model}
           onChange={(event) => setModel(event.target.value)}
-          placeholder={current.model}
+          placeholder={current.model || t('maymun.modelNeeded')}
           spellCheck={false}
           className={`${field} mt-1 font-mono`}
         />
@@ -333,7 +359,31 @@ function ProviderForm({ compact }: { compact: boolean }) {
           </button>
         )}
       </div>
-      <p className="text-xs text-muted">{t('maymun.privacy')}</p>
+      <p className="text-xs text-muted">{current.local ? t('maymun.privacyLocal') : t('maymun.privacy')}</p>
     </form>
+  )
+}
+
+/** How to start the bridge on this computer; the command already allows this site. */
+function BridgeHelp() {
+  const { t } = useI18n()
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+  const command = `node maymun-bridge.mjs${local ? '' : ` --origin ${location.origin}`}`
+  return (
+    <div className="space-y-1 rounded-lg bg-surface-2 p-3 text-xs">
+      <p>{t('maymun.bridge.intro')}</p>
+      <ol className="list-decimal space-y-1 pl-4">
+        <li>{t('maymun.bridge.step1')}</li>
+        <li>
+          <a href={`${import.meta.env.BASE_URL}maymun-bridge.mjs`} download className="text-accent underline">
+            maymun-bridge.mjs
+          </a>{' '}
+          {t('maymun.bridge.step2')}
+          <code className="mt-1 block rounded bg-surface px-2 py-1 font-mono break-all">{command}</code>
+        </li>
+        <li>{t('maymun.bridge.step3')}</li>
+      </ol>
+      <p className="text-muted">{t('maymun.bridge.terms')}</p>
+    </div>
   )
 }

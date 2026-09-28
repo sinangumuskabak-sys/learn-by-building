@@ -279,3 +279,59 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await popup.getByRole('button', { name: 'Clear the conversation' }).click()
   await expect(popup.locator('.markdown')).toHaveCount(0)
 })
+
+test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, the bridge)', async ({ page }) => {
+  const sent: { auth?: string; body: { model: string; messages: { role: string; content: string }[] } }[] = []
+  await page.route('http://127.0.0.1:11434/v1/chat/completions', async (route) => {
+    sent.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: 'data: {"choices":[{"delta":{"content":"Local hello."}}]}\n\ndata: [DONE]\n\n',
+    })
+  })
+  await page.route('http://127.0.0.1:8787/v1/chat/completions', (route) => route.abort('connectionrefused'))
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  const askAboutCode = async () => {
+    await page.goto('/#/games/snake/01-canvas')
+    await tab(page, 'Code')
+    if (!isMobile(page)) {
+      const code = (await page.locator('[data-maymun="code"]').boundingBox())!
+      await page.mouse.move(code.x + code.width / 2, code.y + code.height / 2)
+      await expect.poll(async () => (await cat.boundingBox())?.x ?? 0).toBeGreaterThan(code.x + code.width - 100)
+    }
+    await cat.click()
+  }
+
+  // An OpenAI-compatible server with its own address and model, and no key.
+  await page.goto('/#/settings')
+  const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
+  await setup.getByLabel('Service').selectOption('custom')
+  await setup.getByLabel('Address').fill('http://127.0.0.1:11434/v1/')
+  await setup.getByLabel('Model').fill('llama3.2')
+  await setup.getByRole('button', { name: 'Save' }).click()
+  await askAboutCode()
+  await question.fill('Hi')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('Local hello.')
+  expect(sent[0].auth).toBeUndefined()
+  expect(sent[0].body.model).toBe('llama3.2')
+  // Maymun's teaching instructions go along, with the other panels of the step.
+  expect(sent[0].body.messages[0].content).toContain('## How you teach')
+  expect(sent[0].body.messages[0].content).toContain('<panel name="task"')
+
+  // The bridge: its setup says how to start it, and a bridge that is not running is named as the problem.
+  await page.goto('/#/settings')
+  await setup.getByLabel('Service').selectOption('bridge')
+  await expect(setup.getByRole('link', { name: 'maymun-bridge.mjs' })).toHaveAttribute('download', '')
+  await expect(setup.getByText('node maymun-bridge.mjs', { exact: true })).toBeVisible()
+  await setup.getByLabel('Bridge key').fill('maymun-test')
+  await setup.getByRole('button', { name: 'Save' }).click()
+  const script = await page.request.get('/maymun-bridge.mjs')
+  expect(await script.text()).toContain('export function createBridge')
+  await askAboutCode()
+  await question.fill('Hi again')
+  await question.press('Enter')
+  await expect(popup.getByRole('alert')).toContainText('Could not reach http://127.0.0.1:8787/v1')
+})
