@@ -56,3 +56,63 @@ test('the memory vault: a note for everything, following progress, my notes kept
   await expect(note).toContainText('⏳ Not started')
   await expect(note.getByLabel('My notes')).toHaveValue('')
 })
+
+test('Maymun fills the vault as the learner talks, without showing its memory block', async ({ page }) => {
+  const stepNote = 'Games/Snake/Steps/01 Get a canvas to draw on.md'
+  const statusNote = 'Games/Snake/Current status.md'
+  const sent: { messages: { role: string; content: string }[] }[] = []
+  const memory = JSON.stringify([
+    { file: stepNote, section: 'struggled', add: 'Thought the canvas draws by itself; it needs ctx.' },
+    { file: statusNote, section: 'now', set: 'Painting the board, step 1.' },
+    { file: statusNote, section: 'progress', set: 'not Maymun’s to write' },
+  ])
+  const answer = `The canvas is paper, **ctx** is the brush.\n\n<memory>${memory}</memory>`
+  const summary = JSON.stringify({ asked: ['What ctx is'], learned: ['ctx is the brush'], hard: [], done: ['Painted the board'], next: 'Draw the grid.' })
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    const body = route.request().postDataJSON() as { messages: { role: string; content: string }[] }
+    const summing = body.messages[0].content.startsWith('You sum up a finished tutoring session')
+    if (!summing) sent.push(body)
+    const text = summing ? summary : answer
+    const pieces = [text.slice(0, 50), text.slice(50, 70), text.slice(70)]
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: pieces.map((p) => `data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`).join('') + 'data: [DONE]\n\n',
+    })
+  })
+  await page.goto('./#/games/snake/01-canvas')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
+  await page.reload()
+  if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  await popup.getByRole('textbox', { name: 'Your question' }).fill('What is ctx?')
+  await popup.getByRole('textbox', { name: 'Your question' }).press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('The canvas is paper, ctx is the brush.')
+  await expect(popup.locator('.markdown').filter({ hasText: '<memory' })).toHaveCount(0)
+  await expect(popup).toContainText('Noted in memory:')
+
+  // The model got the notes and where it may write.
+  const system = sent[0].messages[0].content
+  expect(system).toContain(`<note path="${stepNote}">`)
+  expect(system).toContain(`- ${statusNote}: now (set), next (set), questions (add)`)
+
+  // What Maymun wrote is in the vault; what it may not write is not.
+  await popup.getByRole('link', { name: '01 Get a canvas to draw on' }).click()
+  const note = page.getByRole('main').last()
+  await expect(note).toContainText('Thought the canvas draws by itself; it needs ctx.')
+  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await expect(note).toContainText('Painting the board, step 1.')
+  await expect(note).not.toContainText('not Maymun’s to write')
+  await expect(note).toContainText('0/11')
+
+  // A new topic sums up the session into a note next to the project's status, linked from it.
+  await page.goto('./#/games/snake/01-canvas')
+  if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
+  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await expect(note).toContainText('Draw the grid.')
+  await note.getByRole('link', { name: /^\d{4}-\d{2}-\d{2} \d{2}\.\d{2}$/ }).click()
+  await expect(note).toContainText('What ctx is')
+  await expect(note).toContainText('Painted the board')
+})

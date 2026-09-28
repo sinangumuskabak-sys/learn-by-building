@@ -7,8 +7,11 @@ import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
-import { addToThread, forModel, getThread, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
+import { addToThread, forModel, getThread, markSummarized, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
 import { aiStore, baseFor, isReady, modelFor, useMaymunAi } from './store.ts'
+import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
+import { SESSION_GAP, summarize } from '../vault/sessions.ts'
+import { applyMemory, memoryFor, saveSession } from '../vault/store.ts'
 
 type Context = ReturnType<typeof readContext>
 
@@ -47,6 +50,15 @@ export function MaymunChat({
   const [snipping, setSnipping] = useState(false)
   const [shotFailed, setShotFailed] = useState(false)
   const seesImages = provider(ai.provider).images
+  // What the memory vault adds to a question, shown in "what goes with your question" too.
+  const [memoryPreview, setMemoryPreview] = useState('')
+  useEffect(() => {
+    let live = true
+    void memoryFor(project.key, project.step).then((memory) => live && setMemoryPreview(memory.text))
+    return () => {
+      live = false
+    }
+  }, [project.key, project.step, messages.length])
 
   const startSnip = () => {
     setShotFailed(false)
@@ -73,6 +85,22 @@ export function MaymunChat({
     list.current?.scrollTo({ top: list.current.scrollHeight })
   }, [messages, answer, error])
 
+  const language = lang === 'tr' ? 'Turkish' : 'English'
+  /**
+   * Sums up the project's last session into the memory vault, in the background: when the learner comes back after a
+   * break (`force` when they start a new topic).
+   */
+  const closeSession = (force: boolean) => {
+    const thread = getThread(project.key)
+    const pending = thread.messages.slice(thread.summarized ?? 0)
+    const last = pending.at(-1)
+    if (pending.length < 2 || !last) return
+    if (!force && !(last.at && Date.now() - last.at > SESSION_GAP)) return
+    markSummarized(project.key, thread.messages.length)
+    const ended = new Date(last.at ?? Date.now())
+    void summarize(pending, language).then((summary) => summary && saveSession(project.key, projectTitle, summary, ended))
+  }
+
   const send = async () => {
     const image = shot && seesImages ? shot : undefined
     const question = draft.trim() || (image ? t('maymun.shotQuestion') : '')
@@ -87,6 +115,7 @@ export function MaymunChat({
       tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}) },
       at: Date.now(),
     }
+    closeSession(false)
     const history = [...getThread(project.key).messages, asked]
     addToThread(project.key, asked)
     setDraft('')
@@ -96,25 +125,31 @@ export function MaymunChat({
     const abort = new AbortController()
     controller.current = abort
     let text = ''
+    const memory = await memoryFor(project.key, project.step).catch(() => null)
     try {
       await streamChat({
         provider: ai.provider,
         key: key ?? '',
         base: baseFor(ai, ai.provider),
         model: modelFor(ai, ai.provider),
-        system: systemPrompt(current, lang === 'tr' ? 'Turkish' : 'English', projectTitle),
+        system: systemPrompt(current, language, projectTitle, memory?.text),
         messages: forModel(history),
         signal: abort.signal,
         onText: (piece) => {
           text += piece
-          setAnswer(text)
+          // The memory block at the end is for the app, not for the learner.
+          setAnswer(visibleText(text))
         },
       })
     } catch (caught) {
       setError(caught instanceof ChatError ? caught.kind : 'other')
       setDetail(caught instanceof Error ? caught.message : String(caught))
     } finally {
-      if (text) addToThread(project.key, { role: 'assistant', text, at: Date.now() })
+      if (text) {
+        const { visible, ops } = parseMemory(text)
+        const remembered = ops.length && memory ? await applyMemory(ops, memory.allowed).catch(() => []) : []
+        if (visible) addToThread(project.key, { role: 'assistant', text: visible, at: Date.now(), ...(remembered.length ? { remembered } : {}) })
+      }
       setAnswer(null)
       controller.current = null
     }
@@ -133,6 +168,7 @@ export function MaymunChat({
           {context.others.map((other) => (
             <ContextText key={other.panel} context={other} />
           ))}
+          {memoryPreview && <ContextText context={{ title: t('maymun.memory'), text: memoryPreview }} />}
         </details>
         {!ready && <ProviderSetup compact />}
         {messages.length === 0 && ready && <p className="text-muted">{t('maymun.empty')}</p>}
@@ -228,6 +264,7 @@ export function MaymunChat({
         <button
           type="button"
           onClick={() => {
+            closeSession(true)
             newTopic(project.key)
             setError(null)
           }}
@@ -243,7 +280,7 @@ export function MaymunChat({
   )
 }
 
-function Bubble({ role, text, image, shot, tag }: StoredMessage) {
+function Bubble({ role, text, image, shot, tag, remembered }: StoredMessage) {
   const { t } = useI18n()
   return role === 'user' ? (
     <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">
@@ -261,7 +298,22 @@ function Bubble({ role, text, image, shot, tag }: StoredMessage) {
       {text}
     </div>
   ) : (
-    <Markdown source={text} className="mr-4 rounded-lg bg-surface-2 px-3 py-2" />
+    <div className="mr-4">
+      <Markdown source={text} className="rounded-lg bg-surface-2 px-3 py-2" />
+      {remembered && remembered.length > 0 && (
+        <p className="mt-1 text-[11px] text-muted">
+          📝 {t('maymun.remembered')}{' '}
+          {remembered.map((path, i) => (
+            <span key={path}>
+              {i > 0 && ', '}
+              <a href={`#/memory?f=${encodeURIComponent(path)}`} className="underline hover:text-fg">
+                {path.split('/').at(-1)!.replace(/\.md$/, '')}
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
+    </div>
   )
 }
 

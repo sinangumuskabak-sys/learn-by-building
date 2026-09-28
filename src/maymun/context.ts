@@ -71,7 +71,13 @@ export function formatChecks(result: RunResult): string {
 }
 
 /** Maymun's own instructions (`prompt.md`) and what the learner sees, sent along with every question. */
-export function systemPrompt(context: ReturnType<typeof readContext>, language: string, project?: string): string {
+export function systemPrompt(
+  context: ReturnType<typeof readContext>,
+  language: string,
+  project?: string,
+  /** The memory vault part: its instructions, the notes that matter now, where Maymun may write. */
+  memory?: string,
+): string {
   const block = (c: NamedContext) => [`<panel name="${c.panel}" title="${c.title}">`, c.text, '</panel>']
   return [
     instructions.trim(),
@@ -93,5 +99,6 @@ export function systemPrompt(context: ReturnType<typeof readContext>, language: 
     'They were looking at this panel when they asked:',
     ...block(context),
     ...(context.others.length ? ['', 'The other panels of the page:', ...context.others.flatMap(block)] : []),
+    ...(memory ? ['', memory] : []),
   ].join('\n')
 }

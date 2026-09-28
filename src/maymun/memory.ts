@@ -30,6 +30,8 @@ export interface MessageTag {
 
 export interface StoredMessage extends ChatMessage {
   tag?: MessageTag
+  /** Notes of the memory vault this answer wrote to. */
+  remembered?: string[]
   /** When it was sent, in ms since 1970. */
   at?: number
 }
@@ -37,8 +39,10 @@ export interface StoredMessage extends ChatMessage {
 export interface Thread {
   project: string
   messages: StoredMessage[]
-  /** Earlier topics of this project ("New topic" puts the current one here); M2 will summarise them. */
+  /** Earlier topics of this project ("New topic" puts the current one here). */
   archived: { endedAt: number; messages: StoredMessage[] }[]
+  /** How many of `messages` are already summed up in a session note. */
+  summarized?: number
 }
 
 /** The latest messages kept per project, and how many of them go to the model with each question. */
@@ -169,6 +173,11 @@ export function addToThread(project: string, ...messages: StoredMessage[]) {
   update(project, (thread) => ({ ...thread, messages: [...thread.messages, ...messages].slice(-MAX_KEPT) }))
 }
 
+/** Notes that the first `count` messages are summed up in a session note. */
+export function markSummarized(project: string, count: number) {
+  update(project, (thread) => ({ ...thread, summarized: count }))
+}
+
 /** Starts a clean conversation in the project; the current one is kept as an earlier topic. */
 export function newTopic(project: string) {
   update(project, (thread) =>
@@ -177,6 +186,7 @@ export function newTopic(project: string) {
       : {
           ...thread,
           messages: [],
+          summarized: 0,
           archived: [...thread.archived, { endedAt: Date.now(), messages: thread.messages }].slice(-MAX_ARCHIVED),
         },
   )
@@ -199,7 +209,7 @@ export function useThread(project: string): Thread {
  * Maymun can connect "the question you asked in the code panel" to what is on screen now.
  */
 export function forModel(messages: StoredMessage[]): ChatMessage[] {
-  return messages.slice(-MAX_SENT).map(({ tag, at: _at, ...m }) =>
+  return messages.slice(-MAX_SENT).map(({ tag, at: _at, remembered: _r, ...m }) =>
     m.role === 'user' && tag ? { ...m, text: `[${tag.panel} panel${tag.step ? `, step ${tag.step}` : ''}] ${m.text}` } : m,
   )
 }

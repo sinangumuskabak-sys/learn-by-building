@@ -52,6 +52,16 @@ Maymun teaches rather than hands out answers; its instructions are in
 panels and steps and kept in your browser (IndexedDB), so Maymun remembers what you asked earlier in the project;
 **New topic** starts a clean one.
 
+### The memory vault
+
+Maymun also keeps a **memory vault**: a Markdown note for every category, module, challenge, game, step and skill,
+plus your current status and a learner profile, built in your browser the first time you open the app (nothing to
+install). The app writes the status parts as you progress; Maymun fills in what you learned, what was hard and what
+comes next as you talk (a hidden block at the end of its answers, checked before anything is written); sessions are
+summed up when you come back after a break or start a new topic; **My notes** in every note is yours alone. Browse it
+on the **Memory** page, or download it as a folder: it opens as is in [Obsidian](https://obsidian.md) ("Open folder as
+vault"), which is optional. **Reset all data** in Settings turns it back into the empty skeleton.
+
 Maymun answers through AI you choose, and your key never leaves the browser:
 
 - **Your own API key:** OpenRouter, Anthropic (Claude), OpenAI or DeepSeek, called straight from the browser.
