@@ -1,5 +1,5 @@
 import { createPersistedStore, useStore } from '../lib/store.ts'
-import { provider, providers, type ChatMessage, type ProviderId } from './ai.ts'
+import { provider, providers, type ProviderId } from './ai.ts'
 
 export interface MaymunSettings {
   /** Show Maymun the cat. */
@@ -64,23 +64,7 @@ export const baseFor = (ai: MaymunAi, id: ProviderId) => ai.bases[id] || provide
 export const isReady = (ai: MaymunAi) =>
   Boolean((ai.keys[ai.provider] || provider(ai.provider).keyOptional) && modelFor(ai, ai.provider))
 
-const MAX_MESSAGES = 60
-
-/** The conversation, kept on this device (the latest messages only; pictures only for this visit, they are big). */
-export const chatStore = createPersistedStore<ChatMessage[]>(
-  'lp.maymun.chat',
-  [],
-  (raw) =>
-    Array.isArray(raw)
-      ? raw
-          .filter((m): m is ChatMessage => (m?.role === 'user' || m?.role === 'assistant') && typeof m.text === 'string')
-          .map((m) => (m.shot === true ? { role: m.role, text: m.text, shot: true } : { role: m.role, text: m.text }))
-          .slice(-MAX_MESSAGES)
-      : null,
-  (messages) => messages.map(({ image, ...m }) => (image ? { ...m, shot: true } : m)),
-)
-
-export const addMessages = (...messages: ChatMessage[]) => chatStore.set((all) => [...all, ...messages].slice(-MAX_MESSAGES))
+// The conversation itself is in memory.ts (one per project, in IndexedDB).
 
 export interface BoxSize {
   width: number

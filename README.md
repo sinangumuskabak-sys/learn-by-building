@@ -48,7 +48,9 @@ owners of those names. The game format is described in [docs/game-format.md](doc
 An orange cat peeks out of the panel under your pointer. Click it to ask about what you are looking at: the lesson,
 your code and the check results go along with the question, and you can add a picture of any part of the screen.
 Maymun teaches rather than hands out answers; its instructions are in
-[src/maymun/prompt.md](src/maymun/prompt.md).
+[src/maymun/prompt.md](src/maymun/prompt.md). Each game or challenge has its own conversation, shared by all its
+panels and steps and kept in your browser (IndexedDB), so Maymun remembers what you asked earlier in the project;
+**New topic** starts a clean one.
 
 Maymun answers through AI you choose, and your key never leaves the browser:
 

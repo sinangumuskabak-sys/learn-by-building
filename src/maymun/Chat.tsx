@@ -1,33 +1,40 @@
-import { Camera, Send, Square, Trash2, X } from 'lucide-react'
+import { Camera, MessageSquarePlus, Send, Square, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
-import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ChatMessage, type ProviderId } from './ai.ts'
+import { ChatError, provider, providers, streamChat, type ChatErrorKind, type ProviderId } from './ai.ts'
 import { captureRegion, type Region } from './capture.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
-import { addMessages, aiStore, baseFor, chatStore, isReady, modelFor, useMaymunAi } from './store.ts'
-import { useStore } from '../lib/store.ts'
+import { currentPanel } from './tracker.ts'
+import { addToThread, forModel, getThread, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
+import { aiStore, baseFor, isReady, modelFor, useMaymunAi } from './store.ts'
 
 type Context = ReturnType<typeof readContext>
 
 /**
  * The chat with Maymun about one panel. Each question goes with that panel's context as it is when the question is
- * sent; the conversation is kept on this device. A picture of any part of the screen can go along with a question;
- * `onSnip` hides the chat box while the learner chooses the area.
+ * sent. The conversation belongs to the project (the game or challenge): every panel and step of it shares one,
+ * kept on this device, and each question remembers where it was asked. A picture of any part of the screen can go
+ * along with a question; `onSnip` hides the chat box while the learner chooses the area.
  */
 export function MaymunChat({
   panel,
   context,
+  project,
+  projectTitle,
   onSnip,
 }: {
   panel: HTMLElement | null
   context: Context
+  project: Project
+  /** The game's or challenge's name, told to Maymun. */
+  projectTitle: string
   onSnip?: (active: boolean) => void
 }) {
   const { t, lang } = useI18n()
   const ai = useMaymunAi()
-  const messages = useStore(chatStore)
+  const { messages } = useThread(project.key)
   const [draft, setDraft] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [error, setError] = useState<ChatErrorKind | null>(null)
@@ -70,9 +77,18 @@ export function MaymunChat({
     const image = shot && seesImages ? shot : undefined
     const question = draft.trim() || (image ? t('maymun.shotQuestion') : '')
     if (!question || !ready || controller.current) return
-    const current = panel?.isConnected ? readContext(panel) : context
-    const history = [...chatStore.get(), { role: 'user' as const, text: question, ...(image ? { image } : {}) }]
-    addMessages(history[history.length - 1])
+    // The panel the chat was opened on may be gone (the learner moved to another step): ask about what is there now.
+    const el = panel?.isConnected ? panel : currentPanel()
+    const current = el ? readContext(el) : context
+    const asked: StoredMessage = {
+      role: 'user',
+      text: question,
+      ...(image ? { image } : {}),
+      tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}) },
+      at: Date.now(),
+    }
+    const history = [...getThread(project.key).messages, asked]
+    addToThread(project.key, asked)
     setDraft('')
     setShot(null)
     setError(null)
@@ -86,8 +102,8 @@ export function MaymunChat({
         key: key ?? '',
         base: baseFor(ai, ai.provider),
         model: modelFor(ai, ai.provider),
-        system: systemPrompt(current, lang === 'tr' ? 'Turkish' : 'English'),
-        messages: history,
+        system: systemPrompt(current, lang === 'tr' ? 'Turkish' : 'English', projectTitle),
+        messages: forModel(history),
         signal: abort.signal,
         onText: (piece) => {
           text += piece
@@ -98,7 +114,7 @@ export function MaymunChat({
       setError(caught instanceof ChatError ? caught.kind : 'other')
       setDetail(caught instanceof Error ? caught.message : String(caught))
     } finally {
-      if (text) addMessages({ role: 'assistant', text })
+      if (text) addToThread(project.key, { role: 'assistant', text, at: Date.now() })
       setAnswer(null)
       controller.current = null
     }
@@ -212,25 +228,31 @@ export function MaymunChat({
         <button
           type="button"
           onClick={() => {
-            chatStore.set([])
+            newTopic(project.key)
             setError(null)
           }}
           disabled={busy || messages.length === 0}
-          aria-label={t('maymun.clear')}
-          title={t('maymun.clear')}
+          aria-label={t('maymun.newTopic')}
+          title={t('maymun.newTopic')}
           className="rounded-lg p-2 text-muted hover:text-fg disabled:opacity-40"
         >
-          <Trash2 size={16} />
+          <MessageSquarePlus size={16} />
         </button>
       </form>
     </>
   )
 }
 
-function Bubble({ role, text, image, shot }: ChatMessage) {
+function Bubble({ role, text, image, shot, tag }: StoredMessage) {
   const { t } = useI18n()
   return role === 'user' ? (
     <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">
+      {tag && (
+        <span className="mb-0.5 block text-[11px] text-muted">
+          {t('maymun.askedIn', { panel: t(`maymun.panel.${tag.panel}` as Parameters<typeof t>[0]) })}
+          {tag.step && ` · ${tag.step}`}
+        </span>
+      )}
       {image ? (
         <img src={image} alt={t('maymun.shot')} className="mb-1 max-h-40 rounded border border-border" />
       ) : (

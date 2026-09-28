@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/i18n.ts'
 import { useStore } from '../lib/store.ts'
 import { UI_ATTRIBUTE } from './capture.ts'
 import { MaymunChat } from './Chat.tsx'
+import { projectOf } from './memory.ts'
 import { readContext } from './context.ts'
 import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
 import { currentPanel, pointer, startTracking } from './tracker.ts'
@@ -143,10 +144,29 @@ export function Maymun() {
     }
   }, [open, anchor, context, box])
 
-  // The chat is about a panel of this page: leaving the page closes it.
+  // The conversation belongs to the project (a game, a challenge): moving between its steps keeps the chat open and
+  // points it at the new step's panels; leaving the project closes it.
   const { pathname } = useLocation()
-  const [openOn, setOpenOn] = useState(pathname)
-  if (open && openOn !== pathname) setOpen(false)
+  const project = projectOf(pathname)
+  const [openOn, setOpenOn] = useState(project.key)
+  const [projectTitle, setProjectTitle] = useState('')
+  if (open && openOn !== project.key) setOpen(false)
+  useEffect(() => {
+    if (!open) return
+    // After the new step has rendered (and set its title).
+    const timer = window.setTimeout(() => {
+      const panel = currentPanel()
+      if (panel && !panel.isConnected) return
+      if (panel) {
+        setPanelEl(panel)
+        setContext(readContext(panel))
+      }
+      setProjectTitle(titleOf(project.key))
+    }, 300)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+  const titleOf = (key: string) => (key === 'general' ? t('maymun.general') : document.title.replace(/ · Learn Platform$/, ''))
 
   useEffect(() => {
     if (!open) return
@@ -165,7 +185,8 @@ export function Maymun() {
     if (!panel) return
     setContext(readContext(panel))
     setPanelEl(panel)
-    setOpenOn(pathname)
+    setOpenOn(project.key)
+    setProjectTitle(titleOf(project.key))
     const rect = head.current?.getBoundingClientRect()
     setAnchor({ x: rect ? rect.left : window.innerWidth, y: rect ? rect.top + rect.height / 2 : 120 })
     setOpen(true)
@@ -203,7 +224,10 @@ export function Maymun() {
             <span className="text-lg" aria-hidden>
               🐱
             </span>
-            <span className="flex-1 font-semibold">{t('maymun.name')}</span>
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-semibold">{t('maymun.name')}</span>
+              {projectTitle && <span className="text-sm text-muted"> · {projectTitle}</span>}
+            </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -213,7 +237,13 @@ export function Maymun() {
               <X size={16} />
             </button>
           </div>
-          <MaymunChat panel={panelEl} context={context} onSnip={setSnipping} />
+          <MaymunChat
+            panel={panelEl}
+            context={context}
+            project={project}
+            projectTitle={projectTitle}
+            onSnip={setSnipping}
+          />
           <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted">
             <span className="flex-1">{t('maymun.hideHint')}</span>
             <button

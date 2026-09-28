@@ -243,7 +243,9 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(first.model).toBe('openrouter/auto')
   expect(first.messages[0].role).toBe('system')
   expect(first.messages[0].content).toContain('Code (game.js)')
-  expect(first.messages[1]).toEqual({ role: 'user', content: 'What do I do here?' })
+  expect(first.messages[0].content).toContain('# This project: Snake')
+  // Each question carries where it was asked.
+  expect(first.messages[1]).toEqual({ role: 'user', content: '[code panel, step 01-canvas] What do I do here?' })
 
   // A picture of the screen goes along with the next question (a click takes the whole screen); Escape only cancels it.
   const camera = popup.getByRole('button', { name: 'Take a picture of the screen' })
@@ -260,7 +262,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await expect(popup.locator('.markdown')).toHaveCount(2)
   const withShot = sent[1] as { messages: { content: unknown }[] }
   const shotContent = withShot.messages.at(-1)!.content as { type: string; text?: string; image_url?: { url: string } }[]
-  expect(shotContent[0]).toEqual({ type: 'text', text: 'Look at this picture.' })
+  expect(shotContent[0]).toEqual({ type: 'text', text: '[code panel, step 01-canvas] Look at this picture.' })
   expect(shotContent[1].image_url!.url).toMatch(/^data:image\/(png|jpeg);base64,/)
 
   // Resizing from the lower left corner grows the box to the left, and the size is kept.
@@ -303,8 +305,86 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(claude.system).toContain('Code (game.js)')
   expect(claude.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user'])
 
-  await popup.getByRole('button', { name: 'Clear the conversation' }).click()
+  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
   await expect(popup.locator('.markdown')).toHaveCount(0)
+})
+
+test('Maymun keeps one conversation per project, across panels, steps and reloads', async ({ page }) => {
+  const sent: { messages: { role: string; content: string }[] }[] = []
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    sent.push(route.request().postDataJSON())
+    await route.fulfill({
+      headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`,
+    })
+  })
+  // The conversation from before projects existed moves into the first project opened.
+  await page.goto('/#/games/snake/01-canvas')
+  await page.evaluate(() => {
+    localStorage.setItem('lp.maymun.chat', JSON.stringify([{ role: 'user', text: 'An old question' }, { role: 'assistant', text: 'An old answer' }]))
+    localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } }))
+  })
+  await page.reload()
+
+  const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  const openOn = async (panel: 'task' | 'code', name: 'Task' | 'Code') => {
+    await tab(page, name)
+    if (!isMobile(page)) {
+      const box = (await page.locator(`[data-maymun="${panel}"]`).boundingBox())!
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await expect.poll(async () => (await cat.boundingBox())?.x ?? 0).toBeGreaterThan(box.x + box.width - 100)
+    }
+    await cat.click()
+  }
+  const ask = async (text: string) => {
+    await question.fill(text)
+    await question.press('Enter')
+    await expect(popup.locator('.markdown').last()).toHaveText('ok')
+  }
+  const lastUserMessages = () => sent.at(-1)!.messages.filter((m) => m.role === 'user').map((m) => m.content)
+
+  await openOn('code', 'Code')
+  await expect(popup).toContainText('Snake')
+  await expect(popup).toContainText('An old question')
+  await ask('Why is it black?')
+  await popup.getByRole('button', { name: 'Close' }).click()
+
+  // Another panel of the same step: the same conversation, and the model knows where each question came from.
+  await openOn('task', 'Task')
+  await expect(popup).toContainText('Why is it black?')
+  await ask('What does this sentence mean?')
+  expect(lastUserMessages()).toEqual([
+    'An old question',
+    '[code panel, step 01-canvas] Why is it black?',
+    '[task panel, step 01-canvas] What does this sentence mean?',
+  ])
+
+  // The next step of the same game keeps the chat open and the conversation going.
+  await page.getByRole('button', { name: 'Next step' }).click()
+  await expect(page).toHaveURL(/02-grid/)
+  await expect(popup).toBeVisible()
+  await ask('And here?')
+  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-grid\] And here\?$/)
+
+  // Another game has its own, empty conversation.
+  await page.goto('/#/games/pong/01-court')
+  await openOn('code', 'Code')
+  await expect(popup).not.toContainText('Why is it black?')
+  await ask('Pong question')
+  expect(lastUserMessages()).toEqual(['[code panel, step 01-court] Pong question'])
+
+  // Back in Snake after a reload, everything is still there; a new topic starts clean.
+  await page.goto('/#/games/snake/02-grid')
+  await page.reload()
+  await openOn('code', 'Code')
+  await expect(popup).toContainText('What does this sentence mean?')
+  await expect(popup).not.toContainText('Pong question')
+  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
+  await expect(popup).not.toContainText('Why is it black?')
+  await ask('Fresh start')
+  expect(lastUserMessages()).toEqual(['[code panel, step 02-grid] Fresh start'])
 })
 
 test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, the bridge)', async ({ page }) => {
