@@ -406,10 +406,8 @@ function ProviderForm({ compact }: { compact: boolean }) {
   const [key, setKey] = useState(ai.keys[ai.provider] ?? '')
   const [model, setModel] = useState(ai.models[ai.provider] ?? '')
   const [base, setBase] = useState(ai.bases[ai.provider] ?? '')
-  // A server on this computer (the bridge, OmniRoute, Ollama) says which models it has; the bridge also which
-  // subscriptions it found. Asked once the address and key are saved.
+  // A server on this computer (OmniRoute, Ollama) says which models it has. Asked once the address and key are saved.
   const [offered, setOffered] = useState<string[]>([])
-  const [status, setStatus] = useState<BridgeStatusData | null>(null)
   const savedKey = ai.keys[ai.provider]
   const savedBase = baseFor(ai, ai.provider)
   useEffect(() => {
@@ -432,12 +430,6 @@ function ProviderForm({ compact }: { compact: boolean }) {
         }
       })
       .catch(() => {})
-    if (current.id === 'bridge') {
-      fetch(`${root}/status`, { headers })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: BridgeStatusData | null) => live && data?.clis && setStatus(data))
-        .catch(() => {})
-    }
     return () => {
       live = false
     }
@@ -475,7 +467,6 @@ function ProviderForm({ compact }: { compact: boolean }) {
           ))}
         </select>
       </label>
-      {current.id === 'bridge' && <BridgeHelp />}
       {current.id === 'custom' && <p className="text-xs text-muted">{t('maymun.custom.help')}</p>}
       {current.id === 'omniroute' && (
         <p className="text-xs text-muted">
@@ -498,7 +489,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
         </label>
       )}
       <label className="block text-xs font-medium">
-        {current.id === 'bridge' ? t('maymun.bridge.key') : t('maymun.key')}
+        {t('maymun.key')}
         {current.keyOptional && <span className="font-normal text-muted"> {t('maymun.optional')}</span>}{' '}
         {current.keys && (
           <a href={current.keys} target="_blank" rel="noreferrer" className="font-normal text-accent underline">
@@ -546,7 +537,6 @@ function ProviderForm({ compact }: { compact: boolean }) {
           </p>
         </>
       )}
-      {current.id === 'bridge' && status && <BridgeStatus status={status} />}
       <div className="flex items-center gap-2">
         <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg">
           {t('maymun.save')}
@@ -625,54 +615,6 @@ function GatewayModels({ id, offered }: { id: ProviderId; offered: string[] }) {
             )
           })}
       </div>
-    </div>
-  )
-}
-
-interface BridgeStatusData {
-  clis: { id: string; name: string; installed: boolean; login: string }[]
-}
-
-/** Which subscriptions the bridge found on this computer, and how to log in to one. */
-function BridgeStatus({ status }: { status: BridgeStatusData }) {
-  const { t } = useI18n()
-  return (
-    <div className="space-y-1 rounded-lg border border-border p-2 text-xs">
-      <p className="font-medium">{t('maymun.bridge.found')}</p>
-      <ul className="space-y-0.5">
-        {status.clis.map((cli) => (
-          <li key={cli.id} className="flex flex-wrap items-center gap-1.5">
-            <span className={cli.installed ? 'text-success' : 'text-muted'}>{cli.installed ? '●' : '○'}</span>
-            <span>{cli.name}</span>
-            <span className="text-muted">— {cli.installed ? t('maymun.bridge.installed') : t('maymun.bridge.missing')}</span>
-            {cli.installed && <span className="basis-full pl-4 text-muted">{t('maymun.bridge.loginHint', { command: cli.login })}</span>}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-/** How to start the bridge on this computer; the command already allows this site. */
-function BridgeHelp() {
-  const { t } = useI18n()
-  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
-  const command = `node maymun-bridge.mjs${local ? '' : ` --origin ${location.origin}`}`
-  return (
-    <div className="space-y-1 rounded-lg bg-surface-2 p-3 text-xs">
-      <p>{t('maymun.bridge.intro')}</p>
-      <ol className="list-decimal space-y-1 pl-4">
-        <li>{t('maymun.bridge.step1')}</li>
-        <li>
-          <a href={`${import.meta.env.BASE_URL}maymun-bridge.mjs`} download className="text-accent underline">
-            maymun-bridge.mjs
-          </a>{' '}
-          {t('maymun.bridge.step2')}
-          <code className="mt-1 block rounded bg-surface px-2 py-1 font-mono break-all">{command}</code>
-        </li>
-        <li>{t('maymun.bridge.step3')}</li>
-      </ol>
-      <p className="text-muted">{t('maymun.bridge.terms')}</p>
     </div>
   )
 }

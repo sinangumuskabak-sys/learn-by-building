@@ -166,13 +166,14 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
   const bridge = createBridge(parseArgs(['--vault', vault]), key)
   const port: number = await new Promise((resolve) => bridge.listen(0, '127.0.0.1', () => resolve(bridge.address().port)))
   try {
+    // The app talks to the bridge on its usual port; this test's bridge listens on another one.
+    await page.route('http://127.0.0.1:8787/v1/vault', (route) => route.continue({ url: `http://127.0.0.1:${port}/v1/vault` }))
     await page.goto('./#/memory')
-    await page.evaluate(
-      ({ key, port }) =>
-        localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'bridge', keys: { bridge: key }, bases: { bridge: `http://127.0.0.1:${port}/v1` } })),
-      { key, port },
-    )
+    // A key saved back when the bridge was one of Maymun's services still works.
+    await page.evaluate((key) => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'bridge', keys: { bridge: key } })), key)
     await page.reload()
+    await expect(page.getByLabel('Bridge key')).toHaveValue(key)
+    await expect(page.getByRole('link', { name: 'maymun-bridge.mjs' })).toHaveAttribute('download', '')
     await page.getByRole('button', { name: 'Turn on' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Copying into' })).toContainText(VAULT_FOLDER)
     const root = join(vault, VAULT_FOLDER)

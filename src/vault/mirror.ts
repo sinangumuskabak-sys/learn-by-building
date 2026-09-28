@@ -1,5 +1,4 @@
 import { createPersistedStore, type Store } from '../lib/store.ts'
-import { aiStore, baseFor } from '../maymun/store.ts'
 import { obsidianSettings, skillsFolderOf } from './obsidian.ts'
 import { splitMyNotes, writeMyNotes } from './sections.ts'
 import { onVaultWrite, readVaultFile, startVault, vaultFiles, writeVaultFile, type VaultFile } from './store.ts'
@@ -10,9 +9,24 @@ import { onVaultWrite, readVaultFile, startVault, vaultFiles, writeVaultFile, ty
  * the vault works without it.
  */
 
-export const mirrorStore = createPersistedStore<{ enabled: boolean }>('lp.vault.mirror', { enabled: false }, (raw) => {
-  const value = raw as { enabled?: unknown } | null
-  return value && typeof value === 'object' ? { enabled: value.enabled === true } : null
+export const BRIDGE_ADDRESS = 'http://127.0.0.1:8787/v1'
+
+/** The bridge key from when the bridge was also one of Maymun's services, so an existing copy keeps working. */
+function oldBridgeKey(): string | undefined {
+  try {
+    const key = (JSON.parse(localStorage.getItem('lp.maymun.ai') ?? 'null') as { keys?: { bridge?: unknown } } | null)?.keys?.bridge
+    return typeof key === 'string' && key.trim() ? key.trim() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const oldKey = oldBridgeKey()
+export const mirrorStore = createPersistedStore<{ enabled: boolean; key?: string }>('lp.vault.mirror', { enabled: false, ...(oldKey ? { key: oldKey } : {}) }, (raw) => {
+  const value = raw as { enabled?: unknown; key?: unknown } | null
+  if (!value || typeof value !== 'object') return null
+  const key = typeof value.key === 'string' && value.key.trim() ? value.key.trim() : oldBridgeKey()
+  return { enabled: value.enabled === true, ...(key ? { key } : {}) }
 })
 
 /**
@@ -61,9 +75,8 @@ function createStore<T>(initial: T): Store<T> {
 export const mirrorStatus = createStore<MirrorStatus>({ state: 'off' })
 
 function connection() {
-  const ai = aiStore.get()
-  const key = ai.keys.bridge
-  return key ? { key, url: `${baseFor(ai, 'bridge').replace(/\/+$/, '')}/vault` } : null
+  const key = mirrorStore.get().key
+  return key ? { key, url: `${BRIDGE_ADDRESS}/vault` } : null
 }
 
 type Reply = { folder?: string; files?: (VaultFile & { mtime: number })[]; kept?: string[] }
@@ -173,7 +186,7 @@ export function stopMirror() {
 }
 
 export async function setMirror(enabled: boolean) {
-  mirrorStore.set({ enabled })
+  mirrorStore.set((value) => ({ ...value, enabled }))
   if (enabled) return startMirror()
   stopMirror()
   return false

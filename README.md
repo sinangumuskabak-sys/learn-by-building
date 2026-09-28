@@ -60,27 +60,27 @@ install). The app writes the status parts as you progress; Maymun fills in what 
 comes next as you talk (a hidden block at the end of its answers, checked before anything is written); sessions are
 summed up when you come back after a break or start a new topic; **My notes** in every note is yours alone. Browse it
 on the **Memory** page, or download it as a folder: it opens as is in [Obsidian](https://obsidian.md) ("Open folder as
-vault"), which is optional. With the bridge started with `--vault <your Obsidian vault>`, the Memory page can keep a
+vault"), which is optional. With the Maymun bridge (below) started with `--vault <your Obsidian vault>`, the Memory page can keep a
 live copy in that vault's `Learn Platform` folder, and what you write under **My notes** in Obsidian comes back. **Reset
 all data** in Settings turns it back into the empty skeleton.
 
 Maymun answers through AI you choose, and your key never leaves the browser:
 
+- **[OmniRoute](https://github.com/diegosouzapw/OmniRoute) on your computer:** connect your subscriptions and keys
+  there (Claude, Gemini, Codex, free providers…), turn on the models Maymun may use, and the best one answers while the
+  next takes over when it fails.
 - **Your own API key:** OpenRouter, Anthropic (Claude), OpenAI or DeepSeek, called straight from the browser.
-- **An OpenAI-compatible server on your computer:** [OmniRoute](https://github.com/diegosouzapw/OmniRoute) (connects your
-  subscriptions), Ollama, LM Studio.
-- **The Maymun bridge** ([public/maymun-bridge.mjs](public/maymun-bridge.mjs), one file, no dependencies): uses the
-  Claude Code subscription you are logged in with, or forwards to a gateway with `--upstream`. It listens on
-  127.0.0.1 only, answers only allowed sites, and needs the key it prints at start.
+- **Another OpenAI-compatible server on your computer:** Ollama, LM Studio.
 
-  ```bash
-  node maymun-bridge.mjs                                   # this site on localhost
-  node maymun-bridge.mjs --origin https://your.site        # a deployed copy
-  node maymun-bridge.mjs --upstream http://localhost:20128/v1   # also OmniRoute models
-  node maymun-bridge.mjs --vault "~/Documents/Obsidian/My vault" # also a live copy of the memory vault
-  ```
+The live Obsidian copy of the memory vault goes through **the Maymun bridge**
+([public/maymun-bridge.mjs](public/maymun-bridge.mjs), one file, no dependencies; also downloadable from the Memory
+page). It listens on 127.0.0.1 only, answers only allowed sites, and needs the key it prints at start (paste it on the
+Memory page).
 
-  Using a subscription this way is subject to its provider's terms.
+```bash
+node maymun-bridge.mjs --vault "~/Documents/Obsidian/My vault"                            # this site on localhost
+node maymun-bridge.mjs --vault "~/Documents/Obsidian/My vault" --origin https://your.site  # a deployed copy
+```
 
 ## Development
 

@@ -40,12 +40,12 @@ const strings = (value: unknown) =>
 
 export const aiStore = createPersistedStore<MaymunAi>(
   'lp.maymun.ai',
-  { provider: 'openrouter', keys: {}, models: {}, bases: {}, active: {} },
+  { provider: 'omniroute', keys: {}, models: {}, bases: {}, active: {} },
   (raw) => {
     const value = raw as Partial<MaymunAi> | null
     if (!value || typeof value !== 'object') return null
     return {
-      provider: isProvider(value.provider) ? value.provider : 'openrouter',
+      provider: isProvider(value.provider) ? value.provider : 'omniroute',
       keys: strings(value.keys),
       models: strings(value.models),
       bases: strings(value.bases),

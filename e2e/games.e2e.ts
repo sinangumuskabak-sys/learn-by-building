@@ -303,6 +303,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await expect(question).toBeDisabled()
 
   // First time: pick a service and add a key right in the chat.
+  await popup.getByLabel('Service').selectOption('openrouter')
   await popup.getByLabel('API key').fill('sk-or-test')
   await popup.getByRole('button', { name: 'Save' }).click()
   await question.fill('What do I do here?')
@@ -538,7 +539,7 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   expect(lastUserMessages()).toEqual(['[code panel, step 02-grid, page "Snake"] Fresh start'])
 })
 
-test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, the bridge)', async ({ page }) => {
+test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)', async ({ page }) => {
   const sent: { auth?: string; body: { model: string; messages: { role: string; content: string }[] } }[] = []
   await page.route('http://127.0.0.1:11434/v1/chat/completions', async (route) => {
     sent.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
@@ -565,6 +566,9 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, t
   // An OpenAI-compatible server with its own address and model, and no key.
   await page.goto('/#/settings')
   const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
+  // OmniRoute comes first; subscriptions are connected there, not through a service of their own.
+  await expect(setup.getByLabel('Service').locator('option').first()).toHaveText('OmniRoute (everything you connected there)')
+  await expect(setup.getByLabel('Service').locator('option[value="bridge"]')).toHaveCount(0)
   await setup.getByLabel('Service').selectOption('custom')
   await setup.getByLabel('Address').fill('http://127.0.0.1:11434/v1/')
   await setup.getByLabel('Model').fill('llama3.2')
@@ -579,15 +583,10 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, t
   expect(sent[0].body.messages[0].content).toContain('## How you teach')
   expect(sent[0].body.messages[0].content).toContain('<panel name="task"')
 
-  // The bridge: its setup says how to start it, and a bridge that is not running is named as the problem.
+  // A server that is not running is named as the problem.
   await page.goto('/#/settings')
-  await setup.getByLabel('Service').selectOption('bridge')
-  await expect(setup.getByRole('link', { name: 'maymun-bridge.mjs' })).toHaveAttribute('download', '')
-  await expect(setup.getByText('node maymun-bridge.mjs', { exact: true })).toBeVisible()
-  await setup.getByLabel('Bridge key').fill('maymun-test')
+  await setup.getByLabel('Address').fill('http://127.0.0.1:8787/v1')
   await setup.getByRole('button', { name: 'Save' }).click()
-  const script = await page.request.get('/maymun-bridge.mjs')
-  expect(await script.text()).toContain('export function createBridge')
   await askAboutCode()
   await question.fill('Hi again')
   await question.press('Enter')

@@ -154,9 +154,10 @@ export function VaultPage() {
 /** The live mirror into an Obsidian vault on this computer, through the Maymun bridge. */
 function MirrorCard() {
   const { t } = useI18n()
-  const { enabled } = useStore(mirrorStore)
+  const { enabled, key: savedKey } = useStore(mirrorStore)
   const status = useStore(mirrorStatus)
   const [busy, setBusy] = useState(false)
+  const [key, setKey] = useState(savedKey ?? '')
   // Coming back to this page brings in what was written in Obsidian meanwhile.
   useEffect(() => {
     if (enabled) void pullNotes()
@@ -176,7 +177,33 @@ function MirrorCard() {
         </Button>
       </div>
       <p className="text-muted">{t('vault.mirror.help')}</p>
+      <a href={`${import.meta.env.BASE_URL}maymun-bridge.mjs`} download className="text-accent underline">
+        maymun-bridge.mjs
+      </a>
       <code className="block rounded bg-surface-2 px-2 py-1 font-mono break-all">node maymun-bridge.mjs --vault "…/Obsidian/…"</code>
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          mirrorStore.set((value) => ({ ...value, key: key.trim() || undefined }))
+          if (enabled) void setMirror(true)
+        }}
+      >
+        <label className="block flex-1 font-medium">
+          {t('vault.mirror.key')}
+          <input
+            type="password"
+            value={key}
+            onChange={(event) => setKey(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            className="mt-1 h-8 w-full rounded-lg border border-border bg-surface-2 px-2 font-mono"
+          />
+        </label>
+        <Button type="submit" variant="secondary" size="sm">
+          {t('vault.mirror.save')}
+        </Button>
+      </form>
       {message && (
         <p role="status" className={status.state === 'on' ? 'text-success' : 'text-danger'}>
           {message}

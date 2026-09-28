@@ -1,7 +1,7 @@
 import { splitDataUrl } from './capture.ts'
 
 /** The AI services Maymun can talk to with the learner's own key (BYOK). The key never leaves this browser. */
-export type ProviderId = 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'omniroute' | 'bridge' | 'custom'
+export type ProviderId = 'omniroute' | 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'custom'
 
 export interface Provider {
   id: ProviderId
@@ -23,14 +23,12 @@ export interface Provider {
 }
 
 export const providers: Provider[] = [
+  // OmniRoute on the learner's computer: whatever they connected there (Claude, Gemini, Codex…), under one key.
+  { id: 'omniroute', name: 'OmniRoute', model: '', keys: 'http://localhost:20128/dashboard', base: 'http://localhost:20128/v1', images: true, local: true, gateway: true },
   { id: 'openrouter', name: 'OpenRouter', model: 'openrouter/auto', keys: 'https://openrouter.ai/keys', base: 'https://openrouter.ai/api/v1', images: true },
   { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys', images: true },
   { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
-  // OmniRoute on the learner's computer: whatever they connected there (Claude, Gemini, Codex…), under one key.
-  { id: 'omniroute', name: 'OmniRoute', model: '', keys: 'http://localhost:20128/dashboard', base: 'http://localhost:20128/v1', images: true, local: true, gateway: true },
-  // A subscription (Claude Code) or a gateway through `public/maymun-bridge.mjs` on the learner's computer.
-  { id: 'bridge', name: 'Maymun bridge (your subscriptions)', model: 'maymun/auto', keys: '', base: 'http://127.0.0.1:8787/v1', images: true, local: true },
   // Any OpenAI-compatible server the browser may call directly: Ollama, LM Studio…
   { id: 'custom', name: 'OpenAI-compatible (Ollama, LM Studio…)', model: '', keys: '', base: 'http://localhost:11434/v1', images: true, local: true, keyOptional: true },
 ]
