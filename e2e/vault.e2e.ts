@@ -194,6 +194,17 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     await note.getByRole('button', { name: 'Save my notes' }).click()
     await expect.poll(() => readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('From the app.')
 
+    // Written in Obsidian while the app writes the same note before reading that back: neither is lost.
+    writeFileSync(snakeStatus, readFileSync(snakeStatus, 'utf8').replace(/## My notes\n[\s\S]*$/, '## My notes\nObsidian again.\n'))
+    await note.getByLabel('My notes').fill('App again.')
+    await note.getByRole('button', { name: 'Save my notes' }).click()
+    await expect(note.getByRole('status')).toBeVisible()
+    expect(readFileSync(snakeStatus, 'utf8')).toContain('Obsidian again.')
+    // Coming back to the page reads the folder at once.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+    await expect(note.getByLabel('My notes')).toHaveValue('App again.\n\nObsidian again.', { timeout: 15_000 })
+    await expect.poll(() => readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('App again.\n\nObsidian again.')
+
     // Resetting all data starts the folder over: the skeleton comes back, anything else in it goes.
     const stray = join(root, 'Games', 'Snake', 'Sessions', 'old session.md')
     mkdirSync(join(root, 'Games', 'Snake', 'Sessions'), { recursive: true })

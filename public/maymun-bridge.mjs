@@ -82,6 +82,15 @@ function listNotes(dir, base = dir) {
   })
 }
 
+/** Where the learner's own section ("My notes") starts in a note and what it holds; null when the note has none. */
+export function myNotesOf(content) {
+  for (const heading of ['Notlarım', 'My notes']) {
+    const at = content.lastIndexOf(`\n## ${heading}\n`)
+    if (at >= 0) return { start: at + heading.length + 5, notes: content.slice(at + heading.length + 5).trim() }
+  }
+  return null
+}
+
 /** GET: the notes in the vault folder (for "My notes" written in Obsidian). POST: write notes, or start over. */
 async function vaultRequest(options, req, res) {
   if (!options.vault) return fail(res, 404, 'Start the bridge with --vault "<your Obsidian vault folder>" to mirror the memory vault.')
@@ -106,15 +115,27 @@ async function vaultRequest(options, req, res) {
     }
   }
   let written = 0
+  const kept = []
   for (const file of Array.isArray(body.files) ? body.files : []) {
     const target = vaultFile(options.vault, file?.path)
     if (!target || typeof file.content !== 'string') continue
+    let content = file.content
+    // "notesBase" is what the app last saw under My notes in this file. If the file on disk says something else, the
+    // learner wrote it in Obsidian since then: keep it rather than write over it (the app takes it in on its next read).
+    if (typeof file.notesBase === 'string' && existsSync(target)) {
+      const disk = myNotesOf(readFileSync(target, 'utf8'))
+      const ours = myNotesOf(content)
+      if (disk && ours && disk.notes !== file.notesBase.trim() && disk.notes !== ours.notes) {
+        content = `${content.slice(0, ours.start)}${disk.notes ? `${disk.notes}\n` : ''}`
+        kept.push(file.path)
+      }
+    }
     mkdirSync(dirname(target), { recursive: true })
-    writeFileSync(target, file.content)
+    writeFileSync(target, content)
     written++
   }
   res.writeHead(200, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify({ folder: base, written }))
+  res.end(JSON.stringify({ folder: base, written, kept }))
 }
 
 /** The bridge key, made once and kept in the bridge's folder. */

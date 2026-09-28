@@ -181,6 +181,19 @@ describe('Maymun bridge: memory vault mirror', () => {
     expect(readFileSync(join(vault, '.obsidian', 'app.json'), 'utf8')).toBe('{"mine": true}')
     expect((await get()).files.map((f) => f.path)).toEqual(['Güncel durum.md'])
   })
+
+  it('keeps My notes written in Obsidian that the app has not read yet', async () => {
+    const note = (status, notes) => `# Snake\n\n${status}\n\n## Notlarım\n${notes}`
+    const path = 'Oyunlar/Yılan/Güncel durum.md'
+    await post({ files: [{ path, content: note('Step 1', ''), notesBase: '' }] })
+    // Written in Obsidian; then the app updates its own part of the note before reading that back.
+    writeFileSync(join(vault, VAULT_FOLDER, path), note('Step 1', 'Mine, from Obsidian.\n'))
+    expect(await (await post({ files: [{ path, content: note('Step 2', ''), notesBase: '' }] })).json()).toMatchObject({ kept: [path] })
+    expect(readFileSync(join(vault, VAULT_FOLDER, path), 'utf8')).toBe(note('Step 2', 'Mine, from Obsidian.\n'))
+    // Once the app has seen them, what it sends is written as is.
+    await post({ files: [{ path, content: note('Step 3', 'Edited in the app.\n'), notesBase: 'Mine, from Obsidian.' }] })
+    expect(readFileSync(join(vault, VAULT_FOLDER, path), 'utf8')).toBe(note('Step 3', 'Edited in the app.\n'))
+  })
 })
 
 describe('Maymun bridge: other subscriptions and falling back', () => {
