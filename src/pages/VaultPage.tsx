@@ -1,11 +1,15 @@
 import clsx from 'clsx'
 import { Download, FileText, Folder } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { Button } from '../components/ui.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
+import { useStore } from '../lib/store.ts'
+import { mirrorStatus, mirrorStore, pullNotes, setMirror } from '../vault/mirror.ts'
+import { obsidianSettings, skillsFolderOf } from '../vault/obsidian.ts'
+import { splitMyNotes, writeMyNotes } from '../vault/sections.ts'
 import { useVault, writeVaultFile, type VaultFile } from '../vault/store.ts'
 import { zip } from '../vault/zip.ts'
 
@@ -44,23 +48,12 @@ function forDisplay(content: string): string {
     .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, path: string, label: string) => `[${label}](#/memory?f=${encodeURIComponent(`${path}.md`)})`)
 }
 
-/** The learner's own section: everything under the last heading, which is always "My notes". */
-function splitNotes(content: string, heading: string) {
-  const at = content.lastIndexOf(`\n## ${heading}\n`)
-  if (at < 0) return null
-  const start = at + heading.length + 5
-  return { before: content.slice(0, start), notes: content.slice(start).trim() }
-}
-
-function download(files: VaultFile[], graphFolder: string) {
+function download(files: VaultFile[]) {
+  // Ready for Obsidian's "Open folder as vault" on the unzipped folder.
+  const settings = obsidianSettings(skillsFolderOf(files.map((f) => f.path)))
   const entries = [
     ...files.map((f) => ({ path: `${ROOT}/${f.path}`, content: f.content })),
-    // Ready for Obsidian's "Open folder as vault": links update with renames; skills stand out in the graph.
-    { path: `${ROOT}/.obsidian/app.json`, content: JSON.stringify({ alwaysUpdateLinks: true, showFrontmatter: false }, null, 2) },
-    {
-      path: `${ROOT}/.obsidian/graph.json`,
-      content: JSON.stringify({ colorGroups: [{ query: `path:"${graphFolder}"`, color: { a: 1, rgb: 16092476 } }] }, null, 2),
-    },
+    ...Object.entries(settings).map(([name, content]) => ({ path: `${ROOT}/.obsidian/${name}`, content })),
   ]
   const blob = new Blob([zip(entries)], { type: 'application/zip' })
   const url = URL.createObjectURL(blob)
@@ -81,7 +74,6 @@ export function VaultPage() {
   const root = useMemo(() => tree(files), [files])
   const q = query.trim().toLowerCase()
   const shown = (file: VaultFile) => !q || file.path.toLowerCase().includes(q)
-  const skillsFolder = root.folders.find((f) => f.name === 'Beceriler' || f.name === 'Skills')?.name ?? ''
 
   const renderFolder = (folder: Folder, depth: number) => {
     const visible = folder.files.filter(shown)
@@ -124,17 +116,19 @@ export function VaultPage() {
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col gap-4 p-4 sm:p-6 lg:flex-row">
-      <aside className="flex max-h-[40vh] min-h-0 shrink-0 flex-col gap-3 lg:max-h-none lg:w-80">
+    // Phones: one scrolling column (the tree has its own height); wide screens: tree and note side by side.
+    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6 lg:h-full lg:flex-row">
+      <aside className="flex shrink-0 flex-col gap-3 lg:min-h-0 lg:w-80">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('vault.title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('vault.intro')}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => download(files, skillsFolder)} disabled={!files.length}>
+        <Button variant="secondary" size="sm" onClick={() => download(files)} disabled={!files.length}>
           <Download size={15} aria-hidden />
           {t('vault.download')}
         </Button>
         <p className="text-xs text-muted">{t('vault.obsidian')}</p>
+        <MirrorCard />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -142,34 +136,83 @@ export function VaultPage() {
           aria-label={t('vault.search')}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm"
         />
-        <nav aria-label={t('vault.title')} className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border bg-surface p-2">
+        <nav
+          aria-label={t('vault.title')}
+          className="max-h-[50vh] overflow-y-auto rounded-xl border border-border bg-surface p-2 lg:max-h-none lg:min-h-0 lg:flex-1"
+        >
           {files.length ? renderFolder(root, 0) : <p className="p-2 text-sm text-muted">…</p>}
           <p className="px-1.5 pt-2 text-xs text-muted">{t('vault.count', { n: files.length })}</p>
         </nav>
       </aside>
-      <main className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border bg-surface p-5">
+      <main className="rounded-xl border border-border bg-surface p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
         {selected ? <Note key={selected.path} file={selected} /> : <p className="text-muted">{t('vault.pick')}</p>}
       </main>
     </div>
   )
 }
 
+/** The live mirror into an Obsidian vault on this computer, through the Maymun bridge. */
+function MirrorCard() {
+  const { t } = useI18n()
+  const { enabled } = useStore(mirrorStore)
+  const status = useStore(mirrorStatus)
+  const [busy, setBusy] = useState(false)
+  // Coming back to this page brings in what was written in Obsidian meanwhile.
+  useEffect(() => {
+    if (enabled) void pullNotes()
+  }, [enabled])
+  const toggle = async () => {
+    setBusy(true)
+    await setMirror(!enabled)
+    setBusy(false)
+  }
+  const message = enabled ? t(`vault.mirror.${status.state}` as 'vault.mirror.on', { folder: status.folder ?? '' }) : ''
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-surface p-3 text-xs">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-semibold">{t('vault.mirror.title')}</span>
+        <Button variant={enabled ? 'secondary' : 'primary'} size="sm" onClick={() => void toggle()} disabled={busy}>
+          {enabled ? t('vault.mirror.stop') : t('vault.mirror.start')}
+        </Button>
+      </div>
+      <p className="text-muted">{t('vault.mirror.help')}</p>
+      <code className="block rounded bg-surface-2 px-2 py-1 font-mono break-all">node maymun-bridge.mjs --vault "…/Obsidian/…"</code>
+      {message && (
+        <p role="status" className={status.state === 'on' ? 'text-success' : 'text-danger'}>
+          {message}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function Note({ file }: { file: VaultFile }) {
   const { t } = useI18n()
-  const heading = file.content.includes(`\n## Notlarım\n`) ? 'Notlarım' : 'My notes'
-  const parts = splitNotes(file.content, heading)
-  const [notes, setNotes] = useState(parts?.notes ?? '')
+  const parts = splitMyNotes(file.content)
+  const heading = parts?.heading ?? ''
+  const stored = parts?.notes ?? ''
+  const [notes, setNotes] = useState(stored)
   const [saved, setSaved] = useState(false)
+  // Notes written elsewhere (in Obsidian, through the mirror) show up, unless the learner is typing here.
+  const [dirty, setDirty] = useState(false)
+  const [shown, setShown] = useState(stored)
+  if (stored !== shown) {
+    setShown(stored)
+    if (!dirty) setNotes(stored)
+  }
   return (
     <article>
       <p className="mb-3 font-mono text-xs text-muted">{`${ROOT}/${file.path}`}</p>
-      <Markdown source={forDisplay(parts ? parts.before.replace(new RegExp(`\\n## ${heading}\\n$`), '\n') : file.content)} />
+      <Markdown source={forDisplay(parts ? parts.before.slice(0, parts.before.length - heading.length - 4) : file.content)} />
       {parts && (
         <form
           className="mt-6 border-t border-border pt-4"
           onSubmit={(event) => {
             event.preventDefault()
-            void writeVaultFile(file.path, `${parts.before}\n${notes.trim()}\n`).then(() => setSaved(true))
+            void writeVaultFile(file.path, writeMyNotes(file.content, notes)).then(() => {
+              setSaved(true)
+              setDirty(false)
+            })
           }}
         >
           <label className="block text-sm font-semibold">
@@ -178,6 +221,7 @@ function Note({ file }: { file: VaultFile }) {
               value={notes}
               onChange={(event) => {
                 setNotes(event.target.value)
+                setDirty(true)
                 setSaved(false)
               }}
               rows={5}

@@ -55,7 +55,15 @@ async function readAll(): Promise<VaultFile[]> {
   })
 }
 
+/** Told about every written note (the Obsidian mirror listens) and every reset. */
+const writeListeners = new Set<(files: VaultFile[], reset: boolean) => void>()
+export function onVaultWrite(listener: (files: VaultFile[], reset: boolean) => void) {
+  writeListeners.add(listener)
+  return () => writeListeners.delete(listener)
+}
+
 async function writeMany(files: VaultFile[], clear = false) {
+  if (files.length && !clear) writeListeners.forEach((listener) => listener(files, false))
   const database = await openDb()
   if (!database || (!files.length && !clear)) return
   await new Promise<void>((resolve) => {
@@ -141,6 +149,7 @@ export async function resetVault() {
   await writeMany([], true)
   await sync(progressStore.get())
   emit()
+  writeListeners.forEach((listener) => listener(vaultFiles(), true))
 }
 
 export function vaultFiles(): VaultFile[] {

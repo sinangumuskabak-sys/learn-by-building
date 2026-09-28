@@ -60,7 +60,9 @@ install). The app writes the status parts as you progress; Maymun fills in what 
 comes next as you talk (a hidden block at the end of its answers, checked before anything is written); sessions are
 summed up when you come back after a break or start a new topic; **My notes** in every note is yours alone. Browse it
 on the **Memory** page, or download it as a folder: it opens as is in [Obsidian](https://obsidian.md) ("Open folder as
-vault"), which is optional. **Reset all data** in Settings turns it back into the empty skeleton.
+vault"), which is optional. With the bridge started with `--vault <your Obsidian vault>`, the Memory page can keep a
+live copy in that vault's `Learn Platform` folder, and what you write under **My notes** in Obsidian comes back. **Reset
+all data** in Settings turns it back into the empty skeleton.
 
 Maymun answers through AI you choose, and your key never leaves the browser:
 
@@ -74,6 +76,7 @@ Maymun answers through AI you choose, and your key never leaves the browser:
   node maymun-bridge.mjs                                   # this site on localhost
   node maymun-bridge.mjs --origin https://your.site        # a deployed copy
   node maymun-bridge.mjs --upstream http://localhost:20128/v1   # also OmniRoute models
+  node maymun-bridge.mjs --vault "~/Documents/Obsidian/My vault" # also a live copy of the memory vault
   ```
 
   Using a subscription this way is subject to its provider's terms.

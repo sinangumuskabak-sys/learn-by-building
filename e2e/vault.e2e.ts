@@ -116,3 +116,48 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   await expect(note).toContainText('What ctx is')
   await expect(note).toContainText('Painted the board')
 })
+
+test('the live Obsidian copy: notes go to the folder, My notes written there come back', async ({ page }) => {
+  test.skip(isMobile(page), 'one run is enough')
+  // The bridge is a plain script served with the site; it has no type declarations.
+  // @ts-expect-error untyped module
+  const { createBridge, parseArgs, VAULT_FOLDER } = await import('../public/maymun-bridge.mjs')
+  const { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const vault = mkdtempSync(join(tmpdir(), 'lp-obsidian-'))
+  const key = 'maymun-e2e-key'
+  const bridge = createBridge(parseArgs(['--vault', vault]), key)
+  const port: number = await new Promise((resolve) => bridge.listen(0, '127.0.0.1', () => resolve(bridge.address().port)))
+  try {
+    await page.goto('./#/memory')
+    await page.evaluate(
+      ({ key, port }) =>
+        localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'bridge', keys: { bridge: key }, bases: { bridge: `http://127.0.0.1:${port}/v1` } })),
+      { key, port },
+    )
+    await page.reload()
+    await page.getByRole('button', { name: 'Turn on' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Copying into' })).toContainText(VAULT_FOLDER)
+    const root = join(vault, VAULT_FOLDER)
+    const snakeStatus = join(root, 'Games', 'Snake', 'Current status.md')
+    await expect.poll(() => existsSync(snakeStatus)).toBe(true)
+    expect(existsSync(join(vault, '.obsidian', 'graph.json'))).toBe(true)
+
+    // Written in Obsidian, read back when the page is opened again.
+    const disk = readFileSync(snakeStatus, 'utf8')
+    writeFileSync(snakeStatus, disk.replace(/## My notes\n[\s\S]*$/, '## My notes\nFrom Obsidian.\n'))
+    await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+    await page.reload()
+    await expect(page.getByRole('main').last().getByLabel('My notes')).toHaveValue('From Obsidian.')
+
+    // Written in the app, copied to the folder.
+    const note = page.getByRole('main').last()
+    await note.getByLabel('My notes').fill('From the app.')
+    await note.getByRole('button', { name: 'Save my notes' }).click()
+    await expect.poll(() => readFileSync(snakeStatus, 'utf8')).toContain('From the app.')
+  } finally {
+    bridge.close()
+    rmSync(vault, { recursive: true, force: true })
+  }
+})

@@ -27,7 +27,11 @@ export function AppShell() {
 
   // The memory vault follows progress from the start, not only once its page is opened.
   useEffect(() => {
-    const start = () => void import('../vault/store.ts').then(({ startVault }) => startVault())
+    const start = () =>
+      void import('../vault/store.ts')
+        .then(({ startVault }) => startVault())
+        .then(() => import('../vault/mirror.ts'))
+        .then(({ startMirror }) => startMirror())
     const id = window.setTimeout(start, 1500)
     return () => window.clearTimeout(id)
   }, [])

@@ -58,3 +58,23 @@ export function writeFrontMatter(content: string, frontMatter: string): string {
   const body = content.replace(/\r\n/g, '\n').replace(/^---\n[\s\S]*?\n---\n?/, '')
   return `---\n${frontMatter.trim()}\n---\n${body.startsWith('\n') ? body : `\n${body}`}`
 }
+
+/** The learner's own section is always the last one, under one of these headings. */
+const MY_NOTES = ['Notlarım', 'My notes']
+
+/** The note split at the learner's section: what comes before it (heading included) and the notes themselves. */
+export function splitMyNotes(content: string): { before: string; heading: string; notes: string } | null {
+  for (const heading of MY_NOTES) {
+    const at = content.lastIndexOf(`\n## ${heading}\n`)
+    if (at < 0) continue
+    const start = at + heading.length + 5
+    return { before: content.slice(0, start), heading, notes: content.slice(start).trim() }
+  }
+  return null
+}
+
+/** The note with the learner's section replaced. */
+export function writeMyNotes(content: string, notes: string): string {
+  const parts = splitMyNotes(content)
+  return parts ? `${parts.before}${notes.trim() ? `${notes.trim()}\n` : ''}` : content
+}

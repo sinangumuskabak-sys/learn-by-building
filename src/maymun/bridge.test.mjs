@@ -1,11 +1,11 @@
 // @vitest-environment node
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createBridge, loadKey, parseArgs, toClaudeTurn } from '../../public/maymun-bridge.mjs'
+import { createBridge, loadKey, parseArgs, toClaudeTurn, VAULT_FOLDER, vaultFile } from '../../public/maymun-bridge.mjs'
 
 const fake = fileURLToPath(new URL('./fake-claude.mjs', import.meta.url))
 const home = mkdtempSync(join(tmpdir(), 'maymun-test-'))
@@ -132,5 +132,53 @@ describe('Maymun bridge', () => {
     expect(upstreamSeen[0].body.model).toBe('llama3.2')
     // The bridge key stays with the bridge.
     expect(upstreamSeen[0].auth).toBeUndefined()
+  })
+})
+
+describe('Maymun bridge: memory vault mirror', () => {
+  const vault = mkdtempSync(join(tmpdir(), 'maymun-vault-'))
+  let mirror, mirrorUrl
+  beforeAll(async () => {
+    mirror = createBridge(parseArgs(['--vault', vault]), key)
+    mirrorUrl = `http://127.0.0.1:${await listen(mirror)}/v1/vault`
+  })
+  afterAll(() => {
+    mirror.close()
+    rmSync(vault, { recursive: true, force: true })
+  })
+  const post = (body, base = mirrorUrl) =>
+    fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body) })
+  const get = () => fetch(mirrorUrl, { headers: { Authorization: `Bearer ${key}` } }).then((r) => r.json())
+
+  it('only accepts note paths inside its own folder', () => {
+    expect(vaultFile(vault, 'Oyunlar/Yılan/Güncel durum.md')).toBe(join(vault, VAULT_FOLDER, 'Oyunlar', 'Yılan', 'Güncel durum.md'))
+    for (const bad of ['../x.md', 'a/../../x.md', '/etc/x.md', String.raw`a\..\x.md`, 'a/b.txt', 'a//b.md', './a.md']) {
+      expect(vaultFile(vault, bad), bad).toBeNull()
+    }
+  })
+
+  it('says how to turn the mirror on when started without --vault', async () => {
+    const response = await fetch(`${url}/vault`, { headers: { Authorization: `Bearer ${key}` } })
+    expect(response.status).toBe(404)
+    expect((await response.json()).error.message).toContain('--vault')
+  })
+
+  it('writes notes, gives them back, sets up a new vault for Obsidian, and starts over on reset', async () => {
+    const response = await post({
+      files: [{ path: 'Güncel durum.md', content: '# Now' }, { path: 'Oyunlar/Yılan/Güncel durum.md', content: '# Snake' }, { path: '../escape.md', content: 'no' }],
+      obsidian: { 'app.json': '{}', '../evil.json': 'no' },
+    })
+    expect(await response.json()).toMatchObject({ written: 2 })
+    expect(existsSync(join(vault, 'escape.md'))).toBe(false)
+    expect(readFileSync(join(vault, '.obsidian', 'app.json'), 'utf8')).toBe('{}')
+    const { files } = await get()
+    expect(files.map((f) => f.path).sort()).toEqual(['Güncel durum.md', 'Oyunlar/Yılan/Güncel durum.md'])
+    expect(files.find((f) => f.path === 'Güncel durum.md').content).toBe('# Now')
+
+    // An existing vault keeps its own Obsidian settings.
+    writeFileSync(join(vault, '.obsidian', 'app.json'), '{"mine": true}')
+    await post({ reset: true, files: [{ path: 'Güncel durum.md', content: '# Fresh' }], obsidian: { 'app.json': '{}' } })
+    expect(readFileSync(join(vault, '.obsidian', 'app.json'), 'utf8')).toBe('{"mine": true}')
+    expect((await get()).files.map((f) => f.path)).toEqual(['Güncel durum.md'])
   })
 })

@@ -3,11 +3,15 @@
  * Maymun bridge: lets Maymun, the cat on Learn Platform, answer through AI you already have on this computer.
  *
  *   node maymun-bridge.mjs [--port 8787] [--origin https://your-site] [--upstream http://localhost:20128/v1]
+ *                          [--vault "path/to/your Obsidian vault"]
  *
  * - Models named `claude-code/<model>` (for example `claude-code/sonnet`) run through the Claude Code CLI, so they use
  *   the subscription you are logged in with (`claude` must be installed and logged in).
  * - Any other model goes to `--upstream`: an OpenAI-compatible gateway such as OmniRoute (your other subscriptions),
  *   Ollama or LM Studio (local models). Its key, if it needs one, comes from the MAYMUN_UPSTREAM_KEY variable.
+ *
+ * - With --vault, Learn Platform's memory vault is mirrored into that folder (in its own "Learn Platform" subfolder), so
+ *   Obsidian can open it; what you write under "My notes" there goes back to the app.
  *
  * Only this computer can connect (127.0.0.1), only the sites you allow may call it (localhost always, plus each
  * --origin), and every request needs the bridge key printed at start. Using a subscription this way is subject to its
@@ -17,10 +21,10 @@
  */
 import { spawn } from 'node:child_process'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const MAX_BODY = 25 * 1024 * 1024
@@ -33,6 +37,7 @@ export function parseArgs(argv) {
     claude: process.env.MAYMUN_CLAUDE ?? 'claude',
     effort: process.env.MAYMUN_EFFORT ?? 'EFFORT_DEFAULT',
     home: process.env.MAYMUN_HOME ?? join(homedir(), '.maymun-bridge'),
+    vault: process.env.MAYMUN_VAULT ?? '',
   }
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i + 1]
@@ -41,12 +46,71 @@ export function parseArgs(argv) {
     else if (argv[i] === '--upstream') options.upstream = value
     else if (argv[i] === '--claude') options.claude = value
     else if (argv[i] === '--effort') options.effort = value
+    else if (argv[i] === '--vault') options.vault = value
     else continue
     i++
   }
   options.origins = options.origins.map((o) => o.replace(/\/+$/, ''))
   options.upstream = options.upstream.replace(/\/+$/, '')
+  options.vault = options.vault ? resolve(options.vault) : ''
   return options
+}
+
+/** The app's notes live in this subfolder of the vault; the bridge never touches anything outside it. */
+export const VAULT_FOLDER = 'Learn Platform'
+
+/** The absolute file for a note path from the app, or null when the path could leave the vault folder. */
+export function vaultFile(root, path) {
+  if (typeof path !== 'string' || !path.endsWith('.md') || path.includes('\\') || path.startsWith('/')) return null
+  if (path.split('/').some((part) => part === '' || part === '.' || part === '..')) return null
+  const base = join(root, VAULT_FOLDER)
+  const file = resolve(base, ...path.split('/'))
+  return file.startsWith(base + sep) ? file : null
+}
+
+function listNotes(dir, base = dir) {
+  if (!existsSync(dir)) return []
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) return entry.name.startsWith('.') ? [] : listNotes(full, base)
+    if (!entry.name.endsWith('.md')) return []
+    return [{ path: relative(base, full).split(sep).join('/'), content: readFileSync(full, 'utf8'), mtime: statSync(full).mtimeMs }]
+  })
+}
+
+/** GET: the notes in the vault folder (for "My notes" written in Obsidian). POST: write notes, or start over. */
+async function vaultRequest(options, req, res) {
+  if (!options.vault) return fail(res, 404, 'Start the bridge with --vault "<your Obsidian vault folder>" to mirror the memory vault.')
+  const base = join(options.vault, VAULT_FOLDER)
+  if (req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    return res.end(JSON.stringify({ folder: base, files: listNotes(base) }))
+  }
+  let body
+  try {
+    body = JSON.parse(await readBody(req))
+  } catch {
+    return fail(res, 400, 'The request is not JSON or is too large.')
+  }
+  if (body.reset) rmSync(base, { recursive: true, force: true })
+  // A new vault gets Obsidian settings that suit it; an existing vault keeps its own.
+  const settings = join(options.vault, '.obsidian')
+  if (!existsSync(settings) && body.obsidian && typeof body.obsidian === 'object') {
+    mkdirSync(settings, { recursive: true })
+    for (const [name, content] of Object.entries(body.obsidian)) {
+      if (/^[a-z-]+\.json$/.test(name) && typeof content === 'string') writeFileSync(join(settings, name), content)
+    }
+  }
+  let written = 0
+  for (const file of Array.isArray(body.files) ? body.files : []) {
+    const target = vaultFile(options.vault, file?.path)
+    if (!target || typeof file.content !== 'string') continue
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, file.content)
+    written++
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify({ folder: base, written }))
 }
 
 /** The bridge key, made once and kept in the bridge's folder. */
@@ -252,6 +316,7 @@ export function createBridge(options, key) {
       const data = ['sonnet', 'opus', 'haiku'].map((m) => ({ id: `claude-code/${m}`, object: 'model', owned_by: 'claude-code' }))
       return res.end(JSON.stringify({ object: 'list', data }))
     }
+    if (path === '/v1/vault' && (req.method === 'GET' || req.method === 'POST')) return vaultRequest(options, req, res)
     if (req.method !== 'POST' || path !== '/v1/chat/completions') return fail(res, 404, 'Not found.')
     let body
     try {
@@ -272,5 +337,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`Bridge key (paste it into Maymun's setup): ${key}`)
     console.log(`Allowed sites: localhost${options.origins.length ? ', ' + options.origins.join(', ') : ''}`)
     console.log(`Models: claude-code/sonnet, claude-code/opus, claude-code/haiku${options.upstream ? `, and anything else through ${options.upstream}` : ''}`)
+    if (options.vault) console.log(`Memory vault mirrored into: ${join(options.vault, VAULT_FOLDER)}`)
   })
 }
