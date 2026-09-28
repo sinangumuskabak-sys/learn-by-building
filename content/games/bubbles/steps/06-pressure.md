@@ -53,7 +53,8 @@ state === 'playing' ? shoot() : reset()
 ```
 
 `a ? b : c` burada bir değer seçmek için değil, iki işten birini yapmak için kullanılıyor: "oynuyorsa `shoot()`, değilse
-`reset()`". Ekrana dokunma (`pointerdown`) da oyun bitmişse `reset()` yapar; oynarken eskisi gibi nişan alır. Nişan çizgisi
+`reset()`". Ekrana dokunmak da aynı kuralı izler: parmağı kaldırınca (`pointerup`) oynuyorsan atış yapılır, oyun
+bitmişse `reset()`; parmak ekrandayken (`pointerdown`) yalnızca nişan alınır. Nişan çizgisi
 yalnızca oynarken çizilir, bitince ortada yarı saydam bir panelde sonuç yazar.
 
 # --task--
@@ -62,7 +63,8 @@ yalnızca oynarken çizilir, bitince ortada yarı saydam bir panelde sonuç yaza
    the ceiling in `touches` add `drop * ROW_H`.
 2. `attach` counts `shots`; every `DROP_EVERY` shots, `drop` grows by 1. Then: an empty board is `'won'` (+1000); a bubble whose
    bottom is below `DANGER` is `'lost'`.
-3. `shoot` only works while playing. Space and a tap (`pointerdown`) restart when the game is over.
+3. `shoot` only works while playing. When the game is over, Space and a tap restart it: `pointerdown` only aims while
+   playing, and `pointerup` does `state === 'playing' ? shoot() : reset()`.
 4. Draw the ceiling block `TOP + drop * ROW_H` high, the danger line (`'rgba(239, 68, 68, 0.5)'`, 2 high at `DANGER`), and the aim
    line only while playing. At the end: a `'rgba(15, 23, 42, 0.85)'` panel at `(40, 200)`, `canvas.width - 80` by 90, with
    `Board cleared!` or `The bubbles reached you` (`'bold 24px sans-serif'`, `y = 238`) and `Space or tap to play again`
@@ -138,14 +140,18 @@ yalnızca oynarken çizilir, bitince ortada yarı saydam bir panelde sonuç yaza
      else if (event.key === ' ') state === 'playing' ? shoot() : reset() // ← değişti
    ```
 
-9. `canvas.addEventListener('pointerdown', pointAt)` satırını sil, yerine şunu yaz:
+9. `canvas.addEventListener('pointerdown', pointAt)` ve `canvas.addEventListener('pointerup', () => shoot())`
+   satırlarını sil, yerlerine şunu yaz:
 
    ```js
    canvas.addEventListener('pointerdown', (event) => {
-     if (state !== 'playing') return reset()
-     pointAt(event)
+     if (state === 'playing') pointAt(event)
    })
+   canvas.addEventListener('pointerup', () => (state === 'playing' ? shoot() : reset()))
    ```
+
+   Parmağı ekrana koyunca yalnızca nişan alınır; kaldırınca oynuyorsan atış yapılır, oyun bittiyse yeniden başlar.
+   Böylece yeniden başlatan dokunuş aynı anda bir de atış yapmaz.
 
 10. `draw()`'un başında tavan ve tehlike çizgisi:
 
@@ -244,6 +250,7 @@ shoot()
 assert.isNull(shot, 'no shooting after the end')
 $.click(200, 300)
 assert.strictEqual(state, 'playing', 'a tap plays again')
+assert.isNull(shot, 'the tap that plays again does not also shoot')
 ```
 
 # --solution--
@@ -436,10 +443,10 @@ function pointAt(event) {
 
 canvas.addEventListener('pointermove', pointAt)
 canvas.addEventListener('pointerdown', (event) => {
-  if (state !== 'playing') return reset()
-  pointAt(event)
+  if (state === 'playing') pointAt(event)
 })
-canvas.addEventListener('pointerup', () => shoot())
+// Lifting the finger shoots, or plays again after the end (so the tap that restarts does not also shoot).
+canvas.addEventListener('pointerup', () => (state === 'playing' ? shoot() : reset()))
 
 function drawBubble(x, y, color, r = R) {
   ctx.fillStyle = COLORS[color]

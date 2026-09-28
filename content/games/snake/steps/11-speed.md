@@ -212,7 +212,7 @@ function update() {
   dir = nextDir
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
   const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS
-  const hitSelf = snake.some((part) => part.x === head.x && part.y === head.y)
+  const hitSelf = snake.slice(0, -1).some((part) => part.x === head.x && part.y === head.y)
   if (hitWall || hitSelf) {
     gameOver = true
     if (score > best) {

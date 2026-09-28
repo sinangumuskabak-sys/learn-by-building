@@ -11,7 +11,8 @@ A game needs a way to lose. Snake has two:
 - **Hitting a wall**: the new head is outside the grid. Columns go from `0` to `COLS - 1`, so "outside" means
   `x < 0`, `x >= COLS`, `y < 0` or `y >= ROWS`.
 - **Hitting yourself**: the new head is on a cell the body already uses. That is the same `snake.some(...)` question
-  you asked when placing food.
+  you asked when placing food, with one exception: the last part of the tail moves away on this very step, so moving
+  into it is safe. `snake.slice(0, -1)` is the snake without its last part.
 
 Check both **before** adding the new head. If either is true, the move does not happen: the game ends.
 
@@ -38,7 +39,9 @@ ortasında beyaz harflerle `Game Over` (Oyun Bitti) yazısı çıkacak.
   "Dışarıda" demek: `x < 0` (solda dışarıda), `x >= COLS` (sağda dışarıda), `y < 0` (yukarıda) ya da
   `y >= ROWS` (aşağıda). `<` "küçüktür" demektir.
 - **Kendine çarpmak:** yeni baş, gövdenin zaten kullandığı bir hücreye gelir. Bu, 7. adımda yemi yerleştirirken
-  sorduğun `snake.some(...)` sorusunun aynısı.
+  sorduğun `snake.some(...)` sorusunun aynısı; tek fark: kuyruğun son parçası bu adımda zaten o hücreden çekilecek,
+  oraya girmek güvenli. `snake.slice(0, -1)` "yılanın son parçası hariç hali" demektir (`slice` bir dizinin bir
+  parçasını kopyalar; `-1` "sondan bir önceye kadar").
 
 ```js
 const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS
@@ -102,7 +105,7 @@ olduğu için yazı ortalanır.
      dir = nextDir
      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
      const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS // ← yeni
-     const hitSelf = snake.some((part) => part.x === head.x && part.y === head.y) // ← yeni
+     const hitSelf = snake.slice(0, -1).some((part) => part.x === head.x && part.y === head.y) // ← yeni
      if (hitWall || hitSelf) { // ← yeni
        gameOver = true // ← yeni
        return // ← yeni
@@ -250,7 +253,7 @@ function update() {
   dir = nextDir
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
   const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS
-  const hitSelf = snake.some((part) => part.x === head.x && part.y === head.y)
+  const hitSelf = snake.slice(0, -1).some((part) => part.x === head.x && part.y === head.y)
   if (hitWall || hitSelf) {
     gameOver = true
     return

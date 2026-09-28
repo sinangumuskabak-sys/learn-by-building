@@ -139,30 +139,34 @@ test('a step opens at the end of its text and code, where the newest part is', a
   await expect(page.locator('[data-maymun="code"] .view-lines').getByText('Tic-tac-toe', { exact: false }).first()).toBeInViewport()
 })
 
-test('Maymun stays in the middle of the right edge, its popup stays on screen, and it can be hidden', async ({ page }) => {
+test('Maymun peeks into the panel under the pointer at its middle, its popup stays on screen, and it can be hidden', async ({ page }) => {
   await page.goto('/#/games/snake/01-canvas')
   const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
   await expect(cat).toBeVisible()
   const viewport = page.viewportSize()!
 
-  // The cat stays put at the middle of the right edge wherever the pointer goes; only its eyes follow.
-  const middle = async () => {
-    const box = (await cat.boundingBox())!
-    return { right: Math.round(box.x + box.width), centre: Math.round(box.y + box.height / 2) }
-  }
-  const start = await middle()
-  expect(start.right).toBeGreaterThanOrEqual(viewport.width)
-  expect(Math.abs(start.centre - viewport.height / 2)).toBeLessThanOrEqual(2)
-  await page.mouse.move(20, viewport.height - 20)
-  await page.mouse.move(viewport.width / 2, 100, { steps: 3 })
-  expect(await middle()).toEqual(start)
-
-  // The chat is about the panel the learner last clicked in (on phones, the open tab).
-  await tab(page, 'Code')
   if (!isMobile(page)) {
-    const code = (await page.locator('[data-maymun="code"]').boundingBox())!
-    await page.mouse.click(code.x + code.width / 2, code.y + code.height / 2)
+    // The cat follows the pointer to the game panel (inside the iframe) and to the checks below it, and sits at the
+    // middle of the panel's height wherever the pointer is inside it.
+    const game = page.locator('[data-maymun="game"]')
+    const gameBox = (await game.boundingBox())!
+    const catMiddle = async () => {
+      const box = (await cat.boundingBox())!
+      return Math.round(box.y + box.height / 2)
+    }
+    await page.mouse.move(gameBox.x + gameBox.width / 2, gameBox.y + 60)
+    await expect.poll(async () => (await cat.boundingBox())!.x).toBeGreaterThan(gameBox.x + gameBox.width - 100)
+    await expect.poll(catMiddle).toBeCloseTo(gameBox.y + gameBox.height / 2, -1)
+    await page.mouse.move(gameBox.x + gameBox.width / 2, gameBox.y + gameBox.height - 20, { steps: 4 })
+    await expect.poll(catMiddle).toBeCloseTo(gameBox.y + gameBox.height / 2, -1)
+    const checks = (await page.locator('[data-maymun="results"]').boundingBox())!
+    await page.mouse.move(checks.x + 40, checks.y + checks.height - 10)
+    await expect.poll(async () => (await cat.boundingBox())!.y).toBeGreaterThan(checks.y)
   }
+
+  // On phones the cat moves along with the tabs.
+  await tab(page, 'Code')
+  // Opened from wherever the cat is, the whole popup is visible.
   await cat.click()
   const popup = page.getByRole('dialog', { name: 'Maymun' })
   await expect(popup).toContainText('Code (game.js)')
@@ -217,7 +221,8 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
     await tab(page, 'Code')
     if (!isMobile(page)) {
       const code = (await page.locator('[data-maymun="code"]').boundingBox())!
-      await page.mouse.click(code.x + code.width / 2, code.y + code.height / 2)
+      await page.mouse.move(code.x + code.width / 2, code.y + code.height / 2)
+      await expect.poll(async () => (await cat.boundingBox())?.x ?? 0).toBeGreaterThan(code.x + code.width - 100)
     }
     await cat.click()
   }
@@ -320,7 +325,8 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama, t
     await tab(page, 'Code')
     if (!isMobile(page)) {
       const code = (await page.locator('[data-maymun="code"]').boundingBox())!
-      await page.mouse.click(code.x + code.width / 2, code.y + code.height / 2)
+      await page.mouse.move(code.x + code.width / 2, code.y + code.height / 2)
+      await expect.poll(async () => (await cat.boundingBox())?.x ?? 0).toBeGreaterThan(code.x + code.width - 100)
     }
     await cat.click()
   }

@@ -9,18 +9,23 @@ import { readContext } from './context.ts'
 import { boxStore, maymunStore, useMaymunSettings } from './store.ts'
 import { currentPanel, pointer, startTracking } from './tracker.ts'
 
+const HIDDEN = 0.23 // how much of the head (a share of its size) stays behind the panel's right edge
 const MARGIN = 12 // the popup keeps this far from the window edges
 const HEADER = 64 // and stays below the app header
+const TOOLBAR = 48 // the head stays below a panel's toolbar (Run, Show solution, restart)
 const MIN_BOX = { width: 288, height: 320 } // the chat box cannot be dragged smaller than this
 const EYES = [
   { x: 34, y: 53 },
   { x: 66, y: 53 },
 ]
 
+type Mood = 'calm' | 'angry' | 'excited'
+
 /**
- * Maymun, an orange cat peeking in from the middle of the window's right edge. It stays put on every page; only
- * its eyes follow the pointer (and blink now and then). A click opens a chat about the panel the learner last
- * worked in; the box can be resized from its lower left corner.
+ * Maymun, an orange cat peeking in from the middle of the right edge of the panel the pointer is over. The head stays
+ * at that height; the eyes follow the pointer; far to the left the cat gets cross, close by it gets excited. A click
+ * opens a chat about that panel; the box can be resized from its lower left corner. Its size comes from CSS (smaller
+ * on phones).
  */
 export function Maymun() {
   const { t } = useI18n()
@@ -40,27 +45,52 @@ export function Maymun() {
     if (!visible) return
     startTracking()
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    let mood: Mood = 'calm'
     let nextBlink = performance.now() + 2500
     let frame = 0
+    let lastRect = ''
+    let settledAt = Infinity
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick)
       const box = layer.current
       const button = head.current
       if (!box || !button) return
-      box.style.display = currentPanel() ? 'block' : 'none'
+      const panel = currentPanel()
+      const rect = panel?.getBoundingClientRect()
+      const SIZE = button.offsetWidth
+      if (!panel || !rect || rect.height < TOOLBAR + SIZE + 8) {
+        box.style.display = 'none'
+        return
+      }
+      // While the layout moves (page load, panel resize, tab switch) the cat waits, so it never lands on a button.
+      const key = `${panel.dataset.maymun} ${rect.left} ${rect.top} ${rect.width} ${rect.height}`
+      if (key !== lastRect) {
+        lastRect = key
+        settledAt = now + 250
+      }
+      box.style.display = now < settledAt ? 'none' : 'block'
+      box.style.left = `${rect.left}px`
+      box.style.top = `${rect.top}px`
+      box.style.width = `${rect.width}px`
+      box.style.height = `${rect.height}px`
+
+      // The middle of the panel's height (below its toolbar when the panel is short).
+      const headY = Math.min(rect.height - SIZE / 2 - 6, Math.max(TOOLBAR + SIZE / 2, rect.height / 2))
+      button.style.top = `${headY - SIZE / 2}px`
 
       // Eyes: each pupil moves a little towards the pointer.
-      const rect = button.getBoundingClientRect()
-      const scale = rect.width / 100
+      const left = rect.right + SIZE * HIDDEN - SIZE
+      const top = rect.top + headY - SIZE / 2
+      const scale = SIZE / 100
       EYES.forEach((eye, i) => {
         const g = pupils.current[i]
         if (!g) return
         let dx = 0
         let dy = 0
         if (pointer.seen) {
-          const ex = pointer.x - (rect.left + eye.x * scale)
-          const ey = pointer.y - (rect.top + eye.y * scale)
+          const ex = pointer.x - (left + eye.x * scale)
+          const ey = pointer.y - (top + eye.y * scale)
           const d = Math.hypot(ex, ey) || 1
           const reach = Math.min(3.6, d / 25)
           dx = (ex / d) * reach
@@ -68,6 +98,19 @@ export function Maymun() {
         }
         g.setAttribute('transform', `translate(${dx.toFixed(2)} ${dy.toFixed(2)})`)
       })
+
+      // Mood: cross when the pointer runs far off to the left, excited when it comes close.
+      const cx = left + SIZE / 2
+      const cy = top + SIZE / 2
+      let next: Mood = 'calm'
+      if (pointer.seen) {
+        if (Math.hypot(pointer.x - cx, pointer.y - cy) < 150) next = 'excited'
+        else if (cx - pointer.x > Math.max(360, rect.width * 0.65)) next = 'angry'
+      }
+      if (next !== mood) {
+        mood = next
+        svg.current?.setAttribute('data-mood', mood)
+      }
 
       if (!reduced && now > nextBlink) {
         svg.current?.setAttribute('data-blink', 'true')
@@ -130,7 +173,7 @@ export function Maymun() {
 
   return (
     <>
-      <div ref={layer} {...{ [UI_ATTRIBUTE]: '' }} className="pointer-events-none fixed inset-0 z-20 hidden overflow-hidden print:hidden">
+      <div ref={layer} {...{ [UI_ATTRIBUTE]: '' }} className="pointer-events-none fixed z-20 hidden overflow-hidden print:hidden">
         <button
           ref={head}
           type="button"

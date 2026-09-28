@@ -387,10 +387,10 @@ function pointAt(event) {
 
 canvas.addEventListener('pointermove', pointAt)
 canvas.addEventListener('pointerdown', (event) => {
-  if (state !== 'playing') return reset()
-  pointAt(event)
+  if (state === 'playing') pointAt(event)
 })
-canvas.addEventListener('pointerup', () => shoot())
+// Lifting the finger shoots, or plays again after the end (so the tap that restarts does not also shoot).
+canvas.addEventListener('pointerup', () => (state === 'playing' ? shoot() : reset()))
 
 function drawBubble(x, y, color, r = R) {
   ctx.fillStyle = COLORS[color]

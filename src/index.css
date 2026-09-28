@@ -202,23 +202,20 @@ body {
   transform: scaleY(0.1);
 }
 .maymun-head {
-  /* In the middle of the right edge; smaller on phones, where it would cover the ends of lines. */
+  /* Smaller on phones, where it would cover the ends of lines. Its height on the panel is set by Maymun.tsx. */
   --maymun-size: 88px;
-  --maymun-hidden: 20px;
   width: var(--maymun-size);
   height: var(--maymun-size);
-  right: calc(-1 * var(--maymun-hidden));
-  top: calc(50% - var(--maymun-size) / 2);
-  transition: filter 0.2s ease;
+  right: calc(-0.23 * var(--maymun-size));
+  transition: transform 0.2s ease;
 }
 @media (max-width: 639px) {
   .maymun-head {
     --maymun-size: 56px;
-    --maymun-hidden: 12px;
   }
 }
 .maymun-head:hover {
-  filter: brightness(1.08);
+  transform: translateX(-6px);
 }
 @keyframes maymun-wave {
   to {
