@@ -14,9 +14,12 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
   const passed = useProgress().challenges[challenge.id]?.status === 'passed'
   const [answers, setAnswers] = useState<QuizAnswers>({})
   const [graded, setGraded] = useState<boolean[] | null>(null)
+  // Questions whose answer changed since the last check: their verdict (and hint) keep their place but are hidden,
+  // so nothing below jumps while the learner changes an answer.
+  const [changed, setChanged] = useState<ReadonlySet<number>>(new Set())
 
   const toggle = (question: number, option: number, multiple: boolean) => {
-    setGraded(null)
+    setChanged((current) => new Set(current).add(question))
     setAnswers((current) => {
       const selected = current[question] ?? []
       if (!multiple) return { ...current, [question]: [option] }
@@ -30,11 +33,12 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
   const check = () => {
     const result = gradeQuiz(challenge.questions, answers)
     setGraded(result)
+    setChanged(new Set())
     if (result.every(Boolean)) progressActions.markPassed(challenge.id)
   }
 
   const allAnswered = challenge.questions.every((_, index) => (answers[index] ?? []).length > 0)
-  const allCorrect = graded?.every(Boolean)
+  const allCorrect = graded?.every(Boolean) && changed.size === 0
 
   return (
     <section className="space-y-5">
@@ -43,6 +47,7 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
         {challenge.questions.map((question, qIndex) => {
           const multiple = question.options.filter((o) => o.correct).length > 1
           const verdict = graded?.[qIndex]
+          const stale = changed.has(qIndex)
           return (
             <li key={qIndex} className="rounded-xl border border-border bg-surface p-4">
               <fieldset>
@@ -76,9 +81,11 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
                 </div>
                 {verdict !== undefined && (
                   <p
+                    aria-hidden={stale}
                     className={clsx(
                       'mt-3 flex items-center gap-1.5 text-sm font-medium',
                       verdict ? 'text-success' : 'text-danger',
+                      stale && 'invisible',
                     )}
                   >
                     {verdict ? <CheckCircle2 size={16} aria-hidden /> : <XCircle size={16} aria-hidden />}
@@ -86,7 +93,7 @@ export function QuizPanel({ challenge }: { challenge: Challenge }) {
                   </p>
                 )}
                 {verdict === false && question.hint && (
-                  <p className="mt-1.5 text-sm text-muted">
+                  <p aria-hidden={stale} className={clsx('mt-1.5 text-sm text-muted', stale && 'invisible')}>
                     <InlineMarkdown source={question.hint} />
                   </p>
                 )}

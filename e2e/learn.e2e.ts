@@ -34,6 +34,26 @@ test('the catalog lists all 14 categories', async ({ page }) => {
   await expect(categories).toHaveCount(14)
 })
 
+test('a quiz: a wrong answer shows a hint, other verdicts stay put, passing shows the next challenge', async ({ page }) => {
+  await page.goto('./#/learn/loop-basics-quiz')
+  const q1 = page.getByRole('group', { name: /How many times/ })
+  const q2 = page.getByRole('group', { name: /only even numbers/ })
+  await q1.getByLabel('3').check()
+  await q2.getByLabel('i += 2').check()
+  await page.getByRole('button', { name: 'Check answers' }).click()
+  await expect(q1.getByText('Not quite — try again')).toBeVisible()
+  await expect(q1.getByText(/grows by 3 each time/)).toBeVisible()
+  await expect(q2.getByText('Correct')).toBeVisible()
+  const before = (await q2.boundingBox())!.y
+  await q1.getByLabel('4').check()
+  // Changing an answer hides only that question's verdict and keeps its line, so the questions below do not move.
+  expect((await q2.boundingBox())!.y).toBe(before)
+  await expect(q2.getByText('Correct')).toBeVisible()
+  await page.getByRole('button', { name: 'Check answers' }).click()
+  await expect(page.getByText('All answers correct!')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Next challenge/ })).toBeInViewport()
+})
+
 test('catalog → challenge → failing code → passing code → progress survives a reload', async ({ page }) => {
   await page.goto('./')
   await page.locator('a[href="#/c/programming-fundamentals"]').click()
