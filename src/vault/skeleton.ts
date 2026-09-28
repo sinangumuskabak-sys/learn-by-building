@@ -514,9 +514,11 @@ yalnız **ileride işe yarayacak, öğrenci hakkında kalıcı bilgiyi** yaz.
 - Bir madde = bir cümle, somut: "\`for\` döngüsünde koşulun ne zaman bittiğini karıştırıyor (i <= length)". Sohbet özeti,
   kod kopyası, övgü yazma.
 - **Öğrendiklerin:** öğrencinin kendi söylediği ya da kodunda gösterdiği anlayış. **Zorlandıkların:** takıldığı yer ve
-  nedeni. **Sorduğun sorular:** sorunun özü, bir satır. **Güncel durum / Sıradaki:** her zaman şimdiki hâl (eskisinin
-  üstüne yaz).
-- Profil: seviye, güçlü yanlar, çalışılacaklar, ona iyi gelen anlatım biçimi, tekrar eden hatalar.
+  nedeni; öğrenci onu aşınca buradan **sil** ve öğrendiğini Öğrendiklerin'e ekle. **Sorduğun sorular:** sorunun özü, bir
+  satır. **Açık sorular:** yalnız cevabı henüz bulunmamış sorular; cevaplanınca sil. **Güncel durum / Sıradaki:** her
+  zaman şimdiki hâl (eskisinin üstüne yaz).
+- Profil: seviye, güçlü yanlar, çalışılacaklar, ona iyi gelen anlatım biçimi, tekrar eden hatalar. Birkaç konuşmadan
+  sonra ilk izlenimini yaz ("şimdilik" diyerek), gördükçe düzelt.
 - Emin değilsen yazma. Yanlış yazdığını görürsen düzelt. Anahtar, şifre, kişisel bilgi asla yazma.
 `
     : `# Maymun instructions: keeping the memory vault
@@ -528,8 +530,11 @@ write only **lasting facts about the learner that will help later**.
 - One item = one concrete sentence: "mixes up when a \`for\` loop's condition stops (i <= length)". No chat summaries,
   no copied code, no praise.
 - **What you learned:** understanding the learner showed in their words or code. **What was hard:** where they got stuck
-  and why. **Questions you asked:** the gist, one line. **Current status / Next:** always the present (overwrite the old).
-- Profile: level, strengths, what needs work, the kind of explanation that works, recurring mistakes.
+  and why; once they get past it, **remove** it there and add what they learned. **Questions you asked:** the gist, one
+  line. **Open questions:** only questions not answered yet; remove them once answered. **Current status / Next:**
+  always the present (overwrite the old).
+- Profile: level, strengths, what needs work, the kind of explanation that works, recurring mistakes. After a few
+  exchanges write a first impression (say "so far"), and correct it as you learn more.
 - When unsure, do not write. Fix what you find wrong. Never write keys, passwords or personal data.
 `
 }

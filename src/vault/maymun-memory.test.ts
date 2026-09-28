@@ -66,6 +66,16 @@ describe('Maymun memory block', () => {
     expect(changed.content.endsWith('## My notes\nmine\n')).toBe(true)
   })
 
+  it('removes a bullet by its text, leaving the placeholder when the section empties', () => {
+    const [added] = applyOps([{ file: path, section: 'learned', add: 'one' }, { file: path, section: 'learned', add: 'two' }], notes, allowed, EMPTY)
+    const withTwo = new Map([[path, added.content]])
+    const [one] = applyOps([{ file: path, section: 'learned', remove: '- Two' }], withTwo, allowed, EMPTY)
+    expect(body(one.content, 'learned')).toBe('- one')
+    const [none] = applyOps([{ file: path, section: 'learned', remove: 'one' }], new Map([[path, one.content]]), allowed, EMPTY, '_(henüz boş)_')
+    expect(body(none.content, 'learned')).toBe('_(henüz boş)_')
+    expect(applyOps([{ file: path, section: 'learned', remove: 'absent' }], withTwo, allowed, EMPTY)).toEqual([])
+  })
+
   it('keeps to six operations and a size limit', () => {
     const ops = Array.from({ length: 10 }, (_, i) => ({ file: path, section: 'learned', add: `point ${i}` }))
     const [changed] = applyOps(ops, notes, allowed, EMPTY)

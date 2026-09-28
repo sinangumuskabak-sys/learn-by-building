@@ -208,7 +208,7 @@ const EMPTY = /^_\((henüz boş|henüz yok|empty so far|none yet)\)_$/
 export async function applyMemory(ops: MemoryOp[], allowed: ReadonlySet<string>): Promise<string[]> {
   await startVault()
   const notes = new Map([...files.values()].map((f) => [f.path, f.content]))
-  const changed = applyOps(ops, notes, allowed, EMPTY)
+  const changed = applyOps(ops, notes, allowed, EMPTY, langStore.get() === 'tr' ? '_(henüz boş)_' : '_(empty so far)_')
   const now = new Date().toISOString()
   const written = changed.map(({ path, content }) => ({ path, content, updatedAt: now }))
   for (const file of written) files.set(file.path, file)

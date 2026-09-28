@@ -23,6 +23,8 @@ export interface MemoryOp {
   add?: string
   /** Replaces the section: only for the "current" kind of section (see SETTABLE). */
   set?: string
+  /** Removes the bullet with this text (a difficulty overcome, a question answered, a note that was wrong). */
+  remove?: string
 }
 
 /** Sections that describe the present, so they are replaced rather than added to. */
@@ -61,8 +63,14 @@ export function parseMemory(text: string): { visible: string; ops: MemoryOp[] } 
     const list = Array.isArray(parsed) ? parsed : []
     const ops = list
       .filter((op): op is MemoryOp => !!op && typeof op === 'object' && typeof op.file === 'string' && typeof op.section === 'string')
-      .map((op) => ({ file: op.file, section: op.section, ...(typeof op.add === 'string' ? { add: op.add } : {}), ...(typeof op.set === 'string' ? { set: op.set } : {}) }))
-      .filter((op) => op.add !== undefined || op.set !== undefined)
+      .map((op) => ({
+        file: op.file,
+        section: op.section,
+        ...(typeof op.add === 'string' ? { add: op.add } : {}),
+        ...(typeof op.set === 'string' ? { set: op.set } : {}),
+        ...(typeof op.remove === 'string' ? { remove: op.remove } : {}),
+      }))
+      .filter((op) => op.add !== undefined || op.set !== undefined || op.remove !== undefined)
     return { visible, ops }
   } catch {
     return { visible, ops: [] }
@@ -78,7 +86,14 @@ export interface Applied {
  * The notes changed by a memory block; operations outside `allowed` paths, on sections that are not Maymun's, too
  * long, or looking like secrets are skipped.
  */
-export function applyOps(ops: MemoryOp[], notes: Map<string, string>, allowed: ReadonlySet<string>, emptyMark: RegExp): Applied[] {
+export function applyOps(
+  ops: MemoryOp[],
+  notes: Map<string, string>,
+  allowed: ReadonlySet<string>,
+  emptyMark: RegExp,
+  /** What an emptied section shows. */
+  emptyLabel = '_(empty so far)_',
+): Applied[] {
   const changed = new Map<string, string>()
   for (const op of ops.slice(0, MAX_OPS)) {
     if (!allowed.has(op.file)) continue
@@ -86,6 +101,16 @@ export function applyOps(ops: MemoryOp[], notes: Map<string, string>, allowed: R
     if (content === undefined) continue
     const section = readSections(content).find((s) => s.owner === 'maymun' && s.id === op.section)
     if (!section) continue
+    const bullet = (l: string) => l.trim().replace(/^[-*]\s+/, '').toLowerCase()
+    if (op.remove !== undefined) {
+      const gone = bullet(op.remove)
+      const lines = section.body.split('\n').filter((l) => l.trim() && !emptyMark.test(l.trim()))
+      const kept = lines.filter((l) => bullet(l) !== gone)
+      if (kept.length !== lines.length) {
+        changed.set(op.file, writeSection(content, 'maymun', op.section, kept.join('\n') || emptyLabel))
+      }
+      continue
+    }
     const text = (op.set ?? op.add ?? '').trim()
     if (!text || SECRET.test(text)) continue
     if (op.set !== undefined) {
@@ -143,7 +168,10 @@ export function memoryPrompt(notes: NoteText[], instructions: string): { text: s
     '<memory>[{"file": "<path>", "section": "<id>", "add": "<one sentence>"}, {"file": "<path>", "section": "<id>", "set": "<the new text>"}]</memory>',
     '',
     `- At most ${MAX_OPS} operations; "add" appends one bullet (max ${MAX_ADD} characters), "set" replaces a section`,
-    '  marked (set) below (keep it short, a few lines).',
+    '  marked (set) below (keep it short, a few lines), "remove" deletes a bullet by its exact text:',
+    '  {"file": "<path>", "section": "<id>", "remove": "<the text of the bullet>"}.',
+    '- Keep notes true now: when a difficulty is overcome, remove it from "struggled" and add what was learned; when',
+    '  an open question is answered, remove it.',
     '- Only the files and sections listed here. Write in the learner\'s interface language.',
     '- Nothing worth keeping from this exchange? Write <memory>[]</memory>.',
     '',
