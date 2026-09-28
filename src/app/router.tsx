@@ -22,6 +22,7 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import('../pages/GameStepPage')).GameStepPage }),
       },
       { path: 'skills', lazy: async () => ({ Component: (await import('../pages/SkillsPage')).SkillsPage }) },
+      { path: 'memory', lazy: async () => ({ Component: (await import('../pages/VaultPage')).VaultPage }) },
       { path: 'settings', lazy: async () => ({ Component: (await import('../pages/SettingsPage')).SettingsPage }) },
       { path: '*', element: <NotFoundPage /> },
     ],

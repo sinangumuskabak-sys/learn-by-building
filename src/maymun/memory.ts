@@ -204,6 +204,32 @@ export function forModel(messages: StoredMessage[]): ChatMessage[] {
   )
 }
 
+/** Deletes every project's conversation (part of resetting all data). */
+export async function resetAllThreads() {
+  cache.clear()
+  loading.clear()
+  blanks.clear()
+  try {
+    localStorage.removeItem(LEGACY_KEY)
+  } catch {
+    // Nothing to remove.
+  }
+  const database = await openDb()
+  if (database) {
+    await new Promise<void>((resolve) => {
+      try {
+        const tx = database.transaction(STORE, 'readwrite')
+        tx.objectStore(STORE).clear()
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => resolve()
+      } catch {
+        resolve()
+      }
+    })
+  }
+  emit()
+}
+
 /** For tests: forget everything cached. */
 export function resetMemoryForTests() {
   cache.clear()

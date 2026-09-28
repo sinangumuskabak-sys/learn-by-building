@@ -9,7 +9,9 @@ import { useDocumentTitle } from '../lib/hooks.ts'
 import { fontSizes, settingsStore, themeStore, useSettings, useTheme } from '../lib/settings.ts'
 import { ProviderSetup } from '../maymun/Chat.tsx'
 import { maymunStore, useMaymunSettings } from '../maymun/store.ts'
+import { resetAllThreads } from '../maymun/memory.ts'
 import { progressActions } from '../progress/progress.ts'
+import { resetVault } from '../vault/store.ts'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -62,6 +64,13 @@ function Segmented<T extends string | number>({
       ))}
     </div>
   )
+}
+
+/** Progress, Maymun's conversations and the memory vault (back to its skeleton) all go at once. */
+async function resetAllData() {
+  progressActions.resetAll()
+  await resetAllThreads()
+  await resetVault()
 }
 
 export function SettingsPage() {
@@ -177,7 +186,7 @@ export function SettingsPage() {
           </p>
         )}
         <Row label={t('settings.reset')}>
-          <ConfirmButton variant="danger" confirmLabel={t('settings.resetConfirm')} onConfirm={progressActions.resetAll}>
+          <ConfirmButton variant="danger" confirmLabel={t('settings.resetConfirm')} onConfirm={resetAllData}>
             {t('settings.reset')}
           </ConfirmButton>
         </Row>
