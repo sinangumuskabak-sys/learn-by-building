@@ -85,7 +85,10 @@ export function CategoryPage() {
                             {t(`type.${challenge.type}`)}
                           </span>
                         </span>
-                        <Badge tone={status === 'passed' ? 'success' : 'neutral'}>
+                        <Badge
+                          tone={status === 'passed' ? 'success' : 'neutral'}
+                          title={t(`level.${challenge.level}.hint` as `level.0.hint`)}
+                        >
                           <span className="hidden sm:inline">{t(`level.${challenge.level}` as `level.0`)} · </span>
                           L{challenge.level}
                         </Badge>

@@ -16,7 +16,7 @@ export function ChallengeMeta({ challenge }: { challenge: Challenge }) {
         <TypeIcon type={challenge.type} size={13} />
         {t(`type.${challenge.type}`)}
       </Badge>
-      <Badge>
+      <Badge title={t(`level.${challenge.level}.hint` as `level.0.hint`)}>
         {t('level.label', { level: challenge.level })} · {t(`level.${challenge.level}` as `level.0`)}
       </Badge>
     </div>

@@ -107,6 +107,16 @@ describe('Maymun bridge', () => {
     })
   })
 
+  it('answers with one JSON reply when the client does not ask for a stream', async () => {
+    const response = await chat({ stream: false, model: 'claude-code/haiku', messages: [{ role: 'user', content: 'hi' }] })
+    expect(response.headers.get('content-type')).toBe('application/json')
+    const reply = await response.json()
+    expect(reply.object).toBe('chat.completion')
+    expect(JSON.parse(reply.choices[0].message.content)).toMatchObject({ model: 'haiku', content: ['hi'] })
+    const failed = await chat({ stream: false, model: 'claude-code/sonnet', messages: [{ role: 'user', content: 'please fail' }] })
+    expect(failed.status).toBe(502)
+  })
+
   it('passes a CLI failure on as an error event', async () => {
     const { errors } = await read(await chat({ model: 'claude-code/sonnet', messages: [{ role: 'user', content: 'please fail' }] }))
     expect(errors).toEqual(['Not logged in'])

@@ -1,5 +1,5 @@
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Group, Panel } from 'react-resizable-panels'
 import { CodeWorkspace, ResizeHandle } from '../challenge/CodeWorkspace.tsx'
@@ -25,10 +25,19 @@ function NextStep({ entry }: { entry: ChallengeEntry }) {
   const { t, ct } = useI18n()
   const passed = useProgress().challenges[entry.challenge.id]?.status === 'passed'
   const { next } = neighbours(entry)
+  // Passing the challenge right now brings the link into view (it is often below the fold); an already passed
+  // challenge opens where it is.
+  const link = useRef<HTMLAnchorElement>(null)
+  const wasPassed = useRef(passed)
+  useEffect(() => {
+    if (passed && !wasPassed.current) link.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    wasPassed.current = passed
+  }, [passed])
   if (!passed || !next) return null
   const nextEntry = catalog.challenges.get(next)!
   return (
     <Link
+      ref={link}
       to={`/learn/${next}`}
       className="group flex items-center gap-3 rounded-xl border border-success/40 bg-success/8 p-4 transition-colors hover:border-success"
     >

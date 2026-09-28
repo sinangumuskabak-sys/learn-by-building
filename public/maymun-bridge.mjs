@@ -134,6 +134,10 @@ function runClaude(options, body, req, res) {
   // A script path (a stand-in for the CLI) runs with this Node.
   const [command, commandArgs] = /\.[cm]?js$/.test(options.claude) ? [process.execPath, [options.claude, ...args]] : [options.claude, args]
   const child = spawn(command, commandArgs, { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+  // OpenAI clients ask for a stream unless they say "stream": false; then the answer comes back as one JSON reply.
+  const streaming = body.stream !== false
+  let text = ''
+  let failure = ''
   let done = false
   let errors = ''
   let buffer = ''
@@ -151,7 +155,7 @@ function runClaude(options, body, req, res) {
   })
   child.stderr.on('data', (data) => (errors += data))
   child.stdout.on('data', (data) => {
-    if (!res.headersSent) res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' })
+    if (streaming && !res.headersSent) res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' })
     buffer += data
     const lines = buffer.split('\n')
     buffer = lines.pop() ?? ''
@@ -163,13 +167,25 @@ function runClaude(options, body, req, res) {
         continue
       }
       const delta = event.type === 'stream_event' && event.event?.type === 'content_block_delta' ? event.event.delta : null
-      if (delta?.type === 'text_delta' && delta.text) sse(res, chunk(delta.text))
-      if (event.type === 'result' && event.is_error) sse(res, { error: { message: String(event.result || event.subtype || 'Claude Code failed') } })
+      if (delta?.type === 'text_delta' && delta.text) {
+        if (streaming) sse(res, chunk(delta.text))
+        else text += delta.text
+      }
+      if (event.type === 'result' && event.is_error) {
+        failure = String(event.result || event.subtype || 'Claude Code failed')
+        if (streaming) sse(res, { error: { message: failure } })
+      }
     }
   })
   child.on('close', (code) => {
     finish()
     if (res.writableEnded) return
+    if (!streaming) {
+      if (failure || (code !== 0 && !text)) return fail(res, 502, failure || errors.trim() || `Claude Code stopped (exit ${code}).`)
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      const message = { role: 'assistant', content: text }
+      return res.end(JSON.stringify({ object: 'chat.completion', model: body.model, choices: [{ index: 0, message, finish_reason: 'stop' }] }))
+    }
     if (!res.headersSent) return fail(res, 502, errors.trim() || `Claude Code stopped (exit ${code}).`)
     sse(res, '[DONE]')
     res.end()

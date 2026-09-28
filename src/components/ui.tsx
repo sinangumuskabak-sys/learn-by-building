@@ -35,9 +35,19 @@ export function IconButton({
   )
 }
 
-export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'accent' | 'success' }) {
+export function Badge({
+  children,
+  tone = 'neutral',
+  title,
+}: {
+  children: ReactNode
+  tone?: 'neutral' | 'accent' | 'success'
+  /** Shown on hover: what the badge means. */
+  title?: string
+}) {
   return (
     <span
+      title={title}
       className={clsx(
         'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
         tone === 'neutral' && 'bg-surface-2 text-muted',
