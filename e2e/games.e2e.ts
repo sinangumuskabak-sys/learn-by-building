@@ -405,6 +405,8 @@ test('Maymun knows when the learner moves to another page, and what that page is
   // The chat stays open on another page of the app, and knows it: the header, the page's text and what it is for.
   await page.goto('/#/settings')
   await expect(popup).toContainText('Settings')
+  // The page's title is set once it has rendered; on a busy machine that can come after the chat's header.
+  await expect(page).toHaveTitle('Settings · Learn Platform')
   await ask('And what can I do here?')
   const system = sent[1].messages[0].content
   expect(system).toContain('"Settings" (/settings): Settings: theme, language')

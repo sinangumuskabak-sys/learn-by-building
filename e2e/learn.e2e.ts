@@ -44,10 +44,12 @@ test('a quiz: a wrong answer shows a hint, other verdicts stay put, passing show
   await expect(q1.getByText('Not quite — try again')).toBeVisible()
   await expect(q1.getByText(/grows by 3 each time/)).toBeVisible()
   await expect(q2.getByText('Correct')).toBeVisible()
-  const before = (await q2.boundingBox())!.y
+  // Measured in the page, not the viewport: checking an answer may scroll it into view.
+  const top = () => q2.evaluate((el) => el.getBoundingClientRect().top + (el.closest('main') ?? document.documentElement).scrollTop + window.scrollY)
+  const before = await top()
   await q1.getByLabel('4').check()
   // Changing an answer hides only that question's verdict and keeps its line, so the questions below do not move.
-  expect((await q2.boundingBox())!.y).toBe(before)
+  expect(await top()).toBe(before)
   await expect(q2.getByText('Correct')).toBeVisible()
   await page.getByRole('button', { name: 'Check answers' }).click()
   await expect(page.getByText('All answers correct!')).toBeVisible()
