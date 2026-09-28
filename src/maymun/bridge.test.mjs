@@ -182,3 +182,69 @@ describe('Maymun bridge: memory vault mirror', () => {
     expect((await get()).files.map((f) => f.path)).toEqual(['Güncel durum.md'])
   })
 })
+
+describe('Maymun bridge: other subscriptions and falling back', () => {
+  const tool = (name) => fileURLToPath(new URL(`./${name}.mjs`, import.meta.url))
+  let other, otherUrl
+  beforeAll(async () => {
+    // Claude Code installed but logged out; Gemini CLI and Codex CLI logged in.
+    other = createBridge(parseArgs(['--claude', tool('fake-logged-out'), '--gemini', tool('fake-gemini'), '--codex', tool('fake-codex')]), key)
+    otherUrl = `http://127.0.0.1:${await listen(other)}/v1`
+  })
+  afterAll(() => other.close())
+  const ask = (model, stream = false) =>
+    fetch(`${otherUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        stream,
+        messages: [
+          { role: 'system', content: 'You are Maymun.' },
+          { role: 'user', content: 'Hi' },
+          { role: 'assistant', content: 'Meow' },
+          { role: 'user', content: 'What is ctx?' },
+        ],
+      }),
+    })
+
+  it('lists the installed subscriptions and an automatic choice', async () => {
+    const models = await fetch(`${otherUrl}/models`, { headers: { Authorization: `Bearer ${key}` } }).then((r) => r.json())
+    const ids = models.data.map((m) => m.id)
+    expect(ids[0]).toBe('maymun/auto')
+    expect(ids).toEqual(expect.arrayContaining(['claude-code/sonnet', 'gemini-cli/default', 'codex/default']))
+    const status = await fetch(`${otherUrl}/status`, { headers: { Authorization: `Bearer ${key}` } }).then((r) => r.json())
+    expect(status.clis.map((c) => [c.id, c.installed, c.login])).toEqual([
+      ['claude-code', true, 'claude'],
+      ['gemini-cli', true, 'gemini'],
+      ['codex', true, 'codex login'],
+    ])
+  })
+
+  it('answers through Gemini CLI with Maymun’s instructions in place of its own, read-only, streamed', async () => {
+    const response = await ask('gemini-cli/gemini-2.5-pro', true)
+    const { answer } = await read(response)
+    const report = JSON.parse(answer)
+    expect(report.system).toBe('You are Maymun.')
+    expect(report.args).toEqual(expect.arrayContaining(['--approval-mode', 'plan', '-e', 'none', '-m', 'gemini-2.5-pro']))
+    expect(report.input).toContain('Learner: Hi\n\nYou: Meow')
+    expect(report.input.endsWith('What is ctx?')).toBe(true)
+  })
+
+  it('answers through Codex CLI in a read-only sandbox, with the instructions leading the prompt', async () => {
+    const reply = await (await ask('codex/default')).json()
+    const report = JSON.parse(reply.choices[0].message.content)
+    expect(report.args).toEqual(expect.arrayContaining(['exec', '--sandbox', 'read-only', '--ephemeral']))
+    expect(report.args).not.toContain('-m')
+    expect(report.input.startsWith('# Your instructions\n\nYou are Maymun.')).toBe(true)
+  })
+
+  it('falls back from a logged-out subscription to the next one on auto, and says why a named one failed', async () => {
+    const reply = await (await ask('maymun/auto')).json()
+    expect(reply.model).toBe('gemini-cli/default')
+    expect(JSON.parse(reply.choices[0].message.content).system).toBe('You are Maymun.')
+    const failed = await ask('claude-code/sonnet')
+    expect(failed.status).toBe(502)
+    expect((await failed.json()).error.message).toContain('not logged in')
+  })
+})

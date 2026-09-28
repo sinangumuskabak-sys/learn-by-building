@@ -402,6 +402,33 @@ function ProviderForm({ compact }: { compact: boolean }) {
   const [key, setKey] = useState(ai.keys[ai.provider] ?? '')
   const [model, setModel] = useState(ai.models[ai.provider] ?? '')
   const [base, setBase] = useState(ai.bases[ai.provider] ?? '')
+  // A server on this computer (the bridge, OmniRoute, Ollama) says which models it has; the bridge also which
+  // subscriptions it found. Asked once the address and key are saved.
+  const [offered, setOffered] = useState<string[]>([])
+  const [status, setStatus] = useState<BridgeStatusData | null>(null)
+  const savedKey = ai.keys[ai.provider]
+  const savedBase = baseFor(ai, ai.provider)
+  useEffect(() => {
+    if (!current.local || !savedBase) return
+    let live = true
+    const headers: Record<string, string> = savedKey ? { Authorization: `Bearer ${savedKey}` } : {}
+    const root = savedBase.replace(/\/+$/, '')
+    fetch(`${root}/models`, { headers })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { data?: { id?: unknown }[] } | null) => {
+        if (live && data?.data) setOffered(data.data.map((m) => String(m.id)).filter(Boolean))
+      })
+      .catch(() => {})
+    if (current.id === 'bridge') {
+      fetch(`${root}/status`, { headers })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: BridgeStatusData | null) => live && data?.clis && setStatus(data))
+        .catch(() => {})
+    }
+    return () => {
+      live = false
+    }
+  }, [current.local, current.id, savedBase, savedKey])
 
   const save = () =>
     aiStore.set((value) => ({
@@ -473,9 +500,31 @@ function ProviderForm({ compact }: { compact: boolean }) {
           onChange={(event) => setModel(event.target.value)}
           placeholder={current.model || t('maymun.modelNeeded')}
           spellCheck={false}
+          list={offered.length ? `models-${current.id}` : undefined}
           className={`${field} mt-1 font-mono`}
         />
       </label>
+      {offered.length > 0 && (
+        <>
+          <datalist id={`models-${current.id}`}>
+            {offered.map((id) => (
+              <option key={id} value={id} />
+            ))}
+          </datalist>
+          <p className="text-xs text-muted">
+            {t('maymun.models')}:{' '}
+            {offered.slice(0, 12).map((id, i) => (
+              <span key={id}>
+                {i > 0 && ', '}
+                <button type="button" onClick={() => setModel(id)} className="font-mono underline hover:text-fg">
+                  {id}
+                </button>
+              </span>
+            ))}
+          </p>
+        </>
+      )}
+      {current.id === 'bridge' && status && <BridgeStatus status={status} />}
       <div className="flex items-center gap-2">
         <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg">
           {t('maymun.save')}
@@ -495,6 +544,30 @@ function ProviderForm({ compact }: { compact: boolean }) {
       </div>
       <p className="text-xs text-muted">{current.local ? t('maymun.privacyLocal') : t('maymun.privacy')}</p>
     </form>
+  )
+}
+
+interface BridgeStatusData {
+  clis: { id: string; name: string; installed: boolean; login: string }[]
+}
+
+/** Which subscriptions the bridge found on this computer, and how to log in to one. */
+function BridgeStatus({ status }: { status: BridgeStatusData }) {
+  const { t } = useI18n()
+  return (
+    <div className="space-y-1 rounded-lg border border-border p-2 text-xs">
+      <p className="font-medium">{t('maymun.bridge.found')}</p>
+      <ul className="space-y-0.5">
+        {status.clis.map((cli) => (
+          <li key={cli.id} className="flex flex-wrap items-center gap-1.5">
+            <span className={cli.installed ? 'text-success' : 'text-muted'}>{cli.installed ? '●' : '○'}</span>
+            <span>{cli.name}</span>
+            <span className="text-muted">— {cli.installed ? t('maymun.bridge.installed') : t('maymun.bridge.missing')}</span>
+            {cli.installed && <span className="basis-full pl-4 text-muted">{t('maymun.bridge.loginHint', { command: cli.login })}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

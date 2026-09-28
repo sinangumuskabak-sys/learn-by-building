@@ -26,7 +26,7 @@ export const providers: Provider[] = [
   { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
   // A subscription (Claude Code) or a gateway through `public/maymun-bridge.mjs` on the learner's computer.
-  { id: 'bridge', name: 'Maymun bridge (your subscription)', model: 'claude-code/sonnet', keys: '', base: 'http://127.0.0.1:8787/v1', images: true, local: true },
+  { id: 'bridge', name: 'Maymun bridge (your subscriptions)', model: 'maymun/auto', keys: '', base: 'http://127.0.0.1:8787/v1', images: true, local: true },
   // Any OpenAI-compatible server the browser may call directly: OmniRoute, Ollama, LM Studio…
   { id: 'custom', name: 'OpenAI-compatible (OmniRoute, Ollama…)', model: '', keys: '', base: 'http://localhost:20128/v1', images: true, local: true, keyOptional: true },
 ]
