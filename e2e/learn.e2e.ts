@@ -99,3 +99,20 @@ for (const path of ['./', './#/c/software-architecture', './#/learn/iterate-odd-
     expect(overflow).toBeLessThanOrEqual(0)
   })
 }
+
+test('a web challenge’s page cannot reach the site’s storage', async ({ page }) => {
+  await page.goto('./#/learn/accessible-button')
+  await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-secret' } })))
+  await page.reload()
+  if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
+  await page.getByRole('tab', { name: 'index.js' }).click()
+  const editor = page.locator('.monaco-editor').first()
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press('Delete')
+  await page.keyboard.insertText(
+    "let leak = 'blocked'\ntry { leak = String(parent.localStorage.getItem('lp.maymun.ai')) } catch (e) {}\ntry { leak += ' / ' + localStorage.getItem('lp.maymun.ai') } catch (e) { leak += ' / blocked' }\ndocument.querySelector('#status').textContent = leak\n",
+  )
+  await page.getByRole('button', { name: /^Run tests/ }).click()
+  await expect(page.frameLocator('iframe[title="Preview"]').locator('#status')).toHaveText('blocked / blocked')
+})

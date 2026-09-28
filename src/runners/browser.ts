@@ -1,6 +1,7 @@
 import type { Challenge, CodeFile } from '../content/schema.ts'
 import { buildDocument, jsInput, sqlInput } from './challenge-input.ts'
-import { formatValue, runJsTests, type JsRunInput } from './js-core.ts'
+import harness from 'virtual:web-harness'
+import { formatValue, type JsRunInput } from './js-core.ts'
 import type { RunResult } from './types.ts'
 
 export const RUN_TIMEOUT_MS = 5_000
@@ -32,8 +33,9 @@ function runJsInWorker(challenge: Challenge, input: JsRunInput): Promise<RunResu
 }
 
 /**
- * Loads a web challenge into the given iframe and runs the tests against its document.
- * The iframe needs `sandbox="allow-scripts allow-same-origin"` so tests can reach its DOM.
+ * Loads a web challenge into the given iframe and runs the tests against its document. The iframe is sandboxed without
+ * the site's origin (`sandbox="allow-scripts"`), so the learner's page cannot reach the site's storage; the tests run
+ * inside it (see web-harness.ts) and post their result back.
  */
 export async function runWebInIframe(
   iframe: HTMLIFrameElement,
@@ -47,7 +49,7 @@ export async function runWebInIframe(
       /<head>/i,
       // Forward the page's console and uncaught errors to the parent before learner scripts run.
       `<head><script>for (const k of ['log','info','warn','error']) { const o = console[k]; console[k] = (...a) => { parent.postMessage({ __lpLog: a.map(String).join(' ') }, '*'); o(...a) } }
-window.addEventListener('error', (e) => parent.postMessage({ __lpLog: 'Error: ' + e.message }, '*'))</script>`,
+window.addEventListener('error', (e) => parent.postMessage({ __lpLog: 'Error: ' + e.message }, '*'))</script><script>${harness.replace(/<\/script/gi, '<\\/script')}</script>`,
     )
   })
   const onMessage = (event: MessageEvent) => {
@@ -57,12 +59,22 @@ window.addEventListener('error', (e) => parent.postMessage({ __lpLog: 'Error: ' 
   try {
     const win = iframe.contentWindow
     if (!win) return failAll(challenge, 'Preview is not available')
-    const result = await runJsTests({
-      code: '',
-      rawCode: files.map((f) => f.contents).join('\n'),
-      setup: '',
-      tests: challenge.tests,
-      globals: { document: win.document, window: win },
+    const id = Math.random().toString(36).slice(2)
+    const result = await new Promise<RunResult>((resolve) => {
+      const timer = setTimeout(() => {
+        window.removeEventListener('message', onResult)
+        resolve(failAll(challenge, `Timed out after ${RUN_TIMEOUT_MS / 1000}s — is there an infinite loop?`))
+      }, RUN_TIMEOUT_MS)
+      const onResult = (event: MessageEvent) => {
+        const data = event.data as { __lpResult?: string; result?: RunResult } | null
+        if (event.source !== win || data?.__lpResult !== id || !data.result) return
+        clearTimeout(timer)
+        window.removeEventListener('message', onResult)
+        resolve(data.result)
+      }
+      window.addEventListener('message', onResult)
+      const input: Omit<JsRunInput, 'globals'> = { code: '', rawCode: files.map((f) => f.contents).join('\n'), setup: '', tests: challenge.tests }
+      win.postMessage({ __lpRun: id, input }, '*')
     })
     // Let queued console messages from the iframe arrive before reporting.
     await new Promise((r) => setTimeout(r, 0))

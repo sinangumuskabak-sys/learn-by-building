@@ -30,6 +30,9 @@
       ],
       "virtual:games": [
         "./src/games/virtual-games.d.ts"
+      ],
+      "virtual:web-harness": [
+        "./src/runners/virtual-web-harness.d.ts"
       ]
     }
   },

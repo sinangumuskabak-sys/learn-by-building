@@ -3,13 +3,39 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { defineConfig, type Plugin } from 'vite'
+import { build, defineConfig, type Plugin } from 'vite'
 import { loadContentFromDisk } from './src/content/load-node.ts'
 import { validateContent } from './src/content/validate.ts'
 import { loadGamesFromDisk } from './src/games/load-node.ts'
 import { validateGames } from './src/games/validate.ts'
 
 const contentRoot = resolve(import.meta.dirname, 'content')
+const harnessEntry = resolve(import.meta.dirname, 'src/runners/web-harness.ts')
+
+/**
+ * `virtual:web-harness`: the script that runs a web challenge's tests inside its sandboxed preview frame, bundled on
+ * its own (with chai) into one string the app writes into the frame's page. The frame has no access to the site's
+ * files, so the script cannot be loaded by URL.
+ */
+function webHarnessPlugin(): Plugin {
+  const id = 'virtual:web-harness'
+  return {
+    name: 'learn-platform-web-harness',
+    resolveId: (source) => (source === id ? `\0${id}` : undefined),
+    async load(source) {
+      if (source !== `\0${id}`) return
+      this.addWatchFile(harnessEntry)
+      this.addWatchFile(resolve(import.meta.dirname, 'src/runners/js-core.ts'))
+      const out = await build({
+        configFile: false,
+        logLevel: 'silent',
+        build: { write: false, minify: true, lib: { entry: harnessEntry, formats: ['iife'], name: 'LpHarness' } },
+      })
+      const code = (Array.isArray(out) ? out[0] : out) as { output: { code?: string }[] }
+      return `export default ${JSON.stringify(code.output[0].code ?? '')}`
+    },
+  }
+}
 
 function contentFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
@@ -84,7 +110,7 @@ export function loadGame(id) {
 // Relative base + hash routing lets the build run from any static host (GitHub Pages, forks, file server).
 export default defineConfig({
   base: './',
-  plugins: [contentPlugin(), gamesPlugin(), react(), tailwindcss()],
+  plugins: [contentPlugin(), gamesPlugin(), webHarnessPlugin(), react(), tailwindcss()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

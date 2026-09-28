@@ -269,7 +269,8 @@ export function CodeWorkspace({ challenge, footer }: { challenge: Challenge; foo
         <iframe
           ref={iframeRef}
           title={t('challenge.preview')}
-          sandbox="allow-scripts allow-same-origin allow-modals"
+          // No allow-same-origin: the learner's page must not reach the site's storage (progress, AI keys).
+          sandbox="allow-scripts allow-modals"
           srcDoc={initialDocument}
           className={clsx('min-h-0 w-full flex-1 bg-white', outputTab !== 'preview' && 'hidden')}
         />
