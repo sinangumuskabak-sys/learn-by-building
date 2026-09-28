@@ -511,7 +511,6 @@ function draw() {
   ctx.textAlign = 'left'
   ctx.fillText('Gold ' + gold + '  Lives ' + lives, 10, 26)
   ctx.textAlign = 'center'
-  ctx.textAlign = 'center'
   if (state === 'over') {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)

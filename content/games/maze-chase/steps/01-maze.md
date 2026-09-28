@@ -335,7 +335,6 @@ const MAZE = [
 ]
 const ROWS = MAZE.length
 const COLS = MAZE[0].length
-// Checked in this order, so ties go to up, then left, then down.
 
 let pellets // keys of the tiles that still have a pellet
 let powers // keys of the tiles that still have a power pellet

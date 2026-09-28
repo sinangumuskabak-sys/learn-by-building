@@ -403,6 +403,9 @@ function draw() {
     ctx.strokeRect(LEFT + cell.c * SIZE + 2, TOP + cell.r * SIZE + 2, SIZE - 4, SIZE - 4)
   }
 
+  // New gems fall in from above the board: paint the score strip again, so they come out from under it.
+  ctx.fillStyle = '#1e1b4b'
+  ctx.fillRect(0, 0, canvas.width, TOP)
   ctx.fillStyle = 'white'
   ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'left'

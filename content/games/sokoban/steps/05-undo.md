@@ -76,7 +76,7 @@ sıfırlarız.
 2. Write `snapshot()` returning `JSON.stringify({ player, boxes, moves })`. In `move()`, push a snapshot just before a
    move happens (only when it is allowed), and add 1 to `moves` after it.
 3. Write `undo()`: pop the last snapshot, if any, and restore `player`, `boxes` and `moves` from it. Call it on `z`,
-   and restart the level on `r`.
+   and restart the level on `r` (compare `event.key.toLowerCase()`, so Caps Lock does not matter).
 4. Draw `Moves: 12` right-aligned at the top, and change the hint to `Arrows: move   Z: undo   R: restart`.
 
 # --task-tr--
@@ -135,9 +135,11 @@ sıfırlarız.
 6. `keydown` dinleyicisinde, Boşluk satırının (`if (event.key === ' ' ...`) hemen üstüne iki satır ekle:
 
    ```js
-     if (event.key === 'z') undo()
-     if (event.key === 'r') loadLevel(level)
+     if (event.key.toLowerCase() === 'z') undo()
+     if (event.key.toLowerCase() === 'r') loadLevel(level)
    ```
+
+   `event.key.toLowerCase()` basılan harfi küçük harfe çevirir; böylece Caps Lock açıkken (`Z`) de çalışır.
 
 7. `draw()`'da `Level` yazısının altına hamle sayacını ekle ve ipucunu değiştir:
 
@@ -154,7 +156,7 @@ sıfırlarız.
    (İpucunda bölümler arasında **üç boşluk** var.)
 
 8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç adım at: `Moves` artmalı. **Z** son adımı geri almalı, **R**
-   bölümü baştan başlatmalı (küçük harf; Caps Lock kapalı olsun). Alttaki kontrollerin hepsi yeşil olmalı.
+   bölümü baştan başlatmalı (Caps Lock açık olsa da). Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 
@@ -324,8 +326,8 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault()
     move(...directions[event.key])
   }
-  if (event.key === 'z') undo()
-  if (event.key === 'r') loadLevel(level)
+  if (event.key.toLowerCase() === 'z') undo()
+  if (event.key.toLowerCase() === 'r') loadLevel(level)
   if (event.key === ' ' && solved() && level < LEVELS.length - 1) loadLevel(level + 1)
   draw()
 })

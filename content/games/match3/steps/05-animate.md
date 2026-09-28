@@ -72,6 +72,8 @@ tanımlanır; `trySwap` içindeki yerel `chain` ve `matched` ortadan kalkar.
    back to `'idle'`.
 5. Ignore clicks unless `phase === 'idle'`. Draw each gem `drop[r][c]` pixels higher, and white (`'#ffffff'`) instead of its
    color while it is `matched` in `'clearing'` and `Math.floor(timer / 3) % 2 === 0`.
+6. New gems start above the board: before drawing the score, fill the strip above the board again
+   (`'#1e1b4b'`, `0, 0, canvas.width, TOP`) so they appear from under it.
 
 # --task-tr--
 
@@ -206,7 +208,16 @@ tanımlanır; `trySwap` içindeki yerel `chain` ve `matched` ortadan kalkar.
    }
    ```
 
-10. **Çalıştır**'a bas. Bir üçlü yap: mücevherler beyaz yanıp sönmeli, sonra üsttekiler kayarak inmeli ve yenileri
+10. `draw()`'da skoru yazan `ctx.fillStyle = 'white'` satırının hemen üstüne şu iki satırı ekle (yeni mücevherler
+    tahtanın üstünden düşerken skor şeridine taşmasın; şeridi yeniden boyayınca şeridin altından çıkıyormuş gibi
+    görünürler):
+
+    ```js
+      ctx.fillStyle = '#1e1b4b'       // ← yeni
+      ctx.fillRect(0, 0, canvas.width, TOP) // ← yeni
+    ```
+
+11. **Çalıştır**'a bas. Bir üçlü yap: mücevherler beyaz yanıp sönmeli, sonra üsttekiler kayarak inmeli ve yenileri
     yukarıdan düşmeli. Alttaki kontrollerin hepsi yeşil olmalı. Hiçbir şey düşmüyorsa `loop()` içine `update()`'i
     eklediğini kontrol et.
 
@@ -446,6 +457,9 @@ function draw() {
     ctx.strokeRect(LEFT + selected.c * SIZE + 2, TOP + selected.r * SIZE + 2, SIZE - 4, SIZE - 4)
   }
 
+  // New gems fall in from above the board: paint the score strip again, so they come out from under it.
+  ctx.fillStyle = '#1e1b4b'
+  ctx.fillRect(0, 0, canvas.width, TOP)
   ctx.fillStyle = 'white'
   ctx.font = 'bold 18px sans-serif'
   ctx.textAlign = 'left'

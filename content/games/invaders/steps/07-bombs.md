@@ -354,7 +354,7 @@ function shoot() {
   bullets.push({ x: ship.x + SHIP_W / 2 - 2, y: ship.y - 12, w: 4, h: 12 })
 }
 
-// Fewer invaders march faster: from 600 ms with all 45 alive down to 60 ms for the last one, quicker in later waves.
+// Fewer invaders march faster: from 588 ms with all 45 alive down to 60 ms for the last one, quicker in later waves.
 function stepInterval() {
   return Math.max(40, 60 + (alive().length - 1) * 12 - (wave - 1) * 40)
 }

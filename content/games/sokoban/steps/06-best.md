@@ -259,8 +259,8 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault()
     move(...directions[event.key])
   }
-  if (event.key === 'z') undo()
-  if (event.key === 'r') loadLevel(level)
+  if (event.key.toLowerCase() === 'z') undo()
+  if (event.key.toLowerCase() === 'r') loadLevel(level)
   if (event.key === ' ' && solved() && level < LEVELS.length - 1) loadLevel(level + 1)
   draw()
 })

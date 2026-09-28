@@ -228,7 +228,7 @@ const DOWN_STEP = 8 // how much of a face-down card shows under the next one
 const UP_STEP = 22
 
 let piles // stock, waste, f0..f3 (foundations) and t0..t6 (tableau): arrays of { rank, suit, up }
-let drag // { from, index, cards, dx, dy, x, y, moved } while a card is held
+let drag // { from, index, dx, dy, x, y, moved } while a card is held
 let moves
 let frames
 let won
