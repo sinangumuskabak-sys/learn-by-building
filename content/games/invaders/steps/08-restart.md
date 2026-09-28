@@ -18,15 +18,47 @@ out of lives or the invaders landed.
 
 # --explanation-tr--
 
-Son parça, her arcade oyununda olan döngü: oyun biter, skorunu rekorla karşılaştırırsın, bir tuşa basarsın, yeniden
-oynarsın.
+**Bu adımda:** oyunun son parçası: oyun bitince en iyi skorunu göreceksin, Boşluk'a basınca yeni oyun başlayacak.
+`GAME OVER`'ın altında `BEST 480   SPACE TO PLAY AGAIN` gibi bir satır çıkacak.
 
-Bütün kurulum zaten `newGame()`'de yaşadığı için yeniden başlatmak tek bir çağrıdır. Her oyunda kullandığın "yeni bir
-oyunu tek fonksiyon kurar" alışkanlığının karşılığı bu: yeniden başlatma eklemek asla sıfırlanması gereken bütün
-değişkenleri aramak demek olmaz.
+**Yeniden başlatmak tek satır.** Her salon oyununda bu döngü vardır: oyun biter, skorunu en iyisiyle karşılaştırırsın,
+bir düğmeye basarsın, yeniden oynarsın. Bütün kurulum 6. adımda `newGame()`'e taşındığı için yeniden başlatmak tek bir
+çağrıdır. "Yeni oyunu tek bir fonksiyon kurar" alışkanlığının ödülü bu: yeniden başlatma eklerken sıfırlanması gereken
+değişkenleri tek tek aramak zorunda kalmazsın.
 
-Rekor, oyunun bittiği tek yerde, `endGame()`'de `localStorage`'a gider; böylece oyuncunun canları bitse de istilacılar
-insin de kaydedilir.
+**Boşluk'un iki görevi.** Oyun bittiyse yeni oyun, sürüyorsa ateş:
+
+```js
+if (event.key === ' ') {
+  if (state === 'over') newGame()
+  else shoot()
+}
+```
+
+Bir `if`'in içine başka bir `if` koyabilirsin. `else`'ten sonra tek komut varsa süslü parantez gerekmez.
+
+**Tarayıcının küçük defteri: `localStorage`.** Sayfayı kapatsan bile silinmeyen bir not defteridir. Her notun bir adı
+ve bir değeri vardır:
+
+```js
+localStorage.setItem('invaders-best', 480)   // 'invaders-best' adıyla 480 yaz
+localStorage.getItem('invaders-best')        // okur: '480' (yazı olarak!)
+```
+
+Defter her şeyi **yazı** olarak saklar. Okurken `Number(...)` ile yazıyı sayıya çeviririz.
+
+```js
+let best = Number(localStorage.getItem('invaders-best')) || 0
+```
+
+İlk kez oynarken defterde not yoktur; `getItem` "hiçbir şey" (`null`) verir. `a || b` burada "a boş ya da sıfırsa b'yi
+kullan" demektir; yani not yoksa `best` 0 olur.
+
+**Nerede kaydedilir?** Oyunun bittiği tek yerde: `endGame()`. Böylece canlar bitse de, istilacılar insen de kayıt
+yapılır. Yalnızca yeni skor eskisinden büyükse (`score > best`) yazarız.
+
+Yazının içindeki üç boşluk (`'   SPACE TO PLAY AGAIN'`) en iyi skorla talimat arasında boşluk bırakır; kontroller
+tam olarak üç boşluk bekler.
 
 # --task--
 
@@ -37,10 +69,47 @@ insin de kaydedilir.
 
 # --task-tr--
 
-1. `let best = Number(localStorage.getItem('invaders-best')) || 0` ekle. `endGame()` içinde daha yüksek bir skoru
-   `'invaders-best'` altında yeni rekor olarak kaydet.
-2. Boşluk'a basıldığında oyun bittiyse `newGame()` başlat; oyun sürerken eskisi gibi ateş etsin.
-3. `GAME OVER`'ın altına `'16px monospace'` ile `BEST 480   SPACE TO PLAY AGAIN` (gerçek rekor, üç boşluk) yaz.
+1. `let now = 0` satırının altına en iyi skoru okuyan satırı ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('invaders-best')) || 0
+   ```
+
+2. `endGame()` fonksiyonunu şöyle yap:
+
+   ```js
+   function endGame() {
+     state = 'over'
+     if (score > best) { // ← yeni
+       best = score // ← yeni
+       localStorage.setItem('invaders-best', best) // ← yeni
+     } // ← yeni
+   }
+   ```
+
+3. `keydown` bloğunu şöyle yap:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === ' ') { // ← değişti
+       if (state === 'over') newGame() // ← yeni
+       else shoot() // ← yeni
+     } // ← yeni
+   })
+   ```
+
+4. `draw()` içinde, `ctx.fillText('GAME OVER', canvas.width / 2, 250)` satırının altına (hâlâ `if (state === 'over')`
+   bloğunun içinde) iki satır ekle:
+
+   ```js
+       ctx.font = '16px monospace'
+       ctx.fillText('BEST ' + best + '   SPACE TO PLAY AGAIN', canvas.width / 2, 290)
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Oyun bitince `GAME OVER`'ın altında en iyi skor ve
+   `SPACE TO PLAY AGAIN` yazmalı; Boşluk'a basınca 3 can ve `WAVE 1` ile yeni oyun başlamalı. Alttaki kontrollerin hepsi
+   yeşil olmalı. `BEST` kontrolü kırmızıysa `BEST ` sonrasındaki ve `SPACE`'ten önceki boşlukları say.
 
 # --tests--
 

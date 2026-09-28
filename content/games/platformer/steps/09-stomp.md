@@ -27,24 +27,47 @@ Enemies that get stomped are marked `alive: false`: they stop moving, stop being
 
 # --explanation-tr--
 
-Bir düşmana dokunmanın artık iki sonucu var ve fark yalnızca **yön**:
+**Bu adımda:** düşmanların üstüne basıp onları ezeceğiz. Yandan çarparsan ya da çukura düşersen bir can gidecek ve
+bölüm baştan başlayacak. Üç can bitince "Game Over" yazısı çıkacak; Boşluk ile yeni oyun başlayacak.
 
-- Başının üstüne inmek: **ezme**. Düşman ezilir, oyuncu yukarı sıçrar.
-- Diğer her şey (içine yürümek, yanına zıplamak): oyuncu incinir.
+**Aynı dokunuş, iki sonuç.** Düşmana değmenin iki sonucu var ve farkı yalnızca **yön**:
 
-Burada kullanılan kural basit ve affedici: oyuncu **düşüyorsa** (`vy > 0`) ve ayakları hâlâ düşmanın **üst
-yarısındaysa** ezmedir. Oyuncular "üstüne indim"i cömertçe yargılar; kural da öyle olmalı.
+- Yukarıdan kafasına iniyorsan: **ezme** (stomp). Düşman ezilir, oyuncu yukarı sıçrar.
+- Başka her durumda (içine yürümek, yanına zıplamak): oyuncu yanar.
+
+Kural basit ve hoşgörülü: oyuncu **düşüyorsa** (`vy > 0`) ve ayakları hâlâ düşmanın **üst yarısındaysa** ezmedir.
+Oyuncular "üstüne indim" konusunda cömert düşünür; kural da öyle olmalı.
 
 ```js
 const stomp = player.vy > 0 && player.y + player.h < enemy.y + enemy.h / 2
 ```
 
-İncinmek ya da bir çukura düşmek bir **cana** mal olur ve bölümü yeniden başlatır. Altınlar adımındaki plan fikrini
-hatırlıyor musun? Yeniden başlatmak artık çok kolay: canlı nesneleri at ve **bölüm metninden yeniden kur**. Bu
-`loadLevel()`. `newGame()` aynısını yapar, artı canları doldurur. Altınlar ve düşmanlar da yeniden kurulduğu için
-yeniden başlatma gerçek bir sıfırdan başlangıçtır.
+`stomp` doğruysa düşman `alive: false` (canlı değil) olur ve oyuncu `JUMP * 0.6` hızıyla (normal zıplamanın biraz
+altında) yukarı sıçrar. Ölü düşmanlar hareket etmez, çizilmez ve kimseye çarpmaz.
 
-Ezilen düşmanlar `alive: false` olarak işaretlenir: hareket etmeyi, çizilmeyi ve çarpışmayı bırakırlar.
+**Can ve baştan başlamak.** Yanmak ya da çukura düşmek (`player.y > ROWS * TILE`, yani bölümün altına inmek) bir **can**
+götürür (`lives -= 1`, "1 çıkar") ve bölümü yeniden başlatır. 7. adımdaki plan fikrini hatırla: bölüm yazısı plan,
+nesneler canlı durum. Şimdi yeniden başlatmak çok kolay: canlı nesneleri atıp **bölüm yazısından yeniden kurarız**. Bu
+iş `loadLevel()`'ın. Altınlar ve düşmanlar da yeniden kurulduğu için yeniden başlamak gerçekten sıfırdan başlamaktır.
+`newGame()` aynısını yapar, ayrıca canları 3'e doldurur.
+
+Bu yüzden `coins` ve `enemies` artık `const` değil `let`: her yeniden başlatmada **yeni** bir listeye bağlanırlar.
+Diğer değişkenler de en üstte değersiz yazılır (`let camera`), değerlerini `loadLevel()` ve `newGame()` verir.
+
+**Oyun durumu.** `state` ya `'playing'` (oynanıyor) ya `'over'` (bitti). `update()`'in ilk satırı
+`if (state !== 'playing') return` → oyun bittiyse hiçbir şey hareket etmez (`return` fonksiyonu o anda bitirir, `!==`
+"eşit değil" demektir). Oyun bitmişken zıplama tuşu yeni bir oyun başlatır.
+
+**Uzun fonksiyonu bölmek.** `update()` uzadı, bu yüzden oyuncunun hareketini `updatePlayer()` adlı ayrı bir fonksiyona
+taşıyoruz. `update()` artık sırayla: oyuncuyu hareket ettir, düşmanları hareket ettir, altınları topla, düşmanlara
+çarpmayı kontrol et, çukuru kontrol et, kamerayı güncelle.
+
+**Düşman döngüsünde `continue`.** `if (!enemy.alive || !overlaps(player, enemy)) continue` → "düşman ölüyse **ya da**
+oyuncuyla çakışmıyorsa bu düşmanı atla". Oyuncu ölünce hemen `return` ile çıkarız, çünkü `die()` bölümü yeniden kurdu
+ve bu karede yapacak başka iş kalmadı.
+
+Fonksiyonların dosyadaki sırası önemli değildir: bilgisayar çalıştırmaya başlamadan önce bütün `function`
+tanımlarını okur. Bu yüzden bir fonksiyon, dosyada kendisinden sonra yazılmış bir fonksiyonu çağırabilir.
 
 # --task--
 
@@ -61,15 +84,170 @@ Ezilen düşmanlar `alive: false` olarak işaretlenir: hareket etmeyi, çizilmey
 
 # --task-tr--
 
-1. Bölüm taramasını `player`, `coins` ve `enemies`'i (artık `let` değişkenler; düşmanlar `alive: true` alır) yeniden
-   kuran ve `camera`, `collected`, `coyote` ile `state = 'playing'`i sıfırlayan `function loadLevel()`'a çevir.
-   `lives = 3` yapıp `loadLevel()` çağıran `function newGame()` ekle. Açılışta `newGame()` çağır.
-2. `function die()` yaz: bir can kaybet; can kalmadıysa `state = 'over'`, kaldıysa `loadLevel()`.
-3. `update()` içinde (yalnızca `'playing'` iken): ölü düşmanları atla; oyuncunun kesiştiği her canlı düşmanı ezme kuralı
-   sağlanıyorsa ez (`alive = false`, `player.vy = JUMP * 0.6`), değilse `die()` çağırıp dön. Oyuncu bölümün altına
-   düşerse (`player.y > ROWS * TILE`) `die()` çağır.
-4. Oyun bittiğinde `jump()` `newGame()` başlatmalı. Ölü düşmanları çizme. Köşede `Coins: 3   Lives: 2` (arada üç
-   boşluk) göster; oyun bitince ekranı karart ve `Game Over` ile `Press Space to play again` yaz.
+Bu adımda birkaç yer değişiyor; sırayla git.
+
+1. En üstteki değişkenleri değiştir. `// The level text is the blueprint...` yorumundan başlayıp `let camera = 0 ...`
+   satırına kadar olan her şeyi (bölümü tarayan `LEVEL.forEach` bloğu dahil) **sil** ve yerine şunu yaz.
+   Altındaki `const keys = {}` satırı kalsın:
+
+   ```js
+   let player
+   let coins
+   let enemies
+   let camera
+   let collected
+   let lives
+   let coyote
+   let state // 'playing' ya da 'over'
+   ```
+
+2. `jump()` fonksiyonunun **başına**, oyun bitmişse yeni oyun başlatan kısmı ekle:
+
+   ```js
+   function jump() {
+     if (state !== 'playing') { // ← yeni
+       newGame() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     if (coyote > 0) {
+       player.vy = JUMP
+       coyote = 0
+     }
+   }
+   ```
+
+3. `moveY` fonksiyonunun kapanış `}`'inin altına (`function updateEnemy`'den önce) bölümü kuran, yeni oyun başlatan ve
+   can kaybettiren fonksiyonları yaz. Bölüm taraması artık `loadLevel`'ın içinde:
+
+   ```js
+   function loadLevel() {
+     coins = []
+     enemies = []
+     LEVEL.forEach((line, row) => {
+       for (let col = 0; col < COLS; col++) {
+         const x = col * TILE
+         const y = row * TILE
+         if (line[col] === 'P') player = { x: x + 4, y: y + 2, w: 24, h: 30, vx: 0, vy: 0, grounded: false }
+         if (line[col] === 'o') coins.push({ x: x + 8, y: y + 8, w: 16, h: 16, taken: false })
+         if (line[col] === 'e') enemies.push({ x: x + 2, y: y + 4, w: 28, h: 28, vx: 0, vy: 0, dir: -1, alive: true })
+       }
+     })
+     camera = 0
+     collected = 0
+     coyote = 0
+     state = 'playing'
+   }
+
+   function newGame() {
+     lives = 3
+     loadLevel()
+   }
+
+   function die() {
+     lives -= 1
+     if (lives === 0) state = 'over'
+     else loadLevel()
+   }
+   ```
+
+   Dikkat: düşmanlarda sonda yeni bir alan var: `alive: true`.
+
+4. `update()` fonksiyonunun **tamamını** (`function update() {` satırından kapanış `}`'ine kadar) sil ve yerine şu iki
+   fonksiyonu yaz. İlki eski `update()`'in oyuncu kısmıdır; ikincisi yeni `update()`:
+
+   ```js
+   function updatePlayer() {
+     const input = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)
+     if (input !== 0) player.vx += input * ACCEL
+     else player.vx *= FRICTION
+     player.vx = clamp(player.vx, -MAX_SPEED, MAX_SPEED)
+     if (Math.abs(player.vx) < 0.05) player.vx = 0
+     moveX(player)
+
+     player.vy = Math.min(MAX_FALL, player.vy + GRAVITY)
+     moveY(player)
+     coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)
+   }
+
+   function update() {
+     if (state !== 'playing') return
+     updatePlayer()
+     for (const enemy of enemies) if (enemy.alive) updateEnemy(enemy)
+
+     for (const coin of coins) {
+       if (!coin.taken && overlaps(player, coin)) {
+         coin.taken = true
+         collected += 1
+       }
+     }
+
+     for (const enemy of enemies) {
+       if (!enemy.alive || !overlaps(player, enemy)) continue
+       // Ezme: düşüyorsun ve ayakların hâlâ düşmanın üst yarısında. Başka her şey çarpmadır.
+       const stomp = player.vy > 0 && player.y + player.h < enemy.y + enemy.h / 2
+       if (stomp) {
+         enemy.alive = false
+         player.vy = JUMP * 0.6
+       } else {
+         die()
+         return
+       }
+     }
+
+     if (player.y > ROWS * TILE) {
+       die()
+       return
+     }
+
+     camera = clamp(player.x + player.w / 2 - canvas.width / 2, 0, COLS * TILE - canvas.width)
+   }
+   ```
+
+5. `draw()` fonksiyonunda düşmanları çizen `for` satırını, yalnızca canlıları çizecek şekilde değiştir:
+
+   ```js
+     ctx.fillStyle = '#7c2d12'
+     for (const enemy of enemies) { // ← değişti
+       if (enemy.alive) ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h) // ← değişti
+     } // ← yeni
+   ```
+
+6. Yine `draw()`'da en sondaki `ctx.fillText('Coins: ' ...)` satırını değiştir ve altına Game Over ekranını ekle.
+   `draw()` şöyle bitmeli:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Coins: ' + collected + '   Lives: ' + lives, 12, 26) // ← değişti
+
+     ctx.textAlign = 'center' // ← yeni: buradan sona kadar
+     if (state !== 'playing') {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 36px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, 160)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, 200)
+     }
+   }
+   ```
+
+   `'   Lives: '` yazısının başında **üç boşluk** var. `'rgba(0, 0, 0, 0.5)'` yarı saydam siyahtır: ekranı karartır
+   (son sayı saydamlık: 0 görünmez, 1 tam kapalı).
+
+7. En alttaki `requestAnimationFrame(loop)` satırının **hemen üstüne** oyunu başlatan çağrıyı ekle:
+
+   ```js
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bir düşmanın üstüne zıplayınca kaybolmalı ve sen sıçramalısın;
+   yandan değince sol üstteki `Lives` bir azalmalı ve başa dönmelisin. Üç can bitince "Game Over" görünmeli, Boşluk
+   yeniden başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa en sık hata `newGame()` çağrısını
+   unutmak ya da düşmanlara `alive: true` eklememektir.
 
 # --tests--
 

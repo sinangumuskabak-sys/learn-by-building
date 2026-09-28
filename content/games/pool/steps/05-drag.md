@@ -24,21 +24,42 @@ A power bar under the table shows how hard you are about to hit; Up and Down cha
 
 # --explanation-tr--
 
-Ok tuşları hassas ama yavaştır. Çoğu bilardo oyunu işaretçiyi bir **sapan** gibi kullanır: bas, vurmak istediğin yerden
-**uzağa** geri çek ve bırak. Ne kadar çekersen vuruş o kadar sert olur.
+**Bu adımda:** fareyle (ya da parmakla) sapan gibi nişan alacağız. Masaya bas, vurmak istediğin yönün **tersine** geri
+çek ve bırak. Ne kadar çok çekersen vuruş o kadar sert olur. Masanın altında turuncu bir güç çubuğu görünecek.
 
-Hem nişan hem güç tek bir vektörden, işaretçiden isteka topuna olandan gelir:
+Ok tuşları hassas ama yavaş. Çoğu bilardo oyunu fareyi **sapan** gibi kullanır: lastiği geriye çekersin, taş öbür
+yöne fırlar.
+
+**Tek oktan hem yön hem güç.** Fareden beyaz topa doğru bir ok düşün:
 
 ```js
-aim = Math.atan2(cue.y - point.y, cue.x - point.x)          // işaretçiden topun içinden geçerek
+aim = Math.atan2(cue.y - point.y, cue.x - point.x)
 power = Math.min(MAX_POWER, Math.hypot(point.x - cue.x, point.y - cue.y) / 6)
 ```
 
-`Math.atan2(dy, dx)` bir vektörün açısını her yönde verir; `aim`'in anlamı da tam budur. 60 piksel sola çek, 10 güçle sağa
-vurursun.
+- `Math.atan2(dy, dx)` → bir okun **açısını** verir, her yön için doğru çalışır. `cos`/`sin`'in tersi gibi: onlar
+  açıdan yön buluyordu, bu yönden açı bulur. Ok fareden topa doğru olduğu için vuruş çektiğin yönün tersine gider.
+- `Math.hypot(...)` fare ile top arasındaki uzaklıktır; 6'ya böleriz ki güç makul bir sayı olsun.
+- `Math.min(a, b)` iki sayıdan küçüğünü verir: güç hiçbir zaman `MAX_POWER`'ı (16) geçmez. `Math.max(a, b)` de
+  büyüğünü verir.
 
-Vuruş, **document**'ta dinlediğimiz `pointerup`'ta olur: canvas'ın dışında bıraksan bile vurur. Masanın altındaki bir güç
-çubuğu ne kadar sert vurmak üzere olduğunu gösterir; Yukarı ve Aşağı onu klavyeden değiştirir.
+Örnek: topun 60 piksel soluna çekersen açı 0 (sağa), güç 60 / 6 = 10 olur.
+
+**Fare olayları.** Fare ve dokunmatik ekran için aynı olaylar kullanılır:
+
+- `pointerdown` → bastın. `pointermove` → basılıyken ya da değilken hareket ettirdin. `pointerup` → bıraktın.
+- `dragging` (sürüklüyor mu) `true`/`false` bilgisini tutar; hareket sadece basılıyken nişanı değiştirsin.
+- `pointerup`'ı canvas'ta değil **document**'ta (bütün sayfada) dinleriz: fareyi masanın dışında bırakırsan da vuruş
+  olur.
+- `if (state === 'won') return reset()` → kazandıysan tıklama yeni oyun başlatır ve fonksiyon orada biter.
+
+**Sayfadaki konumdan canvas'taki konuma.** Olay, farenin **sayfadaki** konumunu verir (`event.clientX`,
+`event.clientY`). Canvas sayfanın bir yerinde durur ve ekranda büyütülüp küçültülmüş olabilir.
+`canvas.getBoundingClientRect()` canvas'ın sayfadaki yerini ve ekrandaki boyunu verir (`left`, `top`, `width`,
+`height`). Farkı alıp oranla çarparak canvas içindeki koordinatı buluruz; `toCanvas` bunu yapar.
+
+**Güç çubuğu.** Önce gri tam boy bir çubuk, üstüne gücün oranı kadar (`power / MAX_POWER`) turuncu bir çubuk.
+Yukarı/Aşağı ok gücü 1 artırıp azaltır; `Math.min`/`Math.max` onu 2 ile 16 arasında tutar.
 
 # --task--
 
@@ -52,13 +73,85 @@ Vuruş, **document**'ta dinlediğimiz `pointerup`'ta olur: canvas'ın dışında
 
 # --task-tr--
 
-1. `MAX_POWER = 16` ve `dragging` (`reset()`'te `false`) ekle.
-2. `toCanvas(event)` ve `aim` ile `power`'ı yukarıdaki gibi ayarlayan `pull(point)`'i yaz.
-3. Nişan alırken `pointerdown` sürüklemeyi başlatır ve çeker (`'won'`'da yeniden başlatır); `pointermove` sürüklerken çeker;
-   document'ın `pointerup`'ında sürüklemeyi bitir ve `power >= 1` ise vur.
-4. Yukarı ve Aşağı `power`'ı `2` ile `MAX_POWER` arasında 1 değiştirir.
-5. Güç çubuğunu çiz: `(LEFT, 304)`'te `RIGHT - LEFT` genişliğinde, 14 yüksekliğinde `'#334155'` bir çubuk ve üstünde onun
-   `power / MAX_POWER`'ı kadar genişlikte `'#f59e0b'` bir çubuk.
+1. `const BOUNCE = 0.8 ...` satırının hemen altına en büyük gücü ekle:
+
+   ```js
+   const MAX_POWER = 16
+   ```
+
+2. `let power` satırının hemen altına sürükleme bilgisini ekle:
+
+   ```js
+   let dragging
+   ```
+
+3. `reset()` içinde `power = 8` satırının altına şunu ekle:
+
+   ```js
+     dragging = false
+   ```
+
+4. `keydown` dinleyicisinde `ArrowRight` satırının altına, boşluk satırının üstüne iki satır ekle:
+
+   ```js
+     else if (event.key === 'ArrowRight') aim += 0.035
+     else if (event.key === 'ArrowUp') power = Math.min(MAX_POWER, power + 1) // ← yeni
+     else if (event.key === 'ArrowDown') power = Math.max(2, power - 1)       // ← yeni
+     else if (event.key === ' ') state === 'won' ? reset() : shoot()
+   ```
+
+5. `keydown` dinleyicisinin kapanış `})`'inden sonra, `function draw()`'dan önce fare kodunu yaz:
+
+   ```js
+   function toCanvas(event) {
+     const rect = canvas.getBoundingClientRect()
+     return {
+       x: ((event.clientX - rect.left) * canvas.width) / rect.width,
+       y: ((event.clientY - rect.top) * canvas.height) / rect.height,
+     }
+   }
+
+   // Pull back from the cue ball like a slingshot: the shot goes the other way, harder the further you pull.
+   function pull(point) {
+     aim = Math.atan2(cue.y - point.y, cue.x - point.x)
+     power = Math.min(MAX_POWER, Math.hypot(point.x - cue.x, point.y - cue.y) / 6)
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'won') return reset()
+     if (state !== 'aiming') return
+     dragging = true
+     pull(toCanvas(event))
+   })
+
+   canvas.addEventListener('pointermove', (event) => {
+     if (dragging) pull(toCanvas(event))
+   })
+
+   document.addEventListener('pointerup', () => {
+     if (!dragging) return
+     dragging = false
+     if (power >= 1) shoot()
+   })
+   ```
+
+   Son dinleyicide olay bilgisine ihtiyacımız olmadığı için parantez boş: `() =>`.
+
+6. `draw()` içinde topları çizen döngünün kapanış `}`'inden sonra, `ctx.fillStyle = 'white'` satırından önce güç
+   çubuğunu çiz:
+
+   ```js
+     // Power bar
+     ctx.fillStyle = '#334155'
+     ctx.fillRect(LEFT, 304, RIGHT - LEFT, 14)
+     ctx.fillStyle = '#f59e0b'
+     ctx.fillRect(LEFT, 304, ((RIGHT - LEFT) * power) / MAX_POWER, 14)
+   ```
+
+7. **Çalıştır**'a bas. Masanın altında gri bir çubuk ve yarısına kadar turuncu dolu kısım görmelisin. Oyunda beyaz
+   topun soluna bas, sola doğru çek: nişan çizgisi sağı göstermeli, turuncu çubuk uzamalı; bırakınca top sağa gitmeli.
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `atan2` içindeki sıraya bak: önce `y` farkı, sonra `x`
+   farkı, ikisinde de `cue` önce.
 
 # --tests--
 

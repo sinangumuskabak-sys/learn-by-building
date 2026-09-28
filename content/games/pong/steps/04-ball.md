@@ -24,20 +24,49 @@ flipping, also put the ball back on the court edge.
 
 # --explanation-tr--
 
-Topun bir konumu ve **iki yönde hızı** vardır: `vx` (her karede ne kadar sağa gittiği; negatif sol demek) ve `vy`
-(aşağı; negatif yukarı demek). Hareket etmek onları eklemekten ibaret:
+**Bu adımda:** sahaya bir top koyacağız. Top çapraz gidecek, üst ve alt kenardan sekecek. Şimdilik raketlerin
+içinden geçip yanlardan dışarı uçacak; onu sonraki adımlarda düzelteceğiz.
+
+**Top neyi bilmeli?** Nerede olduğunu (`x`, `y`) ve her karede ne kadar kaydığını. Bu kaymaya **hız** (velocity)
+denir ve iki parçası vardır:
+
+- `vx` → her karede sağa kaç piksel gideceği. Eksi (negatif) sayı sola gitmek demektir.
+- `vy` → her karede aşağı kaç piksel gideceği. Eksi sayı yukarı gitmek demektir.
+
+```js
+let ball = { x: 295, y: 195, vx: 4, vy: 3 }   // sağa 4, aşağı 3: sağ alta doğru çapraz
+```
+
+Hareket etmek, konuma hızı eklemektir. 3. adımda gördüğün `+=` burada da iş görür:
 
 ```js
 ball.x += ball.vx
 ball.y += ball.vy
 ```
 
-Duvardan sekmek şaşırtıcı derecede basit: duvara doğru bakan hızın **işaretini çevir**. Aşağı giderken (`vy = 3`)
-zemine çarpmak yukarı gitmeye (`vy = -3`) dönüşür, yatay hız hiç değişmez. Kusursuz bir sekmenin bütün fiziği bu.
+**Sekme.** Top alt kenara aşağı giderken (`vy = 3`) çarptıysa, artık yukarı gitmeli (`vy = -3`). Yani sadece
+`vy`'nin **işaretini çeviririz**; yandan hızı (`vx`) hiç değişmez. Mükemmel bir sekmenin bütün fiziği bu:
 
-Kaçınılması gereken ince bir hata var: top 3'er piksel ilerlediği için duvarın biraz **içinde** kalabilir. Sonraki
-karede hâlâ içerideyse işaret yeniden döner ve top kenar boyunca titreyerek takılır. Bu yüzden işareti çevirdikten
-sonra topu saha kenarına da geri koy.
+```js
+ball.vy = -ball.vy   // 3 ise -3, -3 ise 3 olur
+```
+
+**"Ya da" demek: `||`.** Top ya tepeden taşarsa ya da dipten taşarsa seksin istiyoruz. İki koşulu `||` ("veya")
+ile bağlarız; biri doğruysa bütünü doğrudur:
+
+```js
+if (ball.y < 0 || ball.y + BALL > canvas.height) { ... }
+```
+
+- `ball.y < 0` → topun üst kenarı canvas'ın üstüne taştı.
+- `ball.y + BALL > canvas.height` → topun alt kenarı (üst kenar + boyu) 400'ü geçti. `>` "büyüktür" demektir.
+
+**Gizli bir tuzak.** Top 3'er piksel zıpladığı için kenarın biraz **içine** girebilir. Bir sonraki karede hâlâ
+içerideyse işaret yine döner ve top kenara yapışıp titrer. Bu yüzden sekince topu 3. adımdaki `clamp` ile sahanın
+kenarına geri koyarız.
+
+**`if` ve süslü parantez.** 3. adımda `if` tek satırlık işi aynı satıra yazıyordu. Birden çok iş varsa
+`if (koşul) { ... }` yazılır ve hepsi süslü parantezin içine girer.
 
 # --task--
 
@@ -52,12 +81,42 @@ For now the ball flies through the paddles and off the sides. That comes next.
 
 # --task-tr--
 
-1. `const BALL = 10` (top `BALL`×`BALL` bir kare) ve `let ball = { x: 295, y: 195, vx: 4, vy: 3 }` ekle.
-2. `update()` içinde topu `vx` ve `vy` kadar taşı. Üst kenarı `0`'ın üstüne ya da alt kenarı (`ball.y + BALL`)
-   `canvas.height`'ın altına geçerse `vy`'yi çevir ve `ball.y`'yi `0` ile `canvas.height - BALL` arasında sınırla.
-3. `draw()` içinde topu beyaz bir kare olarak çiz.
+1. `const PADDLE_SPEED = 6` satırının altına top boyutunu ekle (yorumuyla birlikte):
 
-Şimdilik top raketlerin içinden geçip yanlardan çıkıyor. Sırada o var.
+   ```js
+   const BALL = 10 // the ball is a BALL×BALL square
+   ```
+
+2. `let right = ...` satırının altına (`const keys = {}` satırının üstüne) topu ekle:
+
+   ```js
+   let ball = { x: 295, y: 195, vx: 4, vy: 3 }
+   ```
+
+3. `update()` fonksiyonunun içinde, `right.y = clamp(...)` satırından sonra, kapanan `}`'den önce bir boş satır
+   bırak ve topu hareket ettirip sektiren kodu ekle. Fonksiyonun sonu şöyle olmalı:
+
+   ```js
+     right.y = clamp(right.y, 0, canvas.height - PADDLE_H)
+
+     ball.x += ball.vx                                         // ← yeni
+     ball.y += ball.vy                                         // ← yeni
+     if (ball.y < 0 || ball.y + BALL > canvas.height) {        // ← yeni
+       ball.vy = -ball.vy                                      // ← yeni
+       ball.y = clamp(ball.y, 0, canvas.height - BALL)         // ← yeni
+     }                                                         // ← yeni
+   }
+   ```
+
+4. `draw()` fonksiyonunda, sağ raketi çizen `ctx.fillRect(right.x, ...)` satırının hemen altına topu çizen satırı
+   ekle:
+
+   ```js
+   ctx.fillRect(ball.x, ball.y, BALL, BALL)
+   ```
+
+5. **Çalıştır**'a bas. Beyaz kare top çapraz gitmeli, alttan ve üstten sekmeli, sonra yandan sahadan çıkıp gitmeli
+   (bu şimdilik normal). Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

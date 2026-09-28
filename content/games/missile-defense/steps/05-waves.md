@@ -18,15 +18,47 @@ last city falls. Anything that should only happen while playing checks the state
 
 # --explanation-tr--
 
-Sınırsız önleyici gökyüzünü patlamalarla doldurmana izin verirdi. Her dalgada sınırlı **cephaneyle** her atış bir seçimdir: erken
-ateş edip ıskalamayı göze al ya da bekleyip birini geçirmeyi. Zincirler değerli olur, çünkü cephane kazandırırlar.
+**Bu adımda:** oyun dalgalara bölünecek ve cephanen sınırlı olacak. Sağ üstte `Wave 1  Ammo 14` göreceksin. Bir dalga
+bitince ortada `Wave 1 cleared!` yazacak ve biraz sonra daha hızlı bir dalga gelecek. Son şehir düşünce `The end`
+yazacak; tıklayınca yeniden başlayacaksın.
 
-Oyun **dalgalar** hâlinde gelir. Her biri daha fazla, daha hızlı ve daha sık füze fırlatır, biraz daha fazla cephaneyle. Bir dalga
-bitince (fırlatılacak bir şey kalmayınca, havada bir şey kalmayınca, süren bir patlama kalmayınca) hâlâ ayakta olan her şehir ve
-ihtiyaç duymadığın her önleyici için bir bonus alırsın; kısa bir aradan sonra sonraki dalga başlar.
+**Sınırlı cephane.** Sınırsız önleme füzesiyle gökyüzünü patlamayla doldurabilirdin. Her dalgada sınırlı **cephane**
+(ammo) olunca her atış bir seçim olur: erken ateş edip ıskalamayı mı, bekleyip birini kaçırmayı mı göze alırsın?
+Zincirler cephane kazandırdığı için değerli hâle gelir. `fire()` başındaki koşul: oyun sürmüyorsa **veya** (`||`)
+cephane bittiyse **veya** tıklama çok aşağıdaysa hiçbir şey yapma. Değilse bir cephane harca (`ammo -= 1`).
 
-Durum makinesinin artık üç durumu var: `'playing'`, `'between'` (bir dalgadan sonraki ara) ve son şehir düşünce gelen `'over'`.
-Yalnızca oynarken olması gereken her şey önce durumu kontrol eder.
+**Dalgalar.** Her dalga daha çok füze fırlatır, daha hızlı ve daha sık, biraz daha fazla cephaneyle. Bunların hepsi
+dalga numarasından hesaplanır:
+
+```js
+toLaunch = 8 + wave * 2               // 1. dalga 10, 2. dalga 12 füze
+speed: 0.5 + wave * 0.15              // 1. dalga 0.65, 2. dalga 0.8
+launchIn = Math.max(20, 70 - wave * 6) // füzeler arası kare; en az 20
+```
+
+İşlem sırası matematikteki gibidir: önce çarpma, sonra toplama. `Math.max(20, ...)` iki sayının büyüğünü verir; böylece
+aralık hiçbir zaman 20 karenin altına düşmez. Yeni dalgayı kuran iş `nextWave()` fonksiyonuna gider; `reset()` de dalgayı
+0 yapıp onu çağırır (ilk dalga böylece 1 olur).
+
+**Dalga ne zaman biter?** Fırlatılacak füze kalmadıysa **ve** (`&&`) havada füze yoksa **ve** süren patlama yoksa.
+Bir listenin eleman sayısı `.length`'tir; `incoming.length === 0` "liste boş" demektir. Bitince ayakta kalan her şehir
+için 100, harcanmayan her cephane için 5 bonus puan alırsın.
+
+**Durum makinesi.** Oyunun artık üç durumu var, `state` adlı değişkende bir yazı olarak durur:
+
+- `'playing'` → oyun sürüyor,
+- `'between'` → dalgadan sonraki mola; `pause` 90 kareden geri sayar, 0 olunca `nextWave()`,
+- `'over'` → son şehir düştü.
+
+`update()` en başta duruma bakar: bittiyse hiçbir şey yapmaz, moladaysa yalnızca geri sayar ve `return` ile çıkar. Sadece
+oyun sürerken olması gereken her şey önce durumu kontrol eder. `!cities.some((c) => c.alive)` → "canlı şehir **yoksa**"
+(`!` tersine çevirir).
+
+**Yeniden başlamak.** Oyun bitince tıklama ya da Boşluk `reset()`'i çağırır. Boşluk için `keydown` dinlenir;
+`event.preventDefault()` tarayıcının Boşluk'la sayfayı kaydırmasını engeller.
+
+**Hizalama.** `ctx.textAlign = 'right'` verilen noktayı yazının sağ ucu yapar (sağ kenara yaslanır), `'center'` ortası
+yapar. `'  Ammo '` içindeki **iki** boşluk, kontrollerin beklediği aralıktır.
 
 # --task--
 
@@ -42,15 +74,128 @@ Yalnızca oynarken olması gereken her şey önce durumu kontrol eder.
 
 # --task-tr--
 
-1. `wave`, `ammo`, `state` ve `pause` ekle. `reset()` `wave = 0`, `score = 0` yapar ve `wave`'e 1 ekleyen,
-   `toLaunch = 8 + wave * 2`, `launchIn = 30`, `ammo = 12 + wave * 2` ve `'playing'` durumunu ayarlayan `nextWave()`'i çağırır.
-2. Füzeler `0.5 + wave * 0.15` hızla uçar, `Math.max(20, 70 - wave * 6)` kare arayla fırlatılır.
-3. `fire()` yalnızca oynarken ve cephane varken çalışır ve bir tane harcar.
-4. `update()` içinde: bitince hiçbir şey olmaz; dalgalar arasında `pause`'u geri say ve `0`'da sonraki dalgayı başlat. Her şey
-   hareket ettikten sonra: yaşayan şehir yoksa `'over'`; biten bir dalga yaşayan her şehir için `100`, kalan her cephane için `5`
-   ekler ve `pause = 90` ile `'between'` durumunu ayarlar.
-5. Sağ üste `Wave 2  Ammo 14`, dalgalar arasında `y = 180`'de ortalı `Wave 1 cleared!`, bitince `The end` (kalın 28px) ve
-   `Click to play again` (16px, `y = 210`) çiz. Bir tıklama ya da Boşluk o zaman yeni bir oyun başlatır.
+1. Değişkenleri şöyle düzenle (`let blasts ...` satırının altından `let score` satırına kadar):
+
+   ```js
+   let wave // ← yeni
+   let toLaunch // enemy missiles still to come in this wave
+   let launchIn
+   let ammo // ← yeni
+   let score
+   let state // 'playing', 'between' (a pause after a wave) or 'over' ← yeni
+   let pause // ← yeni
+   ```
+
+2. `reset()`'i şöyle yap ve altına `nextWave()`'i ekle:
+
+   ```js
+   function reset() {
+     cities = CITY_XS.map((x) => ({ x, alive: true }))
+     incoming = []
+     shots = []
+     blasts = []
+     wave = 0 // ← yeni
+     score = 0
+     nextWave() // ← değişti
+   }
+
+   function nextWave() {
+     wave += 1
+     toLaunch = 8 + wave * 2
+     launchIn = 30
+     ammo = 12 + wave * 2
+     state = 'playing'
+   }
+   ```
+
+   Eski `toLaunch = 20` ve `launchIn = 30` satırları `reset()`'ten çıkar; `launchIn = 30` artık `nextWave()`'de.
+
+3. `launch()` içindeki son satırda hızı değiştir:
+
+   ```js
+     incoming.push({ sx, sy, x: sx, y: sy, tx, ty: GROUND, speed: 0.5 + wave * 0.15 }) // ← değişti
+   ```
+
+4. `fire()`'ı şöyle yap:
+
+   ```js
+   function fire(tx, ty) {
+     if (state !== 'playing' || ammo === 0 || ty > BASE.y - 10) return // ← değişti
+     ammo -= 1 // ← yeni
+     shots.push({ x: BASE.x, y: BASE.y, tx, ty })
+   }
+   ```
+
+5. `pointerdown` bloğunun başına yeniden başlatmayı ekle, altına Boşluk'u dinleyen bloğu yaz:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'over') { // ← yeni
+       reset()
+       return
+     }
+     const rect = canvas.getBoundingClientRect()
+     fire(((event.clientX - rect.left) * canvas.width) / rect.width, ((event.clientY - rect.top) * canvas.height) / rect.height)
+   })
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' && state === 'over') {
+       event.preventDefault()
+       reset()
+     }
+   })
+   ```
+
+6. `update()`'in en başına (`if (toLaunch > 0)` satırının üstüne) şunu ekle:
+
+   ```js
+     if (state === 'over') return
+     if (state === 'between') {
+       pause -= 1
+       if (pause <= 0) nextWave()
+       return
+     }
+
+   ```
+
+7. Aynı fonksiyonda fırlatma aralığını değiştir:
+
+   ```js
+         launchIn = Math.max(20, 70 - wave * 6) // ← değişti
+   ```
+
+8. `update()`'in sonuna, `incoming = incoming.filter((m) => !m.done)` satırının altına, bir boş satır bırakıp şunu ekle:
+
+   ```js
+     if (!cities.some((c) => c.alive)) {
+       state = 'over'
+       return
+     }
+     if (toLaunch === 0 && incoming.length === 0 && blasts.length === 0) {
+       // Bonus for every city still standing and every interceptor left.
+       score += cities.filter((c) => c.alive).length * 100 + ammo * 5
+       state = 'between'
+       pause = 90
+     }
+   ```
+
+9. `draw()`'un sonuna, `ctx.fillText('Score ' + score, 10, 22)` satırının altına ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Wave ' + wave + '  Ammo ' + ammo, canvas.width - 10, 22)
+     ctx.textAlign = 'center'
+     if (state === 'between') ctx.fillText('Wave ' + wave + ' cleared!', canvas.width / 2, 180)
+     if (state === 'over') {
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('The end', canvas.width / 2, 180)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Click to play again', canvas.width / 2, 210)
+     }
+   ```
+
+10. **Çalıştır**'a bas. Sağ üstte `Wave 1  Ammo 14` yazmalı; her atış cephaneyi 1 azaltmalı. Dalgayı bitirince
+    `Wave 1 cleared!` çıkmalı, puanına bonus eklenmeli ve bir buçuk saniye sonra 2. dalga başlamalı. Alttaki
+    kontrollerin hepsi yeşil olmalı. `Ammo` kontrolü kırmızıysa `'  Ammo '`'daki iki boşluğu kontrol et.
 
 # --tests--
 

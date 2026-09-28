@@ -25,22 +25,51 @@ lives in the world goes between `save` and `restore`.
 
 # --explanation-tr--
 
-Bölümdeki `o` karakterleri altındır. `#` gibi döşemeler bölümde sonsuza kadar kalır ama altınlar değişir: toplanınca
-kaybolurlar. Bu yüzden oyuncu gibi onlar da oyun başlarken **bölümden nesnelere kopyalanır**. Her döşemeyi bir kez tara
-ve her özel karakteri temsil ettiği nesneye çevir:
+**Bu adımda:** bölümdeki `o` harflerini sarı altınlara çevireceğiz. Oyuncu dokununca altın kaybolacak, sol üstteki
+`Coins: ...` sayacı artacak.
+
+**Plan ve canlı durum.** `#` gibi kareler bölümde sonsuza kadar kalır; altınlarsa değişir, toplanınca kaybolur. Bu
+yüzden altınları da oyuncu gibi oyun başlarken bölüm yazısından **nesnelere kopyalarız**. Bölüm yazısı hiç değişmeyen
+bir **plan** (kroki) olarak kalır; nesneler oyunun **canlı durumudur**. Bu ikisini ayrı tutmak ileride bölümü yeniden
+başlatmayı kolaylaştıracak: nesneleri plandan yeniden kurmak yeter.
+
+**Her kareyi bir kez taramak.** Şimdiye kadar her satırda yalnızca `indexOf('P')` ile `P`'yi arıyorduk. Artık her
+satırın her sütununa bakan bir `for` döngüsü kullanıyoruz ve özel harfleri gördüğümüz yerde nesnesini oluşturuyoruz:
 
 ```js
 if (line[col] === 'o') coins.push({ x: x + 8, y: y + 8, w: 16, h: 16, taken: false })
 ```
 
-Bölüm metni değişmeyen bir **plan** olarak kalır; nesneler **canlı durumdur**. Bu ikisini ayrı tutmak, ileride bölümü
-yeniden başlatmayı kolaylaştıracak: nesneleri plandan yeniden kurman yeter.
+- `line[col]` → satır yazısının `col`. harfi.
+- `coins.push(...)` → `coins` listesinin sonuna yeni bir öğe ekler. Liste `const coins = []` ile **boş** başlar.
+- Altın 16×16 bir kutu; 32'lik karenin ortasında dursun diye `x`'e ve `y`'ye 8 ekleriz.
+- `taken: false` → "henüz alınmadı".
 
-Toplamak, oyuncu ile henüz `taken` olmayan her altın arasındaki olağan kutu kesişimidir.
+**İki kutu çakışıyor mu?** `overlaps(a, b)` iki kutunun üst üste gelip gelmediğini söyler. Dört koşulun **hepsi** doğru
+olmalı (`&&` "ve" demektir): `a`'nın solu `b`'nin sağından solda, `a`'nın sağı `b`'nin solundan sağda, aynı şey dikeyde
+de. Biri bile yanlışsa kutular arasında boşluk vardır.
 
-Altın sayacı `ctx.restore()`'dan **sonra**, ekran koordinatlarında çizilir; böylece dünya kayarken köşede sabit kalır.
-Arayüze ait her şey (skor, canlar, mesajlar) restore'dan sonra; dünyada yaşayan her şey `save` ile `restore` arasında
-çizilir.
+`update()` içinde her altına bakarız: alınmamışsa (`!coin.taken`) **ve** oyuncuyla çakışıyorsa onu alınmış işaretleriz
+ve sayacı bir artırırız (`collected += 1`). Alınmış altın bir daha sayılmaz.
+
+**Daire çizmek.** Canvas'ta daire için önce bir **yol** (path) çizip sonra onu boyarız:
+
+```js
+ctx.beginPath()                          // yeni bir şekle başla
+ctx.arc(merkezX, merkezY, 8, 0, Math.PI * 2)   // yarıçapı 8 olan bir yay
+ctx.fill()                               // şekli seçili renkle doldur
+```
+
+`arc`'ın son iki sayısı yayın başladığı ve bittiği açıdır. `Math.PI * 2` tam bir tur demektir; yani tam bir daire.
+Merkez, kutunun köşesine genişliğin yarısını ekleyerek bulunur: `coin.x + coin.w / 2`.
+
+`if (coin.taken) continue` → `continue` döngünün **bu turunu** atlar ve sıradaki altına geçer: alınan altın çizilmez.
+
+**Arayüz kaydırılmaz.** Altınlar dünyada yaşar, bu yüzden `save` ile `restore` arasında çizilir ve dünyayla kayar.
+Sayaç ise arayüzdür: `ctx.restore()`'dan **sonra**, ekran koordinatlarında çizilir; dünya kayarken köşede sabit kalır.
+Skor, can, mesaj gibi arayüz şeyleri hep `restore`'dan sonra gelir. `'Coins: ' + collected` yazıya sayıyı ekler
+(`'Coins: 3'`). `ctx.font` yazı tipini, `ctx.textAlign = 'left'` sola hizalamayı seçer, `ctx.fillText(yazı, x, y)`
+yazıyı boyar.
 
 # --task--
 
@@ -55,14 +84,78 @@ Arayüze ait her şey (skor, canlar, mesajlar) restore'dan sonra; dünyada yaşa
 
 # --task-tr--
 
-1. `'P'` aramasını her döşemeyi tarayan bir döngüyle değiştir (`LEVEL.forEach((line, row) => { for (let col ...) })`):
-   `'P'`de oyuncuyu eskisi gibi oluştursun ve her `'o'` için `const coins = []`'a
-   `{ x: col * TILE + 8, y: row * TILE + 8, w: 16, h: 16, taken: false }` altını eklesin.
-2. `let collected = 0` ve `function overlaps(a, b)` (kutu testi) ekle. `update()` içinde oyuncuyu taşıdıktan sonra
-   oyuncunun kesiştiği her altını `taken` yap ve say.
-3. Toplanmamış altınları kamera `save`/`restore`'unun içinde, merkezlerinde 8 yarıçaplı `'#facc15'` daireler olarak
-   çiz. `restore`'dan sonra `(12, 26)` noktasına sola hizalı, beyaz `'bold 18px sans-serif'` ile `Coins: 3` (gerçek
-   sayı) yaz.
+1. Oyuncuyu oluşturan kısmı (`let player` satırından `LEVEL.forEach` bloğunun kapanış `})`'ine kadar) şununla
+   değiştir:
+
+   ```js
+   // Bölüm yazısı plandır; bu nesneler ondan kurulan canlı durumdur.
+   let player
+   const coins = [] // ← yeni
+   LEVEL.forEach((line, row) => {
+     for (let col = 0; col < COLS; col++) { // ← değişti: artık her sütuna bakıyoruz
+       const x = col * TILE
+       const y = row * TILE
+       if (line[col] === 'P') player = { x: x + 4, y: y + 2, w: 24, h: 30, vx: 0, vy: 0, grounded: false }
+       if (line[col] === 'o') coins.push({ x: x + 8, y: y + 8, w: 16, h: 16, taken: false })
+     }
+   })
+   let collected = 0 // ← yeni
+   ```
+
+   Eski `const col = line.indexOf('P')` ve `if (col !== -1) ...` satırları gitti; altında `let coyote = 0` olduğu gibi
+   kalır.
+
+2. `overlapsSolid` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp iki kutunun çakışmasını soran
+   fonksiyonu ekle:
+
+   ```js
+   function overlaps(a, b) {
+     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+   }
+   ```
+
+3. `update()` fonksiyonunda `coyote = ...` satırının altına, kamera satırlarından **önce** altın toplamayı ekle:
+
+   ```js
+     coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)
+
+     for (const coin of coins) { // ← yeni: bu bloğun tamamı
+       if (!coin.taken && overlaps(player, coin)) {
+         coin.taken = true
+         collected += 1
+       }
+     }
+   ```
+
+4. `draw()` fonksiyonunda karelerin iki döngüsünün kapanışından sonra, oyuncuyu çizen `ctx.fillStyle = '#dc2626'`
+   satırından **önce** altınları çiz:
+
+   ```js
+     ctx.fillStyle = '#facc15'
+     for (const coin of coins) {
+       if (coin.taken) continue
+       ctx.beginPath()
+       ctx.arc(coin.x + coin.w / 2, coin.y + coin.h / 2, 8, 0, Math.PI * 2)
+       ctx.fill()
+     }
+   ```
+
+5. Yine `draw()`'da, `ctx.restore()` satırının **altına** (fonksiyonun son `}`'inden önce) sayacı ekle:
+
+   ```js
+     ctx.restore()
+
+     // Arayüz ekran koordinatlarında, restore'dan sonra çizilir; böylece kaymaz.
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Coins: ' + collected, 12, 26)
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sarı altınlar görünmeli; üstlerinden geçince kaybolmalı ve sol
+   üstteki `Coins:` sayısı artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa sayacın gerçekten
+   `ctx.restore()`'dan **sonra** yazıldığına bak.
 
 # --tests--
 

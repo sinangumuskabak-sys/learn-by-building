@@ -38,37 +38,73 @@ return completes('O') ?? completes('X') ?? (cells[4] === '' ? 4 : randomFreeCell
 
 # --explanation-tr--
 
-O'yu bilgisayar oynasın. Akıllı hissettiren en basit rakip, bir acemi nasıl düşünüyorsa öyle sıralanmış bir **öncelik
-listesidir**:
+**Bu adımda:** O'yu bilgisayar oynayacak. Sen bir kutuya tıklayıp X koyunca, bilgisayar hemen bir O koyacak. Seni
+engellemeye ve fırsat bulunca kazanmaya çalışacak.
 
-1. Şimdi kazanabiliyorsam kazan.
-2. Rakip bir sonraki hamlede kazanabilecekse o hücreyi kapat.
-3. Orta boşsa ortayı al.
-4. Değilse herhangi bir boş hücre seç.
+**Kural listesi.** Akıllı görünen en basit rakip, bir acemi gibi düşünen **öncelik sırasına dizilmiş kurallardır**:
 
-1. ve 2. kurallar farklı işaretle aynı sorudur: "`mark` için bir çizgiyi tamamlayacak boş bir hücre var mı?" Bunu, her
-hamleyi tahtanın **bir kopyası üzerinde deneyerek** cevapla; `winningLine()`'ın hücreleri parametre olarak almasının
-nedeni tam da bu:
+1. Şimdi kazanabiliyorsam, kazan.
+2. Rakip bir sonraki hamlede kazanabilecekse, o kutuyu kapat.
+3. Orta kutu boşsa, onu al.
+4. Yoksa boş kutulardan birini rastgele seç.
+
+1. ve 2. kural aynı soru, sadece işaret farklı: "`mark` için bir çizgiyi tamamlayacak boş bir kutu var mı?" Bunu
+her hamleyi tahtanın bir **kopyası** üzerinde **deneyerek** cevaplarız. 4. adımda `winningLine()`'ın tahtayı
+parametre olarak almasının sebebi tam da buydu.
+
+**Boş kutuların listesi.**
+
+```js
+const free = []
+cells.forEach((cell, index) => {
+  if (cell === '') free.push(index)
+})
+```
+
+`[]` boş bir dizidir. `free.push(index)` bir elemanı dizinin **sonuna ekler**. Sonunda `free`, boş kutuların
+numaralarını tutar, ör. `[1, 2, 3, 5]`.
+
+**Kopyada denemek.**
 
 ```js
 const completes = (mark) =>
-  free.find((i) => {
-    const copy = [...cells]   // yayma: yeni bir dizi, gerçek tahtaya dokunulmaz
-    copy[i] = mark
+  free.find((index) => {
+    const copy = [...cells]
+    copy[index] = mark
     return winningLine(copy)
   })
 ```
 
-Hiçbir hücre işe yaramazsa `find` `undefined` döndürür; **nullish birleştirme** operatörü `??` ise "sol taraf `null`
-ya da `undefined` ise sağ tarafı kullan" demektir. Böylece öncelik listesinin tamamı neredeyse yukarıdaki Türkçe gibi
-okunur:
+Bunu parça parça okuyalım:
+
+- `const completes = (mark) => ...` → bir fonksiyonu bir sabitte saklıyoruz; `completes('O')` diye çağrılır. Ok
+  (`=>`) işaretinden sonra süslü parantez yoksa, sağdaki şeyin sonucu doğrudan geri verilir.
+- `free.find(...)` → 4. adımdaki gibi: testi geçen ilk boş kutuyu ver, yoksa `undefined`.
+- `[...cells]` → üç nokta (`...`) dizinin elemanlarını yeni bir dizinin içine döker: bir **kopya**. Kopyayı
+  değiştirmek gerçek tahtayı bozmaz. Bir fotokopi üzerinde karalama yapmak gibi.
+- `copy[index] = mark` → hamleyi kopyada dene; `return winningLine(copy)` → çizgi tamamlandı mı?
+
+**Rastgele boş kutu.** `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir sayı verir. `free.length` dizideki
+eleman sayısıdır. Çarpıp `Math.floor` ile aşağı yuvarlayınca geçerli bir sıra numarası çıkar:
 
 ```js
-return completes('O') ?? completes('X') ?? (cells[4] === '' ? 4 : rastgeleBoşHücre)
+const random = free[Math.floor(Math.random() * free.length)]
 ```
 
-(Neden `||` değil? Çünkü `0` geçerli bir hücre ve `||` `0`'ı "hiçbir şey" sayar. `??` yalnızca `null`/`undefined`'ı
-atlar.)
+**Hepsini birleştirmek: `??`.**
+
+```js
+return completes('O') ?? completes('X') ?? (cells[4] === '' ? 4 : random)
+```
+
+`??` "soldaki **yoksa** (`null` ya da `undefined` ise) sağdakini kullan" demektir. Yani cümle neredeyse yukarıdaki
+listeyle aynı okunur: kazanan kutu, yoksa engelleyen kutu, yoksa (orta boşsa 4, değilse rastgele).
+
+(Neden `||` değil? Çünkü `0` geçerli bir kutu numarası ve `||` `0`'ı "hiçbir şey" sayar. `??` yalnızca
+`null`/`undefined`'ı atlar.)
+
+**Sırayla oynamak.** Tıklama artık yalnızca sıra X'teyse işe yarar (`else if` = "değilse, eğer..."). X'in hamlesi
+olduysa (`moved`) ve tur bitmediyse (`!result`), bilgisayar hemen O'yu oynar.
 
 # --task--
 
@@ -80,10 +116,50 @@ atlar.)
 
 # --task-tr--
 
-1. Yukarıdaki dört kurala uyarak O'nun oynaması gereken indeksi döndüren `function computerMove(cells)` yaz. Önce boş
-   hücrelerin listesini (`free`) oluştur, rastgele hücreyi `free[Math.floor(Math.random() * free.length)]` ile seç.
-2. Tıklama işleyicisinde insanın yalnızca sıra X'teyken oynamasına izin ver; X'in turu bitirmeyen başarılı bir
-   hamlesinden sonra hemen `play(computerMove(board))` çağır.
+1. `outcome` fonksiyonunun kapanan `}` işaretinin altına bir boş satır bırak ve bilgisayarın hamlesini seçen
+   fonksiyonu yaz (`function play(index)`'ten önce):
+
+   ```js
+   function computerMove(cells) {
+     const free = []
+     cells.forEach((cell, index) => {
+       if (cell === '') free.push(index)
+     })
+     // A free cell that would complete a line for `mark`, if there is one.
+     const completes = (mark) =>
+       free.find((index) => {
+         const copy = [...cells]
+         copy[index] = mark
+         return winningLine(copy)
+       })
+     const random = free[Math.floor(Math.random() * free.length)]
+     return completes('O') ?? completes('X') ?? (cells[4] === '' ? 4 : random)
+   }
+   ```
+
+2. Tıklama dinleyicisini şöyle değiştir:
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     if (result) {
+       reset()
+     } else if (player === 'X') { // ← değişti
+       // The canvas may be displayed at a different size than its 300×300 pixels, so scale the click.
+       const rect = canvas.getBoundingClientRect()
+       const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+       const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+       const moved = play(Math.floor(y / CELL) * 3 + Math.floor(x / CELL)) // ← değişti
+       if (moved && !result) play(computerMove(board)) // ← yeni
+     }
+     draw()
+   })
+   ```
+
+   `play()` 3. adımda hamle olunca `true`, olmayınca `false` döndürecek şekilde yazılmıştı; `moved` o cevabı tutar.
+
+3. **Çalıştır**'a bas. Oynamak için bir kutuya tıkla: X'inin hemen ardından bir O belirmeli. İki X'i yan yana
+   koyunca bilgisayar üçüncüyü kapatmalı. Alttaki kontrollerin hepsi yeşil olmalı. "`computerMove()` tahtayı
+   değiştirmemeli" kontrolü kırmızıysa `const copy = [...cells]` satırında üç noktayı unutmuş olabilirsin.
 
 # --tests--
 

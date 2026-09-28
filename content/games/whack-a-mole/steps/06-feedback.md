@@ -29,25 +29,37 @@ is the timestamp idea again, and it keeps the animation smooth even if frames ar
 
 # --explanation-tr--
 
-Bir köstebeğe vurunca öylece kayboluyor. Vurdun mu, yoksa bir an önce kendisi mi saklandı? Oyuncuların **geri bildirime**
-ihtiyacı var: her harekete anında ve görünür bir cevap.
+**Bu adımda:** vurduğun her köstebeğin üstünde sarı bir `+1` belirecek, yukarı süzülüp yavaşça solacak. Böylece
+vurduğunu hemen anlayacaksın.
 
-Yukarı süzülüp solan bir `+1` klasiktir. Her biri **ne zaman doğduğunu** hatırlayan kısa ömürlü bir nesnedir:
+**Geri bildirim (feedback).** Şu an köstebeğe vurunca sadece kayboluyor. Vurdun mu, yoksa köstebek bir an önce kendi
+mi saklandı? Oyuncu her hareketine anında, gözle görülür bir cevap ister. Süzülen `+1` bunun klasik bir örneğidir.
+
+**Kısa ömürlü nesneler.** Her `+1` bir nesnedir ve **ne zaman doğduğunu** hatırlar:
 
 ```js
 popups.push({ x: hole.x, y: hole.y - 40, born: now })
 ```
 
-Onunla ilgili her şey çizim anında **yaşından hesaplanır** (`now - popup.born`):
+Deliğin 40 piksel üstünde, `now` anında doğdu. Hepsini `popups` dizisinde tutarız.
+
+**Her şey yaşından hesaplanır.** Çizerken yaşını (`now - p.born`) 600'e böleriz: `t`, 600 ms boyunca 0'dan 1'e çıkar.
 
 ```js
-const t = (now - popup.born) / 600    // 600 ms'de 0 → 1
-ctx.globalAlpha = 1 - t               // sol
-ctx.fillText('+1', popup.x, popup.y - t * 30)   // 30 px yukarı süzül
+const t = (now - p.born) / 600    // 0 → 1
+ctx.globalAlpha = 1 - t            // solarak kaybol
+ctx.fillText('+1', p.x, p.y - t * 30)   // 30 piksel yukarı süzül
 ```
 
-Karelik hesap tutmaya gerek yok; `t` 1'i geçince eski yazılar yalnızca süzülüp atılır. Animasyonu bir başlangıç
-zamanından türetmek yine zaman damgası fikridir ve kareler atlansa bile animasyonu akıcı tutar.
+`ctx.globalAlpha` bundan sonra çizilen **her şeyin** saydamlığıdır: 1 tam görünür, 0 görünmez. Bu yüzden `+1`'leri
+çizdikten sonra onu mutlaka `1`'e geri alırız; yoksa skor yazısı da soluk çizilir.
+
+Kare kare hesap tutmaya gerek yok; bu yine "ne zaman?" diye zaman saklama fikri. Kare atlansa bile animasyon düzgün
+kalır.
+
+**Eskileri atmak.** `popups.filter((p) => now - p.born < 600)` → sadece 600 ms'den genç olanları tutan yeni bir liste
+yapar; `popups = ...` ile eskisinin yerine koyarız. Bu satırı `update()`'te `'playing'` kontrolünden **önce** yazarız
+ki tur bittikten sonra da son `+1`'ler solmayı bitirebilsin.
 
 # --task--
 
@@ -60,12 +72,48 @@ zamanından türetmek yine zaman damgası fikridir ve kareler atlansa bile anima
 
 # --task-tr--
 
-1. `let popups = []` ekle ve `start()` içinde boşalt.
-2. Bir köstebeğe vurulunca `{ x: hole.x, y: hole.y - 40, born: now }` ekle.
-3. `update()` içinde yalnızca 600 ms'den genç yazıları (`now - p.born < 600`) tut. Bunu `'playing'` kontrolünden önce
-   yap ki tur bitince de yazılar solmayı tamamlasın.
-4. `draw()` içinde her yazıyı `'#fef08a'` renginde, `'bold 24px sans-serif'` ile ortalı `+1` olarak;
-   `t = (now - p.born) / 600`, `globalAlpha = 1 - t` ve `y - t * 30` ile çiz. Sonra `globalAlpha`'yı `1`'e döndür.
+1. `let best = ...` satırının hemen altına ekle:
+
+   ```js
+   let popups = [] // floating "+1"s: { x, y, born }
+   ```
+
+2. `start()` içinde `nextPop = now` satırının altına ekle:
+
+   ```js
+     popups = []
+   ```
+
+3. `pointerdown` dinleyicisinde `hole.upUntil = 0` satırının altına ekle:
+
+   ```js
+       popups.push({ x: hole.x, y: hole.y - 40, born: now })
+   ```
+
+4. `update()` fonksiyonunun **en başına**, `if (state !== 'playing') return` satırının üstüne ekle:
+
+   ```js
+     popups = popups.filter((p) => now - p.born < 600)
+   ```
+
+5. `draw()` içinde, delik döngüsünü kapatan `}`'den sonra ve `ctx.fillStyle = 'white'` satırından **önce** bir satır
+   boşluk bırakıp şunu ekle:
+
+   ```js
+     ctx.fillStyle = '#fef08a'
+     ctx.font = 'bold 24px sans-serif'
+     ctx.textAlign = 'center'
+     for (const p of popups) {
+       const t = (now - p.born) / 600 // 0 → 1 over the popup's life
+       ctx.globalAlpha = 1 - t
+       ctx.fillText('+1', p.x, p.y - t * 30)
+     }
+     ctx.globalAlpha = 1
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bir köstebeğe vur: üstünde sarı bir `+1` yukarı süzülüp
+   solmalı. Alttaki kontrollerin hepsi yeşil olmalı. Opaklık kontrolü kırmızıysa döngüden sonraki
+   `ctx.globalAlpha = 1` satırını kontrol et.
 
 # --tests--
 

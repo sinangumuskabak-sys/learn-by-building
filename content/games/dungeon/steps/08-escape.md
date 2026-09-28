@@ -15,12 +15,36 @@ door, and a world that remembers what you took. Most top-down adventure games ar
 
 # --explanation-tr--
 
-Kilitli kapının arkasında son oda dışarı çıkan merdiveni saklar. Üstüne basmak kazandırır ve süre skordur: 3B labirentteki gibi en iyi
-süre **en düşük** olandır, `localStorage`'a kaydedilir.
+**Bu adımda:** zindandan kaçışı ekleyeceğiz. Kilitli kapının arkasındaki son odada (sağ alt) koyu bir kare, yani çıkış
+merdiveni var. Üstüne basınca kazanırsın. Sağ üstte geçen süre yazacak, en iyi sürenin de kaydı tutulacak.
 
-Bununla macera tamamlandı: metin olarak yazılan odalar, duvar boyunca kayarak yürümek, hizalı boşluklardan odalar arasında geçmek,
-yalnızca bir kutu olan bir kılıç, küçük bir durum makinesiyle düşmanlar, dokunulmazlık ve geri itmeyle kalpler, anahtarlar ve bir kapı,
-ve aldıklarını hatırlayan bir dünya. Yukarıdan bakışlı macera oyunlarının çoğu, daha fazla odayla, aynı parçalardır.
+**Süreyi kare sayarak ölçeriz.** Oyun saniyede 60 kare çizer. `frames` oynarken her karede 1 artar; ekrana yazarken
+60'a bölüp saniyeye çeviririz. `(sayı).toFixed(1)` sayıyı virgülden sonra tek basamakla yazıya çevirir: `600 / 60`
+→ `'10.0'`. Bu işi yapan küçük fonksiyonun adı `seconds`.
+
+**Kazanmak yeni bir durum.** 6. adımda `state` ya `'playing'` ya `'over'` idi. Şimdi üçüncü bir değer ekliyoruz:
+`'won'` (kazandı). Oyuncunun ortasının altındaki karo `E` olunca `state = 'won'` olur. `update` zaten "oynamıyorsa dur"
+diyordu; oyun burada donar. Bitiş ekranı da hazır: sadece yazısını duruma göre seçeriz (`state === 'won' ? ... : 'Game over'`).
+
+**Rekoru saklamak: `localStorage`.** Tarayıcının küçük bir defteri gibidir; sayfayı kapatıp açsan da içindekiler kalır.
+
+```js
+localStorage.setItem('dungeon-best', best)   // deftere yaz
+localStorage.getItem('dungeon-best')         // defterden oku (yazı olarak gelir)
+```
+
+`Number(...)` yazıyı sayıya çevirir. Defterde bir şey yoksa sayı çıkmaz; `|| 0` "o zaman 0 al" der. `best` 0 ise
+"henüz rekor yok" demektir.
+
+**Az olan iyidir.** Süre kısaldıkça daha iyi. Yeni süre, rekor hiç yoksa (`best === 0`) **ya da** eskisinden küçükse
+(`frames < best`) yeni rekor olur.
+
+**Yazıda koşullu parça:** `(best ? '  Best ' + seconds(best) : '')` → rekor varsa "Best ..." kısmını ekle, yoksa boş
+yazı ekle. `ctx.textAlign = 'right'` yazıyı verilen noktanın soluna hizalar; böylece sağ kenara yaslanır.
+
+Böylece macera tamam: yazıyla çizilmiş odalar, duvar boyunca kayarak yürümek, hizalı boşluklardan odadan odaya geçmek,
+aslında bir kutu olan kılıç, küçük bir durum makinesiyle düşmanlar, dokunulmazlık ve geri itmeyle kalpler, anahtar ve
+kapı, ve aldıklarını hatırlayan bir dünya. Yukarıdan bakışlı macera oyunlarının çoğu, daha çok odayla, bu parçalardan yapılır.
 
 # --task--
 
@@ -32,10 +56,67 @@ ve aldıklarını hatırlayan bir dünya. Yukarıdan bakışlı macera oyunları
 
 # --task-tr--
 
-1. `frames` (`reset()`'te `0`, oynanan her karede 1 fazla) ve `localStorage` `'dungeon-best'`'ten `best` ekle.
-2. Oyuncunun ortasının altındaki bir `E` durumu `'won'` yapar ve süre ilkse ya da daha hızlıysa onu `best` olarak kaydeder.
-3. Bir `E`'yi karosunun 4 piksel içinde `'#1c1917'` bir kare olarak çiz. Sağ üste `Time 12.3` ve bir tane olunca `  Best 9.8`. Kazanınca
-   mesaj `You escaped in 12.3 s!` olur.
+1. `let state ...` satırının yorumunu güncelle ve altına iki satır ekle:
+
+   ```js
+   let state // 'playing', 'won' or 'over'
+   let frames
+   let best = Number(localStorage.getItem('dungeon-best')) || 0
+   ```
+
+2. `reset()` içinde `swing = 0` satırının altına ekle:
+
+   ```js
+     frames = 0
+   ```
+
+3. `update()`'in başında `if (state !== 'playing') return` satırının altına ekle:
+
+   ```js
+     frames += 1
+   ```
+
+4. `update()`'te anahtar/kalp toplayan `if (here === 'k' || here === 'h') { ... }` bloğunun kapanış `}`'sinden sonra,
+   `// A locked door ...` yorumunun **üstüne** çıkışı ekle:
+
+   ```js
+     if (here === 'E') {
+       state = 'won'
+       if (best === 0 || frames < best) {
+         best = frames
+         localStorage.setItem('dungeon-best', best)
+       }
+     }
+   ```
+
+5. `draw()`'daki karo döngüsünde, kalbi çizen `if (ch === 'h') { ... }` bloğunun altına merdiveni ekle:
+
+   ```js
+         if (ch === 'E') {
+           ctx.fillStyle = '#1c1917'
+           ctx.fillRect(x + 4, y + 4, T - 8, T - 8)
+         }
+   ```
+
+6. `draw()`'da `ctx.fillText('Keys ' + keysHeld, 100, 30)` satırının hemen altına süre yazısını ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     const seconds = (f) => (f / 60).toFixed(1)
+     ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 12, 30)
+   ```
+
+   `'  Best '` içinde başta **iki** boşluk var; kontroller yazıyı harfi harfine arar.
+
+7. `draw()`'un sonundaki bitiş ekranında `ctx.fillText('Game over', ...)` satırını şununla değiştir:
+
+   ```js
+       ctx.fillText(state === 'won' ? 'You escaped in ' + seconds(frames) + ' s!' : 'Game over', canvas.width / 2, 190) // ← değişti
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ üstte süre akmalı. Anahtarı al, kapıyı aç, sağ alttaki
+   odada ortadaki koyu kareye bas: `You escaped in ... s!` görmelisin; Boşluk yeniden başlatır ve artık `Best` de
+   yazar. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

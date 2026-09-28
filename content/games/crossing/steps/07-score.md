@@ -26,9 +26,14 @@ score so there is always a number to beat.
 
 # --explanation-tr--
 
-Ne puan kazandırmalı? Her zıplama puan verseydi bir oyuncu güvenli çimende sonsuza kadar aşağı yukarı zıplayabilirdi.
-Klasik kural **ilerlemeyi** ödüllendirir: yalnızca bu kurbağanın **daha önce hiç ulaşmadığı** bir satır için 10 puan. Bu
-kurbağa başına bir sayıdır: şimdiye kadarki en yüksek satır (en küçük numara), `furthest`:
+**Bu adımda:** puan ve rekor ekleyeceğiz. Sol üstte `Score: 0  Best: 0` yazacak. Kurbağa daha önce hiç çıkmadığı bir
+satıra her zıpladığında 10, bir eve her ulaştığında 50, bir bölümü her bitirdiğinde 100 puan daha alacak. Oyun
+bitince rekor saklanacak ve sayfayı yenilesen bile kalacak.
+
+**Ne puan kazandırmalı?** Her zıplama puan verseydi, oyuncu güvenli çimende sonsuza kadar aşağı yukarı zıplayabilirdi.
+Klasik kural **ilerlemeyi** ödüllendirir: 10 puan sadece bu kurbağanın **daha önce hiç ulaşmadığı** bir satır için.
+Bunun için kurbağa başına tek bir sayı yeter: `furthest` (en uzak), şimdiye kadarki en yukarı satır (en küçük
+numara):
 
 ```js
 if (frog.y < furthest) {
@@ -37,12 +42,32 @@ if (frog.y < furthest) {
 }
 ```
 
-Her yeni kurbağa `furthest`'i yeniden başlangıç satırında başlatır; böylece bir can kaybettikten sonra yukarı giden yol
-yine puan değerindedir. Daha büyük hedefler daha büyük ödüller verir: bir ev için 50, bir bölümü bitirmek için 100 daha.
-Bir skor tasarlamak **oyunculardan ne yapmalarını istediğini** tasarlamaktır.
+"Yeni satır, şimdiye kadarki en yukarıdan daha mı yukarıda? Öyleyse yeni rekor burası, 10 puan ver." Aşağı inip
+tekrar çıkmak puan getirmez.
 
-En iyi skor oyun bittiğinde önceki oyunlardaki gibi `localStorage`'a kaydedilir ve skorun yanında gösterilir; böylece
-geçilecek bir sayı hep vardır.
+Her yeni kurbağa `furthest`'i yine başlangıç satırından başlatır; yani can kaybettikten sonra yukarı giden yol yine
+puan getirir. Büyük hedefler büyük ödüller verir: ev için 50, bölümü bitirmek için 100 daha. Bir puan sistemi
+tasarlamak, **oyuncuların ne yapmasını istediğini** tasarlamaktır.
+
+**Rekoru saklamak: `localStorage`.** Normal değişkenler sayfa yenilenince sıfırlanır. `localStorage` tarayıcının
+küçük bir defteri gibidir; yazdığın şey yenilemeden sonra da kalır:
+
+```js
+localStorage.setItem('frogger-best', 490)   // 'frogger-best' başlığı altına 490 yaz
+localStorage.getItem('frogger-best')        // o başlıkta ne yazıyor? → '490' (yazı olarak)
+```
+
+Defter her şeyi **yazı** olarak saklar ve daha önce hiç yazılmamışsa "hiçbir şey" (`null`) verir. Bu yüzden:
+
+```js
+let best = Number(localStorage.getItem('frogger-best')) || 0
+```
+
+`Number(...)` yazıyı sayıya çevirir; `|| 0` "işe yarar bir değer yoksa 0 kullan" demektir. Rekoru, oyunun bittiği tek
+yerde, `die()` içinde son can gittiğinde güncelleriz; skor rekordan büyükse yeni rekor olur ve deftere yazılır.
+
+**Yazıları birleştirmek.** `'Score: ' + score + '  Best: ' + best` yazıları ve sayıları uç uca ekler:
+`'Score: 120  Best: 300'`.
 
 # --task--
 
@@ -55,12 +80,88 @@ geçilecek bir sayı hep vardır.
 
 # --task-tr--
 
-1. `let score`, `let furthest` ve `let best = Number(localStorage.getItem('frogger-best')) || 0` ekle. `reset()`
-   `score = 0`, `newFrog()` `furthest = START_ROW` ayarlar.
-2. `hop()` içinde, ev kontrolünden önce: `frog.y < furthest` ise `furthest`'i güncelle ve 10 ekle.
-3. Bir evi doldurmak için 50, sonuncuyu doldurmak için 100 daha ekle.
-4. Oyun `best`'ten yüksek bir skorla biterse onu `'frogger-best'` altında kaydet.
-5. Sol üste `Score: 120  Best: 300` yaz.
+1. `let filled // one true/false per home` satırının altına üç satır ekle:
+
+   ```js
+   let score
+   let furthest // the highest row (smallest number) this frog has reached
+   let best = Number(localStorage.getItem('frogger-best')) || 0
+   ```
+
+2. `newFrog()` ve `reset()` fonksiyonlarına birer satır ekle:
+
+   ```js
+   function newFrog() {
+     frog = { x: 5, y: START_ROW }
+     furthest = START_ROW   // ← yeni
+   }
+
+   function reset() {
+     lives = 3
+     state = 'playing'
+     level = 1
+     filled = HOMES.map(() => false)
+     score = 0              // ← yeni
+     for (const lane of LANES) lane.offset = 0
+     newFrog()
+   }
+   ```
+
+3. `hop()` fonksiyonunda, `if (frog.y === 0) reachHome()` satırının hemen **üstüne** ilerleme puanını ekle:
+
+   ```js
+     if (!lane || !lane.log) frog.x = Math.round(frog.x)
+     if (frog.y < furthest) {   // ← yeni
+       furthest = frog.y        // ← yeni
+       score += 10              // ← yeni
+     }                          // ← yeni
+     if (frog.y === 0) reachHome()
+   }
+   ```
+
+4. `reachHome()` fonksiyonuna ev ve bölüm bonuslarını ekle:
+
+   ```js
+     filled[i] = true
+     score += 50                       // ← yeni
+     if (filled.every(Boolean)) {
+       level += 1
+       score += 100                    // ← yeni
+       filled = HOMES.map(() => false)
+     }
+     newFrog()
+   }
+   ```
+
+5. `die()` fonksiyonunun sonuna, `state = 'over'` satırının altına rekoru kaydeden kısmı ekle:
+
+   ```js
+     state = 'over'
+     if (score > best) {                            // ← yeni
+       best = score                                 // ← yeni
+       localStorage.setItem('frogger-best', best)   // ← yeni
+     }                                              // ← yeni
+   }
+   ```
+
+6. `draw()` fonksiyonunda, `ctx.font = 'bold 18px sans-serif'` satırının altındaki `ctx.textAlign = 'right'`
+   satırının **üstüne** skoru sola yaslı yazan iki satırı ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'                                          // ← yeni
+     ctx.fillText('Score: ' + score + '  Best: ' + best, 10, 27)    // ← yeni
+     ctx.textAlign = 'right'
+     ctx.fillText('Level ' + level + '   Lives: ' + lives, canvas.width - 10, 27)
+   ```
+
+   `'  Best: '`'ın başında **iki** boşluk var.
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sol üstte `Score: 0  Best: 0` görmelisin. Oynamak için önce oyuna
+   tıkla (bu dokunuş kurbağayı bir satır zıplatıp 10 puan verir), sonra yukarı zıpla: her yeni satır 10 puan
+   getirmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `'frogger-best'` yazısının iki yerde de
+   birebir aynı olduğunu ve yazılardaki boşlukları kontrol et.
 
 # --tests--
 

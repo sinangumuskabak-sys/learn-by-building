@@ -21,17 +21,42 @@ up, then the four neighbours of it. The first untried one is the next shot.
 
 # --explanation-tr--
 
-Bir insan rastgele bilgisayarımızdan çok farklı oynar. Bir isabetten sonra başka yere gitmezsin: **yanındaki** kareleri denersin,
-çünkü geminin geri kalanı orada olmalıdır. Klasik **avla ve hedefle** stratejisi budur:
+**Bu adımda:** bilgisayarı akıllandıracağız. Senin bir gemini vurduktan sonra artık rastgele gezinmeyecek, hemen
+**yanındaki** karelere ateş edecek. Oynarken küçük denizinde isabetlerin art arda dizildiğini göreceksin.
 
-- **hedefle**: henüz batmamış bir gemide bir isabet varsa hemen yanındaki denenmemiş bir kareye (üst, alt, sol ya da sağ) ateş et;
-- **avla**: değilse önceki gibi rastgele ateş et.
+**İnsan gibi düşünmek.** Bir insan rastgele bilgisayarımızdan çok farklı oynar. Bir isabetten sonra uzaklaşmazsın:
+**yanındaki** kareleri denersin, çünkü geminin geri kalanı orada olmalı. Bu klasik **av ve hedef** (hunt and target)
+stratejisidir:
 
-Gemi batınca çevresine ateş etmeye devam etmek için bir sebep kalmaz; bilgisayarın `sunk(ship)`'e bakmasının sebebi budur: oyun bir gemi
-battığında iki oyuncuya da söyler, bu yüzden bilgisayarın da bilmesi adildir.
+- **hedef:** henüz batmamış bir gemide isabet varsa, onun hemen yanındaki (üst, alt, sol, sağ) denenmemiş bir kareye ateş et;
+- **av:** yoksa eskisi gibi rastgele ateş et.
 
-Bu tek fikir ortalamayı yaklaşık 95 atıştan yaklaşık 56'ya düşürür. Kod, ızgarada peşine düşmeye değer bir isabet arayan, sonra onun dört
-komşusuna bakan bir döngüdür. Denenmemiş ilk komşu sonraki atıştır.
+Gemi batınca çevresine ateş etmeye devam etmenin anlamı yoktur; bilgisayar bu yüzden `sunk(ship)`'e bakar. Oyun bir gemi
+batınca iki oyuncuya da söyler, bu yüzden bilgisayarın da bilmesi adildir.
+
+**Kod nasıl?** Önce bütün denizi 1. adımdaki gibi iç içe iki `for` ile dolaşırız ve takip etmeye değer bir isabet ararız:
+
+```js
+const ship = theirShots[r][c] === 'hit' && shipAt(myFleet, r, c)
+if (!ship || sunk(ship)) continue
+```
+
+"Bu kare bir isabetse, oradaki gemiyi al. Gemi yoksa **veya** batmışsa bu kareyi geç." (`continue` sıradaki kareye geçer.)
+
+**Dört komşu.** Bir karenin komşularını bulmak için dört **yön** listesini kullanırız: her yön satıra ve sütuna ne
+ekleneceğini söyler.
+
+```js
+for (const [dr, dc] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+```
+
+`[0, 1]` sağ (sütun +1), `[1, 0]` alt (satır +1), `[0, -1]` sol, `[-1, 0]` üst. Her tur `dr` ve `dc` olarak açılır;
+komşu `(r + dr, c + dc)` olur. Komşu denizin içindeyse (0 ile 9 arası) **ve** henüz denenmediyse onu hemen geri veririz:
+`return { r: nr, c: nc }`. Buradaki `return` iç içe bütün döngülerden ve fonksiyondan bir anda çıkar.
+
+Hiçbir isabet takip edilecek komşu bırakmadıysa döngüler biter ve eski rastgele seçim satırlarına ulaşılır.
+
+Bu tek fikir ortalamayı yaklaşık 95 atıştan yaklaşık 56'ya düşürür.
 
 # --task--
 
@@ -41,8 +66,31 @@ komşusuna bakan bir döngüdür. Denenmemiş ilk komşu sonraki atıştır.
 
 # --task-tr--
 
-1. `pickSquare()`'de önce `theirShots`'ta `myFleet`'in batmamış bir gemisine isabet olan bir kare ara; bulunan ilki için dört komşusundan
-   denizde olan ve denenmemiş ilkini döndür. Yalnızca hiç yoksa rastgele denenmemiş bir kare seç.
+1. `pickSquare()` fonksiyonunu şu hâle getir. Üstteki yorum satırı da değişiyor; eski iki satır (`const left = ...` ve
+   `return left[...]`) en altta aynen kalıyor:
+
+   ```js
+   // Target: a square next to a hit on a ship that is not sunk yet. Hunt: otherwise, any square left.
+   function pickSquare() {
+     for (let r = 0; r < N; r++) { // ← yeni blok başlangıcı
+       for (let c = 0; c < N; c++) {
+         const ship = theirShots[r][c] === 'hit' && shipAt(myFleet, r, c)
+         if (!ship || sunk(ship)) continue
+         for (const [dr, dc] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+           const nr = r + dr
+           const nc = c + dc
+           if (nr >= 0 && nr < N && nc >= 0 && nc < N && !theirShots[nr][nc]) return { r: nr, c: nc }
+         }
+       }
+     } // ← yeni blok sonu
+     const left = untried()
+     return left[Math.floor(Math.random() * left.length)]
+   }
+   ```
+
+2. **Çalıştır**'a bas ve biraz oyna. Bilgisayar senin bir gemini vurunca sonraki atışları hemen o isabetin yanına
+   gelmeli; gemi batınca yeniden rastgele atmalı. Alttaki kontrollerin hepsi yeşil olmalı. "far better" kontrolü
+   kırmızıysa komşu satırındaki `!theirShots[nr][nc]` kısmını kontrol et: yalnızca denenmemiş kareler seçilmeli.
 
 # --tests--
 

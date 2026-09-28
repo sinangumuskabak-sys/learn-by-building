@@ -31,28 +31,62 @@ grow, just **skip the `pop()`**: the new head is added and the tail stays.
 
 # --explanation-tr--
 
-Yılanın artık bir amaca ihtiyacı var. Yem, ızgarada rastgele yere konan bir hücre daha:
+**Bu adımda:** yılana bir amaç veriyoruz. Tahtada rastgele bir yerde kırmızı bir yem belirecek. Yılanın başı yemin
+üstüne gelince yılan bir hücre uzayacak, skor bir artacak ve yem başka bir yere geçecek.
+
+**Kaç sütun, kaç satır?** `/` işareti **bölme** demektir. `canvas.width / CELL` = `400 / 20` = `20` sütun.
+Bunu `COLS` (sütunlar), satır sayısını da `ROWS` (satırlar) diye saklarız.
+
+**Rastgele sayı.** Yem her seferinde başka bir yerde çıksın istiyoruz:
 
 ```js
-Math.random()                    // 0 ile 1 arası bir sayı (1 hariç)
-Math.random() * COLS             // 0 ile 20 arası
-Math.floor(Math.random() * COLS) // bir tam sayı: 0, 1, ... 19
+Math.random()                    // 0 ile 1 arasında rastgele bir sayı (1 hariç), ör. 0.537...
+Math.random() * COLS             // 0 ile 20 arasında (20 hariç), ör. 10.74...
+Math.floor(Math.random() * COLS) // küsuratı atar: 0, 1, ... 19 tam sayılarından biri
 ```
 
-Yem asla yılanın **içinde** çıkmamalı; boş bir hücre bulana kadar seçmeye devam et. `do ... while` döngüsü gövdesini
-en az bir kez çalıştırır, sonra koşul doğru olduğu sürece tekrarlar:
+`Math`, JavaScript'in hazır matematik araç kutusudur. `Math.floor(sayı)` sayıyı **aşağı yuvarlar**: `10.74`
+→ `10`. Hücre numaraları tam sayı olmalı, o yüzden gerekli.
+
+**Değersiz değişken.** `let food` yazıp `=` koymazsak değişken oluşur ama henüz içi boştur. Değerini birazdan
+`placeFood()` verecek.
+
+**Yem yılanın içinde çıkmasın.** Rastgele bir hücre seçeriz; yılanın üstüne denk geldiyse yeniden seçeriz.
+Bunu `do ... while` döngüsü yapar:
 
 ```js
 do {
   food = { x: ..., y: ... }
-} while (snake.some((part) => part.x === food.x && part.y === food.y))
+} while (koşul)
 ```
 
-`array.some(test)` şu soruyu cevaplar: "`test`'in doğru olduğu en az bir eleman var mı?".
+"Önce süslü parantezin içini **bir kez** yap; sonra `while` parantezindeki koşul doğru olduğu sürece tekrarla."
+Zar atıp istemediğin sayı gelirse yeniden atmak gibi.
 
-Izgarada **çarpışma** basittir: iki şey aynı hücredeyse, yani `x` ve `y` değerleri eşitse değiyorlardır. Yeni baş
-yemin üstüne gelince yılan büyümeli. Önceki adımdaki hareket hilesini hatırla: büyümek için **`pop()`'u atla**. Yeni
-baş eklenir, kuyruk yerinde kalır.
+Koşulumuz: "yılanın parçalarından herhangi biri yemle aynı hücrede mi?"
+
+```js
+snake.some((part) => part.x === food.x && part.y === food.y)
+```
+
+- `dizi.some(test)` → "dizide bu testi geçen **en az bir** eleman var mı?" diye sorar; cevabı doğru (`true`) ya
+  da yanlış (`false`) olur.
+- `(part) => ...` → 5. adımda gördüğün ok fonksiyonu. Her parça için bir kez çalışır; parçanın adı `part`.
+- `&&` → "**ve**". İki taraf da doğruysa doğrudur: sütunlar eşit **ve** satırlar eşit.
+
+**Çarpışma (collision).** Izgarada iki şeyin değmesi kolaydır: aynı hücredeyseler, yani `x`'leri ve `y`'leri
+eşitse değmişlerdir.
+
+**Büyümek.** 6. adımdaki hareket numarasını hatırla: başa bir hücre ekle, sondan bir hücre çıkar. Büyümek için
+sadece **çıkarmayı atla**: yeni baş eklenir, kuyruk yerinde kalır, yılan bir uzar. Bunun için `else` kullanırız:
+
+```js
+if (koşul) {
+  // koşul doğruysa bu
+} else {
+  // değilse bu
+}
+```
 
 # --task--
 
@@ -65,13 +99,71 @@ baş eklenir, kuyruk yerinde kalır.
 
 # --task-tr--
 
-1. `const COLS = canvas.width / CELL` ve `const ROWS = canvas.height / CELL` ekle.
-2. `let food` ve `let score = 0` ekle; `food`'u yılana ait olmayan, ızgara içinde rastgele bir `{ x, y }` hücresine
-   (tam sayılar) ayarlayan bir `placeFood()` fonksiyonu yaz. `snake` oluşturulduktan sonra `placeFood()`'u bir kez
-   çağır.
-3. `update()` içinde yeni başı ekledikten sonra: baş yemin üstündeyse `score`'u 1 artır ve `placeFood()` çağır; değilse
-   eskisi gibi kuyruğu `pop()` ile sil.
-4. `draw()` içinde yemi (yılandan önce) `'red'` bir hücre olarak boya.
+1. `const CELL = 20` satırının hemen altına sütun ve satır sayılarını ekle:
+
+   ```js
+   const COLS = canvas.width / CELL
+   const ROWS = canvas.height / CELL
+   ```
+
+2. `let dir = { x: 1, y: 0 }` satırının hemen altına yem ve skor değişkenlerini ekle:
+
+   ```js
+   let food
+   let score = 0
+   ```
+
+3. `let last = 0` satırının altına bir boş satır bırak ve yemi yerleştiren fonksiyonu yaz, hemen altında da onu
+   bir kez çağır:
+
+   ```js
+   function placeFood() {
+     do {
+       food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }
+     } while (snake.some((part) => part.x === food.x && part.y === food.y))
+   }
+
+   placeFood()
+   ```
+
+   Parantezleri say: her `(` bir `)` ile kapanmalı.
+
+4. `update()` fonksiyonunda `snake.pop()` satırını yemek kontrolünün içine al. Fonksiyon şöyle olsun:
+
+   ```js
+   function update() {
+     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
+     snake.unshift(head)
+     if (head.x === food.x && head.y === food.y) { // ← yeni
+       score += 1 // ← yeni
+       placeFood() // ← yeni
+     } else { // ← yeni
+       snake.pop()
+     } // ← yeni
+   }
+   ```
+
+5. `draw()` fonksiyonunda, arka planı boyayan `ctx.fillRect(0, 0, canvas.width, canvas.height)` satırının
+   altına (yılandan **önce**) yemi çizen iki satırı ekle:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#111'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'red' // ← yeni
+     ctx.fillRect(food.x * CELL, food.y * CELL, CELL, CELL) // ← yeni
+
+     ctx.fillStyle = 'lime'
+     for (const part of snake) {
+       ctx.fillRect(part.x * CELL, part.y * CELL, CELL, CELL)
+     }
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Tahtada kırmızı bir kare görmelisin; yılanı onun üstüne
+   sürünce yılan uzamalı ve yem başka yere geçmeli. Alttaki kontrollerin hepsi yeşil olmalı. Yem hiç görünmüyorsa
+   `placeFood()` çağrısını unutmuş olabilirsin.
 
 # --tests--
 

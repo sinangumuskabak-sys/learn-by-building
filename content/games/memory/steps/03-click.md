@@ -24,21 +24,47 @@ Remember to convert the click to canvas pixels first (position and scale), as in
 
 # --explanation-tr--
 
-XOX'ta her piksel bir hücreye aitti, bu yüzden `Math.floor(x / CELL)` yetiyordu. Burada kartların arasında
-**boşluklar** var ve bir boşluğa tıklamak hiçbir şey yapmamalı. Bu yüzden bir hücre hesaplamak yerine her karta sor:
-"bu nokta senin içinde mi?"
+**Bu adımda:** kartlara tıklanabilir hale getireceğiz. Bir karta tıklayınca beyaza döner ve altındaki meyve görünür.
+Kartların arasındaki boşluğa tıklamak hiçbir şey yapmaz.
 
-Bir nokta, sol kenarı geçmiş ama sağ kenara varmamışsa **ve** üstü geçmiş ama alta varmamışsa dikdörtgenin içindedir:
+**Hangi karta tıklandı?** Kartların arasında **boşluklar** var, bu yüzden tıklanan noktadan basit bir hesapla kart
+bulamayız. Onun yerine her karta tek tek sorarız: "bu nokta senin içinde mi?" Buna **isabet testi** (hit testing)
+denir; canvas'taki her tıklanabilir şey (düğmeler, menüler) böyle çalışır.
+
+Bir nokta, sol kenarın sağında ama sağ kenarın solundaysa **ve** üst kenarın altında ama alt kenarın üstündeyse
+dikdörtgenin içindedir:
 
 ```js
-x >= sol && x < sol + CARD && y >= üst && y < üst + CARD
+x >= left && x < left + CARD && y >= top && y < top + CARD
 ```
 
-`cards.find(...)` "evet" diyen ilk kartı, boşluğa yapılan bir tıklama içinse `undefined` döndürür. Bu **isabet
-testi** (hit testing), bir canvas arayüzündeki tıklanabilir her şeyin çalışma biçimidir: düğmeler, menü öğeleri, bir
-strateji oyunundaki birlikler.
+- `>=` "büyük ya da eşit", `<` "küçük" demektir. Bunlara **karşılaştırma** denir; sonuçları `true` ya da `false`'tur.
+- `&&` "**ve**" demektir: hepsi doğruysa sonuç `true`, biri bile yanlışsa `false`.
 
-Her canvas oyununda olduğu gibi tıklamayı önce canvas piksellerine (konum ve ölçek) çevirmeyi unutma.
+**`find` ile aramak.** `cards.find((card) => ...)` kartları sırayla gezer ve ok fonksiyonu `true` döndüren **ilk**
+kartı verir. Hiçbiri tutmazsa sonuç `undefined`'dır, yani "hiçbir şey". Ok fonksiyonunun gövdesi birkaç satırsa
+`{ }` içine yazılır ve sonucu `return` ile verilir.
+
+**Olay (event) nedir?** Tıklama, tuşa basma gibi kullanıcının yaptığı şeylerdir. Bilgisayara "şu olunca şunu yap"
+deriz:
+
+```js
+canvas.addEventListener('click', (event) => {
+  // canvas'a her tıklandığında burası çalışır
+})
+```
+
+`addEventListener` bir **dinleyici** ekler: `'click'` olayını bekler, olunca verdiğimiz fonksiyonu çağırır.
+`event` olayın bilgisini taşır; `event.clientX` ve `event.clientY` farenin ekrandaki konumudur.
+
+**Ekran konumunu canvas konumuna çevirmek.** Ekran konumu, canvas'ın içindeki konumla aynı değildir: canvas sayfada
+bir yerde durur ve ekranda daha küçük ya da büyük gösterilebilir. `canvas.getBoundingClientRect()` canvas'ın ekrandaki
+yerini ve boyunu verir (`rect.left`, `rect.top`, `rect.width`). Önce canvas'ın sol kenarını çıkarırız (`-`), sonra
+ölçekle çarparız (`canvas.width / rect.width`). Bu iki satırı her canvas oyununda aynen kullanırsın.
+
+`if (card) card.faceUp = true` → "kart bulunduysa onu aç". Tek komutluk `if`'te süslü parantez gerekmez.
+`card.faceUp = true` nesnenin alanını değiştirir. Sonra `draw()` ile tahtayı yeniden çizeriz, yoksa değişikliği
+göremeyiz.
 
 # --task--
 
@@ -51,11 +77,37 @@ Her canvas oyununda olduğu gibi tıklamayı önce canvas piksellerine (konum ve
 
 # --task-tr--
 
-1. Karesi canvas noktası `(x, y)`'yi içeren kartı ya da `undefined` döndüren `function cardAt(x, y)` yaz.
-2. Canvas üzerindeki `click`'te: tıklamayı canvas piksellerine çevir, kartı `cardAt` ile bul, varsa onu aç ve
-   `draw()` çağır.
+1. `function cardY(card) { ... }` fonksiyonunun kapanış `}`'sinden sonra bir satır boşluk bırak ve şunu ekle:
 
-(Kartlar şimdilik açık kalıyor. Eşler sırada.)
+   ```js
+   function cardAt(x, y) {
+     return cards.find((card) => {
+       const left = cardX(card)
+       const top = cardY(card)
+       return x >= left && x < left + CARD && y >= top && y < top + CARD
+     })
+   }
+   ```
+
+2. Hemen altına tıklama dinleyicisini ekle:
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     // The canvas may be displayed at a different size than its own pixels, so scale the click.
+     const rect = canvas.getBoundingClientRect()
+     const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+     const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+     const card = cardAt(x, y)
+     if (card) card.faceUp = true
+     draw()
+   })
+   ```
+
+   Sondaki `})` önemli: `}` fonksiyonu, `)` ise `addEventListener(` parantezini kapatır.
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: tıkladığın kartlar beyaza dönüp meyvesini göstermeli (şimdilik
+   açık kalıyorlar; eşleştirme sonraki adımda). Alttaki kontrollerin hepsi yeşil olmalı. Kenar kontrolü kırmızıysa
+   `>=` ile `<`'nin yerlerini kontrol et.
 
 # --tests--
 

@@ -29,26 +29,49 @@ the ball ploughs straight through the wall. `array.find` gives you just the firs
 
 # --explanation-tr--
 
-Pong'da kutuyu kutuyla karşılaştırdın. Top artık bir daire ve onu kutu gibi saymak, özellikle köşelerde, gözle görülür
-biçimde ıskaladığı tuğlaları kırmasına yol açar. Doğru test kısadır:
+**Bu adımda:** top tuğlaları kıracak. Top bir tuğlaya değince o tuğla kaybolacak ve top geri sekecek: alttan ya da
+üstten değerse yukarı/aşağı yönü, yandan değerse sağ/sol yönü dönecek.
 
-1. **Tuğlanın topun merkezine en yakın noktasını** bul. Bu, tuğlanın dikdörtgeninin içine sınırlanmış merkezden
-   ibaret:
-   ```js
-   const nearestX = clamp(ball.x, brick.x, brick.x + BRICK_W)
-   const nearestY = clamp(ball.y, brick.y, brick.y + BRICK_H)
-   ```
-2. O nokta merkeze bir yarıçaptan yakınsa değiyorlardır. **Kareleri alınmış** uzaklıkları karşılaştır; bu yavaş bir
-   `Math.sqrt`'ten kaçınır ve aynı cevabı verir:
-   ```js
-   dx * dx + dy * dy <= BALL_R * BALL_R
-   ```
+**Daire ile kutu.** Topu da bir kutu gibi düşünüp iki kutuyu karşılaştırabilirdik, ama o zaman top, köşelerde
+gözle görülür biçimde ıskaladığı tuğlaları da kırardı. Doğru yöntem kısa:
 
-Hangi yöne sekmeli? Topun merkezi tuğlanın yatay aralığı içindeyse üst ya da alt yüzeyden gelmiştir; `vy`'yi çevir.
-Değilse bir yana çarpmıştır; `vx`'i çevir.
+**1. Tuğlanın topun merkezine en yakın noktasını bul.** Bu, topun merkezini tuğlanın dikdörtgeninin içine
+sıkıştırmaktır (1. adımda yazdığın `clamp` tam bunu yapar):
 
-Karede en fazla **bir tuğla** kır. Top aynı anda ikisine değip iki kez çevrilirse iki çevirme birbirini götürür ve top
-duvarı dümdüz yarıp geçer. `array.find` sana yalnızca ilk vuruşu verir.
+```js
+const nearestX = clamp(ball.x, brick.x, brick.x + BRICK_W)
+const nearestY = clamp(ball.y, brick.y, brick.y + BRICK_H)
+```
+
+Top tuğlanın solundaysa en yakın nokta sol kenardadır, üstündeyse üst kenarda, köşeye yakınsa köşede...
+
+**2. O nokta merkeze bir yarıçaptan yakınsa değiyorlar.** İki nokta arasındaki uzaklık, okuldaki Pisagor
+bağıntısıyla bulunur: yatay fark `dx`, dikey fark `dy` ise uzaklık `√(dx² + dy²)`'dir. Karekök yavaş bir işlemdir;
+iki tarafın **karesini** karşılaştırmak aynı cevabı verir:
+
+```js
+dx * dx + dy * dy <= BALL_R * BALL_R
+```
+
+**Hangi yöne seksin?** Topun merkezi tuğlanın yatay aralığındaysa (tuğlanın tam altında ya da üstündeyse) üst veya
+alt yüzden girmiştir: `vy`'yi ters çevir. Değilse bir yana çarpmıştır: `vx`'i ters çevir.
+
+```js
+if (throughTopOrBottom) ball.vy = -ball.vy
+else ball.vx = -ball.vx
+```
+
+`else` "değilse" demektir: `if`'in koşulu yanlışsa `else`'ten sonraki komut çalışır.
+
+**Karede en fazla bir tuğla.** Top aynı anda iki tuğlaya değer ve iki kez ters dönerse, iki dönüş birbirini siler
+ve top duvarı dümdüz delip geçer. Bu yüzden sadece **ilk** değen tuğlayı alırız. `find` bunu yapar:
+
+```js
+const brick = bricks.find((b) => b.alive && hitsBrick(b))
+```
+
+"`bricks` listesinde, canlı **ve** topla değen ilk tuğlayı bul." Bulamazsa "hiçbir şey" (`undefined`) verir. Bu
+yüzden sonraki satır `if (brick)` ile "bir tuğla bulunduysa" diye sorar.
 
 # --task--
 
@@ -59,9 +82,47 @@ duvarı dümdüz yarıp geçer. `array.find` sana yalnızca ilk vuruşu verir.
 
 # --task-tr--
 
-1. Yukarıdaki en yakın nokta testiyle daire tuğlaya değdiğinde `true` döndüren `function hitsBrick(brick)` yaz.
-2. `update()` içinde raket kontrolünden sonra: topun çarptığı ilk `alive` tuğlayı bul. Varsa `alive = false` yap;
-   sonra `ball.x` `brick.x … brick.x + BRICK_W` aralığındaysa `vy`'yi, değilse `vx`'i çevir.
+1. `canvas.addEventListener('pointermove', ...)` kodunun kapanış `})`'inden sonra bir boş satır bırak ve dairenin
+   tuğlaya değip değmediğini soran fonksiyonu yaz:
+
+   ```js
+   function hitsBrick(brick) {
+     // The point of the brick closest to the ball's center; they touch if it is within one radius.
+     const nearestX = clamp(ball.x, brick.x, brick.x + BRICK_W)
+     const nearestY = clamp(ball.y, brick.y, brick.y + BRICK_H)
+     const dx = ball.x - nearestX
+     const dy = ball.y - nearestY
+     return dx * dx + dy * dy <= BALL_R * BALL_R
+   }
+   ```
+
+   `return` bu karşılaştırmanın cevabını (doğru ya da yanlış) geri verir.
+
+2. `update()` fonksiyonunda, raket kontrolünün `if (onPaddle) { ... }` kapanış `}`'inden sonra ve en alttaki
+   `if (ball.y - BALL_R > canvas.height) resetBall()` satırından **önce**, tuğla kontrolünü ekle:
+
+   ```js
+       ball.y = PADDLE_Y - BALL_R
+     }
+
+     // Break at most one brick per frame, or two flips could cancel out.
+     const brick = bricks.find((b) => b.alive && hitsBrick(b))                // ← yeni
+     if (brick) {                                                              // ← yeni
+       brick.alive = false                                                     // ← yeni
+       const throughTopOrBottom = ball.x >= brick.x && ball.x <= brick.x + BRICK_W   // ← yeni
+       if (throughTopOrBottom) ball.vy = -ball.vy                              // ← yeni
+       else ball.vx = -ball.vx                                                 // ← yeni
+     }                                                                         // ← yeni
+
+     if (ball.y - BALL_R > canvas.height) resetBall()
+   }
+   ```
+
+   `brick.alive = false` tuğlayı öldürür; çizim kodu onu artık atlayacağı için ekrandan kaybolur.
+
+3. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla ve raketle topu karşıla. Top değdiği
+   tuğlaları tek tek kırmalı ve geri sekmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `nearestX`
+   ve `nearestY` satırlarında `BRICK_W` ile `BRICK_H`'nin yerini karıştırmadığından emin ol.
 
 # --tests--
 

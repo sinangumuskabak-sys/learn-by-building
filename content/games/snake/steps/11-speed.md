@@ -24,21 +24,32 @@ games stay fun.
 
 # --explanation-tr--
 
-Oyun çalışıyor ama ilk saniyeden sonuncusuna kadar zorluğu aynı. İyi oyunlar oyuncu geliştikçe zorlaşır. Burada en
-kolay kaldıraç hız: her yem yılanı biraz daha hızlandırır.
+**Bu adımda:** yılan her yem yediğinde biraz hızlanacak. Oynarken yılan uzadıkça daha hızlı gittiğini
+hissedeceksin. Bu, Yılan oyununun son adımı.
 
-Döngü hareketler arasındaki **zamanı** zaten ölçtüğü için tek değişiklik, gecikmenin sabit olmaktan çıkması. `SPEED`,
-`150`'den başlayıp her yemekte küçülen bir `let` olan `speed`'e dönüşür.
+**Neden?** Oyun çalışıyor ama ilk saniyeden son saniyeye kadar aynı zorlukta. İyi oyunlar, oyuncu ustalaştıkça
+zorlaşır. Burada en kolay ayar hız: her yem yılanı biraz hızlandırır.
 
-Bu tür bir sayıya her zaman sınır koy. Sınır olmazsa yeterince yemden sonra gecikme `0`'a iner ve yılan her karede
-hareket eder, oynanamaz hâle gelir. `Math.max(60, değer)` şu demek: "`değer`, ama asla 60'ın altında değil".
+4. adımda döngüyü **zamana** göre kurmuştuk: iki hareket arasında `SPEED` milisaniye bekliyoruz. O hâlde tek
+yapmamız gereken, bu bekleme süresini sabit olmaktan çıkarmak. `const SPEED` yerine değişebilen bir `let speed`
+kullanırız; `150` ile başlar ve her yemekten sonra küçülür. Bekleme **kısaldıkça** yılan **hızlanır**.
+
+Yeni oyun yine yavaş başlasın diye `speed = 150` satırı `reset()`'in içine gider (10. adımda "her başlangıç
+değeri `reset()`'te" demiştik).
+
+**Her zaman bir sınır koy.** Sınır olmazsa yeterince yemden sonra bekleme `0`'a iner, yılan her karede hareket
+eder ve oyun oynanamaz olur. `Math.max(a, b)` iki sayıdan **büyük** olanı verir. Bunu bir taban olarak
+kullanırız:
 
 ```js
 speed = Math.max(60, speed - 8)
 ```
 
-İlerlemeyle değişen ve bir alt ya da üst sınırı olan bir zorluk değeri: çoğu arcade oyunu bu küçük fikirle eğlenceli
-kalır.
+"`speed`'i 8 azalt, ama 60'ın altına asla inme." `speed` 150 ise sonuç 142 olur. `speed` 64 ise `64 - 8 = 56`
+çıkar, ama `Math.max(60, 56)` 60'ı seçer.
+
+Bu küçük fikir (ilerledikçe değişen, bir tabanı ya da tavanı olan bir zorluk değeri) çoğu atari oyununu eğlenceli
+tutan şeydir.
 
 # --task--
 
@@ -50,11 +61,45 @@ Play a few rounds. That is your finished Snake!
 
 # --task-tr--
 
-1. `const SPEED = 150` satırını `let speed` ile değiştir ve `reset()` içinde `speed = 150` yap.
-2. `loop()` içinde `SPEED` yerine `speed` kullan.
-3. Yılan yem yiyince hızı 8 düşür ama asla 60'ın altına indirme: `speed = Math.max(60, speed - 8)`.
+1. Dosyanın başındaki `const SPEED = 150 // milliseconds between moves` satırını sil. Onun yerine `let gameOver`
+   satırının hemen altına şunu yaz:
 
-Birkaç el oyna. İşte bitmiş Yılan oyunun!
+   ```js
+   let speed // milliseconds between moves
+   ```
+
+2. `reset()` fonksiyonunda `gameOver = false` satırının altına başlangıç hızını ekle:
+
+   ```js
+     score = 0
+     gameOver = false
+     speed = 150 // ← yeni
+     placeFood()
+   }
+   ```
+
+3. `update()` fonksiyonunda, yem yenince hızı düşür. `score += 1` satırının hemen altına ekle:
+
+   ```js
+     if (head.x === food.x && head.y === food.y) {
+       score += 1
+       speed = Math.max(60, speed - 8) // ← yeni
+       placeFood()
+     } else {
+   ```
+
+4. `loop()` fonksiyonunda büyük harfli `SPEED` yerine küçük harfli `speed` yaz:
+
+   ```js
+   function loop(time) {
+     if (!gameOver && time - last >= speed) { // ← değişti
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç yem ye: yılan her seferinde biraz hızlanmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Hata alırsan kodda hâlâ büyük harfli `SPEED` kalmış olabilir; JavaScript büyük
+   ve küçük harfi farklı ad sayar.
+
+Tebrikler, Yılan oyunun bitti!
 
 # --tests--
 

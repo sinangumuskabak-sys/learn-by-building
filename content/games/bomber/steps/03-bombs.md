@@ -24,21 +24,51 @@ because `walkable` only checks the tile you are going to.
 
 # --explanation-tr--
 
-Boşluk durduğun kareye bir bomba bırakır. **Fitili** her karede geri sayar; sıfırda patlar.
+**Bu adımda:** Boşluk tuşuyla durduğun kareye bomba bırakacaksın. Siyah bomba bir süre bekleyecek, sonra kırmızı yanıp
+sönmeye başlayacak ve artı (+) biçiminde turuncu-sarı alevlerle patlayacak. Alevler kasaları yakacak.
 
-Patlama bir **artı** şeklidir: bombanın kendi karesi, sonra dört yönün her birinde `power` kare. Her kol kare kare dışarı ilerler
-ve karşılaştığı şey devam edip etmeyeceğine karar verir:
+**Fitil.** Bombanın `fuse` (fitil) değeri kaç kare sonra patlayacağıdır: 150 kare, yani yaklaşık 2,5 saniye. Her karede
+1 azalır (`-=` "şu kadar azalt"); 0'a ya da altına inince bomba patlar.
 
-- bir **duvar** onu o kareden önce durdurur;
-- bir **sandık** alev alır (zemin olur) ve kolu orada durdurur;
-- başka bir **bomba** ateşlenir (fitili 1 olur, yani bir sonraki karede patlar: bir **zincirleme tepkime**) ve kolu durdurur;
+**Patlama bir artıdır.** Bombanın kendi karesi, sonra dört yönün her birinde `power` kare. Her kol kare kare dışarı
+yürür ve karşılaştığı şey devam edip etmeyeceğine karar verir:
+
+- **duvar** onu o kareden önce durdurur;
+- **kasa** tutuşur (zemine döner) ve kolu orada durdurur;
+- başka bir **bomba** ateşlenir (fitili 1 olur, yani bir sonraki karede patlar: **zincirleme reaksiyon**) ve kolu durdurur;
 - zemin yanar ve kol devam eder.
 
-`break` iç döngüden çıkar; bu o tek kolu bitirir ve sonraki yöne geçer. Alevler `FLAME_TIME` kare sonra kaybolan kısa ömürlü
-nesneler olarak tutulur ve birinin içinde duran her şey yakında zarar görecek.
+Kodda bunu iç içe iki döngü yapar:
 
-Bombalar aynı zamanda engeldir: kimse bombalı bir kareye yürüyemez. Yine de az önce bıraktığın bombanın **üstünden** çıkabilirsin,
-çünkü `walkable` yalnızca gideceğin kareye bakar.
+```js
+for (const [dr, dc] of Object.values(DIRS)) {    // dört yönün her biri
+  for (let i = 1; i <= power; i++) {              // o yönde 1., 2., ... kare
+```
+
+- `Object.values(DIRS)` bir nesnenin yalnızca **değerlerini** liste olarak verir: `[[-1, 0], [1, 0], [0, -1], [0, 1]]`.
+  2. adımdaki ok tuşu tablosunu burada dört yön listesi olarak yeniden kullanıyoruz.
+- `r = bomb.r + dr * i` → yönde `i` kare ötesi.
+- `break` **içteki döngüden çıkar**: o kol biter ve sıradaki yöne geçilir.
+
+**Kısa ömürlü alevler.** Her yanan kare `{ r, c, time: FLAME_TIME }` olarak `flames` listesine eklenir; `time` her karede
+azalır, 0 olunca alev silinir. Alevin içinde duran her şey birazdan yanacak (sonraki adımlarda).
+
+**Bombayı bulmak ve silmek.**
+
+- `bombs.find((b) => b.r === r && b.c === c)` → o karedeki bombayı verir; yoksa `undefined` ("yok"). `if (other)` "bomba
+  bulunduysa" demektir.
+- `bombs.filter((b) => b !== bomb)` → patlayan bomba dışındakileri tutar; yani onu listeden siler. `!==` "aynısı değil"
+  demektir.
+
+**Hangi karedeyim?** Oyuncu kayarken iki karenin arasında olabilir (`x = 2.4`). `Math.round` en yakın tam sayıya
+yuvarlar: 2.4 → 2, 2.6 → 3. `tileOf(player)` böylece oyuncunun bastığı kareyi verir. `({ ... })` nesneyi parantez içinde
+döndürür; parantez olmasa `{` fonksiyon gövdesi sanılırdı.
+
+**Bombalar engeldir.** Kimse bombalı bir kareye yürüyemez: `walkable` artık `&& !bombAt(r, c)` diye de sorar. Yine de az
+önce bıraktığın bombanın **üstünden çıkabilirsin**, çünkü `walkable` yalnızca **gideceğin** kareye bakar.
+
+**Yanıp sönme.** `%` bölümden kalanı verir. Fitil 45'in altındayken `b.fuse % 10 < 5` her 5 karede bir değişir; bomba
+kırmızı ile siyah arasında yanıp söner ve "birazdan patlıyorum" der. `else if` Boşluk için ikinci bir koşul ekler.
 
 # --task--
 
@@ -55,15 +85,127 @@ Bombalar aynı zamanda engeldir: kimse bombalı bir kareye yürüyemez. Yine de 
 
 # --task-tr--
 
-1. `FUSE = 150`, `FLAME_TIME = 30`, `bombs` ve `flames` (`[]`), `maxBombs = 1` ve `power = 2` (`reset()`'te) ekle.
-2. `bombAt(r, c)` ve `tileOf(m)` (en yakın kare, `Math.round`) yaz. `walkable` artık bomba olan yerde false'tur.
-3. `dropBomb()` yaz: yerde `maxBombs`'tan az bomba varsa ve oyuncunun karesinde yoksa `{ r, c, fuse: FUSE }` ekle. Boşluk onu
-   çağırır.
-4. `explode(bomb)` yaz: bombayı kaldır, karesine bir alev ekle ve her yön için yukarıda anlatıldığı gibi `1..power` kare
-   ilerleyerek yanan her kare için `{ r, c, time: FLAME_TIME }` ekle.
-5. `update()`'te: her fitili azalt ve `0` ya da altındaki bombaları patlat; her alevi azalt ve `0`'dakileri kaldır.
-6. Her alevi 2 piksel içeride `'#f97316'` bir kare, 9 piksel içeride `'#fde047'` bir kareyle; her bombayı 12 yarıçaplı
-   `'#020617'` bir daire olarak, `fuse < 45` ve `fuse % 10 < 5` iken `'#dc2626'` yanıp sönerek çiz.
+1. `const SPEED = 0.1 ...` satırının altına iki ayar ekle:
+
+   ```js
+   const FUSE = 150 // frames until a bomb goes off
+   const FLAME_TIME = 30
+   ```
+
+2. Değişkenlere dört satır ekle: `let player ...` satırının altına `bombs` ve `flames`, `let held ...` satırının altına
+   `maxBombs` ve `power`:
+
+   ```js
+   let bombs // { r, c, fuse }
+   let flames // { r, c, time }
+   ```
+
+   ```js
+   let maxBombs
+   let power
+   ```
+
+3. `const walkable = ...` satırını şu üç satırla değiştir:
+
+   ```js
+   const bombAt = (r, c) => bombs.find((b) => b.r === r && b.c === c)
+   const walkable = (r, c) => grid[r][c] === ' ' && !bombAt(r, c)
+   const tileOf = (m) => ({ r: Math.round(m.y), c: Math.round(m.x) })
+   ```
+
+4. `reset()`'i şöyle yap:
+
+   ```js
+   function reset() {
+     makeGrid()
+     player = { x: 1, y: 1, target: null }
+     bombs = [] // ← yeni
+     flames = [] // ← yeni
+     held = []
+     maxBombs = 1 // ← yeni
+     power = 2 // ← yeni
+   }
+   ```
+
+5. `updatePlayer()`'ın kapanış `}`'inin altına, `update`'in üstüne iki fonksiyon ekle:
+
+   ```js
+   function dropBomb() {
+     if (bombs.length >= maxBombs) return
+     const t = tileOf(player)
+     if (bombAt(t.r, t.c)) return
+     bombs.push({ r: t.r, c: t.c, fuse: FUSE })
+   }
+
+   // A cross of flames, `power` tiles each way. Walls stop it; a crate burns and stops it; another bomb goes off too.
+   function explode(bomb) {
+     bombs = bombs.filter((b) => b !== bomb)
+     flames.push({ r: bomb.r, c: bomb.c, time: FLAME_TIME })
+     for (const [dr, dc] of Object.values(DIRS)) {
+       for (let i = 1; i <= power; i++) {
+         const r = bomb.r + dr * i
+         const c = bomb.c + dc * i
+         if (grid[r][c] === '#') break
+         flames.push({ r, c, time: FLAME_TIME })
+         if (grid[r][c] === '+') {
+           grid[r][c] = ' '
+           break
+         }
+         const other = bombAt(r, c)
+         if (other) {
+           other.fuse = 1 // a chain reaction: it goes off next frame
+           break
+         }
+       }
+     }
+   }
+   ```
+
+   `dropBomb`: yeterince bomba zaten yerdeyse (`>=` "büyük ya da eşit") ya da bu karede bomba varsa bırakma.
+
+6. `update()`'i şöyle yap:
+
+   ```js
+   function update() {
+     updatePlayer()
+     for (const b of bombs) b.fuse -= 1 // ← yeni
+     for (const bomb of bombs.filter((b) => b.fuse <= 0)) explode(bomb) // ← yeni
+     for (const f of flames) f.time -= 1 // ← yeni
+     flames = flames.filter((f) => f.time > 0) // ← yeni
+   }
+   ```
+
+7. `keydown` bloğuna Boşluk için bir `else if` ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (DIRS[event.key]) {
+       event.preventDefault()
+       if (!held.includes(event.key)) held.push(event.key)
+     } else if (event.key === ' ') { // ← yeni
+       event.preventDefault() // ← yeni
+       dropBomb() // ← yeni
+     }
+   })
+   ```
+
+8. `draw()` içinde, `drawCircle(player, '#f8fafc', 12)` satırının **üstüne** alevleri ve bombaları çiz:
+
+   ```js
+     for (const f of flames) {
+       ctx.fillStyle = '#f97316'
+       ctx.fillRect(f.c * TILE + 2, TOP + f.r * TILE + 2, TILE - 4, TILE - 4)
+       ctx.fillStyle = '#fde047'
+       ctx.fillRect(f.c * TILE + 9, TOP + f.r * TILE + 9, TILE - 18, TILE - 18)
+     }
+     // Bombs blink faster as the fuse runs out.
+     for (const b of bombs) drawCircle({ x: b.c, y: b.r }, b.fuse < 45 && b.fuse % 10 < 5 ? '#dc2626' : '#020617', 12)
+   ```
+
+   `drawCircle` bir `{ x, y }` bekler; bombanın sütununu `x`, satırını `y` olarak veririz.
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, Boşluk'a bas ve uzaklaş: bomba yanıp sönüp artı biçiminde
+   patlamalı, değdiği kasalar kaybolmalı, alevler yarım saniyede sönmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

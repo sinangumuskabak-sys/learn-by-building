@@ -26,22 +26,45 @@ is something to measure.
 
 # --explanation-tr--
 
-Hızlı yazanlar kendilerini **dakikada kelime** (WPM) ile ölçer. Kelimelerin uzunlukları farklıdır, bu yüzden standart, her
-**beş harfi** bir kelime saymaktır. Zaman karelerden gelir: saniyede 60 karede bir dakika 3600 karedir.
+**Bu adımda:** hızını ve doğruluğunu ölçeceğiz. Oyun bittiğinde panelde `38 words per minute, 94% accurate` gibi bir satır
+göreceksin: dakikada kaç kelime yazdığın ve basışlarının yüzde kaçının doğru olduğu.
+
+**Dakikada kelime (WPM, words per minute).** Klavye kullananlar hızlarını böyle ölçer. Kelimelerin boyu farklı olduğu
+için genel kural her **5 harfi** bir kelime saymaktır. Zamanı karelerden (frame) buluruz: saniyede 60 kare varsa bir dakika
+60 × 60 = 3600 karedir.
 
 ```js
-const wpm = () => Math.round(letters / 5 / (frames / 3600))
+letters / 5 / (frames / 3600)
 ```
 
-Tek başına hız her şey değildir; **doğruluk** da önemlidir. İşe yaramayan her tuş (hiçbir kelimenin başlamadığı bir harf ya da
-yanlış sıradaki harf) bir hatadır ve doğruluk, doğru olan tuşların payıdır:
+"Doğru harf sayısını 5'e böl (kaç kelime), sonra geçen dakikaya böl." `frames / 3600` kaç dakika geçtiğidir. Örnek:
+1 dakikada 50 harf → 10 kelime → 10 WPM. `Math.round` sonucu en yakın tam sayıya yuvarlar (`9.6` → `10`).
+
+**Doğruluk (accuracy).** Hız her şey değil. İşe yaramayan her tuş bir **hatadır** (`mistakes`): hiçbir kelimenin
+başlamadığı bir harf ya da sıradaki harf olmayan bir harf. Doğruluk, basışların yüzde kaçının doğru olduğudur:
 
 ```js
 Math.round((100 * letters) / (letters + mistakes))
 ```
 
-İki fonksiyonun da en başta dikkatli olması gerekir: hiç tuş ya da kare yokken sıfıra bölerler ve JavaScript'te `0 / 0`,
-ekranda "NaN words per minute" olarak görünecek olan `NaN`'dır. Bu yüzden ölçecek bir şey olana kadar 0 WPM ve %100 döndürürler.
+3 doğru, 2 hata → `300 / 5` = 60, yani %60.
+
+**Sıfıra bölme tuzağı.** Oyunun en başında `frames` ve `letters + mistakes` sıfırdır. JavaScript'te `0 / 0` sonucu
+`NaN`'dır ("sayı değil"); ekranda "NaN words per minute" yazardı. Bu yüzden iki fonksiyon da önce sorar:
+
+```js
+frames === 0 ? 0 : hesap          // hiç zaman geçmediyse 0
+letters + mistakes === 0 ? 100 : hesap  // hiç tuşa basılmadıysa %100
+```
+
+`koşul ? a : b` "koşul doğruysa `a`, değilse `b`" demektir.
+
+**Hataları saymak.** `type` içinde şimdiye kadar yanlış tuşta sadece `return` ile çıkıyorduk. Artık çıkmadan önce hatayı
+sayacağız; bu yüzden `if`'in arkasına tek komut yerine `{ }` içinde iki komut koyuyoruz: önce `mistakes += 1`, sonra `return`.
+Doğru harfte ise `letters += 1`.
+
+**Yazıyı birleştirmek.** `wpm() + ' words per minute, ' + accuracy() + '% accurate'` sayılarla yazıları sırayla yan yana
+ekler: `'38 words per minute, 94% accurate'`.
 
 # --task--
 
@@ -53,11 +76,72 @@ ekranda "NaN words per minute" olarak görünecek olan `NaN`'dır. Bu yüzden ö
 
 # --task-tr--
 
-1. `frames`, `letters` ve `mistakes` ekle (`reset()`'te hepsi `0`). `update` oynarken `frames`'i sayar.
-2. `type`'ta eşleşen kelimesi olmayan bir tuş ya da yanlış sıradaki harf `mistakes`'e 1 ekler; doğru bir harf `letters`'a 1
-   ekler.
-3. `wpm()` ve `accuracy()`'yi yukarıdaki gibi yaz; henüz ölçecek bir şey yokken `0` ve `100` döndürsünler.
-4. Oyun bitti ekranında `y = 175`'e `38 words per minute, 94% accurate` çiz ve `Press Enter to play again`'i `y = 205`'e taşı.
+1. `let state // 'playing' or 'over'` satırının altına üç değişken ekle:
+
+   ```js
+   let frames
+   let letters // correct letters typed
+   let mistakes
+   ```
+
+2. `reset()`'in sonuna, `state = 'playing'` satırının altına ekle:
+
+   ```js
+     frames = 0
+     letters = 0
+     mistakes = 0
+   ```
+
+3. `type(key)`'de iki `return`'ü hata sayacak şekilde değiştir ve doğru harfi say. Fonksiyonun baş kısmı şöyle olmalı:
+
+   ```js
+   function type(key) {
+     if (state !== 'playing') return
+     if (!target) {
+       // Lock on to the lowest word starting with this letter: it is the most urgent.
+       const options = words.filter((w) => w.text[0] === key).sort((a, b) => b.y - a.y)
+       if (options.length === 0) {  // ← değişti
+         mistakes += 1              // ← yeni
+         return                     // ← yeni
+       }                            // ← yeni
+       target = options[0]
+       typed = 0
+     }
+     if (target.text[typed] !== key) { // ← değişti
+       mistakes += 1                   // ← yeni
+       return                          // ← yeni
+     }                                 // ← yeni
+     typed += 1
+     letters += 1                      // ← yeni
+   ```
+
+   (Altındaki `if (typed === target.text.length) { ... }` kısmı aynı kalır.)
+
+4. `update()`'te `if (state !== 'playing') return` satırının hemen altına kare sayacını ekle:
+
+   ```js
+     frames += 1
+   ```
+
+5. `update()`'in kapanış `}`'sinin altına iki ölçüm fonksiyonunu yaz:
+
+   ```js
+   // Words per minute counts five letters as one word, the usual way.
+   const wpm = () => (frames === 0 ? 0 : Math.round(letters / 5 / (frames / 3600)))
+   const accuracy = () => (letters + mistakes === 0 ? 100 : Math.round((100 * letters) / (letters + mistakes)))
+   ```
+
+6. `draw()`'daki oyun bitti panelinin son satırlarını şöyle değiştir:
+
+   ```js
+       ctx.font = '18px sans-serif'
+       ctx.fillText(wpm() + ' words per minute, ' + accuracy() + '% accurate', canvas.width / 2, 175) // ← yeni
+       ctx.fillText('Press Enter to play again', canvas.width / 2, 205)                             // ← değişti (175 → 205)
+     }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç kelime yaz, sonra üç kelimeyi düşmeye bırak: `Game over`
+   panelinde hızın ve doğruluğun yazmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

@@ -21,17 +21,72 @@ break.
 
 # --explanation-tr--
 
-Bir bilardo masası, kahverengi bir çerçevenin (bantlar) içinde yeşil bir dikdörtgendir (çuha); üzerinde beyaz bir **isteka
-topu** ve bir üçgene dizilmiş numaralı toplar, yani **üçgen dizilim** vardır.
+**Bu adımda:** bilardo masasını kuracağız. Çalıştırınca sağda kahverengi çerçeveli yeşil bir masa, solda beyaz bir
+**isteka topu** ve sağda üçgen şeklinde dizilmiş, üstünde numaraları yazan on renkli top göreceksin.
 
-Her top aynı türde bir nesnedir: bir konum, bir hız (şimdilik sıfır), bir renk, bir numara ve isteka topu olup olmadığı.
-Hepsini tek bir dizide, `balls`'ta tutmak, sonraki fiziğin hepsine aynı biçimde davranabileceği anlamına gelir; `cue` yalnızca
-beyaz topun ikinci bir adıdır.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan yazılar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
 
-Üçgen iki döngüden gelir. 0. satırda 1 top, 1. satırda 2, 3. satırda 4 top vardır: `row` satırında `row + 1` top. Bir satırın
-içinde toplar bir çap (`2R`) aralıklıdır ve `(i - row / 2)` ile masanın orta çizgisine ortalanır. Satırlar bir çaptan biraz
-**daha az** aralıklıdır: sıkı bir üçgende merkezler eşkenar üçgenler oluşturur ve birinin yüksekliği `2R × 0.87`'dir (yani
-`2R × √3 / 2`). Küçük bir ek `0.5`, topların tam olarak değmesini önler; böylece açılış vuruşundan önce hiçbir şey çarpışmaz.
+**Canvas (tuval) ve fırça.** Sayfada 480×340 piksellik boş bir resim alanı var; kimliği (id) `game`. Oyundaki her
+şeyi bu alana **boyayarak** göstereceğiz. Önce kâğıdı buluruz, sonra fırçayı (çizim bağlamı, **context**) alırız:
+
+```js
+const canvas = document.getElementById('game')   // kâğıdı bul
+const ctx = canvas.getContext('2d')              // fırçayı al
+```
+
+- `const ad = ...` → "bundan sonra şuna `ad` diyeceğim". `const` ile ad verilen şeye **sabit** denir, içi değişmez.
+- Nokta (`.`) "bunun içindeki şu komut" demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `ctx.fillStyle = '#15803d'` fırçanın rengini seçer (`'#...'` renk kodudur, `'white'` gibi adlar da olur);
+  `ctx.fillRect(x, y, en, boy)` bir dikdörtgen boyar.
+
+**Konum:** canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Masanın
+yeşil kısmı soldan 20'den (`LEFT`) 460'a (`RIGHT`), yukarıdan 40'tan (`TOP`) 280'e (`BOTTOM`) uzanır.
+
+**`let`, nesne, dizi.**
+
+- `let balls` de bir ad koyar ama `const`'tan farkı, içine sonra başka bir şey konabilmesidir.
+- **Nesne** (object), birkaç bilgiyi bir arada tutar: `{ x: 130, y: 160, color: 'white' }`. Bilgilere `top.x` diye
+  nokta ile ulaşırsın.
+- **Dizi** (array), bir sıra listedir: `['#facc15', '#2563eb', ...]`. Öğelere sıra numarasıyla ulaşırsın ve numara
+  **0'dan** başlar: `COLORS[0]` sarı, `COLORS[1]` mavi.
+
+Her top aynı türden bir nesnedir: konum (`x`, `y`), hız (`vx`, `vy`, şimdilik 0), renk, numara ve isteka topu olup
+olmadığı (`cue`). Hepsini tek bir `balls` dizisinde tutarız; böylece ileride fizik hepsine aynı şekilde davranır.
+`cue` de beyaz topa verilen ikinci bir addır.
+
+**Fonksiyon.** Bir talimat paketine ad vermektir; tarif yazmak gibi, yazmak onu pişirmez. `function rack() { ... }`
+paketi **tanımlar**, `rack()` onu **çağırır** (çalıştırır). Kısa bir yazımı da var:
+
+```js
+const ball = (x, y, color, number) => ({ x, y, vx: 0, vy: 0, color, number, cue: number === 0 })
+```
+
+- Parantezdeki `x, y, color, number` **parametrelerdir**: çağırırken verdiğin bilgilerin adları.
+- `=>` "şunu üret" demektir; sağındaki nesne sonuç olarak **geri verilir**. Nesne parantez içinde `({ ... })` yazılır.
+- `{ x, y }` kısa yazımdır: `{ x: x, y: y }` ile aynı.
+- `number === 0` "numara 0'a eşit mi?" diye sorar ve `true` (evet) ya da `false` (hayır) verir. Yalnız isteka
+  topunun numarası 0'dır.
+
+**Üçgeni dizmek: iç içe döngü.** `for (let row = 0; row < 4; row++) { ... }` bir **sayan döngüdür**: `row` 0'dan
+başlar, 4'ten küçük olduğu sürece içindeki işi yapar, her turda `row++` ile 1 artar (0, 1, 2, 3). İçindeki ikinci döngü
+her sırada `row + 1` top koyar (`<=` "küçük ya da eşit"): 1, 2, 3, 4 top.
+
+- Sıralar arasında yatay aralık bir çaptan (`2R`) biraz **az**: `R * 2 * 0.87`. Sıkı dizilmiş toplarda merkezler
+  eşkenar üçgenler oluşturur, onun yüksekliği çapın 0.87 katıdır. Üstüne eklenen `0.5` toplar birbirine tam
+  değmesin diye.
+- Bir sıradaki toplar dikeyde birer çap aralıklıdır ve `(i - row / 2)` ile masanın orta çizgisine (`y` = 160) göre
+  ortalanır.
+- `n` saydığımız top sayısıdır: rengi `COLORS[n]`, numarası `n + 1`.
+
+**Top çizmek.** `ctx.beginPath()` yeni bir şekle başlar, `ctx.arc(x, y, R, 0, Math.PI * 2)` merkezi `(x, y)`,
+yarıçapı `R` olan bir **tam daire** tanımlar (`Math.PI * 2` tam tur demek), `ctx.fill()` onu boyar. Sonra numarayı
+`ctx.fillText(yazı, x, y)` ile yazarız; `String(b.number)` sayıyı yazıya çevirir. `continue` "bu topu burada bırak,
+döngüde sonrakine geç" demektir: isteka topuna numara yazmayız.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der.
+`loop` çizer ve kendini tekrar ister; böylece ekran saniyede yaklaşık 60 kez çizilir.
 
 # --task--
 
@@ -45,13 +100,103 @@ içinde toplar bir çap (`2R`) aralıklıdır ve `(i - row / 2)` ile masanın or
 
 # --task-tr--
 
-1. Masa kenarlarını `LEFT = 20`, `TOP = 40`, `RIGHT = 460`, `BOTTOM = 280`, yarıçap `R = 9`'u, on `COLORS`'ı ve
-   `CUE_START = { x: 130, y: 160 }`'ı ekle.
-2. `{ x, y, vx: 0, vy: 0, color, number, cue: number === 0 }` döndüren `ball(x, y, color, number)`'ı yaz.
-3. `rack()` yaz: `CUE_START`'ta isteka topu (`'#f8fafc'`, 0 numara), sonra `x = 330 + row * (R * 2 * 0.87 + 0.5)` ve
-   `y = 160 + (i - row / 2) * (R * 2 + 0.5)`'te 1'den 10'a numaralı, 1'den 4'e toplu 4 satır. `reset()` dizer.
-4. Her karede: `'#0f172a'` doldur, masanın çevresinde 12 piksel `'#78350f'` bantlar, `'#15803d'` çuha ve her topu `R`
-   yarıçaplı bir daire olarak; isteka topu dışında numarası beyazla (`'bold 9px sans-serif'`, ortalı, `y + 3`).
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boş bırak ve masanın ölçülerini, top yarıçapını, renkleri ve isteka topunun başlangıç yerini yaz:
+
+   ```js
+   const LEFT = 20
+   const TOP = 40
+   const RIGHT = 460
+   const BOTTOM = 280
+   const R = 9 // ball radius
+   const COLORS = ['#facc15', '#2563eb', '#dc2626', '#7c3aed', '#f97316', '#16a34a', '#7f1d1d', '#111827', '#0891b2', '#db2777']
+   const CUE_START = { x: 130, y: 160 }
+   ```
+
+3. Bir satır boş bırak, topları tutacak adları ve top üreten kısa fonksiyonu yaz:
+
+   ```js
+   let balls // { x, y, vx, vy, color, number, cue }
+   let cue
+
+   const ball = (x, y, color, number) => ({ x, y, vx: 0, vy: 0, color, number, cue: number === 0 })
+   ```
+
+4. Altına topları dizen fonksiyonu ve onu çağıran `reset`'i yaz:
+
+   ```js
+   // Ten balls in a triangle pointing at the cue ball: 1, 2, 3, then 4 in the back row.
+   function rack() {
+     cue = ball(CUE_START.x, CUE_START.y, '#f8fafc', 0)
+     balls = [cue]
+     let n = 0
+     for (let row = 0; row < 4; row++) {
+       for (let i = 0; i <= row; i++) {
+         const x = 330 + row * (R * 2 * 0.87 + 0.5)
+         const y = 160 + (i - row / 2) * (R * 2 + 0.5)
+         balls.push(ball(x, y, COLORS[n], n + 1))
+         n += 1
+       }
+     }
+   }
+
+   function reset() {
+     rack()
+   }
+   ```
+
+   `balls = [cue]` listeyi isteka topuyla başlatır; `balls.push(...)` listenin sonuna bir top ekler; `n += 1`
+   "`n`'yi 1 artır" demektir.
+
+5. Altına her şeyi çizen fonksiyonu yaz: koyu arka plan, 12 piksel kalınlıkta kahverengi çerçeve, yeşil çuha ve toplar:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#78350f'
+     ctx.fillRect(LEFT - 12, TOP - 12, RIGHT - LEFT + 24, BOTTOM - TOP + 24)
+     ctx.fillStyle = '#15803d'
+     ctx.fillRect(LEFT, TOP, RIGHT - LEFT, BOTTOM - TOP)
+
+     for (const b of balls) {
+       ctx.fillStyle = b.color
+       ctx.beginPath()
+       ctx.arc(b.x, b.y, R, 0, Math.PI * 2)
+       ctx.fill()
+       if (b.cue) continue
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 9px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText(String(b.number), b.x, b.y + 3)
+     }
+   }
+   ```
+
+   `for (const b of balls)` → "listedeki her top için, ona `b` de ve işi yap". `font` yazının kalınlığını, boyunu ve
+   türünü; `textAlign = 'center'` yazının verilen noktaya ortalanmasını seçer. `b.y + 3` yazıyı dikeyde ortalar.
+
+6. Altına oyun döngüsünü ve en sona onu başlatan iki satırı yaz:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda çerçeveli yeşil masa, solda beyaz top, sağda 1'den 10'a numaralı
+   üçgen görmelisin; alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa en sık hata: iç döngüdeki `<=` yerine
+   `<` yazmak (o zaman top eksik çıkar) ya da renk kodunda bir harf hatası.
 
 # --tests--
 

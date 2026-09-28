@@ -24,21 +24,37 @@ The wind is shown as an arrow and a number from 0 to 5, rounded to whole hundred
 
 # --explanation-tr--
 
-Aynı açı ve güçle bir atış hep aynı yere düşer; yani menzili bulduğunda oyun biter. **Rüzgâr** onu ilginç tutar: her sırada `-0.05` ile
-`0.05` arasında yeni rastgele bir rüzgâr.
+**Bu adımda:** rüzgâr ekleyeceğiz. Ekranın üst ortasında `Wind → 3` gibi bir yazı olacak: ok rüzgârın yönünü, sayı
+gücünü gösterecek. Her sırada rüzgâr değişecek ve mermileri yana itecek.
 
-Rüzgâr yana doğru iten küçük bir kuvvettir, bu yüzden yerçekiminin gittiği yere, her karede hıza gider:
+**Neden rüzgâr?** Aynı açı ve güçle bir atış hep aynı yere düşer; menzili bir kez bulunca oyunun tadı kaçar. Her sırada
+yeni, rastgele bir rüzgâr (-0.05 ile 0.05 arası) oyunu ilginç tutar.
+
+**Rüzgâr, yerçekimi gibi bir kuvvettir.** Yerçekimi her karede `vy`'ye ekleniyordu (3. adım). Rüzgâr da her karede
+yana doğru, `vx`'e eklenir:
 
 ```js
-s.vx += wind
-s.vy += GRAVITY
+s.vx += wind      // rüzgâr yana iter
+s.vy += GRAVITY   // yerçekimi aşağı çeker
 ```
 
-Her karede `vx`'e eklendiği için etkisi **zamanla büyür**: uzun, yüksek bir atış kısa, düz bir atıştan çok daha fazla sürüklenir. `t`
-kare sonra sürüklenme `wind × (1 + 2 + ... + t)`'dir; düşen bir cisimle aynı büyüyen toplam. Oyuncular karşıdan esen rüzgâra daha düz,
-arkadan esen rüzgârla daha yüksek atmayı öğrenir.
+Her karede `vx`'e eklendiği için etkisi **zamanla büyür**: uzun, yüksek bir atış kısa, düz bir atıştan çok daha fazla
+sürüklenir. `t` karede kayma `wind × (1 + 2 + ... + t)` olur; düşen bir cismin hızlanmasıyla aynı büyüyen toplam.
+Oyuncular karşıdan esen rüzgârda daha düz, arkadan esende daha yüksek atmayı öğrenir.
 
-Rüzgâr bir ok ve 0'dan 5'e bir sayı olarak gösterilir; temiz okunsun diye tam yüzdeliklere yuvarlanır.
+**Rastgele rüzgâr, düzgün sayılarla.** `Math.random() - 0.5` -0.5 ile 0.5 arasında bir sayıdır. 10 ile çarpıp
+`Math.round` ile yuvarlayınca -5 ile 5 arasında bir **tam sayı** olur; 100'e bölünce -0.05 ile 0.05 arasında, hep tam
+yüzdelik (0.03 gibi) bir sayı çıkar. Ekranda bunu 100 ile çarpıp işaretsiz gösteririz (`Math.abs`): `3`.
+
+```js
+const newWind = () => (wind = Math.round((Math.random() - 0.5) * 10) / 100)
+```
+
+Bu tek satırlık fonksiyon hesaplanan sayıyı `wind` değişkenine koyar. Oyunun başında (`reset`) ve sıra her değiştiğinde
+(`endTurn`) çağrılır.
+
+**Ok seçimi:** `wind > 0 ? '→' : wind < 0 ? '←' : ''` → "artıysa sağ ok, eksiyse sol ok, sıfırsa ok yok (boş yazı)".
+Artı `vx` sağa doğru demek, o yüzden artı rüzgâr sağa eser.
 
 # --task--
 
@@ -49,10 +65,56 @@ Rüzgâr bir ok ve 0'dan 5'e bir sayı olarak gösterilir; temiz okunsun diye ta
 
 # --task-tr--
 
-1. `wind` ve onu `Math.round((Math.random() - 0.5) * 10) / 100` yapan `newWind()`'i ekle. Onu `reset()`'te ve her sıra değişiminde
-   çağır.
-2. `fly` her karede yerçekiminden önce `vx`'e `wind` ekler.
-3. `(W / 2, 20)`'ye ortalı `Wind → 3` (ya da `←`, ya da sakin havada oksuz) çiz; sayı `Math.abs(Math.round(wind * 100))`.
+1. `let timer ...` satırının altına rüzgârı ekle:
+
+   ```js
+   let wind
+   ```
+
+2. `reset()` içinde `blast = null` satırının altına (`state = 'aiming'`'in üstüne) ekle:
+
+   ```js
+     newWind()
+   ```
+
+3. `reset()`'in kapanış `}`'sinden sonra, `function fire()`'ın **üstüne** `newWind`'i yaz:
+
+   ```js
+   const newWind = () => (wind = Math.round((Math.random() - 0.5) * 10) / 100) // -0.05 to 0.05
+   ```
+
+4. `fly()`'ın yorumunu güncelle ve en başına rüzgârı ekle:
+
+   ```js
+   // One frame of flight: wind pushes sideways, gravity pulls down. Returns what it hit, or null.
+   function fly(s) {
+     s.vx += wind // ← yeni
+     s.vy += GRAVITY
+   ```
+
+5. `endTurn()` içinde, sıra değiştiği yerde `turn = 1 - turn` satırının altına ekle:
+
+   ```js
+     else {
+       turn = 1 - turn
+       newWind() // ← yeni
+       state = 'aiming'
+     }
+   ```
+
+6. `draw()`'da açı yazısını çizen `ctx.fillText('Angle ' ...)` satırının altına (`ctx.textAlign = 'right'`'ın üstüne)
+   rüzgâr yazısını ekle:
+
+   ```js
+     ctx.textAlign = 'center'
+     const arrow = wind > 0 ? '→' : wind < 0 ? '←' : ''
+     ctx.fillText('Wind ' + arrow + ' ' + Math.abs(Math.round(wind * 100)), W / 2, 20)
+   ```
+
+   `→` ve `←` işaretlerini klavyede bulamazsan bu satırdan kopyala. `'Wind '` ve `' '` içindeki boşluklar önemli.
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Üst ortada rüzgâr yazmalı; her atıştan sonra değişmeli. Yüksek
+   atışların rüzgâr yönünde belirgin şekilde kaydığını görmelisin. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

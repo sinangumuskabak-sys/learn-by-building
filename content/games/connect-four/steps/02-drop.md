@@ -27,8 +27,12 @@ keyboard can move it with the arrows and drop it with Enter or Space, or drop st
 
 # --explanation-tr--
 
-Bu oyunda asla bir hücre seçmezsin, yalnızca bir **sütun**: disk en alttaki boş deliğe düşer. Onu bulmak, en alt satırdan
-yukarı doğru giden ve ilk boş hücrede duran bir döngüdür:
+**Bu adımda:** diskleri bırakacağız. Tahtanın üstünde, farenin olduğu sütunun üzerinde bir disk bekleyecek; bir
+sütuna tıklayınca disk o sütunun en alttaki boş deliğine yerleşecek. Sıra kırmızı ile sarı arasında değişecek ve
+en üstte `Red's turn` (sıra kırmızıda) ya da `Yellow's turn` (sıra sarıda) yazacak.
+
+**Hücre değil, sütun seçersin.** Bu oyunda hücre seçilmez, sadece **sütun**: disk en alttaki boş deliğe düşer. O
+deliği bulmak için en alt satırdan **yukarı doğru** bakarız ve ilk boş hücrede dururuz:
 
 ```js
 for (let row = ROWS - 1; row >= 0; row--) {
@@ -37,14 +41,47 @@ for (let row = ROWS - 1; row >= 0; row--) {
 return -1   // sütun dolu
 ```
 
-"Böyle bir satır yok" için `-1` döndürmek yaygın bir alışkanlıktır (`indexOf` de böyle yapar) ve `play`'in dolu bir sütunu tek
-bir kontrolle reddetmesini sağlar.
+Bunu parça parça okuyalım:
 
-İki oyuncu sırayla oynar ve `turn = 3 - turn` bir `if` olmadan 1 ile 2 arasında geçiş yapar: 3 − 1 = 2, 3 − 2 = 1.
+- `let row = ROWS - 1` → en alt satırdan (5) başla.
+- `row >= 0` → `>=` "büyük ya da eşit": 0. satıra kadar devam et.
+- `row--` → her turdan sonra 1 **azalt** (yukarı çık).
+- `if (board[row][col] === 0) return row` → `===` "eşit mi?" diye sorar. Boşsa bu satırı **geri ver** ve
+  fonksiyondan çık (`return`).
+- Döngü hiç boş bulamadan biterse `return -1`: "böyle bir satır yok". `-1` ile "yok" demek yaygın bir alışkanlıktır
+  ve `play`'in dolu sütunu tek bir kontrolle reddetmesini sağlar.
 
-Farenin altındaki sütun tıklama konumundan gelir. Diğer oyunlardaki gibi önce ekran piksellerini canvas piksellerine çevir,
-çünkü sayfa canvas'ı ölçekler. O sütunun üstünde süzülen bir disk sıradakinin nereye gideceğini gösterir; klavye onu oklarla
-kaydırıp Enter ya da Boşluk ile bırakabilir, ya da 1'den 7'ye bir tuşla doğrudan bir sütuna bırakabilir.
+**Sırayı değiştirmek.** `turn` 1 (kırmızı) ya da 2 (sarı). `turn = 3 - turn` bir `if` olmadan ikisi arasında gidip
+gelir: 3 − 1 = 2, 3 − 2 = 1.
+
+**Olaylar (events).** Tarayıcı, sayfada bir şey olunca bunu duyurur; sen de "şu olunca şunu yap" diye kayıt olursun
+(kapı zili gibi):
+
+- `'pointermove'` → fare canvas üstünde hareket etti: bekleyen diski o sütuna taşırız.
+- `'pointerdown'` → tıklandı (ya da parmakla dokunuldu): o sütuna oynarız.
+- `'keydown'` → klavyede bir tuşa basıldı. `event.key` tuşun adıdır: `'ArrowLeft'`, `'Enter'`, `' '` (Boşluk),
+  `'1'`...
+
+**Fare hangi sütunda?** `event.clientX` farenin sayfadaki yeridir. Sayfa canvas'ı büyütüp küçültebildiği için önce
+canvas piksellerine çeviririz: `canvas.getBoundingClientRect()` canvas'ın ekrandaki yerini (`left`) ve gösterilen
+enini (`width`) verir. Sonra `Math.floor(x / CELL)` sütunu verir (aşağı yuvarlama).
+
+```js
+Math.min(COLS - 1, Math.max(0, sütun))
+```
+
+`Math.max(0, a)` "a'yı al ama 0'ın altına inme", `Math.min(6, a)` "6'nın üstüne çıkma". Birlikte sonucu 0 ile 6
+arasında **sıkıştırırlar**.
+
+**Klavye.** Sol/sağ ok bekleyen diski kaydırır; `1`–`7` doğrudan o sütunu seçip bırakır; Boşluk ve Enter bırakır.
+
+- `event.key >= '1' && event.key <= '7'` → "tuş 1 ile 7 arasında mı?" (`&&` "ve", `<=` "küçük ya da eşit").
+- `Number(event.key) - 1` → `'3'` yazısını `3` sayısına çevirir, 1 çıkarır: 2. sütun (sütunlar 0'dan sayılır).
+- `||` "veya" demektir.
+- `event.preventDefault()` → tuşun olağan işini (Boşluk'un sayfayı kaydırması gibi) engeller.
+
+**Yazı.** `ctx.font` yazı tipi, `ctx.textAlign = 'center'` verilen `x`'in yazının ortası olması,
+`ctx.fillText(yazı, x, y)` yazıyı boyamak. `"Red's turn"` çift tırnakla yazılır, çünkü içinde tek tırnak var.
 
 # --task--
 
@@ -60,15 +97,92 @@ kaydırıp Enter ya da Boşluk ile bırakabilir, ya da 1'den 7'ye bir tuşla do�
 
 # --task-tr--
 
-1. `turn` (`reset()`'te `1`) ve `hoverCol = 3` ekle.
-2. Yukarıdaki gibi `dropRow(col)` ve `play(col)` yaz: sütun dolu değilse `turn`'ü en alttaki boş hücresine koy ve `turn`'ü
-   değiştir.
-3. `colAt(event)` yaz: bir işaretçi olayının altındaki sütun; ekran piksellerini canvas piksellerine çevir ve sonucu `0` ile
-   `COLS - 1` arasında tut. `pointermove` `hoverCol`'u ayarlar; `pointerdown` onu ayarlar ve oraya oynar.
-4. Tuşlar: sol ve sağ oklar `hoverCol`'u kaydırır, `1`'den `7`'ye onu ayarlar; `1`–`7`, Boşluk ve Enter `hoverCol`'a oynar
-   (`preventDefault()` et).
-5. Sıradaki oyuncunun renginde bir diski `hoverCol`'un üstüne (`TOP - CELL / 2`'de ortalı) ve tepede ortalı `Red's turn` ya da
-   `Yellow's turn` çiz (`y = 26`, beyaz, `'bold 18px sans-serif'`).
+1. `let board ...` satırının altına sıra ve bekleyen disk değişkenlerini ekle:
+
+   ```js
+   let turn
+   let hoverCol = 3
+   ```
+
+2. `reset()` fonksiyonuna sırayı başlatan satırı ekle:
+
+   ```js
+   function reset() {
+     board = Array.from({ length: ROWS }, () => Array(COLS).fill(0))
+     turn = 1 // ← yeni
+   }
+   ```
+
+3. `reset()`'in altına bir boş satır bırak ve şu fonksiyonları ve olay dinleyicilerini yaz (`function disc`'ten
+   önce):
+
+   ```js
+   // The lowest empty row in a column, or -1 when the column is full.
+   function dropRow(col) {
+     for (let row = ROWS - 1; row >= 0; row--) {
+       if (board[row][col] === 0) return row
+     }
+     return -1
+   }
+
+   function play(col) {
+     const row = dropRow(col)
+     if (row === -1) return
+     board[row][col] = turn
+     turn = 3 - turn
+   }
+
+   function colAt(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     return Math.min(COLS - 1, Math.max(0, Math.floor(x / CELL)))
+   }
+
+   canvas.addEventListener('pointermove', (event) => {
+     hoverCol = colAt(event)
+   })
+   canvas.addEventListener('pointerdown', (event) => {
+     hoverCol = colAt(event)
+     play(hoverCol)
+   })
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') hoverCol = Math.max(0, hoverCol - 1)
+     if (event.key === 'ArrowRight') hoverCol = Math.min(COLS - 1, hoverCol + 1)
+     if (event.key >= '1' && event.key <= '7') hoverCol = Number(event.key) - 1
+     if (event.key === ' ' || event.key === 'Enter' || (event.key >= '1' && event.key <= '7')) {
+       event.preventDefault()
+       play(hoverCol)
+     }
+   })
+   ```
+
+4. `draw()` fonksiyonunda, arka planı boyayan iki satırın hemen altına bekleyen diski ekle:
+
+   ```js
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     // The next disc waits above the column it would drop into. // ← yeni
+     disc(hoverCol * CELL + CELL / 2, TOP - CELL / 2, COLORS[turn]) // ← yeni
+   ```
+
+5. `draw()` fonksiyonunun sonunda, iç içe `for` döngülerinin kapanışından sonra, fonksiyonun son `}` işaretinden
+   **önce** sıra yazısını ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'center'
+     ctx.fillText(turn === 1 ? "Red's turn" : "Yellow's turn", canvas.width / 2, 26)
+   ```
+
+6. İstersen `const TOP = 96` satırının yorumunu `// room above the board for the messages and the next disc` yap;
+   yorum olduğu için kontrolleri etkilemez.
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Fareyi gezdirince üstteki disk sütun sütun izlemeli; tıklayınca
+   disk o sütunun en altına yerleşmeli ve renk değişmeli. `1`–`7` tuşları ve oklar da çalışmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Diskler en üste yerleşiyorsa `dropRow` döngüsünün `ROWS - 1`'den başlayıp
+   `row--` ile azaldığını kontrol et.
 
 # --tests--
 

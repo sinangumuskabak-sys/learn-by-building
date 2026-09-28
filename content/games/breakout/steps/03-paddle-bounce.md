@@ -28,25 +28,53 @@ has no control over where the ball goes, and the last few bricks become a waitin
 
 # --explanation-tr--
 
-Top raketin **üst yüzeyinden** sekmeli. Üç şey birden doğruysa değer:
+**Bu adımda:** top raketten sekecek. Raketi topun altına getirirsen top yukarı geri dönecek; raketin ortasına
+denk gelirse dümdüz, uçlarına denk gelirse yana doğru açılı gidecek. Böylece topu nişan alabileceksin.
 
-1. **aşağı** gidiyor (`vy > 0`); böylece az önce seken bir top yeniden yakalanamaz;
-2. alt kenarı rakete ulaşmış: `ball.y + BALL_R >= PADDLE_Y`, ama çok da geçmemiş (üst yüzeyin altında en fazla bir
-   karelik hareket); böylece çoktan kaçmış bir top yeniden yukarı çekilmez;
-3. merkezi raketin üstünde: `paddle.x <= ball.x <= paddle.x + PADDLE_W`.
+**Top rakete ne zaman değer?** Topun raketin **üst yüzüne** değdiğini söylemek için üç şeyin aynı anda doğru olması
+gerekir:
 
-Sonra onu yukarı gönder (`vy = -Math.abs(vy)`) ve raketin üstüne geri koy.
+1. Top **aşağı** gidiyor (`ball.vy > 0`). Böylece az önce seken top ikinci kez yakalanmaz.
+2. Topun alt kenarı rakete ulaştı (`ball.y + BALL_R >= PADDLE_Y`) ama raketi fazla geçmedi: en fazla bir karelik
+   hareket kadar (`ball.y + BALL_R <= PADDLE_Y + PADDLE_H + ball.vy`). Böylece raketin yanından çoktan kaçmış bir
+   top geri yukarı çekilmez.
+3. Topun merkezi raketin üstünde: `ball.x`, `paddle.x` ile `paddle.x + PADDLE_W` arasında.
 
-Pong'daki gibi, nereye düştüğü açıyı belirler. Vuruş konumunu raket boyunca `-1 … 1` aralığına normalleştir ve yatay
-hız için kullan:
+Yeni işaretler:
+
+- `>=` "büyük veya eşit mi?", `<=` "küçük veya eşit mi?"
+- `&&` "**ve**": iki tarafı da doğruysa sonuç doğrudur. Beş parçayı `&&` ile bağlayınca "hepsi doğru mu?" diye
+  sormuş oluruz.
+
+Bu uzun sorunun cevabını (doğru ya da yanlış) bir ada koyarız: `onPaddle` ("raketin üstünde"). Uzun bir satırı
+okunur olsun diye birkaç satıra bölebiliriz; `&&` satır sonunda durdukça bilgisayar devam ettiğini anlar:
 
 ```js
-const offset = (ball.x - (paddle.x + PADDLE_W / 2)) / (PADDLE_W / 2)   // -1 sol uç, 1 sağ uç
+const onPaddle =
+  ball.vy > 0 &&
+  ball.y + BALL_R >= PADDLE_Y &&
+  ...
+```
+
+Değdiyse topu yukarı göndeririz (`ball.vy = -Math.abs(ball.vy)`: eksisi atılıp başına eksi konan sayı her zaman
+eksidir, yani yukarı) ve raketin tam üstüne koyarız (`ball.y = PADDLE_Y - BALL_R`).
+
+**Nişan almak.** Topun rakete nereden değdiği açıyı belirler. Değdiği yeri raket boyunca `-1 … 1` arasına çeviririz:
+
+```js
+const offset = (ball.x - (paddle.x + PADDLE_W / 2)) / (PADDLE_W / 2)
 ball.vx = offset * 5
 ```
 
-Ortaya vurmak topu dümdüz yukarı gönderir; uçlar dik bir açıyla fırlatır. Bu kural olmadan oyuncunun topun nereye
-gideceği üzerinde hiç kontrolü olmaz ve son birkaç tuğla bir bekleme oyununa döner.
+Parça parça:
+
+- `paddle.x + PADDLE_W / 2` → raketin ortası. (Önce bölme yapılır, sonra toplama; matematikteki gibi.)
+- `ball.x - (raketin ortası)` → top ortadan ne kadar sağda (artı) ya da solda (eksi).
+- `/ (PADDLE_W / 2)` → bunu yarım raket boyuna bölünce sonuç sol uçta `-1`, ortada `0`, sağ uçta `1` olur.
+- `* 5` → yan hız en fazla 5 piksel.
+
+Ortadan vurmak topu dümdüz yukarı yollar; uçlar sert bir açıyla. Bu kural olmasaydı oyuncunun topun gideceği yere
+hiç etkisi olmazdı ve son birkaç tuğla bir bekleme oyununa dönerdi.
 
 # --task--
 
@@ -56,9 +84,47 @@ In `update()`, after the wall checks: when the three conditions above hold (use
 
 # --task-tr--
 
-`update()` içinde duvar kontrollerinden sonra: yukarıdaki üç koşul sağlanınca ("çok geçmemiş" için
-`ball.y + BALL_R <= PADDLE_Y + PADDLE_H + ball.vy` kullan) `ball.vx = offset * 5`, `ball.vy = -Math.abs(ball.vy)` ve
-`ball.y = PADDLE_Y - BALL_R` yap.
+1. `update()` fonksiyonunda, tavan kontrolünün (`if (ball.y - BALL_R < 0) { ... }`) kapanış `}`'inden sonra ve en
+   alttaki `if (ball.y - BALL_R > canvas.height) resetBall()` satırından **önce**, raket kontrolünü ekle. Fonksiyon
+   şöyle görünmeli:
+
+   ```js
+   function update() {
+     ball.x += ball.vx
+     ball.y += ball.vy
+
+     if (ball.x - BALL_R < 0 || ball.x + BALL_R > canvas.width) {
+       ball.vx = -ball.vx
+       ball.x = clamp(ball.x, BALL_R, canvas.width - BALL_R)
+     }
+     if (ball.y - BALL_R < 0) {
+       ball.vy = Math.abs(ball.vy)
+       ball.y = BALL_R
+     }
+
+     const onPaddle =                                        // ← yeni
+       ball.vy > 0 &&                                        // ← yeni
+       ball.y + BALL_R >= PADDLE_Y &&                        // ← yeni
+       ball.y + BALL_R <= PADDLE_Y + PADDLE_H + ball.vy &&   // ← yeni
+       ball.x >= paddle.x &&                                 // ← yeni
+       ball.x <= paddle.x + PADDLE_W                         // ← yeni
+     if (onPaddle) {                                         // ← yeni
+       // -1 at the paddle's left end, 0 in the middle, 1 at the right end
+       const offset = (ball.x - (paddle.x + PADDLE_W / 2)) / (PADDLE_W / 2)   // ← yeni
+       ball.vx = offset * 5                                  // ← yeni
+       ball.vy = -Math.abs(ball.vy)                          // ← yeni
+       ball.y = PADDLE_Y - BALL_R                            // ← yeni
+     }                                                       // ← yeni
+
+     if (ball.y - BALL_R > canvas.height) resetBall()
+   }
+   ```
+
+   `// ← yeni` yorumlarını yazman gerekmez.
+
+2. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Fareyle raketi topun altına getir: top raketten sekmeli; raketin
+   ucuyla vurursan yana açılı gitmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa beş koşul
+   satırının her birinin (sonuncusu hariç) `&&` ile bittiğinden emin ol.
 
 # --tests--
 

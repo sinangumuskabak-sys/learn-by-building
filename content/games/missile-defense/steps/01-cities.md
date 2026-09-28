@@ -21,18 +21,60 @@ A city is drawn as a block when it is alive and as flat rubble when it is not, s
 
 # --explanation-tr--
 
-Her oyunun kaybedilecek bir şeye ihtiyacı vardır. Burada bu, yerdeki altı şehir ve ortada senin füze üssün.
+**Bu adımda:** korumamız gereken şeyleri çizeceğiz. Sağda koyu bir gökyüzü, altta kahverengi bir zemin, zeminin üstünde
+altı mavi şehir ve ortada yeşil füze üssün görünecek.
 
-Her şehir küçük bir nesnedir, `{ x, alive }`; bir x konumları listesinden `map` ile kurulur:
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur. `//` ile başlayan kısımlar **yorumdur**: bilgisayar atlar,
+sadece insanlar için not.
+
+**Canvas (tuval) ve fırça.** Sayfada 480 piksel eninde, 400 piksel boyunda boş bir resim alanı var. Her şeyi onun
+üstüne boyarız. Önce kâğıdı buluruz, sonra fırçayı (çizim bağlamı, **context**) alırız:
+
+```js
+const canvas = document.getElementById('game')   // kimliği 'game' olan canvas'ı bul
+const ctx = canvas.getContext('2d')              // onun 2D fırçasını al
+```
+
+- `const canvas =` → "bundan sonra buna `canvas` diyeceğim". `const` ile verilen ada **sabit** denir: bir kutuya
+  yapıştırılan, hiç değişmeyen bir etiket. `let` ile verilen adın değeri ise sonradan değişebilir (**değişken**).
+- Nokta (`.`) "bunun içindeki şu şey" demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+
+Fırçayla renk seçilir (`ctx.fillStyle = '#38bdf8'`) ve dikdörtgen boyanır (`ctx.fillRect(x, y, en, boy)`). **Konum:**
+sol üst köşe `(0, 0)`'dır; `x` sağa, `y` **aşağı** doğru büyür. Zemin `y = 370`'ten başlar, yani ekranın altındadır.
+
+**Her oyunun kaybedilecek bir şeyi olmalı.** Burada bu, yerdeki altı şehirdir. Her şehir küçük bir **nesnedir**:
+`{ x: 50, alive: true }` → "yatay konumu 50, canlı: evet". Süslü parantez bilgileri adlarıyla bir pakette toplar;
+`c.x` ile içindeki `x` okunur. `true`/`false` doğru/yanlış demektir.
+
+**Listeden liste yapmak.** Şehirlerin konumları bir **dizide** (listede) durur: `[50, 110, 170, 310, 370, 430]`. Her
+konumdan bir şehir nesnesi yapmak için `map` kullanırız:
 
 ```js
 cities = CITY_XS.map((x) => ({ x, alive: true }))
 ```
 
-(`{ x, alive: true }`'nin etrafındaki fazladan parantezler önemlidir: onlar olmadan JavaScript `{`'yi bir nesnenin değil, bir
-fonksiyon gövdesinin başı sanardı.)
+- `map` listedeki her eleman için verdiğin küçük fonksiyonu çalıştırır ve sonuçlardan **yeni bir liste** yapar.
+- `(x) => ...` bir **fonksiyondur**: `x` gelen elemanın adıdır, ok `=>` "şunu ver" diye okunur.
+- `{ x, alive: true }` içindeki tek başına `x`, `x: x`'in kısaltmasıdır.
+- Nesnenin etrafındaki fazladan parantez önemlidir: onlar olmasa JavaScript `{`'yi bir nesne değil, fonksiyon gövdesinin
+  başlangıcı sanardı.
 
-Bir şehir hayattayken bir blok, değilken yassı bir enkaz olarak çizilir; böylece aynı döngü ikisini de çizer.
+**Fonksiyonlar.** `function reset() { ... }` bir iş listesine ad verir; `reset()` yazınca çalışır. `draw()` her şeyi
+boyar.
+
+**Aynı döngü ikisini de çizer.** `for (const c of cities)` listedeki her şehri sırayla `c` adıyla dolaşır. Şehir canlıysa
+bir blok, değilse yassı bir enkaz çizilir. Seçimi `koşul ? A : B` yapar: "doğruysa A, değilse B".
+
+```js
+ctx.fillStyle = c.alive ? '#38bdf8' : '#44403c'   // canlıysa mavi, değilse gri-kahve
+```
+
+Blok 32 piksel enindedir ve şehrin `x`'inde ortalanır: `c.x - 16`. Yüksekliği canlıyken 14, enkazken 4'tür; ikisi de
+zemine basar: `GROUND - 14` ya da `GROUND - 4`.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der.
+`loop` kendini yeniden sıraya koyduğu için ekran saniyede yaklaşık 60 kez yeniden çizilir.
 
 # --task--
 
@@ -44,11 +86,66 @@ Bir şehir hayattayken bir blok, değilken yassı bir enkaz olarak çizilir; bö
 
 # --task-tr--
 
-1. `GROUND = 370`, `BASE = { x: 240, y: GROUND - 14 }` ve `CITY_XS = [50, 110, 170, 310, 370, 430]` ekle.
-2. `reset()`, `CITY_XS`'ten hepsi hayatta olan `cities`'i yapar.
-3. Her karede çiz: `'#020617'` bir gökyüzü, `GROUND`'dan aşağı `'#854d0e'` zemin, her şehri `x`'inde ortalı 32 genişliğinde bir
-   blok olarak: hayattaysa `'#38bdf8'` ile 14 yüksekliğinde, değilse `'#44403c'` ile 4 yüksekliğinde (ikisi de zeminde duran) ve
-   üssü `BASE`'te 24 genişliğinde, 14 yüksekliğinde `'#a3e635'` bir blok olarak.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı al:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir boş satır bırakıp ayarları ekle:
+
+   ```js
+   const GROUND = 370
+   const BASE = { x: 240, y: GROUND - 14 } // where your interceptors start
+   const CITY_XS = [50, 110, 170, 310, 370, 430]
+   ```
+
+3. Bir boş satır bırakıp şehirlerin değişkenini ve onları kuran `reset`'i yaz:
+
+   ```js
+   let cities
+
+   function reset() {
+     cities = CITY_XS.map((x) => ({ x, alive: true }))
+   }
+   ```
+
+4. Altına her şeyi boyayan `draw`'u yaz: gökyüzü, zemin, şehirler ve üs:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#020617'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#854d0e'
+     ctx.fillRect(0, GROUND, canvas.width, canvas.height - GROUND)
+
+     for (const c of cities) {
+       ctx.fillStyle = c.alive ? '#38bdf8' : '#44403c'
+       ctx.fillRect(c.x - 16, GROUND - (c.alive ? 14 : 4), 32, c.alive ? 14 : 4)
+     }
+     ctx.fillStyle = '#a3e635'
+     ctx.fillRect(BASE.x - 12, BASE.y, 24, 14)
+   }
+   ```
+
+   `canvas.height - GROUND` zeminin boyudur (400 − 370 = 30). Üs 24 piksel enindedir ve `BASE.x`'te ortalanır.
+
+5. En alta döngüyü ekle, şehirleri kur ve başlat:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Altta kahverengi zemin, üstünde altı mavi şehir ve ortada yeşil üs
+   görmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa renk kodlarını ve sayıları harf harf
+   karşılaştır.
 
 # --tests--
 

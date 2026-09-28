@@ -26,24 +26,52 @@ later turns see-through too.
 
 # --explanation-tr--
 
-Oyun çalışıyor. Şimdi iyi hissettirsin. Bir tuğla kırılınca öylece kayboluyor ve o anın hiçbir etkisi yok. Oyun
-geliştiriciler bunun çözümüne **juice** der: kuralları değiştirmeyen ama her hareketi tatmin edici hissettiren küçük
-efektler.
+**Bu adımda:** tuğla kırılınca küçük bir patlama efekti ekleyeceğiz. Kırılan tuğlanın ortasından onun renginde bir
+avuç minik kare saçılacak, hafifçe aşağı düşecek ve yavaşça solup kaybolacak.
 
-Klasik efekt bir **parçacık** patlamasıdır: tuğladan dışarı fırlayan, biraz yerçekimiyle düşen ve solup giden bir düzine
-minik kare. Her parçacık kendi konumu, hızı ve kalan **ömrü** olan minik bir nesnedir:
+**Oyun hissi (juice).** Oyun çalışıyor; şimdi iyi hissettirsin. Tuğla kırıldığında sadece yok oluyor ve o anın hiç
+etkisi yok. Oyun geliştiriciler bunun çözümüne **juice** (meyve suyu) der: kuralları değiştirmeyen ama her hareketi
+tatmin edici yapan küçük efektler.
+
+**Parçacıklar (particles).** En bilinen efekt: bir düzine minik kare tuğladan fırlar, biraz yerçekimiyle düşer ve
+solar. Her parçacık kendi konumu, hızı ve kalan **ömrü** olan küçük bir nesnedir:
 
 ```js
 { x, y, vx, vy, life: 30, color }
 ```
 
-Her karede: taşı, yerçekimi ekle, ömrünü azalt ve ölüleri `filter` ile kaldır. Bu, Flappy oyunundaki borularla aynı
-üret → güncelle → sil kalıbı; yalnızca kısa ömürlü birçok nesneyle. Patlamalar, kıvılcımlar, yağmur, toz ve konfeti
-hep tam olarak böyle yapılır.
+`life: 30` → parçacık 30 kare (yarım saniye kadar) yaşar.
 
-Solmak için `ctx.globalAlpha` kullanılır; ondan sonra çizilen her şeyin opaklığı: `1` tamamen dolu, `0` görünmez.
-Onu `life / 30` yapmak parçacığı son karelerinde soldurur. Sonrasında onu hep `1`'e geri döndür, yoksa sonra çizilen
-her şey de yarı saydam olur.
+Her karede her parçacık için: hareket ettir, yerçekimi ekle (`vy`'yi biraz artır), ömrünü bir azalt; sonra ömrü
+bitenleri `filter` ile listeden at. `filter`, bir listenin sadece istediğin elemanlarını tutan yeni bir liste verir:
+
+```js
+particles = particles.filter((p) => p.life > 0)   // ömrü 0'dan büyük olanları tut
+```
+
+Bu "doğ → güncellen → yok ol" deseni oyunlarda her yerdedir; patlamalar, kıvılcımlar, yağmur, toz ve konfeti hep
+tam olarak böyle yapılır. Ömrü bitenleri silmeyi unutursan liste sonsuza kadar büyür ve oyun gittikçe yavaşlar.
+
+**Rastgele yönler.** `Math.random()` her çağrıldığında 0 ile 1 arasında rastgele bir kesirli sayı verir.
+`Math.random() * 6 - 3` önce 0–6 arasına büyütür, sonra 3 çıkarır: sonuç **-3 ile 3** arası. Böylece her parçacık
+başka bir yöne uçar.
+
+**Uzun nesneyi satırlara bölmek.** Çok alanlı bir nesneyi okunur olsun diye her alanı ayrı satıra yazabiliriz; her
+alanın sonuna virgül konur:
+
+```js
+particles.push({
+  x: brick.x + BRICK_W / 2,
+  y: brick.y + BRICK_H / 2,
+  ...
+})
+```
+
+`brick.x + BRICK_W / 2` tuğlanın yatay ortası, `brick.y + BRICK_H / 2` dikey ortasıdır.
+
+**Solma: `globalAlpha`.** `ctx.globalAlpha` bundan sonra çizilen her şeyin **opaklığıdır**: `1` tam görünür, `0`
+görünmez, `0.5` yarı saydam. Onu `p.life / 30` yaparsak parçacık ömrü azaldıkça solar (30/30 = 1'den 0'a doğru).
+Sonrasında **mutlaka** `1`'e geri döndür; yoksa ondan sonra çizilen raket, top ve yazılar da saydamlaşır.
 
 # --task--
 
@@ -58,13 +86,86 @@ her şey de yarı saydam olur.
 
 # --task-tr--
 
-1. `let particles` ekle ve `newGame()` içinde `particles = []` yap.
-2. Tuğlanın merkezine her biri `vx = Math.random() * 6 - 3`, `vy = Math.random() * 6 - 3`, `life: 30` ve tuğlanın
-   rengi (`COLORS[brick.row]`) olan 12 parçacık ekleyen `function burst(brick)` yaz. Bir tuğla kırılınca çağır.
-3. `update()`'in başında (parçacıklar servisler arasında da hareket etmeye devam etsin diye) her parçacık için:
-   konumuna `vx`/`vy` ekle, `vy`'ye `0.15` ekle ve `life`'tan 1 çıkar. Sonra yalnızca `life > 0` olanları tut.
-4. `draw()` içinde tuğlalardan sonra her parçacığı kendi renginde, `globalAlpha = p.life / 30` ile, merkezinde 4×4
-   bir kare olarak çiz (`fillRect(p.x - 2, p.y - 2, 4, 4)`). `globalAlpha`'yı `1`'e geri döndür.
+1. `let bricks` satırının altına:
+
+   ```js
+   let particles
+   ```
+
+2. `newGame()` fonksiyonunda, `buildBricks()` satırının altına parçacık listesini boşaltan satırı ekle:
+
+   ```js
+   function newGame() {
+     buildBricks()
+     particles = []   // ← yeni
+     lives = 3
+     score = 0
+     resetBall()
+   }
+   ```
+
+3. `buildBricks()` fonksiyonunun kapanış `}`'inden sonra bir boş satır bırak ve patlama fonksiyonunu yaz:
+
+   ```js
+   function burst(brick) {
+     for (let i = 0; i < 12; i++) {
+       particles.push({
+         x: brick.x + BRICK_W / 2,
+         y: brick.y + BRICK_H / 2,
+         vx: Math.random() * 6 - 3,
+         vy: Math.random() * 6 - 3,
+         life: 30,
+         color: COLORS[brick.row],
+       })
+     }
+   }
+   ```
+
+   Döngü 12 kez döner (`i` 0'dan 11'e) ve her turda tuğlanın ortasına, tuğlanın renginde, rastgele yönlü bir
+   parçacık ekler.
+
+4. `update()` fonksiyonunun **en başına**, `if (keys.ArrowLeft)` satırından önce parçacıkları hareket ettiren
+   kodu ekle:
+
+   ```js
+   function update() {
+     for (const p of particles) {                         // ← yeni
+       p.x += p.vx                                        // ← yeni
+       p.y += p.vy                                        // ← yeni
+       p.vy += 0.15                                       // ← yeni
+       p.life -= 1                                        // ← yeni
+     }                                                    // ← yeni
+     particles = particles.filter((p) => p.life > 0)      // ← yeni
+
+     if (keys.ArrowLeft) paddle.x -= 7
+     ...
+   ```
+
+   En başa koyuyoruz ki servis beklerken bile parçacıklar hareket etsin (sonraki `return`'ler onları durdurmasın).
+
+5. Yine `update()` içinde, tuğla kıran `if (brick) { ... }` bloğunda `score += 10` satırının altına:
+
+   ```js
+       burst(brick)
+   ```
+
+6. `draw()` fonksiyonunda, tuğlaları çizen `for (const brick of bricks) { ... }` döngüsünün kapanış `}`'inden
+   sonra (raketten **önce**) parçacıkları çiz:
+
+   ```js
+     for (const p of particles) {
+       ctx.globalAlpha = p.life / 30
+       ctx.fillStyle = p.color
+       ctx.fillRect(p.x - 2, p.y - 2, 4, 4)
+     }
+     ctx.globalAlpha = 1
+   ```
+
+   `p.x - 2`, `p.y - 2`: 4×4'lük kareyi parçacığın tam ortasına oturtur.
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla ve bir tuğla kır: tuğlanın renginde
+   minik kareler saçılıp solmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa
+   `ctx.globalAlpha = 1` satırının döngünün **dışında**, `}`'den sonra olduğundan emin ol.
 
 # --tests--
 

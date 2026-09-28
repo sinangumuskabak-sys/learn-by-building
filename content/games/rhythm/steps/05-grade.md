@@ -23,19 +23,48 @@ The best score is saved, and Space plays again.
 
 # --explanation-tr--
 
-Son nota da geçip gittiğinde şarkı biter ve oyuncu bir **not** alır.
+**Bu adımda:** şarkının bir sonu olacak. Son nota geçince ortada koyu bir panel açılacak: büyük bir harf notu (S, A, B,
+C ya da D), isabet yüzdesi, en iyi puan, vuruş sayıları ve "Space to play again". Boşluk ya da Enter ile yeniden
+oynayabileceksin; en iyi puan sayfayı kapatsan da hatırlanacak.
 
-Not **doğruluktan** gelir: kusursuz tam, iyi yarım, ıska hiç sayılır ve nota sayısına bölünür:
+**Oyunun hâli: `state`.** Şarkı ya çalıyordur (`'playing'`) ya da bitmiştir (`'done'`). Bunu bir yazı olarak `state`
+değişkeninde tutarız. Bittiyse ne basış ne saat çalışır: `press()` ve `update()`'in ilgili yerine
+`if (state !== 'playing') return` koyarız (`!==` "eşit değil", tek başına `return` "burada dur").
+
+**Şarkı ne zaman biter?** Son satırın zamanı `LEAD + CHART.length * STEP`'tir (`CHART.length` çizelgedeki satır
+sayısı). Bir saniye (60 kare) daha bekleriz ki son notalar ekrandan çıksın ve ıskalar sayılsın.
+
+**İsabet (accuracy).** Not, puana değil isabete göre verilir: Perfect tam, Good yarım, Miss sıfır sayılır ve toplam
+notaya bölünür:
 
 ```js
 Math.round((100 * (judged.perfect + judged.good * 0.5)) / total)
 ```
 
-Sonra bir eşikler zinciri yüzdeyi bir harfe çevirir: 95 ya da üstü S, 85 A, 70 B, 50 C ve altı D. O sayıları ayarlamak oyun
-tasarımıdır: her notaya 5 kare içinde basan bir bilgisayar oyuncusu, yani iyi bir insan, S alır; 10 kareye kadar sapan biri C alır.
+`Math.round` en yakın tam sayıya yuvarlar. Henüz hiç nota değerlendirilmediyse (`total === 0`) sıfıra bölmemek için
+100 veririz. Burada `accuracy` birkaç satırlık bir ok fonksiyonudur: süslü parantez kullanınca sonucu `return` ile
+açıkça vermek gerekir.
 
-Doğruluk puandan farklıdır: kısa, kusursuz bir seri ile uzun, titrek bir seri aynı puanla bitebilir ama aynı notla bitmez. En iyi puan
-kaydedilir ve Boşluk yeniden oynatır.
+**Yüzdeden harfe.** Art arda sorular:
+
+```js
+return a >= 95 ? 'S' : a >= 85 ? 'A' : a >= 70 ? 'B' : a >= 50 ? 'C' : 'D'
+```
+
+`koşul ? evetse : hayırsa` zinciri: "95 ya da üstüyse S; değilse 85 ya da üstüyse A; değilse ..." (`>=` "büyük veya
+eşit"). Bu eşikleri ayarlamak oyun tasarımıdır: her notaya 5 kare içinde basan (iyi bir insan) S alır; 10 kareye
+kadar şaşan C alır. İsabet puandan farklıdır: kısa kusursuz bir seri ile uzun titrek bir seri aynı puanı
+getirebilir, ama aynı notu değil.
+
+**Kalıcı hafıza: `localStorage`.** Tarayıcının bu site için tuttuğu, sayfa kapanınca silinmeyen küçük bir not
+defteridir. `localStorage.setItem('rhythm-best', best)` kaydeder, `localStorage.getItem('rhythm-best')` okur (yazı
+olarak; hiç yoksa `null`). `Number(...)` yazıyı sayıya çevirir, `|| 0` "işe yaramazsa 0 kullan" demektir.
+
+**Yeniden başlamak.** Şarkı bittiyse **ve** (`&&`) basılan tuş Boşluk (`' '`) **veya** (`||`) Enter ise `reset()`.
+Parantez, "veya"nın önce hesaplanmasını sağlar. `return reset()` "reset'i çağır ve burada bitir" demenin kısasıdır.
+
+**Yarı saydam panel.** `'rgba(15, 23, 42, 0.9)'` bir renk yazımıdır: kırmızı, yeşil, mavi (0–255) ve saydamlık
+(0 tamamen saydam, 1 tamamen dolu). 0.9 arkadaki notaları çok hafif gösterir.
 
 # --task--
 
@@ -49,12 +78,96 @@ kaydedilir ve Boşluk yeniden oynatır.
 
 # --task-tr--
 
-1. `state` (`reset()`'te `'playing'`) ve `localStorage`'da `'rhythm-best'` adıyla `best` ekle. `press` ve saat yalnızca oynarken çalışır.
-2. `frame`, `LEAD + CHART.length * STEP + 60`'ı geçince `'done'` yap ve daha iyi bir puanı kaydet.
-3. `accuracy()` (henüz hiçbir şey değerlendirilmediyse 100) ve yukarıdaki eşiklerle `grade()` yaz.
-4. Şarkıdan sonra Boşluk ya da Enter `reset()`'i çağırır. Sonda `(40, 170)`'te `canvas.width - 80`'e 170 `'rgba(15, 23, 42, 0.9)'` bir panel
-   ile notu (`'bold 48px sans-serif'`, `y = 228`), `96% accurate, best 40300`, `45 perfect, 4 good, 0 missed` ve `Space to play again`
-   (`'16px sans-serif'`, `y = 262`, `288` ve `318`'de) yazılarını ortalı çiz.
+1. `let lit ...` satırının altına iki değişken ekle:
+
+   ```js
+   let state // 'playing' or 'done'
+   let best = Number(localStorage.getItem('rhythm-best')) || 0
+   ```
+
+2. `reset()`'in son satırı olarak (`lit = [0, 0, 0, 0]`'ın altına) şunu ekle:
+
+   ```js
+     state = 'playing'
+   ```
+
+3. `press()`'in ilk satırı olarak şunu ekle:
+
+   ```js
+   function press(lane) {
+     if (state !== 'playing') return          // ← yeni
+     lit[lane] = 8
+   ```
+
+4. `press()`'in kapanan `}`'sinden sonra bir boş satır bırak ve (`function update()`'in **üstüne**) isabet ve not
+   fonksiyonlarını yaz:
+
+   ```js
+   const accuracy = () => {
+     const total = judged.perfect + judged.good + judged.miss
+     return total === 0 ? 100 : Math.round((100 * (judged.perfect + judged.good * 0.5)) / total)
+   }
+
+   function grade() {
+     const a = accuracy()
+     return a >= 95 ? 'S' : a >= 85 ? 'A' : a >= 70 ? 'B' : a >= 50 ? 'C' : 'D'
+   }
+   ```
+
+5. `update()`'i güncelle: `frame += 1`'in üstüne durum kontrolünü, ıska döngüsünün altına şarkının bitişini ekle.
+   Fonksiyon tamamen şöyle olmalı:
+
+   ```js
+   function update() {
+     lit = lit.map((n) => Math.max(0, n - 1))
+     if (feedback && --feedback.time === 0) feedback = null
+     if (state !== 'playing') return                        // ← yeni
+     frame += 1
+     // A note that has gone past the window without being hit is a miss.
+     for (const n of notes) {
+       if (!n.hit && frame - n.time > GOOD) {
+         n.hit = true
+         judged.miss += 1
+         combo = 0
+         judge('Miss', '#f87171')
+       }
+     }
+     if (frame > LEAD + CHART.length * STEP + 60) {         // ← yeni
+       state = 'done'                                       // ← yeni
+       if (score > best) {                                  // ← yeni
+         best = score                                       // ← yeni
+         localStorage.setItem('rhythm-best', best)          // ← yeni
+       }                                                    // ← yeni
+     }                                                      // ← yeni
+   }
+   ```
+
+6. `keydown` dinleyicisinde, `if (event.repeat) return ...` satırının altına şunu ekle:
+
+   ```js
+     if (state === 'done' && (event.key === ' ' || event.key === 'Enter')) return reset()
+   ```
+
+7. `draw()`'un sonunda, `Combo` yazısını yazan satırdan sonra, fonksiyonun son `}`'sinden önce bitiş panelini ekle:
+
+   ```js
+     if (state === 'done') {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'
+       ctx.fillRect(40, 170, canvas.width - 80, 170)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 48px sans-serif'
+       ctx.fillText(grade(), canvas.width / 2, 228)
+       ctx.font = '16px sans-serif'
+       ctx.fillText(accuracy() + '% accurate, best ' + best, canvas.width / 2, 262)
+       ctx.fillText(judged.perfect + ' perfect, ' + judged.good + ' good, ' + judged.miss + ' missed', canvas.width / 2, 288)
+       ctx.fillText('Space to play again', canvas.width / 2, 318)
+     }
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve şarkıyı sonuna kadar çal (yaklaşık 15 saniye). Sonunda panel
+   ve harf notu çıkmalı; Boşluk'a basınca şarkı baştan başlamalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

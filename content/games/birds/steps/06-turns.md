@@ -21,18 +21,37 @@ clearing it with three.
 
 # --explanation-tr--
 
-Bir bulmacanın bir sınıra ihtiyacı vardır. Seviye başına **üç kuş** alırsın. Her atıştan sonra oyun her şey yatışana kadar bekler
-(önceki sakinlik sayacı), sonra karar verir:
+**Bu adımda:** oyuna bir sınır koyacağız: seviye başına **üç kuş**. Sol üstte `Birds 3  Score 0` yazacak. Bütün
+domuzları temizlersen `Level cleared!` (seviye temizlendi), kuşların biterse `Out of birds` (kuş kalmadı) paneli çıkacak.
 
-- domuz kalmadı: seviye **temizlendi** ve ihtiyaç duymadığın her kuş 1000 puan değerindedir;
-- domuz kaldı ama kuş yok: **kuşlar bitti**;
-- değilse: sıradaki kuş.
+**Bir bulmacanın sınırı olmalı.** `birdsLeft` kalan kuş sayısıdır: 3 ile başlar, her fırlatışta 1 azalır. Kuş kalmadıysa
+`launch()` hiçbir şey yapmaz. Sapanda kuş çizimi de sadece kuş varken görünür.
 
-Sakinliği beklemek burada önemlidir. Bir kule çarpmadan sonra çoğu zaman bir saniye daha yıkılmaya devam eder ve en sonda ezilen
-bir domuz da sayılır.
+**Atış bitince karar.** 2. adımdaki `calm` (sakinlik) sayacı, her şey bir saniye kıpırdamayınca atışı bitiriyordu. Şimdi o
+anda şu karar verilir:
 
-Kullanılmayan kuşlar için verilen ödül oyuncuları bir seviyeyi yeniden oynatan şeydir: onu tek kusursuz atışla temizlemek, üç
-atışla temizlemekten 2000 daha değerlidir.
+- domuz kalmadı (`pigs().length === 0`) → seviye **temizlendi** (`'won'`) ve kullanmadığın her kuş 1000 puan eder;
+- domuz var ama kuş yok → **kuş kalmadı** (`'lost'`);
+- değilse → sıradaki kuş (`'aiming'`).
+
+**Sakinliği beklemek burada önemli.** Bir kule, çarpmadan sonra çoğu zaman bir saniye daha yıkılmaya devam eder; en
+sonda ezilen bir domuz da sayılmalı.
+
+**Neden kullanılmayan kuşa bonus?** Oyuncuları seviyeyi tekrar oynatan budur: seviyeyi tek mükemmel atışla temizlemek,
+üç atışla temizlemekten 2000 puan fazla eder.
+
+**Oyun bitince fizik durur.** `update()`'in başına "ne uçuyor ne nişan alınıyorsa dur" ekleriz. `next()` fonksiyonu,
+oyun bittiyse `reset()` ile baştan başlatır. Boşluk: nişan alırken fırlatır, değilse `next()`'i çağırır:
+
+```js
+state === 'aiming' ? launch() : next()
+```
+
+`? :` burada iki işten birini seçer: "nişan alınıyorsa `launch()`, değilse `next()`". Oyun bittiyse ekrana dokunmak da
+`next()`'i çağırır (`return next()` → "`next`'i çağır ve burada dur").
+
+**Panel.** Yarı saydam koyu bir dikdörtgen (`'rgba(15, 23, 42, 0.8)'`) ve üstüne ortalanmış beyaz iki yazı.
+`ctx.textAlign = 'center'` yazıyı verilen `x`'e ortalar.
 
 # --task--
 
@@ -46,13 +65,106 @@ atışla temizlemekten 2000 daha değerlidir.
 
 # --task-tr--
 
-1. `birdsLeft` ekle (`reset()`'te `3`); `launch()` bir tane ister ve onu alır.
-2. `update()` yalnızca nişan alırken ya da uçarken çalışır. Bir atış yatıştığında: domuz kalmadıysa skora `birdsLeft * 1000` ekle
-   ve `'won'` yap; kuş kalmadıysa `'lost'`; değilse `'aiming'`.
-3. `next()` yaz: `'won'` ya da `'lost'`'ta `reset()`. Nişan alınmıyorsa Boşluk `next()`'i çağırır; oyun bittiğinde bir dokunuş da.
-4. `Birds 3  Score 0` çiz; oyun bitince `(130, 110)`'da 300'e 80 `'rgba(15, 23, 42, 0.8)'` bir panel ile `Level cleared!` ya da
-   `Out of birds` (`'bold 22px sans-serif'`, `y = 145`) ve `Space or tap to play again` (`'15px sans-serif'`, `y = 172`)
-   yazılarını beyazla ortalı çiz.
+1. `let bird ...` satırının altına kalan kuşları ekle ve `let state ...` satırının yorumunu güncelle:
+
+   ```js
+   let birdsLeft
+   ```
+
+   ```js
+   let state // 'aiming', 'flying', 'won' or 'lost'
+   ```
+
+2. `reset()` içinde `bird = null` satırının altına ekle:
+
+   ```js
+     birdsLeft = 3
+   ```
+
+3. `launch()`'ta ilk satırı değiştir ve `bodies.push(bird)` satırının altına bir satır ekle:
+
+   ```js
+   function launch() {
+     if (state !== 'aiming' || birdsLeft === 0) return // ← değişti
+     const { vx, vy } = launchVelocity()
+     bird = body('bird', SLING.x - BIRD, SLING.y - BIRD, BIRD * 2, BIRD * 2)
+     bird.vx = vx
+     bird.vy = vy
+     bodies.push(bird)
+     birdsLeft -= 1 // ← yeni
+     state = 'flying'
+     calm = 0
+   }
+   ```
+
+4. `update()`'in başına bir satır ekle ve en sondaki `state = 'aiming'` satırını karar kısmıyla değiştir; hemen altına
+   `next`'i yaz:
+
+   ```js
+   function update() {
+     if (state !== 'flying' && state !== 'aiming') return // ← yeni
+     for (let i = 0; i < SUB; i++) step()
+   ```
+
+   ```js
+     if (bird) {
+       bodies = bodies.filter((b) => b !== bird)
+       bird = null
+     }
+     if (pigs().length === 0) { // ← yeni (buradan)
+       score += birdsLeft * 1000 // unused birds are worth a lot
+       state = 'won'
+     } else if (birdsLeft === 0) state = 'lost'
+     else state = 'aiming' // ← (buraya kadar)
+   }
+
+   function next() {
+     if (state === 'won' || state === 'lost') reset()
+   }
+   ```
+
+5. `keydown` olayındaki Boşluk satırını değiştir:
+
+   ```js
+     else if (event.key === ' ') state === 'aiming' ? launch() : next() // ← değişti
+   ```
+
+6. `pointerdown` olayının en başına ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'won' || state === 'lost') return next() // ← yeni
+     if (state !== 'aiming') return
+   ```
+
+7. `draw()`'da sapandaki kuşu çizen `if`'i değiştir:
+
+   ```js
+     if (state === 'aiming' && birdsLeft > 0) { // ← değişti
+   ```
+
+8. `draw()`'un en sonundaki puan satırını değiştir ve altına bitiş panelini ekle:
+
+   ```js
+     ctx.fillText('Birds ' + birdsLeft + '  Score ' + score, 10, 22) // ← değişti
+     if (state === 'won' || state === 'lost') { // ← yeni (buradan)
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+       ctx.fillRect(130, 110, 300, 80)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.fillText(state === 'won' ? 'Level cleared!' : 'Out of birds', canvas.width / 2, 145)
+       ctx.font = '15px sans-serif'
+       ctx.fillText('Space or tap to play again', canvas.width / 2, 172)
+     } // ← (buraya kadar)
+   }
+   ```
+
+   `'  Score '` içinde başta **iki** boşluk var; kontroller yazıyı harfi harfine arar.
+
+9. **Çalıştır**'a bas. Sol üstte `Birds 3  Score 0` görmelisin. Oynamak için önce oyuna tıkla ve üç kuşu fırlat: her
+   atışta `Birds` bir azalmalı; üçü de ıskalarsa `Out of birds` çıkmalı, Boşluk baştan başlatmalı. Alttaki kontrollerin
+   hepsi yeşil olmalı.
 
 # --tests--
 

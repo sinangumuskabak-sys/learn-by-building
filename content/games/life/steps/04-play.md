@@ -25,22 +25,44 @@ generation, the world should stop.
 
 # --explanation-tr--
 
-Her nesil için N'ye basmak yorucu. Artık dünya kendi kendine işlemeli ve **Boşluk** onu başlatıp durdurmalı.
+**Bu adımda:** dünya kendi kendine yaşayacak. **Boşluk** (Space) tuşuyla başlatıp durduracaksın; **N** ise durdurup
+tek bir nesil ilerletecek. Sağda desenlerin kendiliğinden hareket ettiğini göreceksin.
 
-Saniyede 60 karede her karede bir nesil izlenemeyecek kadar hızlıdır, bu yüzden kareleri sayar ve yalnızca her `SPEED`'inci
-karede ilerleriz:
+**Doğru / yanlış değerleri.** `playing` değişkeni dünyanın çalışıp çalışmadığını tutar. İçinde ya `true` (doğru) ya da
+`false` (yanlış) olur; bir ışık düğmesi gibi. `!` işareti "tersi" demektir: `playing = !playing` açıksa kapatır,
+kapalıysa açar.
+
+**Yavaşlatmak.** `loop` saniyede yaklaşık 60 kez çalışır. Her seferinde bir nesil ilerlesek gözle izlenemez. Bu yüzden
+kareleri (frame) sayarız ve yalnızca her `SPEED`'inci karede ilerleriz:
 
 ```js
 frames += 1
 if (playing && frames % SPEED === 0) step()
 ```
 
-`frames % SPEED === 0`; 6, 12, 18 gibi karelerde doğrudur: `SPEED = 6` ile bu saniyede 10 nesil eder. Daha büyük bir `SPEED`
-daha yavaş bir dünya demektir.
+`frames % SPEED === 0` (3. adımdaki kalan işareti) `frames` 6, 12, 18... olduğunda doğrudur. `SPEED = 6` ile saniyede
+10 nesil olur. `SPEED` büyüdükçe dünya yavaşlar. Bu sayma işini `update()` adlı bir fonksiyona koyar ve `loop` içinde
+`draw()`'dan hemen önce çağırırız: önce dünyayı güncelle, sonra çiz.
 
-Tuşlar artık tuşlardan eylemlere küçük bir tabloyla tek bir fonksiyondan geçer: `press(button)`. Bunun karşılığını ekrandaki
-düğmelerin aynı `press`'i çağıracağı son adımda alacağız. N hâlâ bir kez ilerletir ve duraklatır da: tek bir nesle bakmak
-istiyorsan dünya durmalıdır.
+**Tek bir karar yeri: `press(button)`.** Tuşları doğrudan işlere bağlamak yerine, her tuş bir düğme adına (`'Play'`,
+`'Step'`) çevrilir ve hepsi `press`'e gider. Son adımda ekrana düğmeler koyacağız; onlar da aynı `press`'i çağıracak.
+
+```js
+if (button === 'Play') playing = !playing
+else if (button === 'Step') { ... }
+```
+
+`if ... else if ...` → "şuysa bunu yap, **değilse** ve şuysa şunu yap".
+
+**Küçük bir tablo: nesne (object).** `{ ' ': 'Play', n: 'Step' }` bir **nesnedir**: anahtar–değer çiftlerinden
+oluşan küçük bir sözlük. `keys['n']` → `'Step'`, `keys[' ']` → `'Play'` (`' '` boşluk tuşunun adıdır). Tabloda olmayan
+bir tuş sorulursa sonuç `undefined` (yok) olur.
+
+- `if (!button) return` → "düğme yoksa (bizi ilgilendirmeyen bir tuşsa) burada dur". `return` fonksiyondan hemen çıkar.
+- `event.preventDefault()` → tarayıcının o tuşla kendi yaptığı işi engeller. Örneğin boşluk tuşu normalde sayfayı aşağı
+  kaydırır; bunu istemeyiz.
+
+N neden durduruyor? Tek bir nesle bakmak istiyorsan dünyanın durması gerekir.
 
 # --task--
 
@@ -52,11 +74,68 @@ istiyorsan dünya durmalıdır.
 
 # --task-tr--
 
-1. `SPEED = 6` ekle; ayrıca `playing` ve `frames` (`reset()`'te `false` ve `0`).
-2. `draw()`'dan önce çağrılan `update()`'i yaz: `frames`'i artır ve `playing` iken `frames % SPEED === 0` olduğunda `step()` et.
-3. `press(button)` yaz: `'Play'` `playing`'i tersine çevirir; `'Step'` `playing = false` yapar ve `step()`'i çağırır.
-4. `keydown`'da `' '`'yu `'Play'`'e, `n`'yi `'Step'`'e eşle (`event.key.toLowerCase()` kullan); bu tuşlarda `preventDefault()`
-   ve `press` çağır.
+1. `const TOP = 36` satırının altına hız sabitini ekle:
+
+   ```js
+   const SPEED = 6 // frames per generation while playing
+   ```
+
+2. `let generation` satırının altına iki değişken daha ekle:
+
+   ```js
+   let playing
+   let frames
+   ```
+
+3. `reset()` fonksiyonunda ikisine başlangıç değeri ver:
+
+   ```js
+   function reset() {
+     grid = emptyGrid()
+     randomize()
+     playing = false // ← yeni
+     frames = 0      // ← yeni
+   }
+   ```
+
+4. Eski N tuşu kodunu (`document.addEventListener('keydown', ...` ile başlayıp `})` ile biten üç satır) sil. Yerine,
+   `const population = ...` satırının altına şunları yaz:
+
+   ```js
+   function press(button) {
+     if (button === 'Play') playing = !playing
+     else if (button === 'Step') {
+       playing = false
+       step()
+     }
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const keys = { ' ': 'Play', n: 'Step' }
+     const button = keys[event.key.toLowerCase()]
+     if (!button) return
+     event.preventDefault()
+     press(button)
+   })
+
+   function update() {
+     frames += 1
+     if (playing && frames % SPEED === 0) step()
+   }
+   ```
+
+5. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra **Boşluk**'a bas: desenler kendiliğinden değişmeli. Tekrar
+   bastığında durmalı; **N** bir nesil ilerletip durdurmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

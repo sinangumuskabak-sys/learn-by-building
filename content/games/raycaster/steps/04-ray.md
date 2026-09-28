@@ -29,26 +29,39 @@ a horizontal line.
 
 # --explanation-tr--
 
-Bir **ışın** tek bir soruyu cevaplar: "bu yöne bakarsam ilk duvar ne kadar uzakta?" 3B görünüm bunu her karede yüzlerce kez
-soracak; bu yüzden hızlı ve kesin olmalı.
+**Bu adımda:** bir **ışın** (ray) göndereceğiz. Haritada, baktığın yönde önündeki ilk duvara kadar giden kırmızı bir
+çizgi göreceksin. Dönünce çizgi de döner ve hep ilk duvarda biter.
 
-Işın boyunca minik adımlarla ilerlemek yavaş olurdu ve ince köşeleri kaçırabilirdi. Bunun yerine şuna dikkat et: bir ışın
-yeni bir döşemeye ancak bir **ızgara çizgisini** geçerek girebilir: dikey bir çizgi (`x` tam sayı) ya da yatay bir çizgi (`y`
-tam sayı). Öyleyse ızgara çizgisinden ızgara çizgisine yürü; ikisinden hangisi önce geliyorsa onu al. Bu **DDA**
-algoritmasıdır (digital differential analyzer):
+**Işın bir soruya cevap verir:** "Bu yöne bakarsam ilk duvar ne kadar uzakta?" Sonraki adımda 3D görüntü bu soruyu
+her karede yüzlerce kez soracak; bu yüzden hem hızlı hem kesin olmalı.
+
+**Küçük adımlar neden kötü?** Işın boyunca minik adımlarla ilerlemek yavaş olur ve ince köşeleri kaçırabilir. Oysa bir
+ışın yeni bir kareye ancak bir **ızgara çizgisini** geçerek girer: ya dikey bir çizgi (`x` tam sayı) ya da yatay bir
+çizgi (`y` tam sayı). O hâlde çizgiden çizgiye yürürüz; her seferinde ikisinden **hangisi daha yakınsa** onu
+geçeriz. Bu yöntemin adı **DDA**'dır:
 
 ```
-deltaX = ışın boyunca bir tam döşeme yana ne kadar uzaktır   = |1 / cos(angle)|
-nextX  = ışın boyunca sonraki dikey çizgi ne kadar uzakta
-tekrarla: nextX / nextY'den yakın olana adım at, o döşemeye gir, bir duvarda dur
+deltaX = ışın boyunca tam bir kare yana gitmek ne kadar sürer   = |1 / cos(açı)|
+nextX  = ışın boyunca bir sonraki dikey çizgi ne kadar uzakta
+tekrarla: nextX ile nextY'den yakın olana adım at, o kareye gir, duvarsa dur
 ```
 
-Her adım tam olarak ışının girdiği sonraki döşemeye düşer; böylece bütün haritayı geçen bir ışın yalnızca birkaç düzine adım
-sürer ve bir duvarı asla atlayamaz. En son hangi tür çizginin geçildiği, duvarın hangi **yüzüne** çarpıldığını da söyler
-(dikey yüz için `'x'`, yatay yüz için `'y'`); görünüm bunu gölgelendirme için kullanacak.
+Her adım ışının girdiği bir sonraki kareye tam denk gelir; ışın bütün haritayı birkaç düzine adımda geçer ve hiçbir
+duvarı atlayamaz. En son hangi tür çizgi geçildiyse duvarın hangi **yüzüne** çarpıldığını da söyler: dikey yüz için
+`'x'`, yatay yüz için `'y'`. Görüntü bunu ileride gölgelendirme için kullanacak.
 
-`0` olan bir `cos` ya da `sin` `Infinity` bir `delta` verir ve bu tam doğrudur: dümdüz yana giden bir ışın hiçbir yatay
-çizgiyi geçmez.
+`cos` ya da `sin` `0` olunca `delta` `Infinity` (sonsuz) olur, bu da tam doğrudur: dümdüz yana giden ışın hiçbir
+yatay çizgiyi geçmez.
+
+**Yeni parçalar:**
+
+- **`while (true) { ... }`**: "sonsuza dek tekrarla". Döngüden çıkış yolu içerideki `return`'dür: duvar bulununca
+  fonksiyon cevabı döndürür ve döngü de biter.
+- **`if (...) { ... } else { ... }`**: koşul doğruysa ilk bloğu, değilse ikinciyi yapar.
+- `Math.abs` bir sayının eksisini atar (`Math.abs(-2)` → `2`).
+- `stepX` ışın sağa gidiyorsa `1`, sola gidiyorsa `-1`: bir sonraki karenin sütunu `col += stepX` ile bulunur.
+- `return { dist, side, tile, x: ..., y: ... }`: `{ dist }` kısaltması `{ dist: dist }` ile aynıdır; aynı adlı
+  değişkenin değerini alır. Cevap bir nesnedir: uzaklık, yüz, duvarın harfi ve çarpma noktası.
 
 # --task--
 
@@ -59,10 +72,62 @@ sürer ve bir duvarı asla atlayamaz. En son hangi tür çizginin geçildiği, d
 
 # --task-tr--
 
-1. Anlatıldığı gibi, oyuncunun döşemesinden başlayan DDA ile `castRay(angle)` yaz. `{ dist, side, tile, x, y }` döndür: ışın
-   boyunca mesafe, `'x'` ya da `'y'`, duvarın harita karakteri ve ışının çarptığı nokta (`player.x + cos * dist`,
-   `player.y + sin * dist`).
-2. Haritada tam öndeki ışını çiz: oyuncudan çarptığı noktaya `'#f87171'` bir çizgi.
+1. `move(dx, dy)` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp ışın fonksiyonunu yaz:
+
+   ```js
+   // Walk the grid line by line (DDA) until the ray enters a wall tile.
+   function castRay(angle) {
+     const dx = Math.cos(angle)
+     const dy = Math.sin(angle)
+     let col = Math.floor(player.x)
+     let row = Math.floor(player.y)
+     const stepX = dx > 0 ? 1 : -1
+     const stepY = dy > 0 ? 1 : -1
+     // How far along the ray one whole tile across (or down) is.
+     const deltaX = Math.abs(1 / dx)
+     const deltaY = Math.abs(1 / dy)
+     // How far along the ray the next vertical (or horizontal) grid line is.
+     let nextX = (dx > 0 ? col + 1 - player.x : player.x - col) * deltaX
+     let nextY = (dy > 0 ? row + 1 - player.y : player.y - row) * deltaY
+     while (true) {
+       let dist
+       let side
+       if (nextX < nextY) {
+         dist = nextX
+         nextX += deltaX
+         col += stepX
+         side = 'x'
+       } else {
+         dist = nextY
+         nextY += deltaY
+         row += stepY
+         side = 'y'
+       }
+       const tile = MAP[row][col]
+       if (tile !== '.') return { dist, side, tile, x: player.x + dx * dist, y: player.y + dy * dist }
+     }
+   }
+   ```
+
+2. `draw()` fonksiyonunda haritayı çizen `MAP.forEach(...)` bloğunun kapanış `})` satırının altına, sarı oyuncuyu
+   çizen `ctx.fillStyle = '#facc15'` satırından **önce** ışını çiz:
+
+   ```js
+     // The ray straight ahead, up to the wall it hits.
+     const hit = castRay(player.angle)
+     ctx.strokeStyle = '#f87171'
+     ctx.beginPath()
+     ctx.moveTo(player.x * MINI, player.y * MINI)
+     ctx.lineTo(hit.x * MINI, hit.y * MINI)
+     ctx.stroke()
+
+   ```
+
+   Harita birimlerini ekran pikseline çevirmek için yine `MINI` ile çarparız.
+
+3. **Çalıştır**'a bas. Oyuncudan sağdaki duvara giden kırmızı bir çizgi görünmeli. Oyuna tıklayıp dönünce çizgi hep
+   ilk duvarda bitmeli. Alttaki kontrollerin hepsi yeşil olmalı. Sayfa donarsa `while` döngüsünde `col += stepX` ya
+   da `row += stepY` satırını unutmuş olabilirsin; ışın hiç ilerlemez.
 
 # --tests--
 

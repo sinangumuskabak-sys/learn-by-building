@@ -27,24 +27,39 @@ Draw the ghost **before** the real piece, in a translucent white, so the real pi
 
 # --explanation-tr--
 
-Her modern sürümde olan iki son dokunuş:
+**Bu adımda:** her modern sürümde olan iki son dokunuşu ekleyeceğiz. Boşluk tuşu parçayı bir anda en alta
+bırakacak; kuyunun dibinde de parçanın nereye düşeceğini gösteren soluk bir **hayalet** görünecek.
 
-- **Sert düşürme** (Boşluk): parçayı en alta kadar indir ve hemen kilitle. "Sığdığı sürece aşağı inmeye devam et",
-  `tryMove(0, 1)` etrafında tek satırlık bir `while` döngüsüdür; bu da ancak `tryMove` hareket edip etmediğini
-  bildirdiği için mümkün. Onu satır başına 2 puanla ödüllendir.
-- **Hayalet parça**: parçanın nereye oturacağını gösteren soluk bir taslak. Hiçbir şeyi taşımadan aynı fikri kullanır:
-  parçanın satırından başla ve `fits(...)` bir sonraki satırın boş olduğunu söyledikçe aşağı in.
+**Sert bırakma (hard drop).** Boşluk'a basınca parça sonuna kadar düşer ve hemen kilitlenir. "Sığdıkça aşağı in" tek
+satırlık bir `while` döngüsüdür:
+
+```js
+while (tryMove(0, 1)) score += 2
+```
+
+`while (koşul) ...` koşul doğru olduğu sürece tekrar eder. Burada koşulun kendisi hareketi yapar: `tryMove(0, 1)` bir
+satır inmeyi dener ve başarırsa `true` döner, döngü sürer ve 2 puan eklenir; inemediği an `false` döner ve döngü
+biter. Bu ancak `tryMove` hareketin olup olmadığını bildirdiği için mümkün. Sonra `lock()` parçayı yerine sabitler.
+
+**Hayalet parça.** Aynı fikir, ama hiçbir şeyi taşımadan: parçanın satırından başla, bir alt satır boş olduğu sürece
+bir aşağı in.
 
 ```js
 let y = piece.y
 while (fits(piece.shape, piece.x, y + 1)) y++
+return y
 ```
 
-Hayaletin de `fits`'i yeniden kullandığına dikkat et. Tek bir soruyu net cevaplayan küçük ve iyi test edilmiş bir
-fonksiyon şaşırtıcı miktarda iş yapar: hareket, tekmeli döndürme, düşme, kilitlenme, oyun sonu, sert düşürme ve hayalet
-hep ondan gelir.
+Burada gerçek `piece.y`'ye dokunmayız; kendi `y` kopyamızı artırırız (`y++` → 1 artır). Sonuç, parçanın inebileceği en
+alt satırdır.
 
-Hayaleti gerçek parçadan **önce**, yarı saydam beyazla çiz; böylece gerçek parça hep üstte durur.
+Hayaletin de `fits`'i kullandığına dikkat et. Tek bir soruyu açıkça cevaplayan küçük, iyi test edilmiş bir fonksiyon
+şaşırtıcı miktarda iş yaptı: hareket, itmeli döndürme, düşme, kilitleme, oyun sonu, sert bırakma ve hayaletin hepsi
+ondan geliyor.
+
+**Çizim sırası.** Hayaleti gerçek parçadan **önce** çizeriz, yarı saydam beyazla (`'rgba(255, 255, 255, 0.15)'`:
+beyaz, yalnız %15 görünür). Sonra çizilen her şey öncekinin üstüne boyandığı için gerçek parça hep üstte kalır.
+`drawShape`'in dördüncü girdisi burada işe yarıyor: renk verince parçanın kendi rengi yerine o kullanılır.
 
 # --task--
 
@@ -54,9 +69,46 @@ Hayaleti gerçek parçadan **önce**, yarı saydam beyazla çiz; böylece gerçe
 
 # --task-tr--
 
-1. `hardDrop()` yaz: `tryMove(0, 1)` başarılı oldukça `score`'a 2 ekle; sonra `lock()`. Oyun sürerken Boşluk'ta çağır.
-2. Mevcut parçanın ulaşabileceği en alt `y`'yi döndüren `ghostY()` yaz.
-3. `draw()` içinde parçadan önce, şeklini `ghostY()` konumunda `'rgba(255, 255, 255, 0.15)'` ile çiz.
+1. `softDrop()` fonksiyonunun kapanış `}`'sinin altına, `keydown` bloğundan önce iki fonksiyon yaz:
+
+   ```js
+   function hardDrop() {
+     while (tryMove(0, 1)) score += 2
+     lock()
+   }
+
+   function ghostY() {
+     let y = piece.y
+     while (fits(piece.shape, piece.x, y + 1)) y++
+     return y
+   }
+   ```
+
+2. `keydown` bloğunun sonuna, `ArrowDown` kısmını kapatan `}`'nin altına Boşluk satırını ekle:
+
+   ```js
+     if (event.key === 'ArrowDown') {
+       if (tryMove(0, 1)) score += 1
+     }
+     if (event.key === ' ') hardDrop() // ← yeni
+   })
+   ```
+
+   `' '` tırnakların arasında tek bir boşluk olan yazıdır: Boşluk tuşunun adı. Oyun bittiğinde Boşluk yine yeni oyun
+   başlatır, çünkü blok başındaki `if (state === 'over')` kısmı daha önce çalışıp `return` ile çıkar.
+
+3. `draw()` içinde parçayı çizen bloğa, gerçek parçadan önce hayalet satırını ekle:
+
+   ```js
+     if (state === 'playing') {
+       drawShape(piece.shape, piece.x, ghostY(), 'rgba(255, 255, 255, 0.15)') // ← yeni
+       drawShape(piece.shape, piece.x, piece.y)
+     }
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Kuyunun dibinde düşen parçanın soluk bir gölgesi görünmeli;
+   Boşluk'a basınca parça bir anda oraya inmeli ve puan artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Hayalet
+   kontrolü kırmızıysa iki `drawShape` satırının sırasına bak: hayalet önce gelmeli.
 
 # --tests--
 

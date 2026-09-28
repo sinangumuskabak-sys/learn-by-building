@@ -18,15 +18,32 @@ That pause matters: without it, the ghosts would start moving before the player 
 
 # --explanation-tr--
 
-Oyuncu ve hayaletler döşemeler arasında akıcı hareket eder; bu yüzden döşemeleri karşılaştırmak yetmez: tek karede yer
-değiştirip birbirinin içinden geçebilirler. Bunun yerine çizilen **konumlarını** karşılaştır. Döşemenin 0.6'sından yakınsa
-(`|dx| + |dy|`), hayalet oyuncuyu yakalamıştır.
+**Bu adımda:** hayaletler seni yakalayabilecek. Yakalanınca bir can gidecek ve herkes başa dönecek; ortada `Press an arrow
+key` yazacak ve bir ok tuşuna basana kadar hiçbir şey kıpırdamayacak. Üç can bitince `Game Over` ekranı gelecek.
 
-Bir can kaybetmek herkesi başlangıca koyar ve oyuncu bir ok tuşuna basana kadar `'ready'` durumunda bekler. Bu duraklama
-önemlidir: o olmasa hayaletler, oyuncu yeni turu fark etmeden hareket etmeye başlardı.
+**Yakalanma nasıl anlaşılır?** Oyuncu ve hayaletler kareler arasında kayarak gidiyor. Sadece kareleri karşılaştırmak
+yetmez: bir karede yer değiştirip birbirlerinin içinden geçebilirler. Onun yerine çizildikleri **konumları**
+(`position`) karşılaştırırız. Yatay fark ile dikey farkın büyüklükleri toplamı (`Math.abs(dx) + Math.abs(dy)`) bir
+karenin 0.6'sından azsa hayalet oyuncuyu yakalamıştır. `Math.abs` sayının işaretsiz büyüklüğüdür (`-0.4` → `0.4`).
+Hâlâ evde bekleyen hayaletler (`waiting > 0`) kimseyi yakalamaz.
 
-`'ready'`, `'playing'` ve `'over'`, önceki oyunlarda kullandığın türden küçük bir **durum makinesidir**. `update()` yalnızca
-oynanırken çalışır ve tuş işleyicisi bir tuşun her durumda ne anlama geldiğine karar verir.
+**Hazır bekleme.** Can kaybedince herkes başlangıca döner ve oyun `'ready'` (hazır) durumunda bekler; oyuncu bir ok
+tuşuna basınca `'playing'` (oynanıyor) olur. Bu duraklama önemlidir: olmasa hayaletler, oyuncu yeni turu fark etmeden
+hareket etmeye başlardı.
+
+**Durum makinesi (state machine).** `'ready'`, `'playing'` ve `'over'` (bitti): oyunun hangi hâlde olduğunu tek bir
+yazıda (`state`) tutarız ve her yer ona bakar:
+
+- `update()` sadece oynanırken çalışır: `if (state !== 'playing') return`. `return` fonksiyondan hemen çıkar.
+- `steer()` oyun bitmişse hiçbir şey yapmaz; değilse durumu `'playing'` yapar. Yani ilk ok tuşu oyunu başlatır.
+- Oyun bitince boşluk tuşu (ya da ekrana dokunma) `reset()` ile yeni oyun başlatır.
+
+`caught()` ("yakalandı") bir can düşer; can kaldıysa (`lives > 0`) herkesi yerine koyar (`placeActors`, bu da durumu
+`'ready'` yapar), kalmadıysa durum `'over'` olur.
+
+**Oyun sonu ekranı.** `'rgba(11, 16, 32, 0.75)'` %75 opak koyu bir renktir (son sayı saydamlık). Tüm ekranı onunla
+boyayınca labirent arkada soluk görünür, üstüne yazılar yazılır. `textAlign = 'center'` yazıları verilen noktaya
+ortalar.
 
 # --task--
 
@@ -40,12 +57,120 @@ oynanırken çalışır ve tuş işleyicisi bir tuşun her durumda ne anlama gel
 
 # --task-tr--
 
-1. `let lives` (`reset()`'te 3) ve `let state` ekle; `placeActors()` durumu `'ready'` yapar.
-2. Oyun bittiğinde `steer()` hiçbir şey yapmaz; değilse durumu `'playing'` yapar. `update()` yalnızca oynanırken çalışır.
-3. Herkesi hareket ettirdikten sonra oyuncunun `position`'ını evin dışındaki her hayaletinkiyle karşılaştır. `0.6` içindeyse
-   (`Math.abs(dx) + Math.abs(dy)`) `caught()` çağır: bir can eksik, sonra can kaldıysa `placeActors()`, değilse `'over'`.
-4. Oyun bittiğinde Boşluk (ya da dokunuş) yeniden başlatır. Sağ üste `Level 1   Lives: 3`, hazırken 11. satırın ortasına
-   `'#facc15'` renkte `Press an arrow key` ve Game Over ekranını çiz.
+1. `let score` satırının altına `lives`, `let level` satırının altına `state` ekle. Bölüm şöyle görünmeli:
+
+   ```js
+   let score
+   let lives
+   let level
+   let state // 'ready', 'playing' or 'over'
+   let clock // frames played on this life, for the scatter / chase cycle
+   ```
+
+2. `placeActors`'ın sonunda, `clock = 0`'ın altına ekle:
+
+   ```js
+     clock = 0
+     state = 'ready' // ← yeni
+   }
+   ```
+
+3. `reset` içinde `score = 0`'ın altına ekle:
+
+   ```js
+     lives = 3
+   ```
+
+4. `steer` fonksiyonunun başına iki satır ekle; kapanışından sonra da `caught` fonksiyonunu yaz:
+
+   ```js
+   function steer(dir) {
+     if (state === 'over') return // ← yeni
+     state = 'playing'            // ← yeni
+     player.want = dir
+     if (same(dir, reverse(player.dir)) && !same(dir, STOP)) turnAround(player)
+   }
+
+   function caught() {
+     lives -= 1
+     if (lives > 0) {
+       placeActors()
+       return
+     }
+     state = 'over'
+   }
+   ```
+
+5. `keydown` dinleyicisinin içine, kapanış `})`'inden önce boşlukla yeniden başlatan satırı ekle:
+
+   ```js
+     if (event.key === ' ' && state === 'over') reset() // ← yeni
+   })
+   ```
+
+6. `pointerup` dinleyicisinde `swipeStart = null` satırının hemen altına, oyun bitmişse dokunuşla yeniden başlatan
+   satırları ekle:
+
+   ```js
+     swipeStart = null
+     if (state === 'over') { // ← yeni
+       reset()
+       return
+     }
+   ```
+
+7. `update()`'in en başına `if (state !== 'playing') return` satırını, en sonuna (hayaletleri yürüten döngünün
+   kapanışından sonra) yakalanma kontrolünü ekle:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+     clock += 1
+     ...
+       advance(g, chooseGhost)
+     }
+
+     const p = position(player)      // ← yeni
+     for (const g of ghosts) {
+       if (g.waiting > 0) continue
+       const q = position(g)
+       if (Math.abs(p.x - q.x) + Math.abs(p.y - q.y) > 0.6) continue
+       caught()
+       return
+     }
+   }
+   ```
+
+   `...` arada değişmeyen satırlar demek; onları olduğu gibi bırak.
+
+8. `draw()`'un sonundaki `ctx.fillText('Level ' + level, ...)` satırını canları da yazacak şekilde değiştir ve altına
+   hazır yazısını ve oyun sonu ekranını ekle:
+
+   ```js
+     ctx.fillText('Level ' + level + '   Lives: ' + lives, canvas.width - 10, 27) // ← değişti
+
+     ctx.textAlign = 'center'                                                     // ← yeni
+     if (state === 'ready') {
+       ctx.fillStyle = '#facc15'
+       ctx.fillText('Press an arrow key', canvas.width / 2, TOP + 11 * TILE + 18)
+     }
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(11, 16, 32, 0.75)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 32px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 32)
+     }
+   }
+   ```
+
+   `'   Lives: '` içinde başta **üç** boşluk var: sonuç `Level 1   Lives: 3`.
+
+9. **Çalıştır**'a bas. Ortada sarı `Press an arrow key` yazmalı ve hiçbir şey kıpırdamamalı. Oynamak için önce oyuna
+   tıkla ve bir ok tuşuna bas: oyun başlamalı. Bir hayalete yakalanınca can azalmalı ve herkes başa dönmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa yazılardaki boşluklara ve büyük harflere bak.
 
 # --tests--
 

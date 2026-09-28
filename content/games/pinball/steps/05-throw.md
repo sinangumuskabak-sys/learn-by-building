@@ -27,24 +27,37 @@ surface moves into the ball, the ball gets that speed on top of its bounce. A st
 
 # --explanation-tr--
 
-Şimdi dene: bir paletin üstünde duran top palete bastığında zar zor kıpırdar. Palet topu yoldan iter ama sekme yalnızca **topun**
-hızına bakar ve top duruyordu. Gerçek bir palet topu *fırlatır*, çünkü paletin kendisi hareket ediyordur.
+**Bu adımda:** paletlerin topu gerçekten **fırlatmasını** sağlayacağız. Paletin üstünde duran bir topa vurunca top
+hızla yukarı uçacak; paletin ucuyla vurursan daha da uzağa gidecek.
 
-Çözüm **göreli** hızdan sekmektir: topun hızı eksi yüzeyin temas noktasındaki hızı.
+**Sorun ne?** Şimdi dene: palette duran top, palet kalkınca neredeyse kıpırdamıyor. Palet topu yolundan itiyor ama
+sekme hesabı sadece **topun** hızına bakıyor, top da duruyordu. Gerçek palet topu fırlatır, çünkü paletin kendisi
+hareket ediyor.
 
-Dönen bir paletteki bir nokta ne kadar hızlı hareket eder? Eksenden `r` uzaklıktaki, karede `speed` radyan dönen bir nokta, palete dik
-olarak karede `speed × r` piksel hareket eder:
+**Çözüm: göreli hız.** Sekmeyi topun hızına değil, "topun hızı **eksi** o noktadaki yüzeyin hızı"na göre yaparız.
+Yürüyen bir otobüsün içinde topa vurmak gibi düşün: önemli olan topun otobüse göre hızıdır.
+
+**Dönen paletin bir noktası ne kadar hızlı?** Eksenden `r` uzaklıktaki nokta, `speed` hızıyla dönerken her karede
+`speed × r` piksel yol alır, paletle dik açıyla:
 
 ```js
 surface = { x: -speed * (py - pivotY), y: speed * (px - pivotX) }
 ```
 
-Yani **uç**, eksene yakın kısımdan çok daha hızlı hareket eder: topa paletin ucuyla vurmak onu daha uzağa gönderir, tıpkı gerçek bir
-masadaki gibi.
+Yani **uç**, eksene yakın kısımdan çok daha hızlı gider: topa paletin ucuyla vurmak onu daha uzağa yollar, tıpkı
+gerçek masada olduğu gibi.
 
-`hitSegment` artık isteğe bağlı bir `surface(px, py)` fonksiyonu alır. Duvarlar bir tane vermez (hareket etmezler), paletler verir.
-Yüzey topa doğru hareket ettiğinde top sekmesinin üstüne o hızı alır. Yukarı 10 hızla hareket eden bir yüzeyin vurduğu duran top 10
-hızla ayrılır.
+**Fonksiyon parametre olarak.** `hitSegment` artık altıncı, **isteğe bağlı** bir parametre alır: `surface`. Bu bir
+fonksiyondur; ona bir nokta `(px, py)` verirsin, o da yüzeyin o noktadaki hızını `{ x, y }` olarak döndürür.
+Duvarlar bunu vermez (hareket etmezler), paletler verir. Verilmeyen parametrenin değeri `undefined` (tanımsız) olur
+ve `if` içinde "yok" sayılır. Bu yüzden:
+
+```js
+const sx = surface ? surface(px, py).x : 0
+```
+
+"yüzey fonksiyonu varsa onu çağırıp hızın x'ini al, yoksa 0" demektir. Yüzey topa doğru hareket ediyorsa top
+sekmesinin üstüne o hızı da alır: 10 hızla yukarı giden bir yüzeyin vurduğu duran top, 10 hızla ayrılır.
 
 # --task--
 
@@ -54,9 +67,38 @@ hızla ayrılır.
 
 # --task-tr--
 
-1. `hitSegment`'e altıncı bir parametre, `surface` ver: varsa en yakın noktadaki yüzey hızını `(sx, sy)` hesapla ve göreli hız
-   üzerinden sektir: `vn = (vx - sx) * nx + (vy - sy) * ny`.
-2. `step()` topu bir paletle çarpıştırırken `(px, py) => ({ x: -f.speed * (py - f.y), y: f.speed * (px - f.x) })` ver.
+1. `hitSegment` fonksiyonunun ilk satırını (ve üstündeki yorumu) şöyle değiştir; sonuna `surface` parametresi
+   eklenir:
+
+   ```js
+   // Push the ball out of a segment and bounce it. `surface` is how fast the segment itself moves at that point:
+   // the bounce works on the speed of the ball relative to the surface, which is how a flipper throws the ball.
+   function hitSegment(x1, y1, x2, y2, bounce, surface) {
+   ```
+
+2. Aynı fonksiyonda `const vn = ball.vx * nx + ball.vy * ny` satırını sil ve yerine şu üç satırı yaz:
+
+   ```js
+     const sx = surface ? surface(px, py).x : 0
+     const sy = surface ? surface(px, py).y : 0
+     const vn = (ball.vx - sx) * nx + (ball.vy - sy) * ny
+   ```
+
+   Altındaki `if (vn < 0) { ... }` bloğu aynen kalır.
+
+3. `step()` fonksiyonunda paletlerin döngüsündeki `hitSegment(f.x, f.y, t.x, t.y, 0.3)` satırını şu iki satırla
+   değiştir:
+
+   ```js
+       // A point on a turning flipper moves at speed × distance from the pivot, at right angles to it.
+       hitSegment(f.x, f.y, t.x, t.y, 0.3, (px, py) => ({ x: -f.speed * (py - f.y), y: f.speed * (px - f.x) }))
+   ```
+
+   Sona eklenen `(px, py) => ({ ... })`, bu paletin yüzey hızını hesaplayan kısa fonksiyondur.
+
+4. **Çalıştır**'a bas. Oyuna tıkla, topu fırlat ve paletin üstüne düşünce paleti kaldır: top bu sefer hızla yukarı
+   uçmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `surface` adının üç yerde aynı yazıldığını
+   kontrol et.
 
 # --tests--
 

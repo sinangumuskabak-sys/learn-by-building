@@ -25,22 +25,49 @@ The game ends when the lives run out, **or** when the formation marches all the 
 
 # --explanation-tr--
 
-Şimdi istilacılar da ateş ediyor. Adımlarının bazılarında (%35), biri bir **bomba** bırakıyor. Ama hangisi? Herhangi bir
-istilacı ateş edebilseydi bombalar düzenin ortasından çıkıp alttaki istilacıların içinden geçerdi. Bu yüzden kural şu:
-rastgele bir sütun seç, yalnızca onun **en alttaki** canlı istilacısı ateş etsin.
+**Bu adımda:** istilacılar da ateş edecek. Aşağı turuncu bombalar düşecek; bomba topa değerse bir can gidecek, canlar
+bitince ekranda `GAME OVER` yazacak. Sağ üstte `LIVES 3` göreceksin.
+
+**Rastgelelik.** `Math.random()` her çağrıldığında 0 ile 1 arasında (1 hariç) rastgele bir kesirli sayı verir: `0.42`,
+`0.07` gibi. İki kullanım:
+
+- **Şans:** `if (Math.random() < 0.35) dropBomb()` → sayı yüzde 35 ihtimalle 0.35'ten küçük çıkar; yani adımların
+  kabaca üçte birinde bomba atılır.
+- **Rastgele seçim:** `Math.random() * living.length` 0 ile canlı sayısı arasında bir kesir verir (örneğin `17.8`).
+  `Math.floor` kesiri **aşağı yuvarlar** (`17`). Sonuç, listede geçerli bir sıra numarasıdır; `living[17]` de rastgele
+  bir istilacıdır.
+
+**Kim ateş eder?** Herhangi bir istilacı ateş etse, bombalar bloğun ortasından çıkıp alttaki istilacıların içinden
+geçerdi. Kural şu: rastgele bir sütun seç, o sütunun yalnızca **en alttaki** canlısı ateş etsin.
 
 ```js
-const shooter = living[Math.floor(Math.random() * living.length)]            // rastgele bir canlı istilacı
-const lowest = living
-  .filter((invader) => invader.x === shooter.x)                                // onun sütunundaki herkes
-  .reduce((a, b) => (b.y > a.y ? b : a))                                       // en aşağıdaki
+const shooter = living[Math.floor(Math.random() * living.length)]   // rastgele bir canlı
+const lowest = living.filter((invader) => invader.x === shooter.x).reduce((a, b) => (b.y > a.y ? b : a))
 ```
 
-`reduce`, yanında tek bir değer taşıyarak bir listeyi gezer; burada "şimdiye kadar görülen en alttaki istilacı".
-`Math.max`'in, toplamların ve birçok "en iyiyi bul" aramasının arkasındaki genel araçtır.
+Parça parça:
 
-Topa çarpan bir bomba bir **cana** mal olur ve oyuncuya toparlanması için adil bir an tanınsın diye diğer bombaları
-temizler. Canlar bitince **ya da** düzen topun hizasına kadar yürüyünce oyun biter.
+- `filter(... invader.x === shooter.x)` → seçilenle aynı `x`'teki, yani aynı sütundaki herkes.
+- `koşul ? A : B` → "koşul doğruysa A, değilse B". Kısa bir `if`/`else`'tir.
+- `reduce` listeyi dolaşırken yanında tek bir değer taşır; burada "şimdiye kadar gördüğüm en alttaki istilacı". `a`
+  taşınan değer, `b` sıradaki eleman: `b` daha aşağıdaysa (`y`'si büyükse) artık o taşınır, değilse `a` kalır. Liste
+  bitince elde en alttaki kalır. `Math.max`'ın, toplamaların ve pek çok "en iyisini bul" aramasının arkasındaki genel
+  araç budur.
+
+**Oyunun durumu (state).** Oyun ya sürüyor ya bitti. Bunu bir yazıyla tutarız: `state = 'playing'` ya da `'over'`.
+`!==` "eşit değil" demektir: `if (state !== 'playing') return` → "oyun sürmüyorsa bu kare hiçbir şey yapma". Böylece
+oyun bitince her şey donar. Ateş de yalnızca oyun sürerken olur: `event.key === ' ' && state === 'playing'`.
+
+**Bir tanesi bile yeter: `some`.** `bombs.some((bomb) => overlaps(bomb, ship))` → "bombalardan **en az biri** topa
+değiyor mu?" Cevap `true` ya da `false`'tur.
+
+**Can kaybı.** Topa bomba değince bir can gider (`lives -= 1`) ve diğer bombalar da silinir; oyuncuya toparlanması için
+adil bir an tanınır. `<=` "küçük ya da eşit" demektir: can 0'a inince `endGame()` oyunu bitirir. Oyun ayrıca istilacılar
+topun sırasına (`SHIP_Y`) kadar indiğinde de biter.
+
+**Yarı saydam renk.** `'rgba(0, 0, 0, 0.7)'` kırmızı, yeşil, mavi (0–255) ve **saydamlık** (0–1) ile verilen bir
+renktir: yüzde 70 opak siyah. `GAME OVER` yazısının arkasına koyu bir şerit çizer, alttaki oyun hafifçe görünür.
+`ctx.textAlign = 'right'` ise verilen noktayı yazının **sağ ucu** yapar; `LIVES 3` sağ kenara yaslanır.
 
 # --task--
 
@@ -55,14 +82,135 @@ temizler. Canlar bitince **ya da** düzen topun hizasına kadar yürüyünce oyu
 
 # --task-tr--
 
-1. `BOMB_SPEED = 3`, `let bombs` (`spawnWave()` içinde boşaltılır), `let lives` (`newGame()` içinde 3) ve `let state`
-   (`newGame()` içinde `'playing'`) ekle.
-2. `dropBomb()`'u yukarıdaki gibi yaz; `x = lowest.x + INVADER_W / 2 - 2`, `y = lowest.y + INVADER_H` noktasına 4×10
-   bir bomba eklesin. Bir yürüyüş adımından sonra `Math.random() < 0.35` ise çağır.
-3. `update()` içinde (yalnızca `'playing'` iken): bombaları `BOMB_SPEED` kadar aşağı taşı, ekranın altındakileri at;
-   biri gemiyle kesişirse `loseLife()` çağır: bir can kaybet, bombaları temizle ve can 0'da `endGame()`
-   (`state = 'over'`). Canlı bir istilacının altı `SHIP_Y`'ye ulaşınca da oyunu bitir. Yalnızca oyun sürerken ateş et.
-4. Bombaları `'#fb923c'` ile, tepede sağa hizalı `LIVES 3`'ü ve oyun bitince ekranın üstüne `GAME OVER`'ı çiz.
+1. `const BULLET_SPEED = 8` satırının altına bomba hızını ekle:
+
+   ```js
+   const BOMB_SPEED = 3
+   ```
+
+2. Tanımlara üç yeni değişken ekle: `let invaders` satırının altına `let bombs`, `let score` satırının altına
+   `let lives` ve `let state`:
+
+   ```js
+   let invaders
+   let bombs // ← yeni
+   ```
+
+   ```js
+   let score
+   let lives // ← yeni
+   let state // 'playing' or 'over' ← yeni
+   ```
+
+3. `spawnWave()` içinde `bullets = []` satırının altına `bombs = []` ekle. `newGame()`'i şöyle yap:
+
+   ```js
+   function newGame() {
+     ship = { x: canvas.width / 2 - SHIP_W / 2, y: SHIP_Y, w: SHIP_W, h: SHIP_H }
+     wave = 1
+     score = 0
+     lives = 3 // ← yeni
+     lastShot = -COOLDOWN
+     state = 'playing' // ← yeni
+     spawnWave()
+   }
+   ```
+
+4. `march()` fonksiyonunun kapanış `}`'inin altına, bir boş satır bırakıp üç fonksiyon ekle:
+
+   ```js
+   // Only the lowest invader in a column can fire, so bombs never pass through other invaders.
+   function dropBomb() {
+     const living = alive()
+     const shooter = living[Math.floor(Math.random() * living.length)]
+     const lowest = living.filter((invader) => invader.x === shooter.x).reduce((a, b) => (b.y > a.y ? b : a))
+     bombs.push({ x: lowest.x + INVADER_W / 2 - 2, y: lowest.y + INVADER_H, w: 4, h: 10 })
+   }
+
+   function loseLife() {
+     lives -= 1
+     bombs = []
+     if (lives <= 0) endGame()
+   }
+
+   function endGame() {
+     state = 'over'
+   }
+   ```
+
+5. `keydown` bloğundaki ateş satırını değiştir:
+
+   ```js
+     if (event.key === ' ' && state === 'playing') shoot() // ← değişti
+   ```
+
+6. `update()` fonksiyonunu şu hâle getir (yeni satırlar işaretli):
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+
+     if (keys.ArrowLeft) ship.x -= SHIP_SPEED
+     if (keys.ArrowRight) ship.x += SHIP_SPEED
+     ship.x = Math.max(0, Math.min(canvas.width - SHIP_W, ship.x))
+
+     for (const bullet of bullets) bullet.y -= BULLET_SPEED
+     for (const bomb of bombs) bomb.y += BOMB_SPEED // ← yeni
+
+     for (const bullet of bullets) {
+       const hit = invaders.find((invader) => invader.alive && overlaps(bullet, invader))
+       if (hit) {
+         hit.alive = false
+         bullet.y = -100 // used up; removed below
+         score += ROW_POINTS[hit.row]
+       }
+     }
+     bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0)
+     bombs = bombs.filter((bomb) => bomb.y < canvas.height) // ← yeni
+
+     if (bombs.some((bomb) => overlaps(bomb, ship))) loseLife() // ← yeni
+     if (state !== 'playing') return // ← yeni
+
+     if (alive().length === 0) {
+       wave += 1
+       spawnWave()
+       return
+     }
+
+     if (now - lastStep >= stepInterval()) {
+       lastStep = now
+       march()
+       if (Math.random() < 0.35) dropBomb() // ← yeni
+     }
+     if (alive().some((invader) => invader.y + invader.h >= SHIP_Y)) endGame() // ← yeni
+   }
+   ```
+
+7. `draw()` içinde mermileri boyayan satırın hemen altına bombaları ekle:
+
+   ```js
+     ctx.fillStyle = '#fb923c'
+     for (const bomb of bombs) ctx.fillRect(bomb.x, bomb.y, bomb.w, bomb.h)
+   ```
+
+8. `draw()`'un sonuna, `WAVE` yazısını yazan satırın altına canları ve oyun sonu ekranını ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('LIVES ' + lives, canvas.width - 10, 24)
+
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+       ctx.fillRect(0, 200, canvas.width, 120)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 32px monospace'
+       ctx.fillText('GAME OVER', canvas.width / 2, 250)
+     }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İstilacılar zaman zaman turuncu bombalar atmalı; bomba topa
+   değince sağ üstteki `LIVES` bir azalmalı, 0 olunca `GAME OVER` çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

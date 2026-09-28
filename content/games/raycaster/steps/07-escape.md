@@ -24,21 +24,43 @@ these pieces.
 
 # --explanation-tr--
 
-Bir labirentin bir hedefi olmalı. Yeşil `E` çıkıştır: **yanına kadar** yürüdüğün bir duvar. Duvarlar oyuncuyu 0.2 döşeme uzakta
-tutar; bu yüzden oyuncu hiçbir zaman çıkış döşemesinin üstünde duramaz; onun yerine merkezine 0.8 döşemeden yakın olmak ona
-ulaşmak sayılır.
+**Bu adımda:** labirente bir hedef ve süre ekleyeceğiz. Sağ üstte geçen süre (`Time 12.6`) yazacak; yeşil çıkışa
+ulaşınca ekran kararacak, `Escaped in ... s` yazısı çıkacak ve en iyi süren saklanacak.
 
-Skor **zamandır**. Oynarken kareleri say ve onları bir ondalıkla saniye olarak göster:
+**Çıkış.** Yeşil `E` çıkıştır: **önüne kadar** yürüdüğün bir duvar. Duvarlar oyuncuyu 0.2 kare uzakta tuttuğu için
+oyuncu çıkış karesinin üstüne asla basamaz. Bu yüzden karenin ortasına **0.8 kareden** yakın olmak çıkışa ulaşmak
+sayılır. `Math.hypot(a, b)` iki nokta arasındaki uzaklığı verir.
+
+**Çıkış karesini bulmak.** `MAP.findIndex((line) => line.includes('E'))` içinde `E` harfi olan **ilk satırın**
+sırasını verir; `MAP[row].indexOf('E')` o satırda `E`'nin kaçıncı harf olduğunu. `includes` "içeriyor mu?",
+`indexOf` "kaçıncı sırada?" demektir.
+
+**Skor = süre.** Oyun sürerken kareleri sayarız (`frames += 1`, her karede 1 artır). Oyun saniyede 60 kare çalıştığı
+için saniyeye çevirip tek ondalıkla gösteririz:
 
 ```js
 (frames / 60).toFixed(1)   // 754 kare -> '12.6'
 ```
 
-Bu kez en iyi skor **en düşük** olandır; bu yüzden karşılaştırma ters döner: henüz rekor yoksa (`best === 0`) ya da yeni süre
-daha küçükse o bir rekordur. Karşılaştırmadan önce hep "daha iyi"nin hangi yöne gittiğini sor.
+`toFixed(1)` bir sayıyı virgülden sonra tek basamaklı bir yazıya çevirir.
 
-Bu labirenti tamamlar: düz bir harita, `sin` ve `cos` ile dönüp yürümek, kayan çarpışma, DDA ışınları, balık gözü olmadan
-perspektif, gölgelendirme ve zamana karşı bir hedef. Doksanların başındaki her 3B nişancı oyunu tam da bu parçalardan başladı.
+**Bu sefer daha iyi olan daha küçük.** En iyi skor en **düşük** süredir; karşılaştırma ters döner. Yeni süre rekor
+sayılır, eğer henüz rekor yoksa (`best === 0`) **ya da** (`||`) yeni süre daha küçükse. Karşılaştırmadan önce hep
+"daha iyi hangi yöne gidiyor?" diye sor.
+
+**En iyi süreyi saklamak: `localStorage`.** Tarayıcının küçük bir defteridir; sayfa kapansa da içindekiler kalır.
+`localStorage.setItem('ray-best', best)` yazar, `localStorage.getItem('ray-best')` okur. Okunan değer yazıdır;
+`Number(...)` onu sayıya çevirir, kayıt yoksa `|| 0` "değilse 0" der.
+
+**Durum.** `state` oyunun hâlini tutar: `'playing'` (oynanıyor) ya da `'won'` (kazanıldı). Kazanınca `update()`
+hiçbir şey yapmaz; oyuncu donar. Boşluk ya da bir dokunuş `reset()` ile baştan başlatır.
+
+**Yazı parçaları:** `best ? '  Best ' + seconds(best) : ''` en iyi süre varsa (0 değilse) onu ekler, yoksa boş yazı
+(`''`) ekler. `ctx.fillText(yazı, x, y)` yazar, `textAlign` hizalar (`'right'`: verilen noktada biter, `'center'`:
+ortalanır).
+
+Labirent tamam: düz bir harita, `sin` ve `cos` ile dönüp yürümek, kayan çarpışma, DDA ışınları, balık gözü olmadan
+perspektif, gölge ve saate karşı bir hedef. Doksanların başındaki bütün 3D nişancılar tam bu parçalardan başladı.
 
 # --task--
 
@@ -52,12 +74,111 @@ perspektif, gölgelendirme ve zamana karşı bir hedef. Doksanların başındaki
 
 # --task-tr--
 
-1. `state` (`'playing'`), `frames` (`0`) ve `best` (`localStorage` `'ray-best'`'ten, kare sayısı) ekle.
-2. `update()` yalnızca oynanırken çalışır ve `frames`'e 1 ekler. `nearExit()` yaz: oyuncu `E` döşemesinin merkezine `0.8`'den
-   yakın mı. Yakınsa durum `'won'` olur ve süre ilkse ya da daha hızlıysa `best` olarak kaydedilir.
-3. Kazandıktan sonra Boşluk (ya da dokunuş) yeniden başlatır.
-4. Sağ üste `Time 12.6`, en iyi varsa ardından `  Best 9.8` yaz. Kazanınca görünümü `'rgba(15, 23, 42, 0.75)'` ile ört ve
-   `Escaped in 12.6 s` ile `Press Space to play again` yaz.
+1. `const keys = {}` satırının altına üç değişken ekle:
+
+   ```js
+   let state // 'playing' or 'won'
+   let frames
+   let best = Number(localStorage.getItem('ray-best')) || 0
+   ```
+
+2. `reset()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function reset() {
+     player = { x: 1.5, y: 1.5, angle: 0 }
+     state = 'playing' // ← yeni
+     frames = 0        // ← yeni
+   }
+   ```
+
+3. `castRay` fonksiyonunun kapanış `}`'inin altına çıkış kontrolünü yaz:
+
+   ```js
+   // The player escapes by walking up to the exit.
+   function nearExit() {
+     const row = MAP.findIndex((line) => line.includes('E'))
+     const col = MAP[row].indexOf('E')
+     return Math.hypot(player.x - (col + 0.5), player.y - (row + 0.5)) < 0.8
+   }
+   ```
+
+4. `keydown` dinleyicisine bir satır ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow')) event.preventDefault()
+     if (event.key === ' ' && state === 'won') reset() // ← yeni
+   })
+   ```
+
+5. `pointerdown` dinleyicisinin en başına, kazanıldıysa baştan başlatan bloğu ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'won') { // ← yeni
+       reset()
+       return
+     }
+     const rect = canvas.getBoundingClientRect()
+   ```
+
+6. `update()` fonksiyonunu şöyle değiştir (baştaki iki satır ve sondaki blok yeni):
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+     frames += 1                     // ← yeni
+     if (keys.ArrowLeft || keys.a) player.angle -= TURN
+     if (keys.ArrowRight || keys.d) player.angle += TURN
+     const forward = (keys.ArrowUp || keys.w ? 1 : 0) - (keys.ArrowDown || keys.s ? 1 : 0)
+     if (forward !== 0) move(Math.cos(player.angle) * MOVE * forward, Math.sin(player.angle) * MOVE * forward)
+
+     if (nearExit()) { // ← yeni
+       state = 'won'
+       if (best === 0 || frames < best) {
+         best = frames
+         localStorage.setItem('ray-best', best)
+       }
+     }
+   }
+   ```
+
+7. `update()`'in altına, `shade` fonksiyonundan önce kareleri saniyeye çeviren kısa fonksiyonu ekle:
+
+   ```js
+   const seconds = (f) => (f / 60).toFixed(1)
+
+   ```
+
+8. `draw()`'un en sonunda, oyuncunun yön çizgisini çizen `ctx.stroke()` satırının altına (fonksiyonun kapanış
+   `}`'inden önce) süreyi ve kazanma ekranını ekle:
+
+   ```js
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'right'
+     ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 10, 22)
+
+     if (state === 'won') {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
+       ctx.fillRect(0, 0, canvas.width, H)
+       ctx.fillStyle = '#22c55e'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Escaped in ' + seconds(frames) + ' s', canvas.width / 2, H / 2)
+       ctx.fillStyle = 'white'
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, H / 2 + 30)
+     }
+   ```
+
+   `'  Best '` yazısının başında **iki** boşluk var; kontroller bunu arıyor.
+
+9. **Çalıştır**'a bas. Sağ üstte `Time` saymaya başlamalı. Oynamak için önce oyuna tıkla ve sağ alttaki yeşil çıkışa
+   yürü: ekran kararıp `Escaped in ... s` yazmalı, Boşluk yeniden başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

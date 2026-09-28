@@ -39,36 +39,47 @@ inputs always give the same result.
 
 # --explanation-tr--
 
-Bu oyunda gizli bir hata var. `requestAnimationFrame` her **ekran yenilemesinde** bir kez çalışır. Çoğu ekran saniyede
-60 kez yenilenir, ama birçok telefon ve oyuncu monitörü 90, 120 ya da 144 yapar. `update()` her karede bir kez
-çalıştığı için, 120 Hz ekranda kuş **iki kat hızlı** düşer ve oyun çok zorlaşır. 30'a düşen yavaş bir dizüstünde ise
-ağır çekimde oynar.
+**Bu adımda:** oyunun her ekranda aynı hızda çalışmasını sağlayacağız. Senin ekranında oyun tamamen aynı
+görünecek; fark, artık başka herkesin ekranında da aynı görünecek olması.
 
-Fizik, saniyenin 1/60'ı kadar adımlar için tasarlandı. Çözüm, fiziği ekrandan **ayırmak**: ekran ne sıklıkta çizerse
-çizsin `update()`'i gerçek zamanda saniyede tam 60 adım çalıştırmak.
+**Gizli bir hata var.** `requestAnimationFrame`, ekran **her yenilendiğinde** bir kez çalışır. Çoğu ekran saniyede
+60 kez yenilenir (60 Hz), ama birçok telefon ve oyun monitörü 90, 120 ya da 144 kez yenilenir. `update()` her
+karede bir kez çalıştığı için, 120 Hz'lik bir ekranda kuş **iki kat hızlı** düşer ve oyun çok zorlaşır. Saniyede 30
+kareye düşen yavaş bir bilgisayarda ise oyun ağır çekimde oynar.
 
-Fikir, genelde *biriktirici* (accumulator) denen bir zaman hesabı:
+Fizik, saniyenin 1/60'ı kadar adımlar için ayarlandı. Çözüm, fiziği ekrandan **ayırmak**: ekran ne sıklıkla çizerse
+çizsin, `update()`'i gerçek zamanda saniyede tam 60 kez çalıştırmak.
+
+**Zaman bilgisi.** `requestAnimationFrame`, `loop`'u çağırırken ona bir sayı verir: sayfa açıldığından beri geçen
+süre, **milisaniye** cinsinden (1 saniye = 1000 milisaniye). Onu almak için `loop`'a bir parametre ekleriz:
+`function loop(time)`.
+
+**Zamandan bir kumbara.** Fikir, bir zaman kumbarası tutmaktır (İngilizcede *accumulator*, biriktirici):
 
 ```js
-const STEP = 1000 / 60   // bir fizik adımı, ms cinsinden
-lag += time - last       // gerçekten geçen zamanı yatır
-last = time
-while (lag >= STEP) {    // onu tam adımlar hâlinde harca
-  update()
-  lag -= STEP
+const STEP = 1000 / 60   // bir fizik adımı ≈ 16,7 milisaniye
+lag += time - last       // gerçekten geçen süreyi kumbaraya at
+last = time              // bir sonraki sefer için şimdiki zamanı hatırla
+while (lag >= STEP) {    // kumbarada bir adımlık süre oldukça...
+  update()               // ...bir adım fizik yap
+  lag -= STEP            // ...ve o süreyi kumbaradan çıkar
 }
 draw()
 ```
 
-- 120 Hz ekranda her kare ~8 ms yatırır; `update()` iki karede bir çalışır.
-- 30 Hz ekranda her kare ~33 ms yatırır; `update()` karede iki kez çalışır.
+**`while` döngüsü** "koşul doğru olduğu **sürece** tekrarla" demektir. Her turdan sonra koşul yeniden sorulur;
+yanlış olunca döngü biter. `lag`'den her turda `STEP` çıktığı için döngü mutlaka biter.
+
+- 120 Hz'lik ekranda her kare kumbaraya yaklaşık 8 ms atar; `update()` iki karede bir çalışır.
+- 30 Hz'lik ekranda her kare yaklaşık 33 ms atar; `update()` her karede iki kez çalışır.
 - Her iki durumda da: saniyede 60 güncelleme.
 
-Bir koruma daha: sekme 10 saniye arka planda kaldıysa `time - last` çok büyük olur ve döngü bir anda 600 güncelleme
-çalıştırmaya kalkar. Yatırılan miktarı sınırlamak (`Math.min(time - last, 100)`) bu "ölüm sarmalını" önler.
+**Bir koruma daha.** Sekme 10 saniye arka planda kaldıysa `time - last` çok büyük olur ve döngü bir anda 600
+güncelleme yapmaya kalkar (buna "ölüm sarmalı" denir). `Math.min(a, b)` iki sayıdan küçüğünü verir;
+`Math.min(time - last, 100)` ile kumbaraya bir seferde en fazla 100 ms atarız.
 
-Bu kalıp, yani **sabit zaman adımı**, gerçek fizik motorlarında kullanılır. Oyunu belirlenimci de yapar: aynı
-girdiler her zaman aynı sonucu verir.
+Bu yönteme **sabit zaman adımı** (fixed timestep) denir ve gerçek fizik motorları da bunu kullanır. Ayrıca oyunu
+tutarlı yapar: aynı hamleler hep aynı sonucu verir.
 
 # --task--
 
@@ -80,12 +91,37 @@ The game will look exactly the same on your screen. Now it will also look the sa
 
 # --task-tr--
 
-1. `loop`'un üstüne `const STEP = 1000 / 60`, `let last = 0` ve `let lag = 0` ekle.
-2. `loop`'u `time` alacak şekilde değiştir: `lag`'e `Math.min(time - last, 100)` ekle, `last = time` yap, sonra
-   `lag >= STEP` olduğu sürece `update()` çağırıp `STEP` çıkar. `while`'dan sonra bir kez çiz, sonra bir sonraki
-   kareyi iste.
+1. `draw()` fonksiyonunun kapanış `}`'inden sonra, `function loop()`'tan **önce**, üç satır ekle:
 
-Oyun senin ekranında tamamen aynı görünecek. Artık herkesin ekranında da aynı görünecek.
+   ```js
+   const STEP = 1000 / 60 // one physics step, in milliseconds
+   let last = 0
+   let lag = 0
+   ```
+
+   `last` bir önceki karenin zamanını, `lag` kumbarada biriken süreyi tutar.
+
+2. `loop()` fonksiyonunu tamamen şununla değiştir:
+
+   ```js
+   function loop(time) {   // ← değişti: time parametresi
+     // Run the physics at a fixed 60 steps per second, whatever the screen's refresh rate.
+     lag += Math.min(time - last, 100)   // ← yeni
+     last = time                         // ← yeni
+     while (lag >= STEP) {               // ← yeni
+       update()
+       lag -= STEP                       // ← yeni
+     }                                   // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+   `draw()` `while`'ın **dışında**, ondan sonra gelir: fizik kaç adım atarsa atsın, ekrana bir kez çizeriz.
+
+3. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla. Oyun önceki gibi görünmeli ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: `update()`'in `while`'ın içinde, `draw()`'un ise dışında
+   olduğundan emin ol.
 
 # --tests--
 

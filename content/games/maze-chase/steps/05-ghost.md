@@ -27,24 +27,49 @@ reverses when it has no other choice. For now the target is simply the player.
 
 # --explanation-tr--
 
-Hayalet oyuncuyla aynı `advance()`'i kullanır, yalnızca farklı bir `choose` fonksiyonuyla. Hareketi bir kez yazmanın
-faydası budur: labirentte yürüyen her şey aynı biçimde yürür.
+**Bu adımda:** ilk hayaleti ekleyeceğiz. Evin hemen üstünden çıkan kırmızı bir kare, labirentte seni kovalayacak
+(henüz yakalayamaz, içinden geçer).
 
-Hayaletin beyni ünlü biçimde basittir ve orijinal atari oyununun kullandığıyla aynıdır. Her döşeme ortasında:
+**Aynı yürüyüş, farklı beyin.** Hayalet de oyuncuyla aynı `advance()`'i kullanır; sadece yön seçen fonksiyonu (`choose`)
+farklıdır. Hareketi bir kez yazmanın faydası bu: labirentte yürüyen her şey aynı şekilde yürür.
 
-1. açık yönleri listele, geldiği yöne **geri dönmek hariç**,
-2. sonraki döşemesi **bir hedefe en yakın** olanı seç (düz çizgi uzaklığı); eşitlikte yukarı, sol, aşağı, sağ sırası.
+**Hayaletin beyni** ünlü derecede basittir ve orijinal salon oyunundakinin aynısıdır. Her kare ortasında:
+
+1. açık yönleri listele, **geldiği yöne geri dönmek hariç**,
+2. bunlardan bir sonraki karesi **hedefe en yakın** olanı seç (kuş uçuşu uzaklık). Eşitlikte sıra yukarı, sol, aşağı,
+   sağ.
 
 ```js
 const distance = (d) => (g.col + d[0] - t.col) ** 2 + (g.row + d[1] - t.row) ** 2
-g.dir = options.reduce((best, d) => (distance(d) < distance(best) ? d : best))
+g.dir = options.reduce((bestDir, d) => (distance(d) < distance(bestDir) ? d : bestDir))
 ```
 
-Hiç yol bulma yok. Hayalet yanlış bir yola sapabilir ve bu işin tadı: canlı gibi hissettirir ve onu alt edebilirsin. "Asla
-geri dönme" kuralı iki döşeme arasında ileri geri titremesini engeller; yalnızca başka seçeneği yoksa geri döner. Şimdilik
-hedef yalnızca oyuncudur.
+Hiç yol bulma (path-finding) yok. Hayalet yanlış yola sapabilir ve bu işin tadıdır: canlı gibi hissettirir ve onu
+atlatabilirsin. "Asla geri dönme" kuralı onun iki kare arasında titreyip durmasını engeller; sadece başka yolu yoksa
+geri döner. Şimdilik hedef doğrudan oyuncu.
 
-(Karşılaştırmak için uzaklığın karesi yeter: bir uzaklık küçükse karesi de küçüktür ve `Math.sqrt`'ten kaçınır.)
+(Karşılaştırmak için uzaklığın **karesi** yeter: bir uzaklık küçükse karesi de küçüktür; böylece `Math.sqrt`'e gerek
+kalmaz. `**` üs almaktır: `3 ** 2` = 9.)
+
+**Yeni araçlar:**
+
+- `GHOSTS.map((g) => ({ ...g, col: ..., row: ... }))` → `map` listedeki her öğeden yeni bir öğe üretip **yeni bir liste**
+  yapar. `...g` "g'nin bütün bilgilerini buraya kopyala" demektir; yanına `col`, `row` gibi yeni bilgiler eklenir.
+  Böylece `GHOSTS`'taki ad ve renk korunur.
+- `Object.values(DIRECTIONS)` → nesnedeki değerlerin listesi: `[[0, -1], [-1, 0], [0, 1], [1, 0]]`, yani yukarı,
+  sol, aşağı, sağ sırasıyla. Eşitlikte bu sıra kazanır.
+- `.filter((d) => canGo(g, d) && !same(d, reverse(g.dir)))` → "açık **ve** geri dönüş olmayan" yönleri tutar.
+- `options.reduce((bestDir, d) => ...)` → listeyi baştan sona gezip tek bir sonuca indirir. `bestDir` şimdiye kadarki
+  en iyi, `d` sıradaki; `d` daha yakınsa (`<`) yeni en iyi `d` olur, değilse `bestDir` kalır. Sadece **daha küçük**
+  olan kazandığı için eşitlikte öndeki kalır.
+- `koşul ? A : B` → kısa "eğer": doğruysa A, değilse B.
+
+**Hız.** Hayalet bir kareyi `ghostFrames(g)` karede geçer (şimdilik 9; oyuncu 8). Büyük sayı = yavaş. Şimdilik hep 9
+döndüren bu küçük fonksiyonu ileride hayaletin durumuna göre değiştireceğiz. `target(g)` de şimdilik hep oyuncuyu
+döndürür; ileride her hayalete farklı hedef vereceğiz.
+
+**Bölüm biterse.** Oyuncu bu karede labirenti bitirdiyse herkes yerine dönmüştür; aynı karede hayaletleri yürütmeyiz.
+Bunun için `update` başta bölüm numarasını hatırlar ve değiştiyse `return` ile çıkar.
 
 # --task--
 
@@ -59,13 +84,85 @@ hedef yalnızca oyuncudur.
 
 # --task-tr--
 
-1. `EXIT = { col: 9, row: 7 }` ve `GHOSTS = [{ name: 'red', color: '#ef4444' }]` ekle. `placeActors()` ondan `ghosts`'u
-   yapar; her biri `EXIT`'te, `dir: [-1, 0]`, `progress: 0` ve `frames: 10` ile.
-2. `9` döndüren `ghostFrames(g)`, oyuncuyu döndüren `target(g)` ve `chooseGhost(g)` yaz: `g.frames`'i ayarla, sonra
-   seçenekler `g.dir`'in tersi olmayan açık yönlerdir. Seçenek yoksa geri dön. Değilse yukarıdaki gibi hedefe en yakını seç.
-3. Her karede oyuncu hareket ettikten sonra her hayaleti `chooseGhost` ile `advance` et. Yemleri yalnızca oyuncu yer.
-   Oyuncu bu hareketinde labirenti bitirdiyse o karede hayaletleri atla.
-4. Her hayaleti kendi renginde, her yandan döşemesinden 3 piksel küçük bir kare olarak `position`'ında çiz.
+1. `const PLAYER_FRAMES = 8 ...` satırının hemen altına evin çıkışını ve hayalet listesini ekle:
+
+   ```js
+   const EXIT = { col: 9, row: 7 } // the tile just above the ghost house
+   const GHOSTS = [{ name: 'red', color: '#ef4444' }]
+   ```
+
+2. `let player` satırının hemen altına ekle:
+
+   ```js
+   let ghosts
+   ```
+
+3. `fillPellets` fonksiyonunun kapanış `}`'inden sonra, `function placeActors()`'tan önce hız fonksiyonunu yaz:
+
+   ```js
+   // Frames a ghost needs to cross one tile (the player always needs PLAYER_FRAMES): smaller is faster.
+   function ghostFrames(g) {
+     return 9
+   }
+   ```
+
+4. `placeActors` içinde `player = ...` satırının altına hayaletleri kuran satırı ekle:
+
+   ```js
+     player = { col: MAZE[row].indexOf('P'), row, dir: STOP, want: STOP, progress: 0, frames: PLAYER_FRAMES }
+     ghosts = GHOSTS.map((g) => ({ ...g, col: EXIT.col, row: EXIT.row, dir: [-1, 0], progress: 0, frames: 10 })) // ← yeni
+   ```
+
+5. `choosePlayer` fonksiyonunun kapanış `}`'inden sonra, `// Turning around...` yorumundan önce hayaletin hedefini ve
+   beynini yaz:
+
+   ```js
+   function target(g) {
+     return player
+   }
+
+   function chooseGhost(g) {
+     g.frames = ghostFrames(g)
+     // Ghosts never turn back on their own: only the open ways that are not backwards.
+     const options = Object.values(DIRECTIONS).filter((d) => canGo(g, d) && !same(d, reverse(g.dir)))
+     if (options.length === 0) {
+       g.dir = reverse(g.dir)
+       return
+     }
+     const t = target(g)
+     const distance = (d) => (g.col + d[0] - t.col) ** 2 + (g.row + d[1] - t.row) ** 2
+     g.dir = options.reduce((bestDir, d) => (distance(d) < distance(bestDir) ? d : bestDir))
+   }
+   ```
+
+6. `update` fonksiyonunu şu hâle getir:
+
+   ```js
+   function update() {
+     const startLevel = level                          // ← yeni
+     advance(player, choosePlayer)
+     if (level !== startLevel) return                  // ← yeni
+
+     for (const g of ghosts) advance(g, chooseGhost)   // ← yeni
+   }
+   ```
+
+7. `draw()` içinde oyuncuyu çizen `const p = position(player)` satırından **önce** hayaletleri çiz (her yanda 3 piksel
+   küçük kareler):
+
+   ```js
+     for (const g of ghosts) {                                          // ← yeni
+       const q = position(g)
+       ctx.fillStyle = g.color
+       ctx.fillRect(q.x * TILE + 3, TOP + q.y * TILE + 3, TILE - 6, TILE - 6)
+     }
+
+     const p = position(player)
+   ```
+
+8. **Çalıştır**'a bas. Evin üstünde kırmızı bir kare belirmeli ve labirentte sana doğru gelmeli. Oynamak için önce oyuna
+   tıkla ve kaç: hayalet seni izlemeli ama hiç geri dönüp titrememeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+   kalırsa `reduce` satırındaki `<` işaretine (küçük-eşit değil) ve `...g` yazımındaki üç noktaya bak.
 
 # --tests--
 

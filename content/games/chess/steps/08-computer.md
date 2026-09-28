@@ -27,26 +27,46 @@ computer "imagine" whole lines of play. It waits a moment before moving, so you 
 
 # --explanation-tr--
 
-Artık bilgisayar siyahla oynuyor. İki şeye ihtiyacı var.
+**Bu adımda:** siyahı bilgisayar oynayacak. Sen beyazla bir hamle yapınca üstte `Computer is thinking...` yazacak,
+kısa bir bekleyişten sonra bilgisayar kendi hamlesini oynayacak ve sıra `Your move (white)` ile sana dönecek.
 
-**Bir değerlendirme**: bir konumun ne kadar iyi olduğunu söyleyen bir sayı. Malzemeyi say (piyon 100, at 320, fil 330, kale 500,
-vezir 900) ve daha çok kareyi kontrol ettikleri ortaya yakın taşlar için biraz ekle. Pozitif beyaz için iyidir.
+Bilgisayarın iki şeye ihtiyacı var.
 
-**Bir arama**: her hamleye, ona her cevaba, ona her cevaba ve böyle devam ederek bak ve iki tarafın da en iyisini oynadığını
-varsay. Bu **minimax**'tır; burada **negamax** olarak yazılır: benim için iyi olan senin için kötüdür, yani her seviye yalnızca
-işareti çevirir:
+**1. Değerlendirme:** bir pozisyonun ne kadar iyi olduğunu söyleyen bir sayı. Taşları sayarız (piyon 100, at 320, fil
+330, kale 500, vezir 900) ve daha çok kare kontrol ettikleri için **merkeze yakın** taşlara biraz puan ekleriz.
+Pozitif sayı beyaz için iyi, negatif siyah için iyi demektir. Merkez puanı `6 - |3.5 - satır| - |3.5 - sütun|`:
+tahtanın ortası `(3.5, 3.5)` olduğu için ortaya yakın kareler daha çok puan alır. Şaha merkez puanı verilmez.
+
+**2. Arama:** her hamleye, ona verilebilecek her cevaba, o cevaba verilebilecek her cevaba... bakarız ve iki tarafın
+da en iyisini oynadığını varsayarız. Buna **minimax** denir; burada **negamax** olarak yazıyoruz: benim için iyi olan
+senin için kötüdür, bu yüzden her seviye sadece işareti çevirir:
 
 ```js
 score = -search(depth - 1, -beta, -alpha)
 ```
 
-3 hamle ileriye bakmak yaklaşık 30 × 30 × 30 konum demektir. **Alfa-beta budama** bunların çoğunu atlar: bir hamlenin zaten
-bulunmuş birinden kötü olduğu gösterilir gösterilmez (`score >= beta`), cevaplarının geri kalanına bakmaya gerek kalmaz, çünkü
-öbür taraf buna asla izin vermezdi. Önce almaları denemek iyi hamleleri erken bulur ve daha da çok budar.
+**Kendini çağıran fonksiyon.** `search` kendi içinde yine `search`'ü çağırır (özyineleme, recursion). Her çağrıda
+`depth` (derinlik) 1 azalır; 0 olunca artık daha ileri bakmaz, `evaluate()` ile pozisyonu puanlar. Böylece sonsuza
+dek sürmez.
 
-Bir mat çok büyük puan alır (erken olan daha iyi), bir pat 0. Yasallığı kontrol eden aynı `makeMove`/`undoMove` artık bilgisayarın
-bütün oyun dizilerini "hayal etmesini" sağlar. Kendi hamlenin yerine oturduğunu görebilesin diye hamle yapmadan önce biraz
-bekler.
+**Budama (alpha-beta).** 3 hamle ileri bakmak yaklaşık 30 × 30 × 30 pozisyon demek. **Alpha-beta budaması**
+bunların çoğunu atlar: bir hamlenin zaten bulunmuş bir hamleden kötü olduğu anlaşılır anlaşılmaz (`score >= beta`),
+geri kalan cevaplarına bakmaya gerek kalmaz, çünkü rakip o yolu asla seçmez. Önce yeme hamlelerini denemek iyi
+hamleleri erken bulur ve daha da çok budar.
+
+Mat çok büyük bir sayıyla puanlanır (ne kadar erken o kadar iyi), pat 0'dır. Yasallığı kontrol eden aynı
+`makeMove`/`undoMove`, şimdi bilgisayarın bütün hamle dizilerini "hayal etmesini" sağlıyor. Bilgisayar oynamadan önce
+biraz bekler (`thinking = 20` kare), böylece kendi hamlenin yerine oturduğunu görürsün.
+
+**Yeni parçalar:**
+
+- **`Math.abs`**: bir sayının eksisini atar (uzaklık).
+- **`Infinity` / `-Infinity`**: sonsuz büyük / sonsuz küçük sayı. "Henüz en iyi puan yok" diye başlamak için.
+- **`dizi.sort((a, b) => gain(b) - gain(a))`**: diziyi sıralar; bu karşılaştırma en çok kazandıranı başa koyar.
+- **`Math.random()`**: 0 ile 1 arasında rastgele bir sayı. Puanlara eklenince eşit hamleler arasında rastgele seçilir;
+  bilgisayar her oyunda aynı oynamaz.
+- **`update()`**: her karede çalışır; sıra siyahtaysa `thinking`'i 1 azaltır, 0'a inince bilgisayarın hamlesini
+  oynar. `-= 1` "1 çıkar", `<=` küçük ya da eşit.
 
 # --task--
 
@@ -62,15 +82,135 @@ bekler.
 
 # --task-tr--
 
-1. `VALUES`, `DEPTH = 3` ve `thinking` ekle. Beyazla sen oynuyorsun: tıklamalar yalnızca beyazın sırasında sayılır ve hamlenden
-   sonra `thinking = 20`; `update()` siyahın sırasında onu geri sayar ve sonra `computerMove()` oynar.
-2. `evaluate()` yaz: her taş için değeri artı `4 × (6 - |3.5 - satır| - |3.5 - sütun|)` (şahlara merkez bonusu yok), beyaz için
-   pozitif, siyah için negatif.
-3. `search(depth, alpha, beta)` (alfa-betalı negamax, önce en büyük taşların alınması, mat olunca `-100000 - depth`, pat için `0`,
-   0 derinlikte hamle yapanın tarafından `evaluate()`) ve kök hamleler arasından en iyi `-search(DEPTH - 1, -Infinity, Infinity)`
-   artı küçük rastgele bir eşitlik bozucuyu seçen `computerMove()` yaz.
-4. Mesajlar: `Your move (white)`, `Computer is thinking...`, `Checkmate: you win! Click to play again` ve
-   `Checkmate: the computer wins. Click to play again`.
+1. `const DIAGONAL = [...]` satırının altına taş değerlerini ve arama derinliğini ekle:
+
+   ```js
+   const VALUES = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 }
+   const DEPTH = 3 // how many moves ahead the computer looks
+   ```
+
+2. `let state ...` satırının altına bir değişken ekle, ve `reset()`'in sonuna başlangıç değerini yaz:
+
+   ```js
+   let thinking // frames until the computer moves
+   ```
+
+   ```js
+     state = 'playing'
+     thinking = 0 // ← yeni
+   }
+   ```
+
+3. `play(m)` fonksiyonuna, son satırın altına bir satır ekle:
+
+   ```js
+     if (legalMoves().length === 0) state = inCheck(turn) ? 'checkmate' : 'stalemate'
+     else if (turn === 'b') thinking = 20 // ← yeni
+   }
+   ```
+
+   Oyun bitmediyse ve sıra siyaha geçtiyse, bilgisayar 20 kare sonra oynayacak.
+
+4. `play(m)`'nin kapanış `}`'inin altına üç fonksiyon yaz:
+
+   ```js
+   // Material, plus a little for pieces near the middle, from white's side: positive is good for white.
+   function evaluate() {
+     let score = 0
+     for (let r = 0; r < 8; r++) {
+       for (let c = 0; c < 8; c++) {
+         const piece = board[r][c]
+         if (!piece) continue
+         const center = piece[1] === 'K' ? 0 : 6 - Math.abs(3.5 - r) - Math.abs(3.5 - c)
+         score += (VALUES[piece[1]] + center * 4) * (piece[0] === 'w' ? 1 : -1)
+       }
+     }
+     return score
+   }
+
+   // Negamax with alpha-beta: the best score the side to move can force, looking `depth` moves ahead.
+   function search(depth, alpha, beta) {
+     const moves = legalMoves()
+     if (moves.length === 0) return inCheck(turn) ? -100000 - depth : 0
+     if (depth === 0) return evaluate() * (turn === 'w' ? 1 : -1)
+     // Trying captures of big pieces first lets alpha-beta skip more of the rest.
+     const gain = (m) => (board[m.to[0]][m.to[1]] ? VALUES[board[m.to[0]][m.to[1]][1]] : 0)
+     moves.sort((a, b) => gain(b) - gain(a))
+     for (const m of moves) {
+       const undo = makeMove(m)
+       const score = -search(depth - 1, -beta, -alpha)
+       undoMove(undo)
+       if (score >= beta) return beta
+       if (score > alpha) alpha = score
+     }
+     return alpha
+   }
+
+   function computerMove() {
+     let best = null
+     let bestScore = -Infinity
+     for (const m of legalMoves()) {
+       const undo = makeMove(m)
+       const score = -search(DEPTH - 1, -Infinity, Infinity) + Math.random() // a tiny random tie-break
+       undoMove(undo)
+       if (score > bestScore) {
+         best = m
+         bestScore = score
+       }
+     }
+     return best
+   }
+   ```
+
+   `evaluate` beyazın gözünden puanlar; `search` ise sırası gelen tarafın gözünden baktığı için siyahın sırasında
+   puanı `-1` ile çarpar.
+
+5. `clickSquare` içinde iki satırı değiştir; artık sadece beyazı sen oynarsın:
+
+   ```js
+   function clickSquare(r, c) {
+     if (state !== 'playing' || turn !== 'w') return // ← değişti
+     const move = targets.find((m) => same(m.to, [r, c]))
+     if (move) {
+       play(move)
+       return
+     }
+     if (board[r][c][0] === 'w') { // ← değişti
+   ```
+
+6. `pointerdown` dinleyicisinin kapanış `})` satırının altına `update()` fonksiyonunu yaz:
+
+   ```js
+
+   function update() {
+     if (state !== 'playing' || turn !== 'b') return
+     thinking -= 1
+     if (thinking <= 0) play(computerMove())
+   }
+   ```
+
+7. `draw()`'daki mesaj satırlarından ilkini ve mat satırını değiştir:
+
+   ```js
+     let message = turn === 'w' ? 'Your move (white)' : 'Computer is thinking...' // ← değişti
+     if (state === 'playing' && inCheck(turn)) message = 'Check! ' + message
+     if (state === 'checkmate') message = (turn === 'w' ? 'Checkmate: the computer wins.' : 'Checkmate: you win!') + ' Click to play again' // ← değişti
+     if (state === 'stalemate') message = 'Stalemate: a draw. Click to play again'
+   ```
+
+8. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Üstte `Your move (white)` yazmalı. Bir beyaz hamle yap: yazı `Computer is thinking...` olmalı
+   ve kısa süre sonra siyah kendi hamlesini oynamalı. Alttaki kontrollerin hepsi yeşil olmalı. Bilgisayar hiç
+   oynamıyorsa 3. ve 8. maddeleri kontrol et.
 
 # --tests--
 

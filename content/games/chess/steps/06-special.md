@@ -22,19 +22,38 @@ move, look at the king, take it back.
 
 # --explanation-tr--
 
-İki özel hamle, oyunun tahtanın tek başına gösteremeyeceği **geçmişi hatırlamasını** gerektirir.
+**Bu adımda:** iki özel hamle ekleyeceğiz: **rok** (castling) ve **geçerken alma** (en passant). Şah ile kale
+arasındaki kareler boşalınca şaha tıklayınca iki kare yanında da bir nokta çıkacak; oraya tıklayınca şah iki kare
+kayacak ve kale onun üstünden atlayacak.
 
-**Rok**, tek hamlede şahı bir kaleye doğru iki kare taşır ve kaleyi onun üstünden atlatır. Yalnızca ne şah ne de o kale hiç
-hareket etmediyse, aradaki kareler boşsa ve şah şahta değilse, saldırı altındaki bir kareden geçmiyorsa ve birine inmiyorsa
-izinlidir. "Hiç hareket etmedi" geçmiştir; bu yüzden `castling`'de dört bayrak tut (`wK`, `wQ`, `bK`, `bQ`) ve bir şah ya da
-kale hareket edince ya da bir kale köşesinde alınınca onları kalıcı olarak kapat.
+İki özel hamle de oyunun **geçmişi hatırlamasını** gerektirir; tahtaya bakarak bunu göremezsin.
 
-**Geçerken alma**: bir piyon iki kare gidip rakip bir piyonun yanına inerse, o piyon onu **yalnızca bir kare gitmiş gibi**
-alabilir, ama yalnızca hemen sonraki hamlede. Bu yüzden `enPassant`, piyonun atladığı kareyi tam bir hamle boyunca hatırlar.
-Alınan piyon, alan piyonun gittiği karede değil, onun yanındadır.
+**Rok**, şahı bir kaleye doğru iki kare kaydırır ve kaleyi şahın üstünden atlatır; hepsi tek hamlede. Sadece şu
+durumda izinlidir:
 
-İkisi de birden fazla kareyi değiştirir; bu yüzden `makeMove` ve `undoMove` biraz büyür. Yasallık kontrolü aynı kalır: hamleyi
-dene, şaha bak, geri al.
+- ne şah ne o kale **hiç oynamamıştır**,
+- aralarındaki kareler boştur,
+- şah şu an şahta değildir, saldırı altındaki bir kareden **geçmez** ve öyle bir kareye **inmez**.
+
+"Hiç oynamamış" bir geçmiş bilgisidir. Bu yüzden `castling` nesnesinde dört bayrak (evet/hayır değeri) tutarız:
+`wK` (beyaz, şah tarafı), `wQ` (beyaz, vezir tarafı), `bK`, `bQ`. Şah ya da kale oynayınca, ya da köşesindeki kale
+yenince ilgili bayrak **kalıcı olarak** `false` olur.
+
+**Geçerken alma:** bir piyon iki kare ilerleyip rakip bir piyonun yanına inerse, o rakip piyon onu **sanki tek kare
+ilerlemiş gibi** yiyebilir; ama sadece **hemen sonraki** hamlede. Bu yüzden `enPassant`, piyonun üstünden atladığı
+kareyi tam bir hamle boyunca hatırlar. Yenen piyon, yiyen piyonun gittiği karede değil, onun **yanındadır**.
+
+İki hamle de birden fazla kareyi değiştirdiği için `makeMove` ve `undoMove` biraz büyür. Yasallık kontrolü aynı
+kalır: hamleyi dene, şaha bak, geri al.
+
+**Yeni parçalar:**
+
+- **İki değeri aynı anda atamak:** `[board[fr][5], board[fr][7]] = [board[fr][7], '']` sağdaki iki değeri soldaki
+  iki kareye yazar: f sütununa kaleyi koy, h sütununu boşalt. Kaleyi tek satırda taşır.
+- **Zincirli atama:** `castling.wK = castling.wQ = false` ikisine birden `false` yazar.
+- **Kopya:** `{ ...castling }` nesnenin bir kopyasını alır; böylece hamle geri alınınca eski bayraklar aynen döner.
+- `(fr + tr) / 2`: iki satırın ortası, yani piyonun üstünden atladığı satır.
+- `color + 'K'`: `'w' + 'K'` → `'wK'`; bayrağın adını kurar ve `castling[...]` ile okuruz.
 
 # --task--
 
@@ -49,14 +68,118 @@ dene, şaha bak, geri al.
 
 # --task-tr--
 
-1. `reset()`'e `castling = { wK: true, wQ: true, bK: true, bQ: true }` ve `enPassant = null` ekle.
-2. `pseudoMoves` içinde: bir piyonun iki adım hamlesi `double: true` alır; bir piyon `enPassant`'a `ep: true` ile çapraz alabilir;
-   ilk karesindeki bir şah, hak hâlâ varsa, aradaki kareler boşsa ve kale köşesindeyse rok hamleleri ekler (6. sütuna
-   `castle: 'K'`, 2. sütuna `castle: 'Q'`).
-3. `makeMove` içinde: geçerken alınan piyonu kaldır, rok yaparken kaleyi taşı, iki adımdan sonra `enPassant`'ı ayarla (ya da
-   temizle) ve rok haklarını anlatıldığı gibi kapat. `undoMove`'da `castling`'i, `enPassant`'ı ve geçerken alınan piyonu kaydet
-   ve geri yükle.
-4. `legalMoves` içinde, şahın karesi ya da üstünden geçtiği kare saldırı altındaysa bir rok hamlesine izin verilmez.
+1. `let targets ...` satırının altına iki değişken ekle, ve `reset()`'e başlangıç değerlerini yaz:
+
+   ```js
+   let castling // which castlings are still allowed
+   let enPassant // the square a pawn could capture onto en passant right now, or null
+   ```
+
+   ```js
+     targets = []
+     castling = { wK: true, wQ: true, bK: true, bQ: true } // ← yeni
+     enPassant = null                                      // ← yeni
+   }
+   ```
+
+2. `pseudoMoves`'un piyon bloğunda iki satırı değiştir/ekle:
+
+   ```js
+           if (r === start && !board[r + 2 * dir][c]) add(r, c, r + 2 * dir, c, { double: true }) // ← değişti
+         }
+         for (const dc of [-1, 1]) {
+           const tr = r + dir
+           const tc = c + dc
+           if (!inside(tr, tc)) continue
+           if (board[tr][tc] && board[tr][tc][0] !== color) add(r, c, tr, tc, promote(tr))
+           if (enPassant && enPassant[0] === tr && enPassant[1] === tc) add(r, c, tr, tc, { ep: true }) // ← yeni
+         }
+       }
+   ```
+
+3. Piyon bloğunun kapanış `}`'inin hemen altına (kare döngülerinin kapanışından önce) rok hamlelerini ekle:
+
+   ```js
+         // Castling: the king still on its first square, the squares between free and the rook in its corner.
+         if (kind === 'K' && c === 4 && r === (color === 'w' ? 7 : 0)) {
+           const rook = color + 'R'
+           if (castling[color + 'K'] && !board[r][5] && !board[r][6] && board[r][7] === rook) add(r, c, r, 6, { castle: 'K' })
+           if (castling[color + 'Q'] && !board[r][1] && !board[r][2] && !board[r][3] && board[r][0] === rook) add(r, c, r, 2, { castle: 'Q' })
+         }
+   ```
+
+4. `makeMove` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function makeMove(m) {
+     const [fr, fc] = m.from
+     const [tr, tc] = m.to
+     const piece = board[fr][fc]
+     const undo = { m, piece, captured: board[tr][tc], castling: { ...castling }, enPassant, taken: '' } // ← değişti
+     board[tr][tc] = m.promo ? piece[0] + m.promo : piece
+     board[fr][fc] = ''
+     if (m.ep) {                                                                     // ← yeni (buradan...)
+       // The pawn taken en passant stands beside the moving pawn, not on the square it moves to.
+       undo.taken = board[fr][tc]
+       board[fr][tc] = ''
+     }
+     if (m.castle === 'K') [board[fr][5], board[fr][7]] = [board[fr][7], '']
+     if (m.castle === 'Q') [board[fr][3], board[fr][0]] = [board[fr][0], '']
+     enPassant = m.double ? [(fr + tr) / 2, fc] : null
+     // Moving the king or a rook, or capturing a rook on its first square, ends castling on that side for good.
+     if (piece[1] === 'K') castling[piece[0] + 'K'] = castling[piece[0] + 'Q'] = false
+     for (const [row, col, side] of [[7, 7, 'wK'], [7, 0, 'wQ'], [0, 7, 'bK'], [0, 0, 'bQ']]) {
+       if ((fr === row && fc === col) || (tr === row && tc === col)) castling[side] = false
+     }                                                                               // ← (...buraya kadar)
+     turn = other(turn)
+     return undo
+   }
+   ```
+
+   Son `for`: bir hamle bir köşeden kalkarsa ya da bir köşeye inerse (kale oynadı ya da yendi), o köşenin rok hakkı
+   biter.
+
+5. `undoMove` fonksiyonuna, `turn = other(turn)` satırından önce beş satır ekle:
+
+   ```js
+   function undoMove(undo) {
+     const [fr, fc] = undo.m.from
+     const [tr, tc] = undo.m.to
+     board[fr][fc] = undo.piece
+     board[tr][tc] = undo.captured
+     if (undo.m.ep) board[fr][tc] = undo.taken                                   // ← yeni
+     if (undo.m.castle === 'K') [board[fr][7], board[fr][5]] = [board[fr][5], ''] // ← yeni
+     if (undo.m.castle === 'Q') [board[fr][0], board[fr][3]] = [board[fr][3], ''] // ← yeni
+     castling = undo.castling                                                    // ← yeni
+     enPassant = undo.enPassant                                                  // ← yeni
+     turn = other(turn)
+   }
+   ```
+
+6. `legalMoves` içinde, `filter`'ın başına rok kontrolünü ekle:
+
+   ```js
+   function legalMoves() {
+     const color = turn
+     return pseudoMoves(color).filter((m) => {
+       if (m.castle) {                                                            // ← yeni
+         const row = m.from[0]
+         // No castling out of check or across an attacked square.
+         if (attacked(row, 4, other(color)) || attacked(row, m.castle === 'K' ? 5 : 3, other(color))) return false
+       }                                                                          // ← yeni blok bitti
+       const undo = makeMove(m)
+       const safe = !inCheck(color)
+       undoMove(undo)
+       return safe
+     })
+   }
+   ```
+
+   Şahın indiği karenin güvenliğini zaten "dene ve geri al" kontrolü sağlıyor.
+
+7. **Çalıştır**'a bas. Oyun eskisi gibi oynanmalı; beyazın şah tarafındaki at ve fil çekilince şaha tıklayınca iki
+   kare sağında bir nokta çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı. Rokta kale yerinde kalıyorsa köşeli
+   parantezli atama satırlarını harf harf karşılaştır.
 
 # --tests--
 

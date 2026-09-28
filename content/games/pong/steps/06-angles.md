@@ -27,24 +27,35 @@ paddle can follow.
 
 # --explanation-tr--
 
-Düz bir sekmede top açısını sonsuza kadar korur ve oyuncunun hiçbir kontrolü olmaz. Orijinal Pong'da topun rakete
-**nereden** çarptığı nereye gideceğine karar verir: orta kısım düz geri gönderir, kenarlar dik bir açıyla fırlatır. Bu
-tek kural bir oyuncağı beceri oyununa çevirir.
+**Bu adımda:** topun raketin **neresine** çarptığı, nereye gideceğini belirleyecek. Ortaya çarparsa düz döner,
+kenarlara çarparsa dik bir açıyla yukarı ya da aşağı kaçar. Her vuruşta top biraz da hızlanır.
 
-Hile, "raketin neresi"ni `-1` ile `1` arasında bir sayıya çevirmek. Buna **normalleştirme** denir:
+**Neden?** Şu anki sekmede top açısını hiç değiştirmiyor; oyuncunun topa bir etkisi yok. Orijinal Pong'daki tek
+bir kural oyunu beceri oyununa çevirir: raketin ortası düz, kenarları açılı gönderir.
 
-```js
-const ballCenter = ball.y + BALL / 2
-const paddleCenter = paddle.y + PADDLE_H / 2
-const offset = (ballCenter - paddleCenter) / (PADDLE_H / 2)   // -1 üst kenar, 0 orta, 1 alt kenar
-ball.vy = offset * 5
-```
+**"Raketin neresi?" sorusunu bir sayıya çevirmek.** Önce topun ve raketin **ortasını** buluruz. `/` bölmedir:
 
-Bir değer normalleştirildikten sonra onu her şeye ölçekleyebilirsin: hız için `* 5`, derece cinsinden açı için
-`* 60`... Normalleştirme, oyun ve grafik kodunda en yararlı alışkanlıklardan biridir.
+- topun ortası: `ball.y + BALL / 2` (üst kenar + boyunun yarısı)
+- raketin ortası: `paddle.y + PADDLE_H / 2`
 
-Ralliler heyecanlı kalsın diye her vuruş topu **%5 hızlandırır**; bir sınıra kadar, ki top hiçbir zaman bir raketin
-yetişemeyeceği kadar hızlanmasın.
+İkisinin farkı, topun raketin ortasından kaç piksel aşağıda (artı) ya da yukarıda (eksi) olduğunu söyler. Bu farkı
+raketin yarı boyuna (40) bölersek sonuç hep **-1 ile 1 arasında** bir sayı olur: -1 üst kenar, 0 orta, 1 alt kenar.
+Bir değeri böyle ortak bir aralığa getirmeye **normalleştirme** (normalizing) denir. Sonra onu istediğimiz ölçüye
+büyütebiliriz: `offset * 5` → -5 ile 5 arası bir dikey hız.
+
+Matematikteki gibi parantez önce hesaplanır; bölme ve çarpma, toplama ve çıkarmadan önce yapılır.
+
+**Hızlanma.** Her vuruşta yatay hız %5 artar (`* 1.05`), ama en fazla 12 olur ki raket yetişebilsin:
+
+- `Math.abs(sayı)` → sayının işaretsiz hâli (mutlak değer): `Math.abs(-4)` → 4.
+- `Math.min(..., 12)` → 3. adımdan hatırla: ikisinden küçüğü. Yani 12'yi asla geçmez.
+
+**Hangi raket? `===` ve `else`.** Sol raketten sonra top sağa (artı), sağ raketten sonra sola (eksi) gitmeli.
+`paddle === left` "bu raket sol raketle aynı mı?" diye sorar (`===` "eşit mi" demektir; tek `=` ise değer atar).
+`if (...) { ... } else { ... }` → koşul doğruysa ilk blok, değilse `else`'in ("yoksa") bloğu çalışır.
+
+Kısacası `bounceOff(paddle)`, 5. adımdaki iki sekme bloğunun yaptığı işi (yön çevirme + dışarı itme) açıyla ve
+hızlanmayla birlikte tek yerde yapar.
 
 # --task--
 
@@ -57,12 +68,40 @@ yetişemeyeceği kadar hızlanmasın.
 
 # --task-tr--
 
-1. Şunları yapan `function bounceOff(paddle)` yaz:
-   - `offset`'i yukarıdaki gibi hesaplasın ve `ball.vy = offset * 5` yapsın,
-   - yatay hızı `Math.min(Math.abs(ball.vx) * 1.05, 12)` yapsın; sol raketten sonra sağa (pozitif), sağ raketten
-     sonra sola (negatif) baksın,
-   - topu eskisi gibi raketin dışına itsin.
-2. `update()` içinde düz çevirmeler yerine `bounceOff(left)` ve `bounceOff(right)` kullan.
+1. `touches` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function update()`'in **üstüne**) şunu
+   yaz:
+
+   ```js
+   function bounceOff(paddle) {
+     // -1 at the paddle's top edge, 0 in the middle, 1 at the bottom edge
+     const offset = (ball.y + BALL / 2 - (paddle.y + PADDLE_H / 2)) / (PADDLE_H / 2)
+     const speed = Math.min(Math.abs(ball.vx) * 1.05, 12)
+     ball.vy = offset * 5
+     if (paddle === left) {
+       ball.vx = speed
+       ball.x = left.x + PADDLE_W
+     } else {
+       ball.vx = -speed
+       ball.x = right.x - BALL
+     }
+   }
+   ```
+
+2. `update()` içinde, 5. adımda yazdığın iki raket bloğunu (`if (ball.vx < 0 && touches(left)) { ... }` ve
+   `if (ball.vx > 0 && touches(right)) { ... }`, süslü parantezleri ve içleriyle birlikte) **sil**. Yerlerine şu iki
+   satırı yaz:
+
+   ```js
+     if (ball.vx < 0 && touches(left)) bounceOff(left)       // ← değişti
+     if (ball.vx > 0 && touches(right)) bounceOff(right)     // ← değişti
+   }
+   ```
+
+   Son `}`, `update()` fonksiyonunun kapanışıdır; o yerinde kalır.
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Topu raketin ucuyla karşıla: dik bir açıyla sekmeli. Ortayla
+   karşılarsan düz dönmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `offset` satırındaki
+   parantezleri tek tek say.
 
 # --tests--
 

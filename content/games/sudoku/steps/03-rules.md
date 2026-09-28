@@ -31,28 +31,44 @@ The puzzle is solved when every cell is filled and nothing clashes.
 
 # --explanation-tr--
 
-Sudoku'nun tamamı tek bir sorudur: **`d` rakamı `(r, c)`'ye konabilir mi?** `d` zaten `r` satırında, `c` sütununda ya da
-kutuda değilse konabilir. 9'luk tek bir döngü üçünü birden kontrol eder:
+**Bu adımda:** oyun kuralları bilecek. Aynı satıra, sütuna ya da kutuya iki kez aynı rakamı yazarsan ikisi de
+kırmızı olacak. Bütün hücreleri doğru doldurunca tahtanın ortasında koyu bir şerit ve "Solved!" (çözüldü) yazısı
+çıkacak; tıklayınca bulmaca baştan başlayacak.
+
+**Sudoku tek bir sorudur:** `d` rakamı `(r, c)` hücresine konabilir mi? Konabilir, eğer `d` o **satırda**, o
+**sütunda** ve o **kutuda** yoksa. 9 turluk tek bir döngü üçünü birden kontrol eder:
 
 ```js
 const br = r - (r % 3)   // kutunun en üst satırı: 0, 3 ya da 6
-const bc = c - (c % 3)   // kutunun sol sütunu
+const bc = c - (c % 3)   // kutunun en sol sütunu
 for (let i = 0; i < 9; i++) {
   if (board[r][i] === d || board[i][c] === d) return false
   if (board[br + Math.floor(i / 3)][bc + (i % 3)] === d) return false
 }
+return true
 ```
 
-Son satır kutuyu gezer: `i` 0'dan 8'e giderken `Math.floor(i / 3)` 0 0 0 1 1 1 2 2 2, `i % 3` ise 0 1 2 0 1 2 0 1 2 olur;
-bu da dokuz hücrenin hepsini ziyaret eder.
+- `r - (r % 3)`: `r = 7` ise `7 % 3 = 1`, `7 - 1 = 6`. Hücrenin kutusu 6. satırdan başlar.
+- `board[r][i]` satırdaki `i`. hücre, `board[i][c]` sütundaki `i`. hücre. İkisinden biri `d` ise (`||` veya)
+  hemen `false` döneriz; `return` fonksiyonu orada bitirir.
+- Son satır kutuyu gezer: `i` 0'dan 8'e giderken `Math.floor(i / 3)` 0 0 0 1 1 1 2 2 2, `i % 3` ise 0 1 2 0 1 2 0 1 2
+  olur. Böylece kutunun dokuz hücresinin hepsine uğrar.
+- Döngü hiçbir çakışma bulmadan biterse en alttaki `return true` çalışır.
 
-`canPlace` her zaman `grid`'i kullanmak yerine tahtayı parametre olarak alır. Bu onu herhangi bir tahtada kullanabileceğimiz
-**saf** bir kural yapar; bir sonraki adımdaki çözücünün buna ihtiyacı olacak.
+**Neden `board` parametresi?** `canPlace` hep `grid`'i kullanmak yerine tahtayı **parametre** olarak alır
+(çağırırken verdiğin değer). Böylece her tahtada çalışan saf bir kural olur; sonraki adımdaki çözücü bunu başka bir
+tahtada kullanacak.
 
-Hataları işaretlemek için `conflict(r, c)` rakamı bir anlığına kendi hücresinden çıkarır (yoksa hep kendisini bulurdu),
-`canPlace`'e sorar ve geri koyar. Çakışan hücreler kırmızıya döner.
+**Hataları işaretlemek.** `conflict(r, c)` bir hücrenin başka bir hücreyle çakışıp çakışmadığını söyler. Rakamı
+kendi hücresinden bir anlığına çıkarır (yoksa hep kendini bulurdu), `canPlace`'e sorar ve geri koyar. `!ok`
+cevabın **tersidir**: "konabilir" değilse çakışma var.
 
-Her hücre dolduğunda ve hiçbir şey çakışmadığında bulmaca çözülmüştür.
+**Kazanmak.** Bulmaca, boş hücre kalmadığında ve hiçbir hücre çakışmadığında çözülmüştür. `checkWin()` 81 hücreyi
+gezer; boş ya da çakışan bir tane bulursa hemen çıkar (`return`), hiç bulamazsa `won = true` yapar. Çözüldükten
+sonra `enter` hiçbir şey yazmaz; bir tıklama `reset()` ile baştan başlatır.
+
+**Yarı saydam renk.** `'rgba(15, 23, 42, 0.75)'` kırmızı, yeşil, mavi miktarı ve **saydamlıktır**: 0.75 = %75
+opak, arkası biraz görünür.
 
 # --task--
 
@@ -66,13 +82,101 @@ Her hücre dolduğunda ve hiçbir şey çakışmadığında bulmaca çözülmü�
 
 # --task-tr--
 
-1. `canPlace(board, r, c, d)` yaz: `d` zaten `r` satırında, `c` sütununda ya da `(r, c)`'nin kutusundaysa false.
-2. `conflict(r, c)` yaz: boş bir hücre için false, değilse o rakamın başka bir hücreyle çakışıp çakışmadığı.
-3. `won` ekle (`reset()`'te `false`). Her `enter`'dan sonra çağrılan `checkWin()`'i yaz: hiçbir hücre `0` değilse ve hiçbirinde
-   çakışma yoksa `won = true` yap. `won` olduktan sonra `enter` hiçbir şey yapmaz.
-4. Çakışan bir hücre `'#fecaca'` ile doldurulur (bu kural diğerlerini geçer).
-5. `won` olduğunda tahtanın ortasına koyu bir şerit (`'rgba(15, 23, 42, 0.75)'`) ve beyazla `Solved!` ile
-   `Click for a new puzzle` çiz. Sonra bir tıklama `reset()`'i çağırır.
+1. `let selected` satırının hemen **altına** ekle:
+
+   ```js
+   let won
+   ```
+
+2. `let won` satırının altına bir satır boşluk bırakıp (`reset()`'ten **önce**) kural fonksiyonunu yaz:
+
+   ```js
+   // Can digit d go at (r, c)? Not if it is already in the row, the column or the 3 by 3 box.
+   function canPlace(board, r, c, d) {
+     const br = r - (r % 3)
+     const bc = c - (c % 3)
+     for (let i = 0; i < 9; i++) {
+       if (board[r][i] === d || board[i][c] === d) return false
+       if (board[br + Math.floor(i / 3)][bc + (i % 3)] === d) return false
+     }
+     return true
+   }
+   ```
+
+3. `reset()` fonksiyonunun sonuna `won = false` ekle:
+
+   ```js
+     selected = { r: 4, c: 4 }
+     won = false // ← yeni
+   }
+   ```
+
+4. `reset()`'in kapanan `}`'sinin altına çakışma ve kazanma fonksiyonlarını yaz; altındaki `enter()` fonksiyonunu
+   da değiştir:
+
+   ```js
+   // Does the digit at (r, c) clash with another cell in its row, column or box?
+   function conflict(r, c) {
+     const d = grid[r][c]
+     if (d === 0) return false
+     grid[r][c] = 0
+     const ok = canPlace(grid, r, c, d)
+     grid[r][c] = d
+     return !ok
+   }
+
+   function checkWin() {
+     for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) if (grid[r][c] === 0 || conflict(r, c)) return
+     won = true
+   }
+
+   function enter(d) {
+     if (won || given[selected.r][selected.c]) return // ← değişti
+     grid[selected.r][selected.c] = d
+     checkWin()                                       // ← yeni
+   }
+   ```
+
+5. `canvas.addEventListener('pointerdown', ...)` içinde, `const y = ...` satırından sonra kazanılmışsa baştan
+   başlatan kısmı ekle:
+
+   ```js
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     if (won) {   // ← yeni
+       reset()    // ← yeni
+       return     // ← yeni
+     }            // ← yeni
+     const r = Math.floor((y - TOP) / SIZE)
+   ```
+
+6. `draw()` fonksiyonunda, `if (r === selected.r && c === selected.c) fill = '#93c5fd'` satırının hemen **altına**
+   kırmızı kuralını ekle (en son olduğu için diğerlerini ezer):
+
+   ```js
+         if (conflict(r, c)) fill = '#fecaca'
+   ```
+
+7. `draw()` fonksiyonunun en sonuna, çizgileri çizen `for` döngüsünün kapanan `}`'sinden sonra ve fonksiyonun
+   kapanan `}`'sinden önce, bir satır boşluk bırakıp şunu ekle:
+
+   ```js
+     if (won) {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
+       ctx.fillRect(0, TOP + 3 * SIZE, canvas.width, 3 * SIZE)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText('Solved!', canvas.width / 2, TOP + 4.5 * SIZE)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Click for a new puzzle', canvas.width / 2, TOP + 5.3 * SIZE)
+     }
+   ```
+
+   Şerit, ızgaranın ortadaki üç satırını kaplar.
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk satırın üçüncü hücresine (boş) `5` yaz: o hücre ve
+   satırın başındaki `5` kırmızı olmalı; `4` yazınca kırmızılık gitmeli. Alttaki kontrollerin hepsi yeşil olmalı.
+   `canPlace` testi kırmızıysa en alttaki `return true`'yu döngünün **dışına** yazdığından emin ol.
 
 # --tests--
 

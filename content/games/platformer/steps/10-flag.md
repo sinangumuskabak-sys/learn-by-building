@@ -19,16 +19,27 @@ the classic games are made of. Try the ideas below and make the level your own. 
 
 # --explanation-tr--
 
-Son parça: bir hedef. Bölümdeki `F`, gökyüzünün tepesinden zemine kadar uzanan bir bayrak direğine dönüşür; böylece
-oyuncu üstünden atlayarak onu ıskalayamaz. Ona dokunmak bölümü kazandırır.
+**Bu adımda:** son parçayı, bir **hedef** ekleyeceğiz. Bölümün sonundaki `F` harfi, gökyüzünden zemine uzanan beyaz bir
+direk ve tepesinde yeşil bir bayrak olacak. Bayrağa dokunursan "Level complete!" (bölüm tamam) yazısı çıkacak.
 
-Bunun ne kadar az kod gerektirdiğine dikkat et: taramada bir karakter daha, bir kutu daha, bir kesişim kontrolü ve bir
-durum daha, `'won'`. Kurduğun yapının karşılığı bu: bölüm metninde **veri**, her gövde için **genel** hareket ve
-çarpışma, oyunun akışı için bir **durum makinesi**. Yeni içerik artık birkaç satıra mal oluyor.
+**Kaçırılamayan bayrak.** Direk, 3. satırdan (`y = 3 * TILE`) `F`'nin bulunduğu satırın dibine kadar uzanır. Oyuncu
+bayrağın üstünden zıplayıp onu kaçıramaz. Direğin boyu şöyle hesaplanır: `F` satırının dibi (`y + TILE`) eksi direğin
+tepesi (`3 * TILE`). Direk 4 piksel ince ve karenin ortasına yakın durur (`x + 14`).
 
-Gerçek bir platform oyunu yaptın: döşeme haritası, eksenleri ayrı çarpışma, momentum, coyote time'lı değişken
-zıplama, ayıklamalı kamera, toplanabilirler, devriye gezen düşmanlar, ezme, canlar ve bir hedef. Klasik oyunlar da bu
-yapı taşlarından yapılır. Aşağıdaki fikirleri dene ve bölümü kendine göre yap. İşe bölüm metnini düzenleyerek başla!
+**Ne kadar az kod gerekti, dikkat et:** taramada bir harf daha, bir kutu daha, bir çakışma kontrolü daha ve bir durum
+daha: `'won'` (kazandın). Kurduğun yapının ödülü bu:
+
+- bölüm yazısında **veri**,
+- her kutu için çalışan **genel** hareket ve çarpışma (`moveX`, `moveY`, `overlaps`),
+- oyunun akışı için bir **durum makinesi** (state machine): `'playing'`, `'won'`, `'over'`.
+
+Yeni içerik artık birkaç satıra mal oluyor. `update()` zaten `state !== 'playing'` iken hiçbir şey yapmadığı için
+kazandığın anda oyun donar; zıplama tuşu da zaten "oynanmıyorsa yeni oyun" diyor. Bitiş ekranında ise hangi yazının
+çıkacağını kısa "eğer" ile seçeriz: `state === 'won' ? 'Level complete!' : 'Game Over'`.
+
+Gerçek bir platform oyunu yaptın: kare haritası, eksenleri ayrı çarpışma, ivme, coyote time'lı ayarlanabilir zıplama,
+ayıklamalı (culling) kamera, toplanabilir altınlar, devriye gezen düşmanlar, ezme, canlar ve bir hedef. Klasik oyunlar
+da bu yapı taşlarından kurulur. Şimdi bölümü kendine göre değiştirmeyi dene: işe `LEVEL` yazısını düzenleyerek başla!
 
 # --task--
 
@@ -41,12 +52,56 @@ yapı taşlarından yapılır. Aşağıdaki fikirleri dene ve bölümü kendine 
 
 # --task-tr--
 
-1. `let flag` ekle. Bölüm taramasında `'F'` döşemesi için
-   `flag = { x: col * TILE + 14, y: 3 * TILE, w: 4, h: row * TILE + TILE - 3 * TILE }` oluştur: 3. satırdan zemine kadar
-   ince bir direk.
-2. `update()` içinde çukur kontrolünden sonra oyuncu bayrakla kesişince `state = 'won'` yap.
-3. Direği dünyada `'#e5e7eb'` bir dikdörtgen, tepesinin sağına da `'#22c55e'` renkli 24×16 bir bayrak olarak çiz.
-   Kazanılınca bitiş ekranında `Game Over` yerine `Level complete!` yazsın.
+1. En üstteki değişkenlerde `let enemies` satırının altına bayrağı ekle:
+
+   ```js
+   let enemies
+   let flag // ← yeni
+   let camera
+   ```
+
+   İstersen `let state` satırının yorumunu da `// 'playing', 'won' ya da 'over'` yapabilirsin.
+
+2. `loadLevel()` içindeki taramada, `if (line[col] === 'e') ...` satırının hemen altına bayrağı oluşturan satırı ekle:
+
+   ```js
+         if (line[col] === 'F') flag = { x: x + 14, y: 3 * TILE, w: 4, h: y + TILE - 3 * TILE }
+   ```
+
+3. `update()` fonksiyonunda çukur kontrolünün (`if (player.y > ROWS * TILE) { ... }`) kapanış `}`'inin hemen altına,
+   kamera satırından önce kazanma kontrolünü ekle:
+
+   ```js
+     if (player.y > ROWS * TILE) {
+       die()
+       return
+     }
+     if (overlaps(player, flag)) state = 'won' // ← yeni
+
+     camera = clamp(player.x + player.w / 2 - canvas.width / 2, 0, COLS * TILE - canvas.width)
+   ```
+
+4. `draw()` fonksiyonunda karelerin iki döngüsünün kapanışından sonra, altınları çizen `ctx.fillStyle = '#facc15'`
+   satırından **önce** direği ve bayrağı çiz:
+
+   ```js
+     ctx.fillStyle = '#e5e7eb'
+     ctx.fillRect(flag.x, flag.y, flag.w, flag.h)
+     ctx.fillStyle = '#22c55e'
+     ctx.fillRect(flag.x + flag.w, flag.y, 24, 16)
+   ```
+
+   İkinci dikdörtgen direğin sağ üstünde duran 24×16'lık yeşil bayraktır.
+
+5. Yine `draw()`'da, bitiş ekranındaki `ctx.fillText('Game Over', ...)` satırını şöyle değiştir:
+
+   ```js
+       ctx.fillText(state === 'won' ? 'Level complete!' : 'Game Over', canvas.width / 2, 160) // ← değişti
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bölümün sonuna kadar koş: bayrağa değince oyun durmalı ve
+   "Level complete!" yazmalı; Boşluk yeni oyun başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa
+   bayrak satırındaki `h: y + TILE - 3 * TILE` hesabını harf harf karşılaştır.
 
 # --tests--
 

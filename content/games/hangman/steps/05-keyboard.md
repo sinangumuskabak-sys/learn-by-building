@@ -20,17 +20,44 @@ possible. Most players look at this more than at the list of misses.
 
 # --explanation-tr--
 
-Telefon bir canvas için klavye açmaz, bu yüzden oyun kendininkini çizer: 9, 9 ve 8'lik satırlarda 26 tuş.
+**Bu adımda:** kelimenin altına 26 harflik bir ekran klavyesi çizeceğiz (9, 9 ve 8 tuşluk üç satır). Telefonda da
+oynanabilecek: tuşa dokununca o harf tahmin edilir. Tuşlar bildiklerini de gösterecek: kelimede olan harf **yeşil**,
+ıska olan harf **gri**, henüz denenmeyenler açık renk.
 
-`keyRect(i)`, `i` tuşunun nerede olduğunu hesaplar: satırı `Math.floor(i / 9)`, satırdaki yeri `i % 9`'dur. Son satırda
-yalnızca 8 tuş vardır ve **ortalanmış** hâli çok daha iyi görünür; bu yüzden her satır kendi sol kenarını kaç tuşu olduğundan
-hesaplar. Hem çizim hem tıklama `keyRect`'i kullanır; böylece gördüğün tuşlarla bastığın tuşlar asla çelişmez.
+**Neden kendi klavyemiz?** Telefon, canvas için klavye açmaz. Bu yüzden tuşları kendimiz çizer, dokunuşları kendimiz
+yakalarız.
 
-Bir tıklama, tuşun sol ve sağ kenarları arasında **ve** üstü ile altı arasındaysa tuşun içindedir. Tuşlar arasındaki küçük
-boşluk hiçbir tuşa ait değildir; bu da kenara dokunan kalın bir parmakla yanlış harfe basmayı önler.
+**`keyRect(i)`: `i`. tuşun yeri.** Tuşları `LETTERS` yazısındaki sırayla numaralarız (A = 0, B = 1, ... Z = 25).
 
-Tuşlar bildiklerini de gösterir: **yeşil** bir tuş kelimedeydi, **gri** bir tuş ıskaydı, geri kalanlar hâlâ mümkün.
-Çoğu oyuncu buna ıska listesinden daha çok bakar.
+- Satırı: `Math.floor(i / 9)` → 9'a bölüp aşağı yuvarla (`i = 10` → satır 1).
+- Satırdaki yeri: `i % 9` → 9'a bölümden kalan (`10 % 9` → 1).
+- Son satırda sadece 8 tuş var ve **ortalanmış** daha güzel durur. Bu yüzden her satır kendi sol kenarını kaç tuşu
+  olduğuna göre hesaplar: `const inRow = row === 2 ? 8 : 9` ("üçüncü satırsa 8, değilse 9"; `? :` kısa bir `if`).
+  Tuşların ve aralarındaki 4 piksellik boşlukların toplam genişliğini canvas'ın eninden çıkarıp ikiye böleriz.
+
+Fonksiyon sonuç olarak `{ x, y }` **nesnesi** verir (`return`): tuşun sol üst köşesi. Hem çizim hem tıklama aynı
+`keyRect`'i kullanır; böylece gördüğün tuş ile bastığın tuş asla birbirini tutmazlık etmez.
+
+**Tıklama bir tuşun içinde mi?** Nokta tuşun sol ve sağ kenarı arasındaysa **ve** (`&&`) üst ve alt kenarı
+arasındaysa içindedir:
+
+```js
+x >= k.x && x < k.x + KEY_W && y >= k.y && y < k.y + KEY_H
+```
+
+`>=` "büyük ya da eşit", `<` "küçük" demektir. Tuşların arasındaki küçük boşluk hiçbir tuşa ait değildir; kalın parmakla
+kenara basınca yanlış harfe gitmez. Tıklamada 26 tuşu bir `for` döngüsüyle tek tek sorarız. `LETTERS[i]` yazının
+`i`. harfidir.
+
+Dokunulan nokta önce canvas piksellerine çevrilir: canvas ekranda farklı boyda görünebildiği için
+`getBoundingClientRect()` ile ekrandaki yerini ve boyunu alıp oranlarız. Oyun bittiyse tıklama eskisi gibi yeni kelime
+başlatır.
+
+**Tuş rengi.** Önce varsayılan açık renk: `let color = '#e7e5e4'`. Harf denendiyse, kelimede varsa yeşil, yoksa gri:
+
+```js
+if (guessed.has(letter)) color = word.includes(letter) ? '#86efac' : '#a8a29e'
+```
 
 # --task--
 
@@ -44,13 +71,70 @@ Tuşlar bildiklerini de gösterir: **yeşil** bir tuş kelimedeydi, **gri** bir 
 
 # --task-tr--
 
-1. `KEY_W = 48`, `KEY_H = 34` ve `KEYS_Y = 360` ekle.
-2. `keyRect(i)` yaz: `i` tuşunun `{ x, y }`'si; 9'luk satırlarda (son satırda 8), yatayda 4, dikeyde 6 piksel aralıklı, her satır
-   ortalı.
-3. Oynarken `pointerdown`'da işaretçinin altındaki tuşun harfini tahmin et (oyundan sonra bir tıklama hâlâ yeni bir kelime
-   başlatır).
-4. Her tuşu çiz: tahmin edildiyse ve kelimedeyse `'#86efac'`, tahmin edildiyse ve değilse `'#a8a29e'`, değilse `'#e7e5e4'`;
-   harfi `'#1f2937'` ile, `'bold 18px sans-serif'`, `k.y + 24`'te ortalı.
+1. `const MAX_WRONG = 6` satırının hemen altına klavye ölçülerini ekle:
+
+   ```js
+   const KEY_W = 48
+   const KEY_H = 34
+   const KEYS_Y = 360
+   ```
+
+2. Önceki adımdaki tıklama dinleyicisini **sil**:
+
+   ```js
+   canvas.addEventListener('pointerdown', () => {
+     if (state !== 'playing') newWord()
+   })
+   ```
+
+   ve aynı yere şunları yaz:
+
+   ```js
+   // The on-screen keyboard: rows of 9 keys, centered.
+   function keyRect(i) {
+     const row = Math.floor(i / 9)
+     const inRow = row === 2 ? 8 : 9
+     const left = (canvas.width - inRow * (KEY_W + 4) + 4) / 2
+     return { x: left + (i % 9) * (KEY_W + 4), y: KEYS_Y + row * (KEY_H + 6) }
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     if (state !== 'playing') {
+       newWord()
+       return
+     }
+     for (let i = 0; i < LETTERS.length; i++) {
+       const k = keyRect(i)
+       if (x >= k.x && x < k.x + KEY_W && y >= k.y && y < k.y + KEY_H) guess(LETTERS[i])
+     }
+   })
+   ```
+
+3. `draw()` fonksiyonunun en sonunda, `if (state !== 'playing') { ... }` bloğunu kapatan `}`'den sonra ve
+   fonksiyonun kapanış `}`'sinden önce bir satır boşluk bırakıp tuşları çiz:
+
+   ```js
+     for (let i = 0; i < LETTERS.length; i++) {
+       const letter = LETTERS[i]
+       const k = keyRect(i)
+       let color = '#e7e5e4'
+       if (guessed.has(letter)) color = word.includes(letter) ? '#86efac' : '#a8a29e'
+       ctx.fillStyle = color
+       ctx.fillRect(k.x, k.y, KEY_W, KEY_H)
+       ctx.fillStyle = '#1f2937'
+       ctx.font = 'bold 18px sans-serif'
+       ctx.fillText(letter, k.x + KEY_W / 2, k.y + 24)
+     }
+   ```
+
+   `ctx.textAlign` daha önce `'center'` yapıldığı için harf tuşun ortasına gelir.
+
+4. **Çalıştır**'a bas. Kelimenin altında A'dan Z'ye üç satırlık bir klavye görmelisin, son satır ortalı. Oynamak için
+   önce oyuna tıkla, sonra tuşlara tıkla: kelimede olan harfler yeşile, olmayanlar griye dönmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Konum kontrolü kırmızıysa `left` formülündeki `+ 4`'ü kontrol et.
 
 # --tests--
 

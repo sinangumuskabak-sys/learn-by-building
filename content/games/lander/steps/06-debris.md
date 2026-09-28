@@ -26,23 +26,52 @@ The same few lines make sparks, smoke, rain, confetti and explosions in every ki
 
 # --explanation-tr--
 
-Yalnızca "Crashed" yazan bir kaza hayal kırıklığıdır. İniş aracının, dışarı fırlayıp geri düşen **parçalara ayrıldığı** bir kaza
-ise bir andır. Bu aynı zamanda var olan en basit **parçacık sistemidir**: her birinin bir konumu, bir hızı ve bir ömrü olan, hepsi
-aynı kurallara uyan birçok minik nesne.
+**Bu adımda:** kaza anını görünür yapacağız. Araç çakılınca kaybolacak ve yerine 24 turuncu kıvılcım etrafa saçılıp
+yerçekimiyle geri düşecek; yaklaşık bir saniye sonra hepsi sönecek.
 
-Her parça enkazda rastgele bir yönle (yine `cos` ve `sin`'e çevrilen bir açı) ve rastgele bir hızla başlar; patlama yerden
-kalkmış gibi görünsün diye biraz yukarı itilir:
+**Parçacık sistemi (particle system).** Sadece "Crashed" yazan bir kaza hayal kırıklığıdır; parçalara ayrılan bir araç
+ise akılda kalan bir andır. Bu, var olan en basit **parçacık sistemidir**: her birinin konumu, hızı ve ömrü olan bir
+sürü küçük nesne, hepsi aynı kurallara uyar. Kıvılcım, duman, yağmur, konfeti ve patlamalar her türlü oyunda bu birkaç
+satırla yapılır.
+
+**Parçaları bir listede tutmak.** `debris` (enkaz) bir **dizidir**. Boş liste `[]` diye yazılır;
+`debris.push(parça)` listenin sonuna bir parça ekler.
+
+**Parça nasıl doğar?** 24 kez tekrar eden bir `for` döngüsüyle (`i` 0'dan başlar, 24'ten küçük olduğu sürece, `i++`
+her turda bir artırır). Her parça:
 
 ```js
-const a = Math.random() * Math.PI * 2
-debris.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 2, life: 60 })
+const a = Math.random() * Math.PI * 2       // rastgele bir yön: 0 ile tam tur arası bir açı
+const speed = 1 + Math.random() * 3         // rastgele bir hız: 1 ile 4 arası
+debris.push({ x: lander.x, y: lander.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 2, life: 60 })
 ```
 
-Her karede her parça iniş aracıyla aynı yerçekimiyle düşer ve `life`'ından bir kare kaybeder. Sıfıra ulaşınca çıkarılır.
-Parçalar kazadan sonra da hareket eder; bu yüzden oyun artık uçmuyorken bile güncellenirler. Parçalanan aracın kendisi artık
-çizilmez.
+`Math.PI * 2` tam bir turdur (360°). 3. adımdaki gibi `cos` ve `sin` açıyı "ne kadarı yana, ne kadarı aşağı" oranına
+çevirir; hızla çarpınca parçanın hızı olur. `- 2` hepsini biraz yukarı fırlatır, sanki yerden sekmiş gibi. `life: 60`
+parçanın 60 kare (yaklaşık bir saniye) yaşayacağı demektir.
 
-Aynı birkaç satır her türden oyunda kıvılcımları, dumanı, yağmuru, konfetiyi ve patlamaları yapar.
+**Her karede.** Listedeki her parça:
+
+```js
+for (const d of debris) { ... }
+```
+
+Bu da bir döngüdür: "`debris`'teki her eleman için, ona `d` de ve süslü parantezin içini yap". İçeride parça araçla
+aynı yerçekimiyle düşer, hızı kadar ilerler ve ömründen bir kare kaybeder (`d.life -= 1`).
+
+Sonra ömrü bitenleri atarız:
+
+```js
+debris = debris.filter((d) => d.life > 0)
+```
+
+`filter` (süz) sadece koşulu doğru olan elemanlardan yeni bir liste yapar: "ömrü 0'dan büyük olanlar kalsın".
+
+**Neden `update()`'in en başında?** `update()`'in ilk satırı uçmuyorsak `return` ile çıkıyordu. Parçalar kazadan
+**sonra** hareket etmeli, o yüzden onları bu kontrolün **üstüne** koyarız.
+
+**Çizim.** Her parça 3×3'lük bir kare. Kareyi parçanın ortasına oturtmak için 1.5 piksel sola ve yukarı kaydırarak
+başlatırız. Kaza olduysa artık aracı çizmeyiz: `if (state !== 'crashed') drawLander()`.
 
 # --task--
 
@@ -54,11 +83,59 @@ Aynı birkaç satır her türden oyunda kıvılcımları, dumanı, yağmuru, kon
 
 # --task-tr--
 
-1. `debris` ekle (`startLevel()`'da `[]`). Bir kaza, araçta rastgele bir açı, 1 ile 4 arasında rastgele bir hız ve `life: 60` ile
-   yukarıdaki gibi 24 parça ekler.
-2. `update()`'in başında, "uçmuyor" kontrolünden önce, her parçayı yerçekimiyle hareket ettir, `life`'ını geri say ve ömrü
-   kalmayan parçaları çıkar.
-3. Her parçayı üstünde ortalı `'#fb923c'` 3'e 3 bir kare olarak çiz ve araç parçalandıktan sonra onu çizme.
+1. `let state ...` satırının hemen altına parça listesini ekle:
+
+   ```js
+   let debris
+   ```
+
+2. `startLevel()` içinde, `state = 'flying'` satırının altına listeyi boşaltan satırı ekle:
+
+   ```js
+     state = 'flying'
+     debris = []                                                   // ← yeni
+   }
+   ```
+
+3. `touchdown()` içinde, `state = 'crashed'` satırının hemen altına (en iyi skoru kontrol eden `if`'in **üstüne**)
+   patlamayı ekle:
+
+   ```js
+     state = 'crashed'
+     // A burst of pieces flying out from the wreck.
+     for (let i = 0; i < 24; i++) {
+       const a = Math.random() * Math.PI * 2
+       const speed = 1 + Math.random() * 3
+       debris.push({ x: lander.x, y: lander.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 2, life: 60 })
+     }
+     if (score > best) {
+   ```
+
+4. `update()`'in en başına, `if (state !== 'flying') return` satırının **üstüne** parçaları hareket ettiren kodu
+   ekle:
+
+   ```js
+   function update() {
+     for (const d of debris) {                                     // ← yeni
+       d.vy += gravity                                             // ← yeni
+       d.x += d.vx                                                 // ← yeni
+       d.y += d.vy                                                 // ← yeni
+       d.life -= 1                                                 // ← yeni
+     }                                                             // ← yeni
+     debris = debris.filter((d) => d.life > 0)                     // ← yeni
+     if (state !== 'flying') return
+   ```
+
+5. `draw()` içinde `drawLander()` satırını değiştir ve altına parçaları çizen iki satırı ekle:
+
+   ```js
+     if (state !== 'crashed') drawLander()                         // ← değişti
+     ctx.fillStyle = '#fb923c'                                     // ← yeni
+     for (const d of debris) ctx.fillRect(d.x - 1.5, d.y - 1.5, 3, 3)   // ← yeni
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bilerek çakıl: araç kaybolmalı, turuncu parçalar saçılıp
+   düşmeli ve bir saniye içinde sönmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

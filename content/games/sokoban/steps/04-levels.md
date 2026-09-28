@@ -24,21 +24,36 @@ feedback on progress before the level is fully solved.
 
 # --explanation-tr--
 
-**Her kutu bir hedefin üstündeyse** bölüm çözülmüştür. Bölüm biçimi kutu sayısı kadar hedef olmasını garanti eder; bu
-yüzden kutulara bakmak yeter:
+**Bu adımda:** bölüm çözülünce oyun bunu anlayacak. Altta yeşil `Solved! Press Space for the next level` yazısı çıkacak,
+**Boşluk** tuşu sıradaki bölümü açacak. Sol üstte `Level 1/3` gibi bir sayaç göreceksin.
+
+**Ne zaman çözüldü?** **Her kutu bir hedefin üstündeyse.** Bölüm düzeninde hedef sayısı kutu sayısına eşittir, bu yüzden
+kutulara bakmak yeter:
 
 ```js
 boxes.every((box) => goals.has(key(box.x, box.y)))
 ```
 
-`Set` seçiminin karşılığı burada da görülür: "bu döşeme hedef mi?" tek bir `has` çağrısıdır.
+`every` listenin **her elemanı** için soruyu sorar; hepsi "evet" derse `true` (doğru), biri bile "hayır" derse `false`
+(yanlış) verir. Soru: "bu kutunun karesi bir hedef mi?" `Set` burada yine işe yarar: tek bir `has` çağrısı.
 
-Çözülünce tahta donar (artık hamle yok), bir mesaj belirir ve Boşluk `loadLevel(level + 1)` ile sıradaki bölümü yükler.
-Bir bölümü yüklemek her şeyi metninden yeniden kurduğu için ilerlemek tek bir çağrıdır. Oyun zaten sıfırdan başlamayı
-biliyordu; yeni bir bölüm yalnızca farklı bir haritayla sıfırdan başlamaktır.
+**Çözülünce ne olur?**
 
-Tepedeki bir bölüm sayacı oyuncuya nerede olduğunu söyler. Hedefteki kutular zaten yeşil çiziliyor; bu da bölüm
-tamamen çözülmeden önce ilerleme hakkında geri bildirim verir.
+- Tahta donar: `move()`'un ilk satırı `if (solved()) return` olur, yani çözülmüşse hiç hareket yok.
+- Boşluk (`' '`) sıradaki bölümü yükler: `loadLevel(level + 1)`. Bölüm yüklemek her şeyi yazıdan baştan kurduğu için
+  sıradaki bölüme geçmek tek bir çağrıdır.
+- Ama son bölümdeysek sıradaki yok. `LEVELS.length` bölüm sayısı (3), son bölümün numarası ise `LEVELS.length - 1` (2),
+  çünkü sayma 0'dan başlar. `level < LEVELS.length - 1` → "son bölümde değil miyiz?" `&&` ("ve") ile üç koşulu birleştiririz:
+  tuş Boşluk **ve** çözüldü **ve** son bölüm değil.
+
+**Yazılar.**
+
+- `'Level ' + (level + 1) + '/' + LEVELS.length` → `'Level 1/3'`. `level` 0'dan başlar ama insanlar 1'den sayar; parantez
+  `level + 1`'in önce toplanmasını sağlar (yoksa yazıya `0` ve `1` ayrı ayrı eklenirdi: `'Level 01/3'`).
+- `ctx.fillText(yazı, x, y)` yazıyı boyar. `ctx.textAlign` yazının yatay hizası (`'left'` sola, `'center'` ortaya),
+  `ctx.textBaseline = 'middle'` ise dikey hizasıdır: yazının ortası `y`'ye gelir.
+- Altta `if ... else` ile iki yazıdan biri: çözüldüyse yeşil mesaj, değilse gri `Arrows: move` ipucu. `else` "değilse"
+  demektir. Son bölümde mesaj `All levels solved!` olur: `last ? a : b` → "son bölümse `a`, değilse `b`".
 
 # --task--
 
@@ -51,11 +66,59 @@ tamamen çözülmeden önce ilerleme hakkında geri bildirim verir.
 
 # --task-tr--
 
-1. Her kutunun bir hedefte olup olmadığını döndüren `solved()` yaz.
-2. Bölüm çözüldükten sonra `move()` hiçbir şey yapmamalı.
-3. Boşluk'ta, bölüm çözüldüyse ve son bölüm değilse sıradaki bölümü yükle.
-4. Sol üste `Level 2/3` yaz (beyaz, `'bold 18px sans-serif'`). Altta ortada, çözüldüyse yeşil
-   `Solved! Press Space for the next level` (son bölümde `All levels solved!`), değilse gri `Arrows: move` göster.
+1. `boxAt` fonksiyonunun kapanış `}`'sinin altına `solved()`'u yaz:
+
+   ```js
+   function solved() {
+     return boxes.every((box) => goals.has(key(box.x, box.y)))
+   }
+   ```
+
+2. `move()` fonksiyonunun **ilk satırı** olarak şunu ekle:
+
+   ```js
+   function move(dx, dy) {
+     if (solved()) return // ← yeni
+     const x = player.x + dx
+   ```
+
+3. `keydown` dinleyicisinde `draw()` satırının hemen **üstüne** Boşluk tuşunu ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (directions[event.key]) {
+       event.preventDefault()
+       move(...directions[event.key])
+     }
+     if (event.key === ' ' && solved() && level < LEVELS.length - 1) loadLevel(level + 1) // ← yeni
+     draw()
+   })
+   ```
+
+4. `draw()`'un en sonunda, `tile(player.x, player.y, '#38bdf8', 10)` satırının altına (fonksiyonun son `}`'sinden önce)
+   yazıları ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.textBaseline = 'middle'
+     ctx.fillText('Level ' + (level + 1) + '/' + LEVELS.length, 12, TOP / 2)
+
+     ctx.textAlign = 'center'
+     ctx.font = '14px sans-serif'
+     if (solved()) {
+       const last = level === LEVELS.length - 1
+       ctx.fillStyle = '#4ade80'
+       ctx.fillText(last ? 'All levels solved!' : 'Solved! Press Space for the next level', canvas.width / 2, canvas.height - 16)
+     } else {
+       ctx.fillStyle = '#a8a29e'
+       ctx.fillText('Arrows: move', canvas.width / 2, canvas.height - 16)
+     }
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ okla kutuyu hedefe it: altta yeşil mesaj çıkmalı. **Boşluk**'a
+   bas: `Level 2/3` açılmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

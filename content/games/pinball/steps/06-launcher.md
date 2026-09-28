@@ -21,18 +21,38 @@ starts again.
 
 # --explanation-tr--
 
-Gerçek bir fırlatıcı bir yaydır: onu ne kadar uzun geri çekersen top o kadar sert uçar. Bu yüzden Boşluk artık iki yarıda çalışır:
+**Bu adımda:** fırlatıcıyı gerçek bir **yay** gibi yapacağız ve oyuna **üç top** hakkı ekleyeceğiz. Boşluk'u ne kadar
+uzun basılı tutarsan yay o kadar gerilecek (gri yay ve top aşağı inecek), bırakınca top o kadar hızlı fırlayacak.
+Üç top düşünce `Game over` yazısı çıkacak.
 
-- **basılı tutmak** yayı çeker: `charge` yaklaşık bir saniyede 0'dan 1'e büyür;
-- **bırakmak**, gerilime bağlı olarak 13 ile 19 arasında bir hızla fırlatır.
+**Yay iki yarıda çalışır:**
 
-Gerilim büyüdükçe yay ve kanaldaki top daha aşağıda çizilir; böylece ne kadar çektiğini görebilirsin.
+- **basılı tutmak** yayı çeker: `charge` (gerginlik) yaklaşık bir saniyede 0'dan 1'e çıkar (her karede `0.02`);
+- **bırakmak** topu 13 ile 19 arasında bir hızla fırlatır: `-(13 + 6 * charge)`. `charge` 0 ise 13, 1 ise 19.
 
-Tuş işleyicisinin artık `keydown` kadar `keyup`'ı da dinlemesinin sebebi de budur: fırlatma *bırakmada* olur ve yalnızca tuş
-tutulduysa (`pressed.launch`).
+Yay ve kanaldaki top, gerginlik arttıkça biraz aşağıda çizilir (`charge * 12` piksel); böylece ne kadar çektiğini
+görürsün.
 
-Bir oyun **üç top** alır. Düşen bir top birine mal olur; sonuncusundan sonra oyun biter, en iyi puan kaydedilir ve Boşluk yeniden
-başlatır.
+**Neden `keyup`?** Fırlatma tuşu **bırakınca** olur, ve sadece tuş gerçekten basılı tutulduysa
+(`pressed.launch`). Önceki adımda yazdığın `key(event, down)` fonksiyonu zaten hem basmayı (`down = true`) hem
+bırakmayı (`down = false`) duyuyor.
+
+**Üç top ve oyun sonu.** Düşen top bir hak yer (`balls -= 1`, yani 1 azalt). Hak kalmayınca `state` `'over'` olur;
+Boşluk'a basmak oyunu baştan başlatır.
+
+**En iyi skoru saklamak: `localStorage`.** Tarayıcının küçük bir defteridir; sayfa kapansa da içindekiler kalır.
+
+```js
+localStorage.setItem('pinball-best', 1234) // deftere yaz
+localStorage.getItem('pinball-best')       // oku: '1234' (yazı olarak döner)
+```
+
+Okunan değer yazı olduğu için `Number(...)` ile sayıya çeviririz. Defterde hiç kayıt yoksa sonuç sayı olmaz; o
+zaman `|| 0` "değilse 0 kullan" der.
+
+**Yeni çizim parçaları:** `textAlign = 'right'` yazıyı verilen noktada biten, `'center'` ortalanan şekilde yazar.
+`'rgba(12, 10, 9, 0.85)'` kırmızı, yeşil, mavi ve **saydamlık** (0.85 = biraz saydam) ile verilen bir renktir.
+`Math.min(1, ...)` iki sayıdan küçüğünü seçer; `charge` 1'i geçmez.
 
 # --task--
 
@@ -47,14 +67,130 @@ başlatır.
 
 # --task-tr--
 
-1. `charge` (`newBall()`'da `0`) ve `pressed.launch` ekle. Hazırken ve `pressed.launch` iken `charge` karede `0.02` büyür, en fazla 1'e
-   kadar. `launch()`, `vy = -(13 + 6 * charge)` yapar.
-2. Boşluk ve Aşağı: basmak `pressed.launch`'u ayarlar (ya da oyun bitmişse yeniden başlatır); bırakmak, tutulduysa fırlatır.
-3. `balls` (`reset()`'te `3`) ve `localStorage`'da `'pinball-best'` adıyla `best` ekle. Düşen bir top bir tane alır; 0'da durum
-   `'over'` olur ve daha iyi bir puan kaydedilir.
-4. Yayı (`'#78716c'`, `(LANE_X - 8, 580 + charge * 12)`'de 16'ya 20) ve hazır topu `charge * 12` aşağıda çiz; `(330, 50)`'ye sağa hizalı
-   `Balls 3`, `(200, 50)`'ye ortalı `Best 0` (`'13px sans-serif'`), hazırken `(200, 580)`'e `Hold Space, let go to launch` ve sonda
-   `Space to play again` ile bir `Game over` paneli çiz.
+1. Dosyanın başındaki `let` satırlarını (`let ball`'dan `let flash`'a kadar) şöyle değiştir; yeni ve değişen
+   satırlar işaretli:
+
+   ```js
+   let ball // { x, y, vx, vy }
+   let flippers // { ...FLIPPERS[i], angle, speed }
+   let pressed // { left, right, launch }               ← değişti (sadece yorum)
+   let charge // 0 to 1 while the launcher is held      ← yeni
+   let state // 'ready' (in the lane), 'playing' or 'over'
+   let score
+   let balls                                            // ← yeni
+   let flash // frames each bumper stays lit
+   let best = Number(localStorage.getItem('pinball-best')) || 0 // ← yeni
+   ```
+
+   `← yeni` gibi işaretler yorumun içinde; onları yazman gerekmez.
+
+2. `newBall()` ve `reset()` fonksiyonlarını şöyle değiştir:
+
+   ```js
+   function newBall() {
+     ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }
+     charge = 0 // ← yeni
+     state = 'ready'
+   }
+
+   function reset() {
+     score = 0
+     flash = BUMPERS.map(() => 0)
+     flippers = FLIPPERS.map((f) => ({ ...f, angle: f.rest, speed: 0 }))
+     pressed = { left: false, right: false, launch: false } // ← değişti
+     balls = 3 // ← yeni
+     newBall()
+   }
+   ```
+
+3. `update()` fonksiyonunda `if (state === 'ready') { ... }` bloğunu şöyle değiştir ve hemen altına bir satır ekle:
+
+   ```js
+     if (state === 'ready') {
+       for (const f of flippers) f.angle += f.speed
+       if (pressed.launch) charge = Math.min(1, charge + 0.02) // ← yeni
+       return
+     }
+     if (state !== 'playing') return // ← yeni
+   ```
+
+4. `update()`'in son satırını (`if (ball.y > canvas.height + R) newBall() // drained: the next ball`) sil ve yerine
+   şunu yaz:
+
+   ```js
+     if (ball.y > canvas.height + R) {
+       balls -= 1
+       if (balls > 0) newBall()
+       else {
+         state = 'over'
+         if (score > best) {
+           best = score
+           localStorage.setItem('pinball-best', best)
+         }
+       }
+     }
+   ```
+
+5. `launch()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function launch() {
+     if (state !== 'ready') return
+     ball.vy = -(13 + 6 * charge) // ← değişti
+     charge = 0                   // ← yeni
+     state = 'playing'
+   }
+   ```
+
+6. `key()` fonksiyonunda Boşluk/Aşağı kısmındaki `if (down) launch()` satırını üç satırla değiştir:
+
+   ```js
+     else if (k === ' ' || k === 'ArrowDown') {
+       if (down && state === 'over') reset()          // ← değişti
+       else if (!down && pressed.launch) launch()      // ← yeni
+       pressed.launch = down                           // ← yeni
+     } else return
+   ```
+
+   `!down` "`down` değilse", yani tuş bırakıldıysa demektir (`!` "değil").
+
+7. `draw()`'da paletleri çizen `for` döngüsünün kapanış `}`'inin altına yayı çiz, ve hemen altındaki topu çizen
+   `ctx.arc(...)` satırını değiştir:
+
+   ```js
+     // The launcher's spring shortens as it is pulled back.
+     ctx.fillStyle = '#78716c'
+     ctx.fillRect(LANE_X - 8, 580 + charge * 12, 16, 20)
+     ctx.fillStyle = '#e7e5e4'
+     ctx.beginPath()
+     ctx.arc(ball.x, ball.y + (state === 'ready' ? charge * 12 : 0), R, 0, Math.PI * 2) // ← değişti
+     ctx.fill()
+   ```
+
+8. `draw()`'un sonunda `ctx.fillText('Score ' + score, 30, 50)` satırının altına (kapanış `}`'inden önce) şunları
+   ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Balls ' + balls, 330, 50)
+     ctx.textAlign = 'center'
+     ctx.font = '13px sans-serif'
+     ctx.fillText('Best ' + best, 200, 50)
+     if (state === 'ready') ctx.fillText('Hold Space, let go to launch', 200, 580)
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(12, 10, 9, 0.85)'
+       ctx.fillRect(60, 330, 280, 80)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.fillText('Game over', 200, 364)
+       ctx.font = '15px sans-serif'
+       ctx.fillText('Space to play again', 200, 392)
+     }
+   ```
+
+9. **Çalıştır**'a bas. Üstte `Balls 3` ve `Best 0`, altta `Hold Space, let go to launch` görünmeli. Oynamak için önce
+   oyuna tıkla; Boşluk'u basılı tutunca yay inmeli, bırakınca top fırlamalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Top hiç fırlamıyorsa 6. maddedeki üç satırın sırasını kontrol et: `pressed.launch = down` en sonda olmalı.
 
 # --tests--
 

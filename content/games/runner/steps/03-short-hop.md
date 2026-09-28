@@ -27,25 +27,45 @@ Two details make input feel solid:
 
 # --explanation-tr--
 
-Şu an her zıplama aynı yükseklikte. İyi platform oyunları bunu kontrol etmene izin verir: kısa bir sekme için
-**dokun**, tam zıplama için **basılı tut**. Zıplama tuşu analogmuş gibi hissettirir ama hile küçücük:
+**Bu adımda:** zıplamanın yüksekliğini oyuncu belirleyecek. Tuşa **kısa dokunursan** koşucu küçük bir sekme
+yapacak, **basılı tutarsan** tam yükseklikte zıplayacak. Ayrıca oyuna fareyle tıklayarak ya da telefonda dokunarak
+da zıplayabileceksin.
 
-> Koşucu hâlâ hızla yükselirken tuş bırakılırsa yukarı hızı kes.
+**Hile çok küçük.** Tuş bırakıldığında koşucu hâlâ hızla yükseliyorsa, yukarı hızını keseriz:
 
 ```js
-if (runner.vy < CUT) runner.vy = CUT   // CUT = -4: biraz daha yüksel, sonra erken düş
+if (runner.vy < CUT) runner.vy = CUT   // CUT = -4
 ```
 
-Başka hiçbir şey değişmez; gerisini yerçekimi yapar. Erken bırakmak kavisi küçük bir sekmeye çevirir, basılı tutmak tam
-zıplamanın sonuna kadar gitmesine izin verir.
+Hatırla: eksi hız yukarı demek. `-11` çok hızlı yukarı, `-4` yavaşça yukarı. `<` "küçüktür" demektir; `-11 < -4`
+doğrudur. Yani "hız `-4`'ten daha hızlı yukarıysa, onu `-4`'e düşür". Koşucu biraz daha yükselir, sonra erken düşer.
+Geri kalanını yerçekimi halleder. Koşucu zaten düşüyorsa (hız artıysa) koşul yanlış olur ve hiçbir şey değişmez.
 
-İki ayrıntı girdiyi sağlam hissettirir:
+**Tuş bırakma olayı.** 2. adımda `keydown` (tuşa basıldı) olayını dinlemiştik. Tuş bırakılınca da `keyup` olayı
+gelir. Bırakma işini tek bir fonksiyona, `endJump()`'a koyarız ve hem klavyeden hem dokunmadan onu çağırırız.
 
-- **Tuş tekrarı**: bir tuşu basılı tutmak tarayıcının `keydown`'ı tekrar tekrar göndermesine yol açar. Bu tekrarlanan
-  olaylarda `event.repeat === true`'dur; zıplama için onları görmezden gel, yoksa Boşluk'u basılı tutmak koşucuyu yere
-  indiği anda yeniden zıplatır.
-- **Dokunma ve fare**: `pointerdown` zıplatır, `pointerup` keser; böylece kısa dokunuş ve uzun basış klavyeyle aynı
-  çalışır. Bırakma mantığını tek bir fonksiyona, `endJump()`'a koy ve ikisinden de çağır.
+**Basılı tutunca tekrar eden tuş.** Bir tuşu basılı tutunca tarayıcı `keydown`'u durmadan tekrar tekrar gönderir.
+Bu tekrarlarda `event.repeat` alanı `true` olur. Bunları yok saymazsak, Boşluk'u tutan oyuncu yere değdiği anda
+kendiliğinden yeniden zıplar. Bu yüzden koşula bir parça ekleriz:
+
+```js
+if ((event.key === ' ' || event.key === 'ArrowUp') && !event.repeat) jump()
+```
+
+- `!` "değil" demektir: `!event.repeat` → "bu bir tekrar **değilse**".
+- `&&` "ve" demektir: iki taraf da doğru olmalı.
+- Dış parantez `( ... || ... )` önce "doğru tuş mu?" sorusunu bir arada tutar, sonra `&&` ile "ve tekrar değil"
+  eklenir. Matematikteki parantez gibi, önce içi hesaplanır.
+
+**Fare ve dokunma.** `pointerdown` olayı fareyle tıklanınca ya da ekrana parmakla dokununca gelir, `pointerup` da
+bırakılınca. Bunları bu sefer `document`'e değil, `canvas`'a bağlarız (sadece oyun alanına dokunmak sayılsın):
+
+```js
+canvas.addEventListener('pointerdown', jump)
+```
+
+Burada `jump` yazıp parantez koymuyoruz: fonksiyonu **şimdi çağırmıyor**, "olay olunca bunu çağır" diye tarayıcıya
+**veriyoruz**. `jump()` yazsaydık hemen bir kez çalışırdı.
 
 # --task--
 
@@ -55,10 +75,40 @@ zıplamanın sonuna kadar gitmesine izin verir.
 
 # --task-tr--
 
-1. `const CUT = -4` ve `runner.vy < CUT` olduğunda `runner.vy = CUT` yapan `function endJump()` ekle.
-2. Boşluk ve `'ArrowUp'` için `keyup`'ta ve canvas üzerindeki `pointerup`'ta `endJump()` çağır.
-3. Zıplarken tekrarlanan `keydown` olaylarını (`event.repeat`) görmezden gel; canvas üzerindeki `pointerdown`'da da
-   zıpla.
+1. `const JUMP = -11 ...` satırının hemen **altına** yeni sabiti ekle:
+
+   ```js
+   const CUT = -4 // letting go early caps the upward speed at this
+   ```
+
+2. `function jump() { ... }` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp bırakma fonksiyonunu
+   yaz:
+
+   ```js
+   // Letting go early makes a short hop: cap the upward speed.
+   function endJump() {
+     if (runner.vy < CUT) runner.vy = CUT
+   }
+   ```
+
+3. Var olan `keydown` dinleyicisini değiştir ve altına üç yeni dinleyici ekle. Bu bölüm sonunda şöyle olmalı:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if ((event.key === ' ' || event.key === 'ArrowUp') && !event.repeat) jump() // ← değişti
+   })
+   document.addEventListener('keyup', (event) => {          // ← yeni
+     if (event.key === ' ' || event.key === 'ArrowUp') endJump()
+   })
+   canvas.addEventListener('pointerdown', jump)             // ← yeni
+   canvas.addEventListener('pointerup', endJump)            // ← yeni
+   ```
+
+   `// ← ...` notlarını yazmana gerek yok, sadece neyin eklendiğini gösteriyor.
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Boşluk'a kısa dokun: küçük sekme. Basılı tut: yüksek
+   zıplama. Oyun alanına tıklamak da zıplatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kısa sekme olmuyorsa
+   `endJump()` içindeki `<` işaretinin yönünü kontrol et.
 
 # --tests--
 

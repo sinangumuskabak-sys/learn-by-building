@@ -21,18 +21,41 @@ the total score can become your best.
 
 # --explanation-tr--
 
-Bir seviye yalnızca **veri** olduğu için (`[kind, x, y, width, height]` listesi), seviye eklemek yeni kod gerektirmez: `LEVELS`
-böyle listelerden bir dizi olur ve `startLevel(n)` `n` seviyesini kurar. İkinci seviyenin taş ayakları ve iki katı, üçüncüsünün üç
-domuzlu geniş bir kalesi vardır.
+**Bu adımda:** oyuna üç seviye ekleyeceğiz. Sol üstte `Level 1  Birds 3  Score 0`, sağ üstte en iyi puanın (`Best`)
+yazacak. Bir seviyeyi temizleyince puanın korunarak sonrakine geçeceksin; üçüncüden sonra `All levels cleared!` çıkacak.
 
-Bir seviye tasarlamak bir seviyeyi test etmektir. İki şey önemlidir:
+**Seviye sadece veri olduğu için yeni kod gerekmez.** 4. adımdan beri seviye, `[tür, x, y, en, boy]` satırlarından oluşan
+bir listeydi (`LEVEL`). Şimdi bu listelerin bir listesini yaparız: `LEVELS`. `LEVELS[0]` birinci seviye, `LEVELS[1]`
+ikinci seviye (numaralar 0'dan başlar). İkinci seviyede taş ayaklar ve iki kat var, üçüncüsü üç domuzlu geniş bir kale.
 
-- **ayakta durmalı**: ilk kuştan önce yıkılan bir kule bir hatadır. Her blok tam altındakinin üstünde durur (`y + h`, sonraki
-  bloğun `y`'sine eşit) ve test her seviyeyi on saniye kendi başına bırakır;
+**`startLevel(n)`** `n` numaralı seviyeyi kurar: `reset()`'in eskiden yaptığı her şeyi, puan hariç. `reset()` artık sadece
+puanı sıfırlar ve 0. seviyeyi başlatır. Hangi seviyede olduğumuzu `level` değişkeni tutar; ekranda `level + 1` gösteririz
+(insanlar 1'den sayar).
+
+**Seviye tasarlamak, seviyeyi denemektir.** İki şey önemli:
+
+- **kendi başına durmalı**: ilk kuştan önce yıkılan bir kule hatadır. Her blok tam alttakinin üstüne oturur (bir bloğun
+  `y + h`'si, alttakinin `y`'sine eşit) ve kontroller her seviyeyi on saniye kendi hâline bırakır;
 - **mümkün olmalı**: yüzlerce atış deneyen bir bilgisayar oyuncusu bu seviyelerin her birini üç kuş içinde temizledi.
 
-Bir seviyeyi temizlemek skoru koruyarak sonrakine geçer; başarısız olmak aynı seviyeyi 0'dan yeniden başlatır. Son seviyeden sonra
-toplam skor en iyin olabilir.
+**Sonraki adım (`next`).** Kazandıysan: son seviyeyse baştan (`reset()`), değilse bir sonraki seviye
+(`startLevel(level + 1)`), puan korunur. Kaybettiysen: puan 0'a döner ve aynı seviye yeniden başlar.
+
+**En iyi puan: `localStorage`.** Tarayıcının küçük bir defteri gibidir; sayfayı kapatıp açsan da içindekiler kalır.
+
+```js
+localStorage.setItem('birds-best', best)   // deftere yaz
+localStorage.getItem('birds-best')         // defterden oku (yazı olarak gelir)
+```
+
+`Number(...)` yazıyı sayıya çevirir; defterde bir şey yoksa `|| 0` "o zaman 0 al" der. Son seviye kazanılınca puan
+rekordan **yüksekse** kaydedilir (burada çok olan iyidir).
+
+**Yeni küçük şeyler:**
+
+- `LEVELS.length - 1` son seviyenin numarasıdır (3 seviye varsa 2).
+- `last ? 'All levels cleared!' : 'Level cleared!'` → son seviyeyse birinci yazı, değilse ikincisi. Parantez içinde
+  başka bir `? :` olabilir: önce "kazandı mı?", sonra "son seviye mi?" diye sorulur.
 
 # --task--
 
@@ -47,13 +70,109 @@ toplam skor en iyin olabilir.
 
 # --task-tr--
 
-1. `LEVEL`'ı çözümdeki üç seviyeyle `LEVELS` ile değiştir ve `level` ekle. `startLevel(n)`'i yaz (`reset()`'in skor dışında
-   yaptığı her şey); `reset()` skoru 0 yapar ve 0. seviyeyi başlatır.
-2. `next()`: kazanınca sonraki seviye (sonuncudan sonra `reset()`); kaybedince skor 0'a döner ve aynı seviye yeniden başlar.
-3. `best`'i `localStorage`'da `'birds-best'` adıyla tut; son seviye daha yüksek bir skorla kazanıldığında kaydet.
-4. `Level 1  Birds 3  Score 0` ve `(canvas.width - 10, 22)`'ye sağa hizalı `Best 4234` çiz. Mesajlar
-   `Level cleared!` / `Space or tap for the next level`, `All levels cleared!` / `Space or tap to play again` ve
-   `Out of birds` / `Space or tap to try again` olur.
+1. `// The level: ...` yorumunu ve bütün `const LEVEL = [ ... ]` bloğunu sil; yerine üç seviyeyi yaz:
+
+   ```js
+   // Each level: [kind, x, y, width, height], x and y the top left corner.
+   const LEVELS = [
+     [
+       ['wood', 380, 230, 12, 60], ['wood', 440, 230, 12, 60], ['wood', 370, 218, 94, 12], ['pig', 406, 196, 22, 22],
+       ['pig', 480, 268, 22, 22],
+     ],
+     [
+       ['stone', 360, 250, 14, 40], ['stone', 450, 250, 14, 40], ['wood', 350, 238, 124, 12], ['pig', 400, 268, 22, 22],
+       ['wood', 380, 188, 12, 50], ['wood', 432, 188, 12, 50], ['wood', 372, 176, 80, 12], ['pig', 400, 216, 22, 22],
+     ],
+     [
+       ['wood', 340, 230, 12, 60], ['wood', 400, 230, 12, 60], ['wood', 460, 230, 12, 60], ['stone', 330, 218, 152, 12],
+       ['pig', 362, 268, 22, 22], ['pig', 424, 268, 22, 22], ['wood', 360, 168, 12, 50], ['wood', 440, 168, 12, 50],
+       ['wood', 352, 156, 108, 12], ['pig', 396, 196, 22, 22], ['stone', 500, 250, 40, 40],
+     ],
+   ]
+   ```
+
+   İlk seviye eskisiyle aynı. Sayıları dikkatle kopyala: bir blok birkaç piksel yanlış yerdeyse kule kendi kendine yıkılır.
+
+2. `let dragging` satırının altına seviyeyi, `let calm ...` satırının altına en iyi puanı ekle:
+
+   ```js
+   let level
+   ```
+
+   ```js
+   let best = Number(localStorage.getItem('birds-best')) || 0
+   ```
+
+3. `reset()` fonksiyonunu sil ve yerine şu iki fonksiyonu yaz:
+
+   ```js
+   function startLevel(n) {
+     level = n
+     bodies = LEVELS[n].map(([kind, x, y, w, h]) => body(kind, x, y, w, h))
+     bird = null
+     birdsLeft = 3
+     aim = { angle: -0.6, pull: 50 }
+     dragging = false
+     state = 'aiming'
+     calm = 0
+   }
+
+   function reset() {
+     score = 0
+     startLevel(0)
+   }
+   ```
+
+4. `update()`'in sonunda, `state = 'won'` satırının altına rekor kaydını ekle:
+
+   ```js
+     if (pigs().length === 0) {
+       score += birdsLeft * 1000 // unused birds are worth a lot
+       state = 'won'
+       if (level === LEVELS.length - 1 && score > best) { // ← yeni (buradan)
+         best = score
+         localStorage.setItem('birds-best', best)
+       } // ← (buraya kadar)
+     } else if (birdsLeft === 0) state = 'lost'
+   ```
+
+5. `next()` fonksiyonunun içini değiştir:
+
+   ```js
+   function next() {
+     if (state === 'won') level === LEVELS.length - 1 ? reset() : startLevel(level + 1)
+     else if (state === 'lost') {
+       score = 0
+       startLevel(level)
+     }
+   }
+   ```
+
+6. `draw()`'un sonunda üst yazıyı değiştir, en iyi puanı ekle ve paneldeki iki yazıyı seviyeye göre seç:
+
+   ```js
+     ctx.fillText('Level ' + (level + 1) + '  Birds ' + birdsLeft + '  Score ' + score, 10, 22) // ← değişti
+     ctx.textAlign = 'right' // ← yeni
+     ctx.fillText('Best ' + best, canvas.width - 10, 22) // ← yeni
+     if (state === 'won' || state === 'lost') {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+       ctx.fillRect(130, 110, 300, 80)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 22px sans-serif'
+       const last = level === LEVELS.length - 1 // ← yeni
+       ctx.fillText(state === 'won' ? (last ? 'All levels cleared!' : 'Level cleared!') : 'Out of birds', canvas.width / 2, 145) // ← değişti
+       ctx.font = '15px sans-serif'
+       ctx.fillText(state === 'won' ? (last ? 'Space or tap to play again' : 'Space or tap for the next level') : 'Space or tap to try again', canvas.width / 2, 172) // ← değişti
+     }
+   }
+   ```
+
+   `'  Birds '` ve `'  Score '` içinde başta **iki** boşluk var.
+
+7. **Çalıştır**'a bas. Sol üstte `Level 1  Birds 3  Score 0`, sağ üstte `Best 0` görmelisin. Oynamak için önce oyuna
+   tıkla. Seviyeyi temizleyince Boşluk seni 2. seviyeye götürmeli; orada kule iki katlı olmalı. Alttaki kontrollerin
+   hepsi yeşil olmalı. "Seviye kıpırdamadan durmalı" kontrolü kırmızıysa o seviyenin sayılarını tek tek karşılaştır.
 
 # --tests--
 

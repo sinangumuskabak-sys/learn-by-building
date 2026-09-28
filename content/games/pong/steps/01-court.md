@@ -23,21 +23,68 @@ middle line, start it half its width (2 px) to the left.
 
 # --explanation-tr--
 
-Pong sahası, ortasından kesikli bir çizgi geçen siyah bir dikdörtgendir. Kesikli çizgi, çizimde **döngü**
-kullanmanın iyi bir ilk örneği: 14 `fillRect` çağrısını elle yazmak yerine, bir `for` döngüsünün her 30 pikselde kısa
-bir çizgi koymasına izin ver.
+**Bu adımda:** Pong sahasını çizeceğiz. Sağda siyah bir alan ve ortasından yukarıdan aşağıya inen beyaz, kesikli
+bir çizgi göreceksin.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan satırlar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) nedir?** Sayfada 600 piksel eninde, 400 piksel boyunda boş bir resim alanı var. Adı `canvas`,
+kimliği (id) `game`:
+
+```html
+<canvas id="game" width="600" height="400"></canvas>
+```
+
+Oyundaki her şeyi (raketleri, topu, skoru) bu alanın üstüne **boyayarak** göstereceğiz. Kâğıda resim yapmak gibi:
+önce kâğıdı bulursun, sonra fırçayı alırsın.
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+Bunu parça parça okuyalım:
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile adlandırılan şeye **sabit** denir:
+  bir kutuya etiket yapıştırmak gibidir, sonra hep o etiketle çağırırsın.
+- `document.getElementById('game')` → "sayfada (`document`) kimliği `game` olanı bul". Nokta (`.`) "bunun
+  içindeki şu komut" demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `canvas.getContext('2d')` → canvas'ın çizim aracını (bağlam, **context**) al. `ctx` artık senin fırçan.
+
+Fırçayla iki şey yaparsın: **renk seçmek** ve **dikdörtgen boyamak**:
+
+```js
+ctx.fillStyle = 'white'       // fırçaya beyaz boya sür
+ctx.fillRect(10, 20, 50, 30)  // dikdörtgen boya: x, y, genişlik, yükseklik
+```
+
+**Konum:** canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Bir
+dikdörtgen her zaman **sol üst köşesinden** başlayarak çizilir.
+
+**Döngü (loop) nedir?** Orta çizgi 14 kısa parçadan oluşuyor. 14 kez neredeyse aynı satırı yazmak yerine
+bilgisayara "bunu tekrar et" deriz. Buna **döngü** denir:
 
 ```js
 for (let y = 0; y < canvas.height; y += 30) {
-  ctx.fillRect(canvas.width / 2 - 2, y, 4, 15)   // 4 geniş, 15 uzun, ortaya hizalı
+  ctx.fillRect(canvas.width / 2 - 2, y, 4, 15)
 }
 ```
 
-Şöyle oku: `y = 0`'dan başla; `y` hâlâ canvas üzerindeyken bir çizgi çiz; sonra `y`'yi 30 aşağı kaydır. 15 piksellik
-çizgi ve 15 piksellik boşluk en alta kadar tekrarlanır.
+Parça parça:
 
-Neden `canvas.width / 2 - 2`? Dikdörtgen **sol üst köşesinden** çizilir. 4 piksel genişliğindeki bir çizgiyi orta
-çizgiye hizalamak için onu genişliğinin yarısı (2 px) kadar soldan başlat.
+- `let y = 0` → `y` adında bir **değişken** aç, değeri 0 olsun. `let`, `const` gibidir ama değeri sonradan
+  değişebilir (bir sayaç gibi).
+- `y < canvas.height` → "`y`, canvas'ın boyundan (400) küçük olduğu sürece devam et". `<` "küçüktür" demektir.
+- `y += 30` → her turun sonunda `y`'ye 30 ekle (`y = y + 30`'un kısa yazılışı).
+- `{ ... }` → süslü parantezlerin içi, her turda tekrarlanacak işlerdir.
+
+Yani `y` sırayla 0, 30, 60, ... 390 olur ve her seferinde bir çizgi parçası boyanır: 15 piksel çizgi, 15 piksel
+boşluk, en alta kadar.
+
+**Neden `canvas.width / 2 - 2`?** `/` bölme demektir: `600 / 2 = 300`, sahanın tam ortası. Parça 4 piksel geniş ve
+dikdörtgen sol üst köşesinden çizildiği için, ortalamak üzere onu genişliğinin yarısı (2) kadar sola alırız: 298.
 
 # --task--
 
@@ -48,10 +95,37 @@ Neden `canvas.width / 2 - 2`? Dikdörtgen **sol üst köşesinden** çizilir. 4 
 
 # --task-tr--
 
-1. Canvas'ı `canvas`'ta, 2D bağlamını `ctx`'te tut.
-2. Canvas'ın tamamını `'black'` ile doldur.
-3. `'white'` ile orta çizgiyi çiz: `x = canvas.width / 2 - 2` noktasında, `y = 0`'dan en alta kadar her `30`
-   pikselde bir, `4` geniş ve `15` uzun bir çizgi.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve kâğıdı ve fırçayı alan iki
+   satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve bütün sahayı siyaha boya:
+
+   ```js
+   ctx.fillStyle = 'black'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+   ```
+
+   `canvas.width` ve `canvas.height` canvas'ın eni (600) ve boyudur (400).
+
+3. Bir satır boşluk daha bırak, rengi beyaza çevir ve orta çizgiyi çizen döngüyü yaz:
+
+   ```js
+   ctx.fillStyle = 'white'
+   for (let y = 0; y < canvas.height; y += 30) {
+     ctx.fillRect(canvas.width / 2 - 2, y, 4, 15)
+   }
+   ```
+
+   Döngünün içindeki satırı iki boşlukla içeri kaydırmak zorunlu değil ama okumayı kolaylaştırır.
+
+4. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda siyah saha ve ortasında beyaz kesikli çizgi görmelisin; alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `for` satırındaki noktalı virgülleri (`;`) ve süslü parantezleri
+   kontrol et.
 
 # --tests--
 

@@ -23,20 +23,48 @@ over the board, on its way into its hole.
 
 # --explanation-tr--
 
-Deliğinde birden beliren bir disk yavan hissettirir. Gerçeği gibi hızlanarak **düşen** bir disk her hamleyi tatmin edici
-yapar ve bunun için Flappy Bird'deki yerçekiminin aynı iki satırı yeter:
+**Bu adımda:** diskler deliğe birden belirmek yerine yukarıdan **düşecek**, gerçek bir cisim gibi giderek
+hızlanarak. Çalıştırıp bir sütuna tıklayınca diskin aşağı kayıp deliğine oturduğunu göreceksin.
+
+**Yer çekimi iki satırdır.** Düşen bir şeyin iki bilgisi vardır: yeri (`y`) ve hızı (`vy`, dikey hız). Her karede:
 
 ```js
-falling.vy += GRAVITY
-falling.y += falling.vy
+falling.vy += GRAVITY    // hız biraz artar (yer çekimi çeker)
+falling.y += falling.vy  // yer, hız kadar değişir
 ```
 
-`play` artık tahtayı değiştirmez. Hedef `row`'unu zaten bilen, aşağı giden bir disk olan `falling`'i yaratır. `y`'si o deliğin
-ortasına ulaşınca **yere iner**: tahta değişir ve sıra geçer. "Hamleye karar verildi"yi "hamle bitti"den ayırmak her
-animasyonlu oyunda işe yarar.
+`+=` "üstüne ekle" demektir. Hız her karede `1.2` artar, yer de her karede hız kadar aşağı iner. Böylece disk önce
+yavaş, sonra giderek hızlı düşer. Bir topu bıraktığında olduğu gibi.
 
-Bir disk düşerken `play` hiçbir şey yapmaz; böylece sabırsız tıklamalar aynı anda iki disk bırakamaz. Düşen disk tahtanın
-üstüne, deliğine giderken çizilir.
+**Karar ile sonuç ayrılıyor.** `play` artık tahtayı değiştirmiyor. Onun yerine `falling` (düşen) adında, yolda olan
+bir disk yaratıyor; disk hedef satırını (`row`) baştan biliyor. `y`'si o deliğin ortasına varınca disk **iner**
+(`land`): tahta değişir ve sıra geçer. "Hamleye karar verildi" ile "hamle tamamlandı"yı ayırmak her animasyonlu
+oyunda işe yarar.
+
+**`null` ve "yok" kontrolü.** Düşen disk yokken `falling` `null`'dır ("hiçbir şey"). `if (falling)` "düşen bir disk
+varsa" diye okunur: `null` yanlış, bir nesne doğru sayılır. `!falling` ise "düşen disk **yoksa**" (`!` "değil").
+
+**Kısa yazımlar.**
+
+```js
+falling = { col, row, who: turn, y: -CELL / 2, vy: 0 }
+```
+
+`{ col, row }`, `{ col: col, row: row }`'un kısasıdır: aynı adlı değişkenin değeri aynı adlı alana konur. `who`
+diski atan oyuncu, `y: -CELL / 2` disk tahtanın biraz üstünden (ekranın dışından) başlar, `vy: 0` hız sıfırdan.
+
+```js
+const { col, row, who } = falling
+```
+
+Bu da tersi: `falling`'in `col`, `row` ve `who` alanlarını aynı adlı üç sabite çıkarır. `falling.col` yazmak yerine
+kısaca `col` yazarız.
+
+**Sabırsız tıklamalar.** Bir disk düşerken `play` hiçbir şey yapmaz; böylece hızlı tıklamalar aynı anda iki disk
+bırakamaz. `if (falling || dropRow(col) === -1) return` → "disk düşüyorsa **veya** sütun doluysa çık".
+
+**Hangisi önce çizilir?** Düşen disk tahtanın **üstüne** çizilir (tahtadan sonra), yoksa mavi tahta onu örterdi.
+Bekleyen disk ise yalnızca hiçbir şey düşmüyorken görünür.
 
 # --task--
 
@@ -50,13 +78,92 @@ Bir disk düşerken `play` hiçbir şey yapmaz; böylece sabırsız tıklamalar 
 
 # --task-tr--
 
-1. `GRAVITY = 1.2` ve `falling` (`reset()`'te `null`) ekle.
-2. `play(col)` bir disk düşerken ya da sütun doluyken hiçbir şey yapmaz; değilse
-   `falling = { col, row, who: turn, y: -CELL / 2, vy: 0 }` ayarlar.
-3. `land()` yaz: `falling.who`'yu tahtada satırına ve sütununa koy, `falling`'i temizle ve `turn`'ü değiştir.
-4. `update()` yaz: bir disk düşerken yerçekimi uygula; `y` deliğinin ortasına (`TOP + row * CELL + CELL / 2`) ulaşınca onu
-   oraya oturt ve `land()` çağır. Her karede çağır.
-5. Düşen diski tahtanın üstüne, süzülen diski yalnızca hiçbir şey düşmezken çiz.
+1. `const TOP = 96 ...` satırının altına yer çekimini ekle:
+
+   ```js
+   const GRAVITY = 1.2
+   ```
+
+2. `let turn` satırının altına düşen diski ekle:
+
+   ```js
+   let falling // the disc on its way down, or null
+   ```
+
+3. `reset()` fonksiyonunun son satırı olarak ekle:
+
+   ```js
+     turn = 1
+     falling = null // ← yeni
+   }
+   ```
+
+4. `play()` fonksiyonunu tamamen şununla değiştir, altına da `land()` fonksiyonunu ekle:
+
+   ```js
+   function play(col) {
+     if (falling || dropRow(col) === -1) return
+     const row = dropRow(col)
+     falling = { col, row, who: turn, y: -CELL / 2, vy: 0 }
+   }
+
+   function land() {
+     const { col, row, who } = falling
+     board[row][col] = who
+     falling = null
+     turn = 3 - turn
+   }
+   ```
+
+   Tahtaya yazma ve sırayı değiştirme artık `land()`'de.
+
+5. `document.addEventListener('keydown', ...)` bloğunun kapanan `})` işaretinin altına bir boş satır bırak ve
+   güncelleme fonksiyonunu yaz (`function disc`'ten önce):
+
+   ```js
+   function update() {
+     if (falling) {
+       falling.vy += GRAVITY
+       falling.y += falling.vy
+       const bottom = TOP + falling.row * CELL + CELL / 2
+       if (falling.y >= bottom) {
+         falling.y = bottom
+         land()
+       }
+     }
+   }
+   ```
+
+   `bottom` hedef deliğin ortasıdır. Disk oraya varınca (ya da biraz geçince) tam ortaya oturtulur ve iner.
+
+6. `draw()` fonksiyonunda bekleyen disk satırının başına `if (!falling) ` ekle:
+
+   ```js
+     // The next disc waits above the column it would drop into.
+     if (!falling) disc(hoverCol * CELL + CELL / 2, TOP - CELL / 2, COLORS[turn]) // ← değişti
+   ```
+
+7. `draw()` fonksiyonunda, iç içe `for` döngülerinin kapanışından sonra ve `ctx.fillStyle = 'white'` satırından
+   **önce** düşen diski çiz:
+
+   ```js
+     // The falling disc goes over the board, on its way to its hole.
+     if (falling) disc(falling.col * CELL + CELL / 2, falling.y, COLORS[falling.who])
+   ```
+
+8. `loop()` fonksiyonunda çizimden önce güncelle:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bir sütuna tıklayınca disk yukarıdan hızlanarak düşmeli ve
+   deliğine oturmalı; düşerken yapılan tıklamalar yok sayılmalı. Alttaki kontrollerin hepsi yeşil olmalı. Disk hiç
+   düşmüyorsa `loop()` içindeki `update()` çağrısını kontrol et.
 
 # --tests--
 

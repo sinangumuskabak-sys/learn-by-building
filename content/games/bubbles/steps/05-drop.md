@@ -25,22 +25,50 @@ once they leave the screen. The grid is already updated, so the game plays on wh
 
 # --explanation-tr--
 
-Bir balon atıcıda en iyi hamleler, büyük bir grubu **tutan** küçük bir grubu patlatır. Patlayan balonlara asılı her şey düşer ve tek
-atış tahtanın yarısını temizler.
+**Bu adımda:** ipi keseceğiz. Bir grup patlayınca, artık tavana bağlı olmayan bütün balonlar da düşecek. Patlayan ve düşen
+balonların birden kaybolmak yerine hafifçe zıplayıp ekranın altından **düşerek** çıktığını göreceksin.
 
-Hâlâ neyin asılı olduğunu nasıl bilebiliriz? Bir balon, başka balonlar üzerinden **tavana** bağlanıyorsa tutulur. Yani yeniden flood
-fill yaparız; bu sefer 0. satırdaki her balondan başlayıp herhangi bir renkten geçerek. Ulaşılan her balon tutulur; ulaşılmayan her
-balon havadadır ve düşer. Düşen balonlar iki kat değerlidir.
+**En iyi hamle.** Balon oyunlarında en güzel atış, **büyük bir grubu taşıyan** küçük bir grubu patlatmaktır. Patlayanlara
+asılı olan her şey düşer ve tek atış tahtanın yarısını temizler. Düşen balonlar **iki kat** değerlidir (20 puan).
 
-Aynı `connected` fonksiyonu iki işi de yapar; yalnızca başlangıç hücreleri ve test değişir:
+**Hangi balon hâlâ asılı?** Bir balon, başka balonlar üzerinden **tavana** bağlıysa asılıdır. Bunu 4. adımdaki taşma
+doldurmayla (flood fill) buluruz, ama bu sefer:
+
+- başlangıç: tavandaki (satır 0) **bütün** balonlar;
+- test: **renk fark etmez**, dolu olan her hücre (`grid[nr][nc] >= 0`).
+
+Ulaşılan her balon asılıdır; ulaşılamayan her balon boşta kalmıştır ve düşer. Aynı `connected` fonksiyonu iki işi de
+yapar, yalnızca başlangıç ve test değişir:
 
 ```js
 connected([[r, c]], (nr, nc) => grid[nr][nc] === color) // tek renkli grup
-connected(topRow, (nr, nc) => grid[nr][nc] >= 0)        // tavanın tuttuğu her şey
+connected(top, (nr, nc) => grid[nr][nc] >= 0)           // tavana asılı her şey
 ```
 
-Kaldırılan balonlar artık yalnızca kaybolmaz. Küçük bir yukarı zıplama ve yerçekimiyle **düşen** balonlar olurlar ve ekrandan
-çıkınca unutulurlar. Izgara zaten güncellenmiştir, bu yüzden onlar düşerken oyun sürer.
+Kodda sırayla:
+
+1. `top` listesine satır 0'daki dolu hücreler eklenir.
+2. `held` (tutulanlar): taşma doldurmanın bulduğu hücreler, 4. adımdaki gibi `r * COLS + c` sayısına çevrilip bir `Set`'e
+   konur; böylece "bu hücre tutuluyor mu?" sorusu tek bir `has` olur.
+3. `loose` (boşta olanlar): bütün hücreleri gezip dolu **ve** tutulmayan (`!held.has(...)`) hücreleri toplarız.
+4. `remove(loose, 20)`.
+
+Döngü değişkenlerine `r2`, `c2`, `hr`, `hc` adlarını veriyoruz, çünkü `r` ve `c` adları zaten `attach(r, c, color)`'ın
+kendi değerleri; aynı adı kullanırsak onları gölgelerdik.
+
+**Düşen balonlar ve yerçekimi.** `remove` artık balonu sadece silmiyor; önce `falling` listesine bir kart ekliyor:
+`{ x, y, vy: -2, r: R, color }`. `vy: -2` küçük bir yukarı zıplamadır (`y` aşağı büyüdüğü için eksi = yukarı). Sonra her
+karede:
+
+```js
+f.vy += 0.4   // yerçekimi: aşağı doğru hız her karede biraz artar
+f.y += f.vy   // hızı kadar hareket et
+```
+
+Önce yavaşça yükselir, durur, sonra gittikçe hızlanarak düşer; gerçek bir top gibi. Üst kenarı canvas'ın altını geçince
+(`f.y - f.r < canvas.height` artık doğru değilse) `filter` onu listeden çıkarır. Izgara zaten güncellendiği için oyun,
+balonlar düşerken devam eder. Bu hareket `update()`'in **başında** yapılır, `if (!shot) return` satırından önce; yoksa uçan
+balon yokken düşenler havada donardı.
 
 # --task--
 
@@ -53,12 +81,69 @@ Kaldırılan balonlar artık yalnızca kaybolmaz. Küçük bir yukarı zıplama 
 
 # --task-tr--
 
-1. `attach`'te bir grup patladıktan sonra 0. satırdaki bütün balonlardan herhangi bir balon üzerinden flood fill yap ve ulaşılmayan
-   her balonu her biri 20 puana kaldır.
-2. `falling` ekle (`reset()`'te `[]`). `remove` artık kaldırılan her balon için hücresinin konumunda bir `{ x, y, vy: -2, r: R, color }`
-   de ekler.
-3. `update()`'te her düşen balonun `vy`'sine `0.4` eklenir ve o kadar hareket eder; üst kenarı canvas'ın altına inince onu kaldır.
-4. Düşen balonları çiz.
+1. `let shot ...` satırının altına ekle:
+
+   ```js
+   let falling // popped and dropped bubbles on their way out: { x, y, vy, r, color }
+   ```
+
+2. `reset()`'te `shot = null` satırının altına ekle:
+
+   ```js
+     falling = []
+   ```
+
+3. `remove()` şöyle olmalı:
+
+   ```js
+   function remove(cells, points) {
+     for (const [r, c] of cells) {
+       const p = cellPos(r, c)                                             // ← yeni
+       falling.push({ x: p.x, y: p.y, vy: -2, r: R, color: grid[r][c] }) // ← yeni
+       grid[r][c] = -1
+       score += points
+     }
+   }
+   ```
+
+4. `attach()`'te `remove(group, 10)` satırının altına (aynı `if`'in içine) boşta kalanları düşüren kodu ekle:
+
+   ```js
+     if (group.length >= 3) {
+       remove(group, 10)
+       // Whatever no longer hangs from the ceiling drops, worth double.
+       const top = []
+       for (let c2 = 0; c2 < cols(0); c2++) if (grid[0][c2] >= 0) top.push([0, c2])
+       const held = new Set(connected(top, (nr, nc) => grid[nr][nc] >= 0).map(([hr, hc]) => hr * COLS + hc))
+       const loose = []
+       for (let r2 = 0; r2 < ROWS; r2++) for (let c2 = 0; c2 < cols(r2); c2++) {
+         if (grid[r2][c2] >= 0 && !held.has(r2 * COLS + c2)) loose.push([r2, c2])
+       }
+       remove(loose, 20)
+     }
+   ```
+
+5. `update()`'in **en başına**, `if (!shot) return` satırının üstüne ekle:
+
+   ```js
+   function update() {
+     for (const f of falling) {                                  // ← yeni
+       f.vy += 0.4                                               // ← yeni
+       f.y += f.vy                                               // ← yeni
+     }                                                           // ← yeni
+     falling = falling.filter((f) => f.y - f.r < canvas.height) // ← yeni
+     if (!shot) return
+   ```
+
+6. `draw()`'da ızgarayı çizen iki döngünün kapanışından hemen sonra, `// The aim: ...` yorumundan önce ekle:
+
+   ```js
+     for (const f of falling) drawBubble(f.x, f.y, f.color, f.r)
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Başka balonları taşıyan bir grubu patlat: altındakiler de düşmeli,
+   balonlar ekranın altından çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı. "Düşen balonlar" kontrolü kırmızıysa yerçekimi
+   kodunu `if (!shot) return`'ün **üstüne** koyduğundan emin ol.
 
 # --tests--
 

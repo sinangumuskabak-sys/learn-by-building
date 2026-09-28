@@ -19,17 +19,46 @@ We also add a real blackjack move: **double down** (D). On your first two cards 
 
 # --explanation-tr--
 
-Şu an krupiyenin bütün sırası tek karede oluyor ve sonuç birden beliriyor. Gerçek bir masada krupiye kartları **birer birer**
-açar ve gerilim o duraklamadadır.
+**Bu adımda:** krupiye kartlarını **tek tek**, arada yarım saniye bekleyerek açacak; gerilim artacak. Ayrıca yeni
+bir hamle gelecek: **D** tuşuyla bahsini ikiye katlayabileceksin (double down).
 
-Bu yüzden krupiye kendi evresini alır. `stand()` artık döngü kurmaz; `phase = 'dealer'` ve bir `timer` ayarlar. Her karede
-`update()` sayacı azaltır ve sayaç bittiğinde krupiye **tek** bir karar verir: 17'nin altında bir kart çek ve sayacı yeniden
-başlat; değilse bitir. Önceki `while` döngüsü zamana yayılmış bir döngü olmuştur, her `DELAY` karede bir tur. Bu, Üçlü
-Eşleştirme'deki yanıp sönen ve düşen mücevherlerle aynı numaradır: bekleyen oyun mantığı bir döngüde değil `update`'te olur.
+**Şu anki sorun.** Krupiyenin bütün sırası tek bir karede olup bitiyor, sonuç birden beliriyor. Gerçek masada
+krupiye kartları birer birer çevirir; heyecan o bekleyişte.
 
-Gerçek bir blackjack hamlesi de ekleriz: **ikiye katlamak** (D). İlk iki kartında bahsini ikiye katlayabilirsin, ama sonra
-**tam olarak bir** kart daha alırsın ve durmak zorundasın. Zayıf bir krupiye kartına karşı 10 ya da 11 ile çoğu zaman oyundaki
-en iyi hamledir.
+**Zamana yayılmış döngü.** `while` döngüsü hepsini bir anda yapar; ekrana çizim ancak döngü bitince olur. Beklemek
+için başka bir yol gerekir: krupiyeye kendi **evresini** veririz (`phase = 'dealer'`) ve bir **sayaç** kurarız.
+
+```js
+function update() {
+  if (phase !== 'dealer') return   // krupiyenin sırası değilse hiçbir şey yapma
+  timer -= 1                       // her karede sayacı bir azalt
+  if (timer > 0) return            // daha zamanı gelmedi
+  if (handValue(dealer) < 17) {    // zamanı geldi: tek bir karar
+    dealer.push(nextCard())
+    timer = DELAY                  // sayacı yeniden kur
+  } else finish()
+}
+```
+
+`update()`'i oyun döngüsü her karede (saniyede ~60 kez) çağırır. `DELAY = 30` kare yaklaşık yarım saniye. Yani
+krupiye her yarım saniyede bir kez "17'nin altında mıyım?" diye bakar, kart çeker ya da biter. Eski `while`
+döngüsü, zamana yayılmış bir döngüye dönüştü. Bekleyen oyun mantığı döngüde değil, `update()`'te olur.
+
+`stand()` artık krupiyeyi oynatmaz; sadece `phase = 'dealer'` yapar ve sayacı kurar. `hit()` ve `double()` zaten
+`phase !== 'player'` ise çalışmadığı için krupiye çekerken sen kart çekemezsin.
+
+**İkiye katlama (double down).** Yalnızca ilk iki kartındayken bahsini ikiye katlayabilirsin; ama sonra **tam bir**
+kart daha alırsın ve durmak zorundasın. Toplamın 10 ya da 11 iken çoğu zaman en iyi hamledir. Koşullar:
+
+```js
+if (phase !== 'player' || player.length !== 2 || bank < bet) return
+```
+
+"Senin sıran değilse **veya** elinde 2 kart yoksa **veya** fişin bir bahis daha koymaya yetmiyorsa, çık." `||` ile
+bağlı koşullardan biri doğruysa hepsi doğru sayılır. `bet *= 2` bahsi ikiyle çarpar (`bet = bet * 2`).
+
+Gizli kart artık yalnızca `'player'` evresinde gizli; krupiye çekerken açık görürsün. 3. adımda yazdığımız
+`const hide = phase === 'player'` bunu zaten sağlıyor, değiştirmene gerek yok.
 
 # --task--
 
@@ -42,12 +71,90 @@ en iyi hamledir.
 
 # --task-tr--
 
-1. `DELAY = 30` ve `timer` ekle. `phase` artık `'dealer'` da olabilir.
-2. `stand()`, `phase = 'dealer'` ve `timer = DELAY` yapar. `draw()`'dan önce çağrılan `update()`'i yaz: `'dealer'`'da sayacı
-   azalt; `0`'da krupiye 17'nin altındaysa bir kart çek ve sayacı yeniden kur, değilse `finish()`.
-3. `double()` yaz: yalnızca `'player'`'da, tam iki kartla ve `bank >= bet` iken. `bank`'tan bir `bet` daha al, `bet`'i ikiye
-   katla, bir kart al, sonra batarsa `finish()`, batmazsa `stand()`. D tuşu `'Double'`'a basar.
-4. Gizli kart yalnızca `'player'`'da gizli kalır; böylece krupiyenin çekişini izleyebilirsin.
+1. `const BET = 10` satırının hemen **altına** bekleme süresini ekle:
+
+   ```js
+   const DELAY = 30 // frames between the dealer's cards
+   ```
+
+2. `let bet` satırının altına `let timer` ekle. `let phase` satırının yorumunu da yeni evreyle güncelleyebilirsin:
+
+   ```js
+   let phase // 'player' (your turn), 'dealer' (the dealer draws) or 'done' (the round is over)
+   ```
+
+   ```js
+   let bet
+   let timer
+   ```
+
+3. `stand()` fonksiyonunu değiştir; altına `double()` fonksiyonunu yaz:
+
+   ```js
+   function stand() {
+     if (phase !== 'player') return
+     phase = 'dealer' // ← yeni (eski while satırı silindi)
+     timer = DELAY    // ← yeni
+   }
+
+   // Double the bet, take exactly one more card, and stand.
+   function double() {
+     if (phase !== 'player' || player.length !== 2 || bank < bet) return
+     bank -= bet
+     bet *= 2
+     player.push(nextCard())
+     if (handValue(player) > 21) finish()
+     else stand()
+   }
+   ```
+
+   `stand()` içindeki `// The dealer has no choice...` yorumu ve `while` satırı artık burada yok; o yorum
+   `update()`'e taşınıyor.
+
+4. `reset()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp `update()`'i yaz:
+
+   ```js
+   function update() {
+     if (phase !== 'dealer') return
+     timer -= 1
+     if (timer > 0) return
+     // The dealer has no choice: draw below 17, stand on 17 or more.
+     if (handValue(dealer) < 17) {
+       dealer.push(nextCard())
+       timer = DELAY
+     } else finish()
+   }
+   ```
+
+5. `press()` fonksiyonuna `'Double'`'ı, klavye sözlüğüne `d`'yi ekle:
+
+   ```js
+   function press(button) {
+     if (button === 'Hit') hit()
+     else if (button === 'Stand') stand()
+     else if (button === 'Double') double() // ← yeni
+     else if (button === 'Deal' && phase === 'done') deal()
+   }
+   ```
+
+   ```js
+     const keys = { h: 'Hit', s: 'Stand', d: 'Double', n: 'Deal', ' ': 'Deal' } // ← değişti
+   ```
+
+6. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. S'ye basınca krupiye kartlarını yarım saniye arayla
+   açmalı. Yeni bir elde ilk iki kartınla D'ye basınca bahis 20 olmalı, bir kart gelmeli ve sıra krupiyeye
+   geçmeli. Alttaki kontrollerin hepsi yeşil olmalı. Krupiye hiç kart çekmiyorsa `loop()` içine `update()`'i
+   eklediğini kontrol et.
 
 # --tests--
 

@@ -30,27 +30,44 @@ the second 20, the third 30.
 
 # --explanation-tr--
 
-Şimdi eşleşen mücevherler kaybolur. Onları `-1` ile boş işaretleriz, sonra **yerçekimi**: her sütunda bir boşluğun
-üstündeki mücevherler onu doldurmak için aşağı düşer ve tepeden yeni rastgele mücevherler düşer.
+**Bu adımda:** eşleşen mücevherler yok olacak, üstlerindekiler aşağı düşecek, en üste yeni mücevherler gelecek ve
+puan kazanacaksın. Sol üstte `Score 30` gibi puanın görünecek. Düşen mücevherler kendiliğinden yeni üçlüler
+yaparsa onlar da silinecek (zincirleme).
 
-Yerçekimi zarif bir iki işaretçi numarasıdır. Bir sütunu `r` ile **aşağıdan yukarı** gez ve henüz doldurulmamış en alçak yer
-için ikinci bir sıra `write` tut. Bulunan her mücevher `write`'a kopyalanır ve `write` bir yukarı çıkar:
+**Boş hücre = `-1`.** Silinen mücevherleri `-1` ile işaretleriz; `-1` hiçbir rengin sırası değildir. Sonra
+**yerçekimi**: her sütunda bir boşluğun üstündeki mücevherler aşağı düşüp onu doldurur, yukarıda açılan yerlere yeni
+rastgele mücevherler düşer.
+
+**İki işaretçi hilesi.** Bir sütunu `r` ile **aşağıdan yukarı** gezeriz; ikinci bir sayı olan `write`, henüz
+doldurulmamış en alttaki yeri gösterir. Bulunan her mücevher `write`'a kopyalanır ve `write` bir yukarı çıkar:
 
 ```js
-let write = N - 1
-for (let r = N - 1; r >= 0; r--) {
-  if (board[r][c] < 0) continue   // bir boşluk: atla
-  board[write][c] = board[r][c]
-  write--
+let write = N - 1                       // en alt satırdan başla
+for (let r = N - 1; r >= 0; r--) {      // aşağıdan yukarı gez
+  if (board[r][c] < 0) continue         // boşluk: atla
+  board[write][c] = board[r][c]         // mücevheri aşağıdaki boş yere indir
+  write--                               // bir sonraki boş yer bir üstte
 }
-// 0..write satırları arta kaldı: yeni mücevherler
+// 0'dan write'a kadar olan satırlar arta kaldı: yeni mücevherler
 ```
 
-Mücevherler sıralarını korur ve boş hücreler tam yeni mücevherlerin gelmesi gereken yere, tepeye düşer.
+`r--` bir azaltır (yukarı çıkmak). Mücevherler sıralarını korur, boş hücreler en üstte toplanır; yeni mücevherler
+de tam oraya konur. Bir boşluğu olan 8 satırlık bir sütun düşün: 7 mücevher aşağı iner, `write` en sonda 0'da kalır,
+sadece 0. satıra yeni mücevher gelir.
 
-Düşen ve yeni mücevherler kendiliğinden sıraya girebilir. Bu bir **zincirleme**dir, oyunun en güzel anı; bu yüzden temizleme
-tahta sakinleşene kadar bir `while` döngüsünde tekrarlanır. Zincirin her turu daha değerlidir: ilk temizleme mücevher başına
-10, ikincisi 20, üçüncüsü 30 puan getirir.
+**Zincirleme (cascade).** Düşen ve yeni gelen mücevherler kendiliğinden sıraya girebilir. Oyunun en güzel anı bu; o
+yüzden temizleme işi tahta sakinleşene kadar bir `while` döngüsünde tekrarlanır. Zincirin her turu daha değerlidir:
+ilk temizlik mücevher başına 10, ikincisi 20, üçüncüsü 30 puan:
+
+```js
+score += matched.size * 10 * chain
+```
+
+`for (const cell of matched)` kümenin her elemanını gezer. Hücre sayısından satır `Math.floor(cell / N)`, sütun
+`cell % N` (3. adımdaki gibi).
+
+**Boşlukları atlamak.** Tahtada artık bir anlığına `-1` olabilir; `findMatches` ve `draw` boş hücreleri
+`if (gem < 0) continue` ile atlamalı. (`-1`'i `COLORS[-1]` ile çizmeye çalışmak anlamsız olurdu.)
 
 # --task--
 
@@ -63,12 +80,89 @@ tahta sakinleşene kadar bir `while` döngüsünde tekrarlanır. Zincirin her tu
 
 # --task-tr--
 
-1. `score` ekle (`reset()`'te `0`) ve sol üste `Score 120` çiz (`LEFT`, `y = 30`, beyaz, `'bold 18px sans-serif'`).
-2. `collapse()` yaz: her sütunda mücevherleri iki işaretçili döngüyle `-1` boşluklarına düşür ve tepeyi `randomGem()` ile
-   doldur.
-3. `trySwap`'ta eşleşen bir takastan sonra: `chain`'i `0`'dan başlat ve `findMatches()` hücre buldukça `chain`'e 1 ekle,
-   `score`'a `size * 10 * chain` ekle, o hücreleri `-1` yap ve `collapse()` et.
-4. `board` artık `-1` tutabildiği için `findMatches`'te ve `draw`'da boş hücreleri atla.
+1. `let selected` satırının hemen **altına** ekle (istersen `let board`'un yorumunu da
+   `// board[row][col]: a color index, or -1 while empty` yapabilirsin):
+
+   ```js
+   let score
+   ```
+
+2. `reset()` fonksiyonunun sonuna ekle:
+
+   ```js
+     selected = null
+     score = 0 // ← yeni
+   }
+   ```
+
+3. `findMatches()` içinde, `const gem = board[r][c]` satırının hemen **altına** ekle:
+
+   ```js
+         if (gem < 0) continue
+   ```
+
+4. `trySwap()` fonksiyonunu şöyle yap; hemen altına da `collapse()` fonksiyonunu yaz:
+
+   ```js
+   function trySwap(a, b) {
+     if (Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return false
+     swap(a, b)
+     if (findMatches().size === 0) {
+       swap(a, b) // no match: the gems go back
+       return false
+     }
+     // Clear the matches, let everything fall, and keep going while the fallen gems make new matches.
+     let chain = 0                                           // ← yeni
+     let matched = findMatches()                             // ← yeni
+     while (matched.size > 0) {                              // ← yeni
+       chain += 1
+       score += matched.size * 10 * chain // cascades are worth more and more
+       for (const cell of matched) board[Math.floor(cell / N)][cell % N] = -1
+       collapse()
+       matched = findMatches()
+     }
+     return true
+   }
+
+   // Everything above a gap falls down to fill it, and new gems drop in at the top.
+   function collapse() {
+     for (let c = 0; c < N; c++) {
+       let write = N - 1
+       for (let r = N - 1; r >= 0; r--) {
+         if (board[r][c] < 0) continue
+         board[write][c] = board[r][c]
+         write--
+       }
+       for (let r = write; r >= 0; r--) board[r][c] = randomGem()
+     }
+   }
+   ```
+
+   `collapse` her sütun için iki işaretçi döngüsünü çalıştırır, sonra en üstte kalan satırları rastgele
+   mücevherlerle doldurur.
+
+5. `draw()` içinde, `const gem = board[r][c]` satırının hemen **altına** ekle:
+
+   ```js
+         if (gem < 0) continue
+   ```
+
+6. `draw()` fonksiyonunun en sonuna, `if (selected) { ... }` bloğundan sonra ve fonksiyonun kapanan `}`'sinden önce,
+   bir satır boşluk bırakıp puanı yaz:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score ' + score, LEFT, 30)
+   ```
+
+   `'Score ' + score` yazıyla sayıyı birleştirir → `'Score 30'`.
+
+7. **Çalıştır**'a bas. Sol üstte `Score 0` görmelisin. Bir üçlü yap: mücevherler kaybolmalı, üsttekiler düşmeli,
+   yeni mücevherler gelmeli ve puan artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Mücevherler yanlış yöne
+   kayıyorsa `collapse` içindeki iki döngünün de `N - 1`'den (ya da `write`'tan) başlayıp `r--` ile azaldığını
+   kontrol et.
 
 # --tests--
 

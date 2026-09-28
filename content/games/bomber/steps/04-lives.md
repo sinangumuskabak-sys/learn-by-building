@@ -17,15 +17,54 @@ At zero lives the game is over. `update` stops, bombs cannot be dropped, and Ent
 
 # --explanation-tr--
 
-Artık alevler tehlikeli: birinin içinde durmak bir **cana** mal olur. Oyuncunun karesi `tileOf(player)`'dır, yani bulunduğu
-yere en yakın kare; bu yüzden patlamadan yarı yarıya çıkmış bir oyuncu, ancak yarısından fazlası yanan kareden çıktığında
-güvendedir.
+**Bu adımda:** alevler tehlikeli olacak. Alevin içinde durursan bir **can** kaybedeceksin. Sol üstte canların kalp olarak
+(`♥♥♥`) görünecek; can kaybedince başa döneceksin ve bir süre yanıp söneceksin. Canlar bitince ortada `Game over`
+yazacak.
 
-Bir can kaybettikten sonra oyuncu başlangıca döner. Koruma olmasa, orada hâlâ yanan alevler bir sonraki karede ikinci bir canı
-alabilirdi. Bu yüzden oyuncu 120 kare (iki saniye) boyunca **güvende**dir ve bunu yanıp sönerek gösterir: yalnızca her 5 karede
-bir değişen `safe % 10 < 5` iken çizilir.
+**Alevde miyim?**
 
-Sıfır canda oyun biter. `update` durur, bomba bırakılamaz ve Enter yeniden başlatır.
+```js
+const inFlames = (m) => {
+  const t = tileOf(m)
+  return flames.some((f) => f.r === t.r && f.c === t.c)
+}
+```
+
+Ok fonksiyonunun gövdesi birden çok satırsa süslü parantez içine yazılır ve sonucu `return` ile verilir. Oyuncunun karesi
+3. adımdaki `tileOf(player)`'dır, yani bulunduğu yere en yakın kare. Bu yüzden patlamanın yarısından çıkmış bir oyuncu,
+ancak yarısından fazlası yanan kareden çıktığında güvendedir. `some` "alevlerden **en az biri** bu karede mi?" diye sorar.
+
+**Can kaybı ve koruma.** Can kaybedince oyuncu başlangıca döner. Koruma olmasa, orada hâlâ yanan alevler hemen sonraki
+karede ikinci bir canı alabilirdi. Bu yüzden oyuncu 120 kare (iki saniye) **güvendedir** (`safe`). Her karede:
+
+```js
+if (safe > 0) safe -= 1
+else if (inFlames(player)) hurt()
+```
+
+"Koruma sürüyorsa bir azalt; sürmüyorsa **ve** alevdeysen can kaybet."
+
+**Yanıp sönme.** Korumayı göstermek için oyuncu yalnızca `safe % 10 < 5` iken çizilir. `%` bölümden kalanı verir
+(`17 % 10` → 7); bu değer her 5 karede bir 5'in altına inip üstüne çıkar, oyuncu görünüp kaybolur. Koruma bitince
+`safe` 0 kalır, `0 % 10` 0'dır, yani oyuncu hep görünür.
+
+**Oyunun durumu.** `state` bir yazıdır: `'playing'` (sürüyor) ya da `'lost'` (kaybettin). Can 0'a inince `'lost'` olur.
+`!==` "eşit değil" demektir: `if (state !== 'playing') return` → "oyun sürmüyorsa bu kare hiçbir şey yapma". Bomba
+bırakmak da yalnızca oyun sürerken olur (`||` "veya"). Oyun bitince Enter `reset()` ile yeniden başlatır.
+
+**Yazı yazmak.** Fırçayla yazı da boyanır:
+
+```js
+ctx.font = 'bold 16px sans-serif'   // kalın, 16 piksel yazı
+ctx.textAlign = 'left'              // verdiğin noktadan sağa doğru yaz
+ctx.fillText('♥'.repeat(lives), 8, 22)
+```
+
+`'♥'.repeat(3)` yazıyı 3 kez tekrarlar: `'♥♥♥'`. `textAlign = 'center'` ise verilen noktayı yazının ortası yapar;
+`canvas.width / 2` ekranın yatay ortasıdır.
+
+**Yarı saydam panel.** `'rgba(15, 23, 42, 0.85)'` kırmızı, yeşil, mavi (0–255) ve **saydamlık** (0–1) ile verilen
+bir renktir: yüzde 85 opak koyu lacivert. `Game over` yazısının arkasına koyu bir panel çizer, oyun hafifçe görünür.
 
 # --task--
 
@@ -40,14 +79,98 @@ Sıfır canda oyun biter. `update` durur, bomba bırakılamaz ve Enter yeniden b
 
 # --task-tr--
 
-1. `lives`, `safe` ve `state` ekle (`reset()`'te `3`, `0` ve `'playing'`).
-2. `inFlames(m)` yaz: `m`'nin karesinde bir alev varsa true.
-3. `hurt()` yaz: bir can al; `0`'da `state = 'lost'` yap; değilse oyuncuyu `(1, 1)`'e geri koy ve `safe = 120` yap.
-4. `update` yalnızca `'playing'` iken çalışır: `safe` 0'ın üstündeyken onu azalt, değilse oyuncu alevdeyse `hurt()` et.
-   `dropBomb` yalnızca `'playing'` iken çalışır ve oyun öyle değilken Enter yeniden başlatır.
-5. Oyuncuyu yalnızca `safe % 10 < 5` iken çiz. Kalpleri `(8, 22)`'ye çiz (beyaz, `'bold 16px sans-serif'`) ve kaybedince
-   `(40, 150)`'de `canvas.width - 80`'e `90` bir `'rgba(15, 23, 42, 0.85)'` panel ile `Game over` (`'bold 24px sans-serif'`,
-   `y = 190`) ve `Press Enter to play again` (`'16px sans-serif'`, `y = 222`) yazılarını ortalı çiz.
+1. `let power` satırının altına üç değişken ekle:
+
+   ```js
+   let lives
+   let safe // frames of invincibility after losing a life
+   let state // 'playing' or 'lost'
+   ```
+
+2. `reset()`'in sonuna, `power = 2` satırının altına ekle:
+
+   ```js
+     lives = 3
+     safe = 0
+     state = 'playing'
+   ```
+
+3. `dropBomb()`'un ilk satırını değiştir:
+
+   ```js
+     if (state !== 'playing' || bombs.length >= maxBombs) return // ← değişti
+   ```
+
+4. `explode()`'un kapanış `}`'inin altına, `update`'in üstüne ekle:
+
+   ```js
+   const inFlames = (m) => {
+     const t = tileOf(m)
+     return flames.some((f) => f.r === t.r && f.c === t.c)
+   }
+
+   function hurt() {
+     lives -= 1
+     if (lives === 0) {
+       state = 'lost'
+       return
+     }
+     player = { x: 1, y: 1, target: null }
+     safe = 120
+   }
+   ```
+
+5. `update()`'i şöyle yap:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+     updatePlayer()
+     for (const b of bombs) b.fuse -= 1
+     for (const bomb of bombs.filter((b) => b.fuse <= 0)) explode(bomb)
+     for (const f of flames) f.time -= 1
+     flames = flames.filter((f) => f.time > 0)
+     if (safe > 0) safe -= 1 // ← yeni
+     else if (inFlames(player)) hurt() // ← yeni
+   }
+   ```
+
+6. `keydown` bloğunun sonunu şöyle yap (Boşluk bloğunun kapanışına Enter eklenir):
+
+   ```js
+     } else if (event.key === ' ') {
+       event.preventDefault()
+       dropBomb()
+     } else if (event.key === 'Enter' && state !== 'playing') reset() // ← değişti
+   })
+   ```
+
+7. `draw()`'un sonunda oyuncuyu çizen satırı değiştir ve altına yazıları ekle:
+
+   ```js
+     if (safe % 10 < 5) drawCircle(player, '#f8fafc', 12) // ← değişti
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('♥'.repeat(lives), 8, 22)
+     if (state !== 'playing') {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+       ctx.fillRect(40, 150, canvas.width - 80, 90)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 24px sans-serif'
+       ctx.fillText('Game over', canvas.width / 2, 190)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Press Enter to play again', canvas.width / 2, 222)
+     }
+   ```
+
+   Kalp işaretini (`♥`) buradan kopyalayıp yapıştırabilirsin.
+
+8. **Çalıştır**'a bas. Sol üstte `♥♥♥` görmelisin. Oynamak için önce oyuna tıkla; bir bomba bırakıp alevin içinde kal:
+   bir kalp gitmeli, top başa dönüp iki saniye yanıp sönmeli. Üç can bitince `Game over` çıkmalı, Enter yeni oyun
+   başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

@@ -17,14 +17,34 @@ feedback on every press and a game that speeds up.
 
 # --explanation-tr--
 
-Simon'da skor, ne kadar uzun bir diziyi tekrarlayabildiğindir. 5. turda başarısız olduğunda 4. turu doğru tekrarlamışsındır; bu
-yüzden skor `sequence.length - 1`'dir. Bunun gibi bir farkla yanılma (off-by-one) ayrıntılarını düşünmeye değer: kaybettiğin tur
-sayılmaz.
+**Bu adımda:** en iyi skoru kaydedeceğiz. Yanlış basınca üstte, ör. `Wrong! Best 4. Click to retry` yazacak:
+şimdiye kadar tekrarladığın en uzun dizi. Sayfayı yenilesen de bu sayı kalacak.
 
-En iyi skoru `localStorage`'a kaydet ve oyun bitince göster; böylece geçilecek bir sayı hep vardır.
+**Skor ne?** Simon'da skor, tekrarlayabildiğin en uzun dizinin uzunluğudur. 5. turda hata yaptıysan 4. turu doğru
+tekrarlamışsındır; skor `sequence.length - 1` olur. Bu tür "bir fazla, bir eksik" ayrıntıları üzerine düşünmeye
+değer: kaybettiğin tur sayılmaz.
 
-Bu Simon'ı tamamlar: sayaçlarla yönetilen küçük bir gösteri, bilgisayar ile oyuncu arasında sıralar, her cevabı geldikçe kontrol
-etmek, her basışta geri bildirim ve hızlanan bir oyun.
+**Sayfa yenilense de kalan bilgi: `localStorage`.** Değişkenler sayfa kapanınca silinir. Tarayıcının her site
+için tuttuğu küçük bir defter vardır: `localStorage`. İçine bir **ad** ile bir değer yazarsın, sonra aynı adla
+okursun.
+
+```js
+localStorage.setItem('simon-best', best)                   // "simon-best" adıyla kaydet
+Number(localStorage.getItem('simon-best')) || 0            // oku; hiç kayıt yoksa 0
+```
+
+Bunu parça parça okuyalım:
+
+- `setItem(ad, değer)` → deftere yaz. Defter her şeyi **yazı** olarak saklar (`4` → `'4'`).
+- `getItem(ad)` → defterden oku. Hiç kayıt yoksa boş (`null`) gelir.
+- `Number(...)` → yazıyı sayıya çevirir: `'4'` → `4`.
+- `|| 0` → "soldaki boşsa ya da sıfırsa 0 kullan": bir yedek değer.
+
+Oyun bitince skor en iyiden **büyükse** (`>`) en iyiyi güncelleyip deftere yazarız. Böylece hep yenilecek bir sayı
+olur.
+
+İşte Simon tamam: sayaçlarla yönetilen küçük bir gösteri, bilgisayar ile oyuncu arasında sıra, her cevabı geldiği
+anda kontrol etmek, her basışta geri bildirim ve hızlanan bir oyun.
 
 # --task--
 
@@ -34,9 +54,38 @@ etmek, her basışta geri bildirim ve hızlanan bir oyun.
 
 # --task-tr--
 
-1. `localStorage` `'simon-best'`'ten `best` ekle.
-2. Oyun kaybedilince skor `sequence.length - 1`'dir; `best`'i geçiyorsa kaydet.
-3. Bitince mesaj `Wrong! Best 4. Click to retry` olur.
+1. `let litFor` satırının hemen altına en iyi skoru ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('simon-best')) || 0
+   ```
+
+2. `press()` fonksiyonunda, yanlış basış bölümüne skoru hesaplayıp kaydeden satırları ekle:
+
+   ```js
+     if (pad !== sequence[inputAt]) {
+       state = 'over'
+       const score = sequence.length - 1 // ← yeni
+       if (score > best) { // ← yeni
+         best = score // ← yeni
+         localStorage.setItem('simon-best', best) // ← yeni
+       } // ← yeni
+       return
+     }
+   ```
+
+3. `draw()` fonksiyonunda oyun sonu mesajını değiştir:
+
+   ```js
+     if (state === 'over') message = 'Wrong! Best ' + best + '. Click to retry' // ← değişti
+   ```
+
+   Boşluklara ve noktaya dikkat: sonuç `Wrong! Best 4. Click to retry` gibi görünmeli.
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç tur oyna ve bilerek yanlış bas: üstte en iyi skorun
+   görünmeli. Alttaki kontrollerin hepsi yeşil olmalı. Mesaj kontrolü kırmızıysa yazıyı harf harf karşılaştır.
+
+Tebrikler, Simon oyunun bitti!
 
 # --tests--
 

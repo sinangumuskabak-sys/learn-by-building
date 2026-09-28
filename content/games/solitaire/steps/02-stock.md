@@ -20,16 +20,49 @@ piles only the top card matters. An empty column still counts, so a card can lat
 
 # --explanation-tr--
 
-Desteye dokunmak üst kartını atığın üstüne çevirir. Deste boşken bir dokunuş bütün atığı yeni bir deste olarak geri çevirir; böylece
-onun içinden yeniden geçebilirsin.
+**Bu adımda:** desteyi açacağız. Sol üstteki mavi desteye tıklayınca (ya da Boşluk'a basınca) en üstteki kart yanındaki
+yere açık olarak çevrilecek. Deste bitince bir tıklama bütün açık kartları kapalı olarak desteye geri koyacak, böylece
+destenin içinden yeniden geçebileceksin.
 
-Burada sıra önemlidir. Deste kartları sonundan verir (`pop`) ve atık onları sonunda toplar (`push`); yani çevrilen ilk kart atığın
-**başında** kalır. Atığı geri çevirmek, yığını tam anlamıyla ters çevirmektir: `reverse()` o ilk kartı yeni destenin sonuna koyar ve
-o yine ilk çıkar. Gerçek kartlarda olduğu gibi desteden her geçiş kartları aynı sırayla gösterir.
+**Listenin sonu: `pop` ve `push`.** Deste kartları **sonundan** verir: `piles.stock.pop()` listenin son kartını çıkarır
+ve geri verir. Açık kartlar yığını onları **sonuna** toplar: `piles.waste.push(card)`. Böylece ilk çevrilen kart, açık
+kartlar yığınının **başında** kalır.
 
-Neye dokunulduğunu bilmek için `hit(x, y)`'ye ihtiyacımız var: bir noktanın altında hangi yığın ve içinde hangi kart var? Bir tablo
-sütununda kartlar üst üste biner, bu yüzden **sondan** geriye test ederiz: en son çizilen üsttedir ve ilk eşleşme kazanır. Diğer
-yığınlarda yalnızca üst kart önemlidir. Boş bir sütun da sayılır; böylece oraya sonra bir kart bırakılabilir.
+**Desteyi yeniden kurmak.** Açık kartları desteye geri çevirmek gerçekten yığını ters çevirmektir:
+
+```js
+piles.stock = piles.waste.reverse().map((card) => ({ ...card, up: false }))
+```
+
+- `reverse()` listeyi ters çevirir: ilk çevrilen kart yeni destenin sonuna gelir ve yine ilk o çıkar. Her geçişte kartlar
+  gerçek kartlardaki gibi aynı sırayla gelir.
+- `map(...)` listenin her elemanını dönüştürüp yeni bir liste yapar.
+- `{ ...card, up: false }` → kartın bütün bilgilerini (`...` "hepsini buraya kopyala") alıp `up`'ı `false` (kapalı)
+  yapan yeni bir kart. Nesneyi `=>`'dan hemen sonra yazarken normal parantez içine alırız: `({ ... })`.
+
+`if (piles.stock.length)` → listede kart varsa (uzunluk 0 değilse) doğrudur. `else` ("yoksa") bloğu deste boşken
+çalışır.
+
+**Neye tıklandı? `hit(x, y)`.** Bir noktanın altında hangi yığın, hangi kart var?
+
+- `Object.keys(piles)` yığınların adlarının listesidir (`'stock'`, `'waste'`, `'f0'`...). `for (const key of ...)` her
+  ad için bir kez döner.
+- Nokta yığının sütununda değilse (`x`, yığının solunda **veya** sağında) `continue` ile sıradakine geç.
+- Sütunlarda kartlar üst üste biner. En son çizilen kart en üsttedir; bu yüzden **son karttan başa doğru**
+  (`i--`) bakarız ve ilk tutan kart kazanır. Nokta kartın üst ve alt kenarı arasındaysa (`>=`, `<=`, `&&`)
+  `{ key, index: i }` döneriz.
+- Boş bir sütun da sayılır (ileride oraya kart bırakacağız): `!pile.length` "liste boşsa" demektir.
+- Diğer yığınlarda sadece en üstteki kart önemlidir: `index: pile.length - 1`.
+- Hiçbir şey bulunmazsa `null` ("hiçbir şey") döneriz.
+
+**Ekran pikselinden canvas pikseline.** Telefonda canvas küçültülmüş olabilir. `toCanvas(event)` tıklamanın ekrandaki
+yerini (`event.clientX`, `event.clientY`) canvas'ın kendi ölçüsüne çevirir: `getBoundingClientRect()` canvas'ın ekrandaki
+yeri ve boyudur; önce canvas'ın köşesine göre konumu buluruz, sonra gerçek boy / görünen boy ile büyütürüz.
+
+**Olaylar.** Tarayıcı, canvas'a dokunulunca `pointerdown`, tuşa basılınca `keydown` **olayı** gönderir.
+`addEventListener('olay', (event) => { ... })` ile "bu olay olunca şunu yap" deriz. `h && h.key === 'stock'` → bir şey
+bulunduysa **ve** o şey desteyse. Boşluk tuşunun adı tek boşluktur (`' '`). `event.preventDefault()` Boşluk'un
+sayfayı kaydırmasını engeller; başka tuşlarda `else return` ile hemen çıkarız ki onlar normal çalışsın.
 
 # --task--
 
@@ -41,11 +74,72 @@ yığınlarda yalnızca üst kart önemlidir. Boş bir sütun da sayılır; böy
 
 # --task-tr--
 
-1. `flipStock()` yaz: destenin son kartını açık olarak atığa taşı; deste boşsa deste, hepsi kapalı olarak ters çevrilmiş atık olur ve
-   atık boşalır.
-2. `hit(x, y)` yaz: sütunu `x`'i içeren yığın için noktanın altındaki kartın `{ key, index }`'ini (tablo: önce üst kart; boş sütun:
-   0 sırası; diğer yığınlar: son sıra) ya da `null` döndür.
-3. `toCanvas(event)` yaz. Destede bir `pointerdown` `flipStock()`'u çağırır, Boşluk da (`preventDefault()`).
+1. `cardY` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function drawCardAt`'ın **üstüne**) desteyi
+   çeviren fonksiyonu yaz:
+
+   ```js
+   function flipStock() {
+     if (piles.stock.length) {
+       const card = piles.stock.pop()
+       card.up = true
+       piles.waste.push(card)
+     } else {
+       // An empty stock takes the waste back, face down, in the same order as before.
+       piles.stock = piles.waste.reverse().map((card) => ({ ...card, up: false }))
+       piles.waste = []
+     }
+   }
+   ```
+
+2. Bir boş satır bırak ve noktadaki kartı bulan fonksiyonu yaz:
+
+   ```js
+   // Which card, or which empty pile, is at (x, y)? The card drawn last, on top, wins.
+   function hit(x, y) {
+     for (const key of Object.keys(piles)) {
+       const px = pileX(key)
+       if (x < px || x > px + CW) continue
+       const pile = piles[key]
+       if (key[0] === 't') {
+         for (let i = pile.length - 1; i >= 0; i--) {
+           const cy = cardY(key, i)
+           if (y >= cy && y <= cy + CH) return { key, index: i }
+         }
+         if (!pile.length && y >= TAB_Y && y <= TAB_Y + CH) return { key, index: 0 }
+       } else if (y >= TOP_Y && y <= TOP_Y + CH) return { key, index: pile.length - 1 }
+     }
+     return null
+   }
+   ```
+
+3. Bir boş satır bırak ve dokunuşu canvas ölçüsüne çeviren fonksiyonu yaz (ikinci satır uzun ama tek satırdır):
+
+   ```js
+   function toCanvas(event) {
+     const rect = canvas.getBoundingClientRect()
+     return { x: ((event.clientX - rect.left) * canvas.width) / rect.width, y: ((event.clientY - rect.top) * canvas.height) / rect.height }
+   }
+   ```
+
+4. Bir boş satır bırak ve dokunuş ile Boşluk tuşu dinleyicilerini yaz:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const p = toCanvas(event)
+     const h = hit(p.x, p.y)
+     if (h && h.key === 'stock') flipStock()
+   })
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ') flipStock()
+     else return
+     event.preventDefault()
+   })
+   ```
+
+5. **Çalıştır**'a bas. Sol üstteki mavi desteye tıkla: yanına açık bir kart gelmeli. Boşluk tuşu da aynısını yapmalı
+   (önce oyuna tıkla). Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `{ ...card, up: false }`'yu saran
+   normal parantezleri kontrol et.
 
 # --tests--
 

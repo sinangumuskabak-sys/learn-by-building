@@ -28,25 +28,40 @@ The lives are shown as hearts: `'♥'.repeat(lives)` makes a string of that many
 
 # --explanation-tr--
 
-Şimdiye kadar bir kelime yere indiğinde kötü bir şey olmuyordu. Artık inen her kelime bir **cana** mal olur ve üçünden sonra
-oyun biter.
+**Bu adımda:** oyuna can ve puan ekleyeceğiz. Sol üstte `Score 0`, sağ üstte üç kalp (`♥♥♥`) göreceksin. Yere düşen
+her kelime bir kalp götürecek; üç kalp bitince ekranın ortasında `Game over` yazacak ve **Enter** yeni oyun başlatacak.
 
-`update()`'te önce zemini geçen kelimeleri toplar, sonra geri kalanları tutarız:
+**Yere düşenleri ayırmak.** `update()` içinde önce çizgiyi geçen kelimeleri toplar, sonra geri kalanları tutarız:
 
 ```js
-const landed = words.filter((w) => w.y > GROUND)
-words = words.filter((w) => w.y <= GROUND)
+const landed = words.filter((w) => w.y > GROUND)  // düşenler
+words = words.filter((w) => w.y <= GROUND)        // kalanlar
 lives -= landed.length
 ```
 
-Aynı karede iki kelime inebilir, bu yüzden 1 değil `landed.length` çıkarırız. Hedef onların arasındaysa kilit de gider.
+Aynı karede iki kelime birden düşebilir; bu yüzden 1 değil, `landed.length` (düşenlerin sayısı) kadar can gider.
+`landed.includes(target)` → "düşenlerin arasında hedef kelime var mı?" Varsa kilit de bırakılır (`target = null`).
+Hiç düşen yoksa (`landed.length === 0`) `return` ile `update`'ten erkenden çıkarız; yapılacak başka iş yok.
 
-`state` `'over'` olduğunda `update` hemen döner; böylece kelimeler oldukları yerde donar ve `type` tuşları yok sayar. Enter,
-`reset()` ile yeni bir oyun başlatır.
+**Oyunun durumu (`state`).** `state` değişkeni oyunun hangi hâlde olduğunu bir yazıyla tutar: `'playing'` (oynanıyor) ya
+da `'over'` (bitti). Durum `'over'` iken:
 
-Biten her kelime harf başına bir puan getirir. Uzun kelimeler daha zordur, bu yüzden daha değerlidir.
+- `update` en başta `if (state !== 'playing') return` ile hemen çıkar; kelimeler olduğu yerde donar.
+- `type` da aynı satırla tuşları yok sayar.
+- `keydown` dinleyicisinde Enter'a basılırsa `reset()` çağrılır ve oyun baştan başlar.
+  `return reset()` → "`reset()`'i çalıştır ve dinleyiciden çık"; aşağıdaki harf kontrolüne hiç gelinmez.
 
-Canlar kalp olarak gösterilir: `'♥'.repeat(lives)` o kadar kalpten bir metin yapar.
+`lives <= 0` olunca canı `0`'a sabitleriz (eksiye düşüp kalp çizimini bozmasın) ve durumu `'over'` yaparız.
+
+**Puan.** Biten her kelime harf sayısı kadar puan getirir: `score += target.text.length`. Uzun kelime daha zor, daha
+değerli.
+
+**Kalpleri çizmek.** `'♥'.repeat(3)` → `'♥♥♥'`: bir yazıyı verilen sayı kadar tekrar eder. `+` iki yazıyı yan yana
+ekler: `'Score ' + 12` → `'Score 12'`. `ctx.textAlign = 'right'` yazının **sağ ucunu** verilen `x`'e, `'center'` ise
+**ortasını** koyar. `canvas.width / 2` canvas'ın tam ortasıdır (`/` bölme).
+
+**Yarı saydam panel.** `'rgba(2, 6, 23, 0.85)'` bir renk yazımıdır: kırmızı, yeşil, mavi miktarları (0–255) ve sonda
+**saydamlık** (0 görünmez, 1 tam dolu). 0.85 ile arkadaki kelimeler hafifçe görünür kalır.
 
 # --task--
 
@@ -61,14 +76,111 @@ Canlar kalp olarak gösterilir: `'♥'.repeat(lives)` o kadar kalpten bir metin 
 
 # --task-tr--
 
-1. `lives`, `score` ve `state` ekle (`reset()`'te `3`, `0` ve `'playing'`).
-2. `type` yalnızca `'playing'` iken çalışır ve biten bir kelime uzunluğunu `score`'a ekler.
-3. `update` yalnızca `'playing'` iken çalışır. `GROUND`'un altındaki kelimeler silinir ve her biri bir cana mal olur; hedef
-   onlardan biriyse bırak. `0` canda `state = 'over'` yap.
-4. `'over'`'da Enter `reset()`'i çağırır.
-5. `(10, 22)`'ye `Score 12` (beyaz, `'bold 16px sans-serif'`), `(canvas.width - 10, 22)`'ye sağa hizalı kalpleri ve oyun
-   bitince koyu bir panel üstünde (`'rgba(2, 6, 23, 0.85)'`, `(40, 105)`'ten, `canvas.width - 80`'e `120`) `y = 140`'ta `Game over` (`'bold 26px sans-serif'`) ile `y = 175`'te `Press Enter to play again`
-   (`'18px sans-serif'`) yazılarını ortalı çiz.
+1. `const GROUND = 330 ...` satırının yorumunu güncelle:
+
+   ```js
+   const GROUND = 330 // a word that falls past this line costs a life
+   ```
+
+2. Üç değişken ekle: `let typed ...` satırının altına `let lives` ve `let score`, `let spawnTimer` satırının altına
+   `let state ...`. O bölüm şöyle olmalı:
+
+   ```js
+   let words // { text, x, y }
+   let target // the word being typed, or null
+   let typed // how many letters of the target are typed
+   let lives
+   let score
+   let spawnTimer
+   let state // 'playing' or 'over'
+   ```
+
+3. `reset()` şöyle olmalı:
+
+   ```js
+   function reset() {
+     words = []
+     target = null
+     typed = 0
+     lives = 3          // ← yeni
+     score = 0          // ← yeni
+     spawnTimer = 0
+     state = 'playing'  // ← yeni
+   }
+   ```
+
+4. `type(key)` fonksiyonunun **ilk satırı** olarak şunu ekle:
+
+   ```js
+     if (state !== 'playing') return
+   ```
+
+   Aynı fonksiyonda kelime bitince puan ver; sondaki `if` şöyle olmalı:
+
+   ```js
+     if (typed === target.text.length) {
+       words = words.filter((w) => w !== target)
+       score += target.text.length // ← yeni
+       target = null
+     }
+   ```
+
+5. `update()`'i şöyle değiştir (baştaki satır yeni; `if (target && ...)` satırı silindi, yerine can hesabı geldi):
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+     spawnTimer -= 1
+     if (spawnTimer <= 0) {
+       spawn()
+       spawnTimer = SPAWN_EVERY
+     }
+     for (const w of words) w.y += SPEED
+     const landed = words.filter((w) => w.y > GROUND) // ← yeni
+     if (landed.length === 0) return                  // ← yeni
+     words = words.filter((w) => w.y <= GROUND)
+     if (landed.includes(target)) target = null       // ← yeni
+     lives -= landed.length                           // ← yeni
+     if (lives <= 0) {                                // ← yeni
+       lives = 0
+       state = 'over'
+     }
+   }
+   ```
+
+6. `keydown` dinleyicisinin **ilk satırı** olarak Enter'ı ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (state === 'over' && event.key === 'Enter') return reset() // ← yeni
+     const key = event.key.toLowerCase()
+   ```
+
+7. `draw()`'da kelimeleri çizen `for` döngüsünün kapanış `}`'sinden sonra, fonksiyonun son `}`'sinden önce şunu ekle
+   (kalp işaretini buradan kopyala):
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.fillText('Score ' + score, 10, 22)
+     ctx.textAlign = 'right'
+     ctx.fillText('♥'.repeat(lives), canvas.width - 10, 22)
+
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(2, 6, 23, 0.85)'
+       ctx.fillRect(40, 105, canvas.width - 80, 120)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 26px sans-serif'
+       ctx.fillText('Game over', canvas.width / 2, 140)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Press Enter to play again', canvas.width / 2, 175)
+     }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç kelimeyi düşmeye bırak: kalpler azalmalı, üçüncüde
+   `Game over` çıkmalı; **Enter** yeniden başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kalp kontrolü kırmızıysa
+   `♥` işaretini kopyalayarak yapıştırdığından emin ol.
 
 # --tests--
 

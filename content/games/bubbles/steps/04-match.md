@@ -26,22 +26,45 @@ test.
 
 # --explanation-tr--
 
-Yeni balon, ona değen (ya da birbirine değen) kendi renginden **iki ya da daha fazla** balona katıldığında bütün grup patlar.
+**Bu adımda:** aynı renkten üç ya da daha fazla balon birleşince patlayacak. Sol üstte `Score 30` gibi bir puan göreceksin;
+patlayan her balon 10 puan.
 
-Önce bir hücrenin komşularına ihtiyacımız var ve altıgen ızgarada bunlar satıra bağlıdır. Her hücrenin kendi satırında iki komşusu
-vardır: `c - 1` ve `c + 1`. Üstte ve altta **çift** bir satırın komşuları `c - 1` ve `c`'dedir, ama sağa kaymış bir **tek** satır
-`c` ve `c + 1`'e değer:
+**Kural.** Yeni balon, kendisine (ya da birbirine) değen **en az iki** aynı renk balonla birleşirse bütün grup patlar.
+
+**Komşular (`neighbors`).** Önce bir hücrenin komşularını bilmeliyiz. Bal peteği ızgarasında her hücrenin altı komşusu
+vardır ve yerleri satıra göre değişir:
+
+- aynı satırda: `c - 1` (sol) ve `c + 1` (sağ);
+- üst ve alt satırda: **çift** satırda `c - 1` ve `c`; **tek** satır sağa kaymış olduğu için `c` ve `c + 1`.
 
 ```js
 const shift = r % 2 === 0 ? -1 : 0
-// üst: (r - 1, c + shift) ve (r - 1, c + shift + 1); alt: aynısı r + 1 ile
+// üstte: (r - 1, c + shift) ve (r - 1, c + shift + 1); altta: aynısı r + 1 ile
 ```
 
-Sonra bir **flood fill** (taşma doldurma) grubu toplar: yeni balondan başla, komşularına bak, aynı renkte olanları ekle, sonra
-*onların* komşularına bak ve yeni hiçbir şey bulunmayana kadar böyle devam et. Bir kuyruk bakılacak hücreleri, bir `Set` de zaten
-bulunan hücreleri tutar; böylece hiçbir şey iki kez ziyaret edilmez. Bir çizim programındaki boya kovasıyla aynı algoritmadır.
+Altı çifti bir listeye koyar, sonra `filter` ile ızgaranın **içinde** kalanları tutarız. `inGrid(r, c)` bunu sorar: satır
+0 ile `ROWS` arasında **ve** sütun 0 ile o satırın uzunluğu arasında mı (`>=` "büyük ya da eşit", `&&` "ve").
+`([nr, nc]) => ...` → "gelen çiftin ilkine `nr`, ikincisine `nc` de".
 
-Flood fill testi bir fonksiyon olarak alır, `connected(starts, test)`, çünkü sonraki adım onu farklı bir testle yeniden kullanacak.
+**Grubu bulmak: taşma doldurma (flood fill).** Resim programlarındaki **boya kovası** gibi çalışır: yeni balondan başla,
+komşularına bak, aynı renkte olanları ekle, sonra *onların* komşularına bak... yeni bir şey bulunmayana kadar.
+
+- `queue` (kuyruk) bakılacak hücrelerin listesi. `queue.shift()` listenin **başından** bir eleman çıkarır, `queue.push(...)`
+  sonuna ekler: markette sıra gibi, ilk gelen ilk çıkar.
+- `seen` şimdiye kadar bulunan hücrelerin kümesi (`Set`); her hücreye bir kez bakılsın diye. `Set` iki listeyi
+  karşılaştıramaz, bu yüzden her hücreyi tek bir sayıya çeviririz: `r * COLS + c` (satır 2, sütun 3 → `23`). Geri
+  çevirirken `Math.floor(k / COLS)` satırı, `k % COLS` sütunu verir.
+- `while (queue.length) { ... }` → "kuyrukta eleman olduğu **sürece** tekrarla". `while` bir başka döngü türüdür: kaç kez
+  döneceğini önceden bilmeyiz.
+- `for (const [nr, nc] of neighbors(r, c))` her komşuyu gezer. Zaten bulunmuşsa **ya da** (`||`) testi geçmiyorsa (`!`
+  "değil") `continue` ile atlanır.
+- `[...starts]` listenin bir kopyası, `[...seen]` kümeyi listeye çevirir.
+
+`connected(starts, test)` testi bir **fonksiyon** olarak alır: `(nr, nc) => grid[nr][nc] === color` → "bu hücre aynı renkte
+mi?" Böylece sonraki adımda aynı taşma doldurmayı başka bir testle yeniden kullanacağız.
+
+**Patlatmak.** `remove(cells, points)` verilen hücreleri boşaltır (`-1`) ve her biri için `points` puan ekler.
+`attach` balonu koyduktan sonra grubunu bulur; `group.length >= 3` ise (3 ya da daha fazla) hepsini 10'ar puanla patlatır.
 
 # --task--
 
@@ -54,12 +77,90 @@ Flood fill testi bir fonksiyon olarak alır, `connected(starts, test)`, çünkü
 
 # --task-tr--
 
-1. `inGrid(r, c)` ve `neighbors(r, c)` yaz: yukarıdaki gibi, ızgarada olan çevredeki altı hücre.
-2. `connected(starts, test)` yaz: `starts`'taki `[r, c]` hücrelerinden, `test(r, c)`'nin true olduğu komşular üzerinden bir flood
-   fill; bulunan her hücreyi `[r, c]` olarak döndür.
-3. `score` (`reset()`'te `0`) ve hücreleri boşaltıp her biri için `points` ekleyen `remove(cells, points)`'i ekle.
-4. `attach`'te balonu koyduktan sonra aynı renkteki grubunu bul; 3 ya da daha fazlaysa her biri 10 puana kaldır.
-5. `(10, 21)`'e `Score 30` çiz (beyaz, `'bold 16px sans-serif'`).
+1. `let shot ...` satırının altına ekle:
+
+   ```js
+   let score
+   ```
+
+2. `const cols = ...` satırının altına ekle:
+
+   ```js
+   const inGrid = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < cols(r)
+   ```
+
+3. `const cellPos = ...` satırının altına bir satır boşluk bırakıp komşu fonksiyonunu yaz:
+
+   ```js
+   // The six cells around (r, c). Odd rows are shifted right, so their neighbours above and below are at c and c + 1;
+   // even rows' are at c - 1 and c.
+   function neighbors(r, c) {
+     const shift = r % 2 === 0 ? -1 : 0
+     return [
+       [r, c - 1], [r, c + 1],
+       [r - 1, c + shift], [r - 1, c + shift + 1],
+       [r + 1, c + shift], [r + 1, c + shift + 1],
+     ].filter(([nr, nc]) => inGrid(nr, nc))
+   }
+   ```
+
+4. `reset()`'te `shot = null` satırının altına ekle:
+
+   ```js
+     score = 0
+   ```
+
+5. `snap` fonksiyonunun kapanış `}`'sinin altına, `function attach` satırından önce iki fonksiyon yaz:
+
+   ```js
+   // Flood fill: every cell connected to (r, c) through neighbours that pass the test.
+   function connected(starts, test) {
+     const seen = new Set(starts.map(([r, c]) => r * COLS + c))
+     const queue = [...starts]
+     while (queue.length) {
+       const [r, c] = queue.shift()
+       for (const [nr, nc] of neighbors(r, c)) {
+         if (seen.has(nr * COLS + nc) || !test(nr, nc)) continue
+         seen.add(nr * COLS + nc)
+         queue.push([nr, nc])
+       }
+     }
+     return [...seen].map((k) => [Math.floor(k / COLS), k % COLS])
+   }
+
+   function remove(cells, points) {
+     for (const [r, c] of cells) {
+       grid[r][c] = -1
+       score += points
+     }
+   }
+   ```
+
+6. `attach()` şöyle olmalı:
+
+   ```js
+   function attach(r, c, color) {
+     grid[r][c] = color
+     // Three or more of one color, touching: they pop.
+     const group = connected([[r, c]], (nr, nc) => grid[nr][nc] === color) // ← yeni
+     if (group.length >= 3) {                                              // ← yeni
+       remove(group, 10)                                                   // ← yeni
+     }                                                                     // ← yeni
+   }
+   ```
+
+7. `draw()`'un sonuna, `if (shot) drawBubble(...)` satırının altına puanı ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score ' + score, 10, 21)
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bir balonu aynı renkten iki balonun yanına at: üçü birden kaybolmalı
+   ve puan 30 artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Komşu kontrolü kırmızıysa `shift` satırını ve altı çifti
+   harf harf karşılaştır.
 
 # --tests--
 

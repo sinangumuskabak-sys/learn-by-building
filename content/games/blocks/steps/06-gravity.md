@@ -28,25 +28,66 @@ With a loop running, the key handler no longer needs to call `draw()`; the loop 
 
 # --explanation-tr--
 
-Şimdi parça kendi kendine düşüyor: her 800 ms'de bir satır. Döngü zamanı ölçer ve son düşüşten bu yana yeterli zaman
-geçince yeniden düşürür:
+**Bu adımda:** parçalar kendi kendine düşmeye başlayacak. Yere değen parça kuyuya yapışacak, tepeden rastgele yeni
+bir parça gelecek. Yığın tepeye ulaşınca kuyunun ortasında **Game Over** yazacak; Boşluk tuşu yeni oyun başlatacak.
+
+**Oyun döngüsü ve zaman.** Şimdiye kadar yalnızca tuşa basınca çiziyorduk. Artık ekranı sürekli yenileyen bir döngü
+kuruyoruz:
 
 ```js
-if (time - lastDrop >= dropInterval()) {
+function loop(time) {
+  ...
+  draw()
+  requestAnimationFrame(loop)
+}
+```
+
+`requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki yenilemede `loop`'u çalıştır" der; `loop` de sonunda
+aynı isteği tekrarlar. Böylece saniyede yaklaşık 60 kez çizim yapılır. Tarayıcı `loop`'a bir sayı verir: sayfa
+açıldığından beri geçen süre, **milisaniye** cinsinden (1000 ms = 1 saniye). Onu `time` adıyla alırız.
+
+**Her 800 ms'de bir düşmek.** En son ne zaman düşürdüğümüzü `lastDrop`'ta tutarız:
+
+```js
+if (state === 'playing' && time - lastDrop >= dropInterval()) {
   lastDrop = time
   softDrop()
 }
 ```
 
-`softDrop()` bir satır aşağı gitmeyi dener. Bu **başarısız** olunca parça yere oturmuştur ve **kilitlenir**: hücreleri
-tahtaya kopyalanır ve ayrı bir nesne olmaktan çıkar. Sayı-renk fikrinin karşılığını tam burada verir: tahtanın her
-bloğun rengini hatırlaması için sayıları kopyalamak yeter.
+"Oyun sürüyorsa **ve** son düşüşten beri en az 800 ms geçtiyse: şimdiyi not et, bir satır düşür." `dropInterval()`
+şimdilik hep `800` verir; ileride oyun hızlandıkça küçülecek.
 
-Sonra tepede rastgele seçilmiş yeni bir parça belirir. Yeni parça belirdiği yere bile sığmıyorsa yığın tepeye ulaşmıştır:
-**oyun biter**. Bu adımdaki her soruyu "önce dene"nin cevapladığına dikkat et: düşebilir mi? yere oturdu mu? yenisine yer
-var mı?
+**Yere oturmak (kilitlemek).** `softDrop()` bir satır aşağı gitmeyi dener: `if (!tryMove(0, 1)) lock()`. Deneme
+**başarısızsa** parça yere değmiştir ve **kilitlenir**: dolu hücreleri kuyuya kopyalanır, artık ayrı bir parça
+değildir. Sayının aynı zamanda renk olması burada işe yarar: yalnızca sayıları kopyalamak, kuyunun her bloğun rengini
+hatırlaması için yeter.
 
-Bir döngü çalıştığı için tuş işleyicisinin artık `draw()` çağırmasına gerek yok; döngü her karede yeniden çizer.
+**Rastgele parça.**
+
+```js
+SHAPES[Math.floor(Math.random() * SHAPES.length)]
+```
+
+`Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir. 7 ile çarpınca 0 ile 6,99 arası olur;
+`Math.floor` aşağı yuvarlar → 0 ile 6 arasında rastgele bir tam sayı, yani rastgele bir şeklin sıra numarası.
+
+**Yeni parça (`spawn`).** Rastgele şeklin kopyası kuyunun ortasına, en üste konur: `(COLS - shape.length) / 2` şekli
+ortalar. Yeni parça çıktığı yere bile sığmıyorsa yığın tepeye ulaşmıştır: **oyun bitti** (`state = 'over'`).
+"Önce dene" bu adımdaki her soruyu cevapladı: düşebilir mi? yere değdi mi? yenisine yer var mı?
+
+**Oyunun durumu.** `let state` bir yazı tutar: `'playing'` (oynanıyor) ya da `'over'` (bitti). `newGame()` kuyuyu
+boşaltır, durumu `'playing'` yapar ve ilk parçayı çıkarır. Değişkenleri (`let board`, `let piece`...) dosyanın üstünde
+**boş** açarız; içlerini `newGame()` doldurur. Böylece yeni oyun başlatmak tek bir çağrıdır.
+
+**Oyun bitince.** Tuş fonksiyonunun başında: bittiyse ve basılan Boşluk (`' '`, içinde bir boşluk olan yazı) **veya**
+`'Enter'` ise yeni oyun başlat; hangi tuş olursa olsun `return` ile çık, oklar çalışmasın.
+
+**Yarı saydam renk.** `'rgba(0, 0, 0, 0.7)'` → kırmızı, yeşil, mavi 0 (siyah), son sayı **saydamlık**: 0.7 yani %70
+kapak. Yazının arkasına koyu ama altı hafif görünen bir şerit çizmek için. `ctx.fillText(yazı, x, y)` canvas'a yazı
+yazar; `ctx.font` yazı tipi ve boyu, `ctx.textAlign = 'center'` yazıyı verilen noktaya ortalar.
+
+Artık döngü her karede çizdiği için tuş fonksiyonundaki `draw()` gereksiz; onu sileceğiz.
 
 # --task--
 
@@ -62,15 +103,122 @@ Bir döngü çalıştığı için tuş işleyicisinin artık `draw()` çağırma
 
 # --task-tr--
 
-1. `let board`, `let piece`, `let state` ve `let lastDrop = 0` tanımla. `newGame()` (yeni tahta, `state = 'playing'`,
-   `spawn()`), `randomShape()` (rastgele bir şeklin kopyası) ve `spawn()` yaz: yeni rastgele parçayı
-   `x = Math.floor((COLS - shape.length) / 2)`, `y = 0` konumuna koy ve sığmıyorsa `state = 'over'` yap.
-2. `lock()` (parçanın sıfır olmayan hücrelerini tahtaya kopyala, sonra `spawn()`) ve `softDrop()` (aşağı in, inemiyorsa
-   `lock()`) yaz. Şimdilik `800` döndüren `dropInterval()` ekle.
-3. Oyun sürerken her `dropInterval()` ms'de `softDrop()` çağıran, çizen ve sonraki kareyi isteyen `loop(time)` yaz.
-   `newGame()` ve döngüyle başlat; tuş işleyicisinden `draw()`'u kaldır.
-4. Oyun bitince: okları yok say, Boşluk ya da Enter'da yeni oyun başlat, kuyunun üstünde `Game Over` ve
-   `Press Space to play again` göster.
+1. `SHAPES` listesinin kapanış `]` satırının altına, `function emptyRow()` satırından önce şu dört satırı ekle:
+
+   ```js
+   let board
+   let piece
+   let state // 'playing' or 'over'
+   let lastDrop = 0
+   ```
+
+2. Şu iki satırı **sil**:
+
+   ```js
+   let board = Array.from({ length: ROWS }, emptyRow)
+   let piece = { shape: SHAPES[2].map((row) => [...row]), x: 3, y: 0 }
+   ```
+
+   ve onların yerine (yani `emptyRow` fonksiyonunun altına) üç fonksiyon yaz:
+
+   ```js
+   function newGame() {
+     board = Array.from({ length: ROWS }, emptyRow)
+     state = 'playing'
+     spawn()
+   }
+
+   function randomShape() {
+     return SHAPES[Math.floor(Math.random() * SHAPES.length)].map((row) => [...row])
+   }
+
+   function spawn() {
+     const shape = randomShape()
+     piece = { shape, x: Math.floor((COLS - shape.length) / 2), y: 0 }
+     if (!fits(piece.shape, piece.x, piece.y)) state = 'over'
+   }
+   ```
+
+   `{ shape, x: ... }` içindeki yalnız `shape` yazımı `shape: shape` demenin kısa yoludur.
+
+3. `tryRotate` fonksiyonunun kapanış `}`'sinin altına, `document.addEventListener('keydown', ...)` satırından önce şu
+   üç fonksiyonu yaz:
+
+   ```js
+   function dropInterval() {
+     return 800
+   }
+
+   function lock() {
+     piece.shape.forEach((cells, r) => {
+       cells.forEach((value, c) => {
+         if (value) board[piece.y + r][piece.x + c] = value
+       })
+     })
+     spawn()
+   }
+
+   function softDrop() {
+     if (!tryMove(0, 1)) lock()
+   }
+   ```
+
+4. `keydown` bloğunu şöyle değiştir (başa oyun bitti kontrolü geldi, sondaki `draw()` silindi):
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (state === 'over') { // ← yeni
+       if (event.key === ' ' || event.key === 'Enter') newGame() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     if (event.key === 'ArrowLeft') tryMove(-1, 0)
+     if (event.key === 'ArrowRight') tryMove(1, 0)
+     if (event.key === 'ArrowUp' || event.key === 'x') tryRotate()
+     if (event.key === 'ArrowDown') tryMove(0, 1)
+   })
+   ```
+
+5. `draw()` fonksiyonunun sonundaki `drawShape(piece.shape, piece.x, piece.y)` satırını sil ve yerine şunu yaz; sonra
+   fonksiyonun kapanış `}`'sinin altına `loop` fonksiyonunu ekle:
+
+   ```js
+     if (state === 'playing') {
+       drawShape(piece.shape, piece.x, piece.y)
+     }
+
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+       ctx.fillRect(0, 180, COLS * CELL, 110)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Game Over', (COLS * CELL) / 2, 225)
+       ctx.font = '14px sans-serif'
+       ctx.fillText('Press Space to play again', (COLS * CELL) / 2, 260)
+     }
+   }
+
+   function loop(time) {
+     if (state === 'playing' && time - lastDrop >= dropInterval()) {
+       lastDrop = time
+       softDrop()
+     }
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+6. Dosyanın en sonundaki `draw()` satırını sil ve yerine oyunu başlatan iki satırı yaz:
+
+   ```js
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas. Parçalar kendi kendine düşmeli, yere değince durup yenisi gelmeli. Oynamak için önce oyuna
+   tıkla; oklarla yönlendir. Tepeye kadar yığarsan **Game Over** çıkmalı, Boşluk'la yeniden başlamalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Hiçbir şey görünmüyorsa eski `let board = ...` ve `let piece = ...` satırlarını
+   silmeyi unutmuş olabilirsin (aynı ad iki kez açılamaz).
 
 # --tests--
 

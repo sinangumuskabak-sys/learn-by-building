@@ -37,34 +37,60 @@ Math.max(0, Math.min(canvas.height - PADDLE_H, left.y))
 
 # --explanation-tr--
 
-Yılan'da bir tuşa basmak bir dönüş demekti. Raketler farklı: **bir tuş basılı tutulduğu sürece** hareket ederler.
+**Bu adımda:** raketleri klavyeyle hareket ettireceğiz. Sol raket `W` (yukarı) ve `S` (aşağı), sağ raket ok
+tuşlarıyla (↑ ↓) oynayacak; tuşu basılı tuttuğun sürece raket kayacak ve sahadan dışarı çıkmayacak.
 
-Tek başına `keydown` yanlış araçtır. Bir tuşu basılı tuttuğunda tarayıcı bir `keydown` gönderir, yaklaşık yarım saniye
-durur, sonra işletim sisteminin yazma hızında tekrarlar. Buna dayanan hareket takılır ve oyuncunun klavye ayarlarına
-bağlı olur.
-
-Çözüm, **olayları** **durumdan** ayırmak:
-
-1. Olaylar yalnızca şu an hangi tuşların basılı olduğunu kaydeder:
-   ```js
-   const keys = {}
-   document.addEventListener('keydown', (e) => { keys[e.key] = true })
-   document.addEventListener('keyup', (e) => { keys[e.key] = false })
-   ```
-2. Oyun döngüsü bu durumu her karede okur ve akıcı biçimde hareket ettirir:
-   ```js
-   if (keys.w) left.y -= PADDLE_SPEED
-   ```
-
-Bu, iki oyuncunun aynı anda tuş basılı tutabilmesini de sağlar: sol raket için `w`/`s`, sağ raket için oklar.
-
-Son olarak raketler sahada kalmalı. **Sınırlama** (clamp) bir sayıyı bir aralıkta tutar:
+**Olay (event) nedir?** Tarayıcı, bir tuşa basıldığında ya da tuş bırakıldığında sana haber verebilir. Bu
+haberlere **olay** denir. `addEventListener` ile "şu olay olunca şunu yap" dersin:
 
 ```js
-Math.max(0, Math.min(canvas.height - PADDLE_H, left.y))
+document.addEventListener('keydown', (event) => {
+  keys[event.key] = true
+})
 ```
 
-`Math.min` alt kenarı geçmesini, `Math.max` üst kenarın üstüne çıkmasını engeller.
+Parça parça:
+
+- `'keydown'` → "bir tuşa basıldığında". Bırakıldığında ise `'keyup'` olayı gelir.
+- `(event) => { ... }` → adı olmayan küçük bir fonksiyon (ok fonksiyonu, **arrow function**). Olay olunca
+  tarayıcı onu çağırır ve olayın bilgilerini `event` adıyla içine verir. Bir fonksiyonun parantez içinde aldığı
+  bu bilgiye **parametre** denir.
+- `event.key` → basılan tuşun adı: `'w'`, `'s'`, `'ArrowUp'`, `'ArrowDown'` gibi.
+
+**Neden sadece `keydown` yetmez?** Bir tuşu basılı tutunca tarayıcı bir `keydown` gönderir, yarım saniye kadar
+bekler, sonra klavye ayarına göre tekrar tekrar gönderir. Raketi buna bağlarsak kesik kesik gider. Çözüm:
+olaylar sadece **"şu an hangi tuşlar basılı?"** bilgisini not etsin, raketi ise her karede bu nota bakarak
+kaydıralım.
+
+**Not defteri: `keys`.** Boş bir nesneyle (`{}`) başlarız. Köşeli parantezle, adı bir değişkenin içinde olan alana
+yazabiliriz: `keys[event.key] = true`, `w`'ye basıldıysa `keys.w = true` ile aynıdır. `true` "doğru/evet",
+`false` "yanlış/hayır" demektir.
+
+**`if` ile karar vermek.** `if (koşul) iş` → koşul doğruysa işi yap, değilse atla:
+
+```js
+if (keys.w) left.y -= PADDLE_SPEED   // W basılıysa sol raketi 6 piksel yukarı al
+```
+
+`-=` çıkarıp geri yazar (`left.y = left.y - 6`). `y` yukarı gidince küçülür, o yüzden yukarı = eksi.
+
+**Sahada tutmak (clamp).** Raketin `y`'si 0'dan küçük (tepeden taşmış) ya da 400 − 80 = 320'den büyük (dipten
+taşmış) olmamalı. Bunu yapan küçük bir fonksiyon yazarız:
+
+```js
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
+```
+
+- `value, min, max` → fonksiyonun üç parametresi; çağırırken verilen sayılar bu adlara girer.
+- `Math.min(a, b)` iki sayıdan küçüğünü, `Math.max(a, b)` büyüğünü verir. İç içe kullanınca sayı alt ve üst
+  sınır arasında kalır: `clamp(350, 0, 320)` → 320, `clamp(-6, 0, 320)` → 0.
+- `return` → "sonuç budur", fonksiyon bu değeri geri verir ve biter.
+
+**Oyun döngüsü.** Hareket için ekranı saniyede yaklaşık 60 kez yeniden çizmemiz gerekir. Her karede: durumu
+güncelle (`update`), çiz (`draw`), bir sonraki kareyi iste. `requestAnimationFrame(loop)` tarayıcıya "ekranı
+yenilemeden hemen önce `loop`'u çağır" der. `loop` en sonda kendini yeniden istediği için bu sonsuza kadar sürer.
 
 # --task--
 
@@ -77,12 +103,67 @@ Math.max(0, Math.min(canvas.height - PADDLE_H, left.y))
 
 # --task-tr--
 
-1. `const PADDLE_SPEED = 6` ve `const keys = {}` ekle. `keydown`'da `keys[event.key] = true`, `keyup`'ta `false` yap.
-2. `function update()` yaz: `'w'`/`'s'` basılıyken `left`'i, `'ArrowUp'`/`'ArrowDown'` basılıyken `right`'ı
-   `PADDLE_SPEED` kadar yukarı/aşağı taşı. Sonra iki `y` değerini de `0` ile `canvas.height - PADDLE_H` arasında
-   sınırla.
-3. `update()`, `draw()` ve `requestAnimationFrame(loop)` çağıran `function loop()` yaz ve `draw()`'u bir kez çağırmak
-   yerine onu başlat.
+1. `const PADDLE_H = 80` satırının hemen altına raket hızını ekle:
+
+   ```js
+   const PADDLE_SPEED = 6
+   ```
+
+2. `let right = ...` satırının hemen altına basılı tuşları tutan boş nesneyi yaz:
+
+   ```js
+   const keys = {}
+   ```
+
+3. Bir boş satır bırak ve tuşa basılınca ve bırakılınca notu güncelleyen iki olay dinleyicisini ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+4. Bir boş satır bırak ve sınırlama fonksiyonunu yaz:
+
+   ```js
+   function clamp(value, min, max) {
+     return Math.max(min, Math.min(max, value))
+   }
+   ```
+
+5. Onun altına (hâlâ `function draw()`'un **üstünde**) raketleri hareket ettiren `update()` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     if (keys.w) left.y -= PADDLE_SPEED
+     if (keys.s) left.y += PADDLE_SPEED
+     if (keys.ArrowUp) right.y -= PADDLE_SPEED
+     if (keys.ArrowDown) right.y += PADDLE_SPEED
+     left.y = clamp(left.y, 0, canvas.height - PADDLE_H)
+     right.y = clamp(right.y, 0, canvas.height - PADDLE_H)
+   }
+   ```
+
+   Son iki satır, raketin yeni `y`'sini 0 ile 320 arasına sıkıştırıp geri yazar.
+
+6. En alttaki `draw()` satırını **sil** ve yerine oyun döngüsünü yaz:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra `W`/`S` ve ↑/↓ tuşlarını basılı tut: raketler akıcı
+   kaymalı, kenarda durmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa tuş adlarının büyük/küçük
+   harfine bak: `keys.w` küçük, `keys.ArrowUp` büyük A ve U ile.
 
 # --tests--
 

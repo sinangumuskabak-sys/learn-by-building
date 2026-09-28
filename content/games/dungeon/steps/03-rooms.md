@@ -27,22 +27,39 @@ this kind of rule easy to check: you can see it in the text.
 
 # --explanation-tr--
 
-Dış duvarlardaki boşluklar komşu odalara çıkar. Bir odadan çıkmak şöyle çalışır:
+**Bu adımda:** duvarlardaki boşluklardan geçip öteki odalara gidebileceksin. Sağdaki boşluktan çıkınca yan odanın
+sol kenarında, alttaki boşluktan çıkınca alt odanın üst kenarında belireceksin.
 
-1. Odanın dışı artık duvar değil; bu yüzden oyuncu bir boşluktan dışarı yürüyebilir.
-2. Oyuncunun ortası odadan çıkar çıkmaz o yöndeki komşuyu bul (`ROOMS`'ta bir oda sol, sağ, yukarı ya da aşağı) ve ona **gir**.
-3. Oyuncuyu öbür tarafa taşı; böylece sağdan çıkmak seni sonraki odanın sol kenarına, eşleşen boşluğa koyar.
+**Odadan çıkmak üç adımdır:**
+
+1. Odanın dışı artık duvar sayılmaz; oyuncu boşluktan dışarı yürüyebilir.
+2. Oyuncunun **ortası** odanın dışına çıktığı an, o yöndeki komşu odayı buluruz (`ROOMS`'ta bir sola, sağa, yukarı ya
+   da aşağı) ve oraya **gireriz**.
+3. Oyuncuyu karşı tarafa taşırız: sağdan çıkan, yeni odanın sol kenarında, aynı hizadaki boşlukta belirir.
 
 ```js
-if (cx > COLS * T) {       // sağ taraftan çıktı...
-  player.x -= COLS * T - 4 // ...öyleyse sonraki odanın sol tarafında belir
-  enter(room.rx + 1, room.ry)
+if (cx > COLS * T) {        // sağ taraftan çıktı...
+  player.x -= COLS * T - 4  // ...öyleyse yeni odanın sol tarafında belirsin
 }
 ```
 
-`enter(rx, ry)` o odanın karolarını yükler. Komşu odaların boşlukları hizalıdır (ilk odanın sağ boşluğu, ikincinin sol boşluğuyla
-aynı satırda); odaları tek bir bina gibi hissettiren budur. Bölümleri veri olarak tasarlamak bu tür bir kuralı kontrol etmeyi
-kolaylaştırır: metinde görebilirsin.
+`COLS * T` odanın piksel olarak enidir (15 × 32 = 480). Oyuncuyu bu kadar (4 piksel eksiğiyle) geri çekersek karşı
+kenara geçer. Dikeyde aynısını `ROWS * T` ile yaparız.
+
+**Hangi odadayız?** Bunu `room = { rx, ry }` nesnesinde tutarız: `rx` sütun (0 sol, 1 sağ), `ry` satır (0 üst, 1 alt).
+1. adımda gördüğün gibi oda `ROOMS[ry][rx]` ile bulunur. `enter(rx, ry)` fonksiyonu hem odayı hatırlar hem de o odanın
+karolarını yükler. Yüklerken `P` ve `e` harflerini zemine çeviririz (düşmanlar ileride ayrıca eklenecek).
+
+**Harita veri olunca kontrol kolay.** Komşu odaların boşlukları aynı hizadadır: ilk odanın sağ boşluğu, ikinci odanın
+sol boşluğuyla aynı satırda. Odaları tek bir bina gibi hissettiren budur ve haritalar yazı olduğu için bunu gözle görebilirsin.
+
+**Yeni küçük şeyler:**
+
+- `&&` "ve" demektir. `row >= 0 && row < ROWS && ...` → "satır odanın içinde **ve** sütun odanın içinde **ve** karo duvar".
+  2. adımda "dışarısı da duvar" diyordu (`||` ile); şimdi "sadece içerideki duvarlar" diyor.
+- `cx < 0 ? -1 : cx > COLS * T ? 1 : 0` → iki soru arka arkaya: "solda mı? öyleyse -1; değilse sağda mı? öyleyse 1;
+  hiçbiri değilse 0". Bu sayıyı odanın numarasına ekleyince komşu oda bulunur.
+- `return` `update`'i orada bitirir: yeni odaya girdiğimiz karede başka iş yapmayız.
 
 # --task--
 
@@ -54,10 +71,77 @@ kolaylaştırır: metinde görebilirsin.
 
 # --task-tr--
 
-1. `room` ekle ve `enter(rx, ry)` yaz: odayı hatırla ve karolarını yükle (`P` ve `e` zemin olur). `reset()` `(0, 0)` odasına girer.
-2. `blocked()` içinde odanın dışındaki karolar artık duvar sayılmaz.
-3. Hareketten sonra oyuncunun ortası (`x + SIZE / 2`, `y + SIZE / 2`) odanın dışındaysa o yöndeki komşu odayı hesapla, oyuncuyu öbür
-   tarafa `COLS * T - 4` (ya da `ROWS * T - 4`) kadar taşı ve yeni odaya gir.
+1. `let tiles ...` satırının altına oda bilgisini ekle:
+
+   ```js
+   let room // { rx, ry }: which room we are in
+   ```
+
+2. `reset()` içindeki `tiles = ROOMS[0][0].map(...)` satırını sil ve yerine şunu yaz:
+
+   ```js
+   function reset() {
+     const start = findIn(ROOMS[0][0], 'P')
+     player = { x: start.col * T + (T - SIZE) / 2, y: start.row * T + (T - SIZE) / 2, dir: [0, 1] }
+     enter(0, 0) // ← değişti
+   }
+   ```
+
+3. `findIn` fonksiyonunun kapanış `}`'sinden sonra, `const solidTile = ...` satırının **üstüne** `enter` fonksiyonunu yaz:
+
+   ```js
+   // Load a room: its tiles.
+   function enter(rx, ry) {
+     room = { rx, ry }
+     tiles = ROOMS[ry][rx].map((line) => [...line].map((ch) => (ch === 'P' || ch === 'e' ? '.' : ch)))
+   }
+   ```
+
+4. `blocked()` içinde yorumu ve `if` satırını değiştir:
+
+   ```js
+   // Does a box at (x, y) overlap a wall? Outside the room counts as open, so the player can walk out of a gap. // ← değişti
+   function blocked(x, y) {
+     for (const [cx, cy] of [[x, y], [x + SIZE - 1, y], [x, y + SIZE - 1], [x + SIZE - 1, y + SIZE - 1]]) {
+       const row = Math.floor(cy / T)
+       const col = Math.floor(cx / T)
+       if (row >= 0 && row < ROWS && col >= 0 && col < COLS && solidTile(tiles[row][col])) return true // ← değişti
+     }
+     return false
+   }
+   ```
+
+5. `update()` fonksiyonunda, `if (dir) { ... }` bloğunun kapanış `}`'sinden sonra, fonksiyonun son `}`'sinden **önce**
+   odadan çıkma kısmını ekle:
+
+   ```js
+   function update() {
+     let dir = padDir
+     for (const key in DIRS) if (held[key]) dir = DIRS[key]
+     if (dir) {
+       player.dir = dir
+       move(player, dir[0] * SPEED, dir[1] * SPEED)
+     }
+
+     // Walking out through a gap in the wall: into the next room, on the opposite side. // ← yeni (buradan)
+     const cx = player.x + SIZE / 2
+     const cy = player.y + SIZE / 2
+     if (cx < 0 || cx > COLS * T || cy < 0 || cy > ROWS * T) {
+       const rx = room.rx + (cx < 0 ? -1 : cx > COLS * T ? 1 : 0)
+       const ry = room.ry + (cy < 0 ? -1 : cy > ROWS * T ? 1 : 0)
+       if (cx < 0) player.x += COLS * T - 4
+       if (cx > COLS * T) player.x -= COLS * T - 4
+       if (cy < 0) player.y += ROWS * T - 4
+       if (cy > ROWS * T) player.y -= ROWS * T - 4
+       enter(rx, ry)
+       return
+     } // ← (buraya kadar)
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk odanın sağ duvarındaki boşluktan çık: yan odaya geçmelisin.
+   Geri dön, sonra alt duvardaki boşluktan aşağı in. Alttaki kontrollerin hepsi yeşil olmalı. Boşluktan çıkamıyorsan
+   `blocked`'daki `if` satırında `&&` ve `>=`/`<` işaretlerini kontrol et.
 
 # --tests--
 

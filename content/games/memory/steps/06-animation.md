@@ -28,25 +28,45 @@ the timer just change state; the loop draws. It is the same structure as every o
 
 # --explanation-tr--
 
-Kartlar bir anda açılıyor. Kısa bir çevirme animasyonu oyuna hayat verir ve temel bir fikri öğretir: **hedef durumu
-gösterilen durumdan ayır**.
+**Bu adımda:** kartlar anında açılmak yerine gerçekten **dönecek**: daralıp ince bir çizgiye iner, sonra öbür
+yüzüyle genişler. Oyun canlı görünecek.
 
-- `card.faceUp` gerçeğin kendisi: kurallar, tıpkı önceki gibi, yalnızca buna bakar.
-- `card.flip`, `0`'dan (arkası görünür) `1`'e (yüzü görünür) giden ve her karede gerçeği biraz **kovalayan** bir
-  sayı:
-  ```js
-  card.flip = card.faceUp ? Math.min(1, card.flip + 0.1) : Math.max(0, card.flip - 0.1)
-  ```
+**Gerçek durum ile görünen durum ayrı.** Bu adımın asıl fikri bu:
 
-Gösterilen bir değeri bir hedefe doğru yavaş yavaş kaydırmaya **ara değerleme** (tweening) denir; oyunlardaki ve
-arayüzlerdeki animasyonların neredeyse hepsi böyle çalışır.
+- `card.faceUp` **gerçektir**: oyunun kuralları yalnızca buna bakar, eskisi gibi.
+- `card.flip` ise 0 (arka yüz görünüyor) ile 1 (ön yüz görünüyor) arasında bir sayıdır ve her karede gerçeği biraz
+  **kovalar**:
 
-2D'de 3D bir dönüşü taklit etmek için kartı yatayda sıkıştır. `Math.cos` bunu doğal olarak yapar: `flip` 0'dan 1'e
-giderken `Math.abs(Math.cos(flip * Math.PI))` 1 → 0 → 1 gider; kart bir çizgiye daralır ve yeniden genişler. `flip < 0.5`
-iken arkasını, sonra yüzünü göster; değişim tam da kart yan döndüğü anda olur.
+```js
+card.flip = card.faceUp ? Math.min(1, card.flip + 0.1) : Math.max(0, card.flip - 0.1)
+```
 
-Animasyon, resmin tıklamalar arasında değişmesi demek; bu yüzden oyunun sonuçta bir **döngüye** ihtiyacı var. Tıklama
-işleyicisi ve zamanlayıcı yalnızca durumu değiştirir; döngü çizer. Buradaki diğer bütün oyunlarla aynı yapı.
+Parça parça: kart açıksa `flip`'i 0.1 artır, kapalıysa 0.1 azalt. `Math.min(1, ...)` iki sayıdan küçüğünü seçer,
+yani sonuç 1'i asla geçmez; `Math.max(0, ...)` büyüğünü seçer, yani 0'ın altına inmez. Görünen bir değeri hedefe
+doğru azar azar yürütmeye **tweening** denir; oyunlardaki ve uygulamalardaki animasyonların neredeyse hepsi böyledir.
+
+**Oyun döngüsü.** Animasyon, resmin tıklamalar arasında da değişmesi demek. Bu yüzden saniyede yaklaşık 60 kez
+çalışan bir **döngü** gerekir:
+
+```js
+function loop() {
+  // durumu biraz ilerlet, çiz
+  requestAnimationFrame(loop)
+}
+```
+
+`requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki yenilemende `loop`'u çağır" der. `loop` kendi sonunda
+kendini yeniden istediği için sonsuza kadar döner. Artık **çizmek döngünün işi**: tıklama ve zamanlayıcı yalnızca
+durumu değiştirir, `draw()` çağırmaz.
+
+**2D'de sahte 3D dönüş.** Kartı yatay olarak sıkıştırırız. `Math.cos` (kosinüs) bunu kendiliğinden yapar:
+`flip` 0'dan 1'e giderken `Math.abs(Math.cos(card.flip * Math.PI))` değeri 1 → 0 → 1 olur. `Math.PI` π sayısıdır
+(3.14…), `Math.abs` eksi işaretini atar. Kart genişliğini bu sayıyla çarparız: tam genişlik, ortada ince çizgi, yine
+tam genişlik. `flip < 0.5` iken arka yüzü, sonra ön yüzü çizeriz; değişim tam kart yan döndüğünde olur. Kartın
+ortada kalması için solundan `(CARD - width) / 2` kadar içeri kaydırırız.
+
+**`return` ile erken çıkış.** Tıklamada oyun bittiyse `newGame()` deyip `return` ile çıkarız; `else` bloğuna gerek
+kalmaz.
 
 # --task--
 
@@ -60,13 +80,81 @@ işleyicisi ve zamanlayıcı yalnızca durumu değiştirir; döngü çizer. Bura
 
 # --task-tr--
 
-1. Her yeni karta `flip: 0` ver.
-2. Her karede her kartın `flip`'ini hedefine (`faceUp` ise 1, değilse 0; uçları asla geçmeden) 0.1 yaklaştıran, sonra
-   `draw()` çağırıp sonraki kareyi isteyen bir `loop()` ekle. `draw()`'u bir kez çağırmak yerine onu başlat; tıklama
-   işleyicisindeki ve zamanlayıcıdaki `draw()` çağrılarını kaldır.
-3. `draw()` içinde her kartı `width = CARD * Math.abs(Math.cos(card.flip * Math.PI))` genişliğinde, kartın her
-   zamanki merkezine ortalayarak (`x + (CARD - width) / 2`) çiz. `card.flip >= 0.5` ise yüzünü (arka plan ve sembol),
-   değilse arkasını göster.
+1. `newGame()` içinde, kart nesnesinde `matched: false,` satırının altına yeni alanı ekle:
+
+   ```js
+       matched: false,
+       flip: 0, // 0 = showing its back, 1 = showing its face; follows faceUp over a few frames
+     }))
+   ```
+
+2. `flip` fonksiyonundaki `setTimeout` içinde `draw()` satırını **sil**. Şöyle kalmalı:
+
+   ```js
+       setTimeout(() => {
+         a.faceUp = false
+         b.faceUp = false
+         opened = []
+       }, 800)
+   ```
+
+3. Tıklama dinleyicisini şöyle değiştir (`else` ve sondaki `draw()` gidiyor, yerine `return` geliyor):
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     if (won()) {
+       newGame()
+       return            // ← değişti (eskiden burada } else { vardı)
+     }
+     // The canvas may be displayed at a different size than its own pixels, so scale the click.
+     const rect = canvas.getBoundingClientRect()
+     const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+     const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+     flip(cardAt(x, y))
+   })
+   ```
+
+4. `draw()` içindeki kart döngüsünü şöyle değiştir:
+
+   ```js
+     for (const card of cards) {
+       // Squeeze the card horizontally to fake a 3D turn: full width, a thin line halfway, full width again.
+       const width = CARD * Math.abs(Math.cos(card.flip * Math.PI))  // ← yeni
+       const x = cardX(card) + (CARD - width) / 2                     // ← değişti
+       const y = cardY(card)
+       if (card.flip >= 0.5) {                                        // ← değişti
+         ctx.fillStyle = card.matched ? '#bbf7d0' : '#f8fafc'
+         ctx.fillRect(x, y, width, CARD)                              // ← değişti
+         ctx.fillText(card.symbol, cardX(card) + CARD / 2, y + CARD / 2) // ← değişti
+       } else {
+         ctx.fillStyle = '#6366f1'
+         ctx.fillRect(x, y, width, CARD)                              // ← değişti
+       }
+     }
+   ```
+
+5. `draw()` fonksiyonunun kapanış `}`'sinden sonra, en alttaki `newGame()` satırından önce döngüyü ekle:
+
+   ```js
+   function loop() {
+     for (const card of cards) {
+       card.flip = card.faceUp ? Math.min(1, card.flip + 0.1) : Math.max(0, card.flip - 0.1)
+     }
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+6. En alttaki `draw()` satırını sil ve yerine döngüyü başlatan satırı yaz. Dosyanın sonu şöyle olmalı:
+
+   ```js
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: kartlar daralıp genişleyerek dönmeli, yanlış çift 0,8 saniye
+   sonra dönerek kapanmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kartlar hiç dönmüyorsa en alttaki
+   `requestAnimationFrame(loop)` satırını unutmuş olabilirsin.
 
 # --tests--
 

@@ -21,19 +21,55 @@ Row colors come from a lookup list, `ROW_COLORS[invader.row]`, so changing the l
 
 # --explanation-tr--
 
-Dokuz istilacılık beş sıra: 45 nesne, iki iç içe döngüyle kurulur (dışta satırlar, içte sütunlar). Her istilacı kendi
-**satırını** hatırlar, çünkü satır şimdi rengini, sonra da puanını belirler.
+**Bu adımda:** ekranın üstüne 5 sıra, her sırada 9 tane olmak üzere 45 istilacı dizeceğiz. Çalıştırınca üstte pembe,
+mor ve yeşil renkli küçük dikdörtgenlerden bir blok göreceksin.
+
+**Sayarak tekrarlamak: `for` döngüsü.** 45 istilacıyı tek tek yazmak yerine bilgisayara saydırırız:
+
+```js
+for (let col = 0; col < 9; col++) {
+  // buradaki kod 9 kez çalışır; col sırayla 0, 1, 2, ... 8 olur
+}
+```
+
+Parantezin içinde üç parça var, noktalı virgülle (`;`) ayrılır:
+
+- `let col = 0` → sayaç 0'dan başlasın.
+- `col < 9` → sayaç 9'dan küçük olduğu sürece devam et.
+- `col++` → her turdan sonra sayacı 1 artır (`col += 1` ile aynı).
+
+**İç içe döngü.** Bir döngünün içine ikinci bir döngü koyarsak: dıştaki sıraları (`row`, 0'dan 4'e), içteki o
+sıradaki sütunları (`col`, 0'dan 8'e) sayar. Dıştaki her tur için içteki baştan sona döner: 5 × 9 = 45 tur. Tıpkı bir
+defterin satırlarını tek tek doldurmak gibi.
+
+Her turda bir istilacı ekleriz:
 
 ```js
 invaders.push({ x: 40 + col * SPACING_X, y: 60 + row * SPACING_Y, w: INVADER_W, h: INVADER_H, row, alive: true })
 ```
 
-İstilacılar tek tek vurulacak. Onları diziden çıkarmak yerine `alive: false` olarak işaretle. Küçük bir yardımcı,
-`alive()`, yalnızca canlı olanları döndürür; böylece kodun geri kalanı "hâlâ önemli olan istilacıları" tek çağrıyla
-isteyebilir. Sabit bir listeyi tutup ihtiyaç anında süzmek, senkron tutulması gereken iki liste tutmaktan daha basittir.
+- `*` çarpma işaretidir. `x: 40 + col * 44` → ilk sütun 40'ta, sonraki 84'te, sonraki 128'de... Her sütun bir
+  öncekinden 44 piksel sağda. `y` için aynı şey sıralarla: her sıra 36 piksel aşağıda.
+- Tek başına `row` yazmak `row: row` demenin kısaltmasıdır: alanın adı ve değeri aynı addan gelir. İstilacı hangi
+  sırada olduğunu hatırlar, çünkü sıra şimdi rengini, ileride de puanını belirleyecek.
+- `alive: true` → "canlı: evet". `true`/`false` (doğru/yanlış) değerlerine **mantıksal değer** (boolean) denir.
 
-Satır renkleri bir arama listesinden gelir, `ROW_COLORS[invader.row]`; böylece bütün bir satırın görünümünü değiştirmek
-tek bir düzenlemedir.
+**Silmek yerine işaretlemek.** İstilacılar tek tek vurulacak. Onları listeden silmek yerine `alive: false` diye
+işaretleyeceğiz. Küçük bir yardımcı fonksiyon yalnızca canlıları verir:
+
+```js
+function alive() {
+  return invaders.filter((invader) => invader.alive)
+}
+```
+
+`return` burada fonksiyonun **cevabını geri verir**: `alive()` yazdığın yere canlı istilacıların listesi gelir.
+2. adımdaki `filter` gibi, `invader.alive` doğru olanları tutar. Sabit bir liste tutup gerektiğinde süzmek, iki ayrı
+listeyi uyum içinde tutmaktan çok daha kolaydır.
+
+**Renk tablosu.** `ROW_COLORS` beş rengin listesidir. Listedeki elemanlara **sıra numarası** (index) ile ulaşılır ve
+sayma **0'dan başlar**: `ROW_COLORS[0]` pembe `'#f472b6'`, `ROW_COLORS[1]` mor, ... `ROW_COLORS[4]` yeşil. Böylece
+`ROW_COLORS[invader.row]` istilacının sırasına göre rengini verir; bir sıranın rengini değiştirmek tek düzenleme olur.
 
 # --task--
 
@@ -45,11 +81,54 @@ tek bir düzenlemedir.
 
 # --task-tr--
 
-1. `ROWS = 5`, `COLS = 9`, `INVADER_W = 28`, `INVADER_H = 20`, `SPACING_X = 44`, `SPACING_Y = 36` ve
-   `ROW_COLORS = ['#f472b6', '#a78bfa', '#a78bfa', '#34d399', '#34d399']` ekle.
-2. `let invaders = []`'ı yukarıdaki gibi iç içe döngülerle kur.
-3. Yalnızca `alive` olan istilacıları döndüren `function alive()` yaz ve her canlı istilacıyı satırının renginde bir
-   dikdörtgen olarak çiz.
+1. `const COOLDOWN = 350 ...` satırının altına istilacı ayarlarını ekle:
+
+   ```js
+   const ROWS = 5
+   const COLS = 9
+   const INVADER_W = 28
+   const INVADER_H = 20
+   const SPACING_X = 44
+   const SPACING_Y = 36
+   const ROW_COLORS = ['#f472b6', '#a78bfa', '#a78bfa', '#34d399', '#34d399']
+   ```
+
+2. `let lastShot = -COOLDOWN` satırının altına istilacı listesini kuran döngüleri ekle:
+
+   ```js
+   let invaders = []
+   for (let row = 0; row < ROWS; row++) {
+     for (let col = 0; col < COLS; col++) {
+       invaders.push({ x: 40 + col * SPACING_X, y: 60 + row * SPACING_Y, w: INVADER_W, h: INVADER_H, row, alive: true })
+     }
+   }
+   ```
+
+   Her `{` açılışının bir `}` kapanışı olmalı: burada iki döngü var, sonda iki `}` var.
+
+3. `const keys = {}` satırının altına, bir boş satır bırakıp `alive` fonksiyonunu yaz (`shoot` fonksiyonunun üstünde
+   kalacak):
+
+   ```js
+   function alive() {
+     return invaders.filter((invader) => invader.alive)
+   }
+   ```
+
+4. `draw()` içinde, arka planı boyayan `ctx.fillRect(0, 0, canvas.width, canvas.height)` satırının altına, bir boş
+   satır bırakıp canlı istilacıları boyayan bloğu ekle:
+
+   ```js
+     for (const invader of alive()) {
+       ctx.fillStyle = ROW_COLORS[invader.row]
+       ctx.fillRect(invader.x, invader.y, invader.w, invader.h)
+     }
+   ```
+
+   Döngünün gövdesi iki satır olduğu için süslü parantez içine aldık.
+
+5. **Çalıştır**'a bas. Üstte 5 sıra × 9 istilacıdan oluşan renkli bir blok görmelisin: en üst sıra pembe, sonraki iki
+   sıra mor, alttaki iki sıra yeşil. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

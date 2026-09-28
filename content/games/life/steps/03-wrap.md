@@ -26,21 +26,40 @@ We also count the living. `reduce` adds up a row, and a second `reduce` adds up 
 
 # --explanation-tr--
 
-Kenarlarda duvar varken sınıra ulaşan bir planör ona çarpar ve bir bloğa dönüşür. Birçok Hayat programı bundan dünyayı **başa
-sararak** kaçınır: sonuncudan sonraki sütun birincidir, en üstün üstündeki satır en alttakidir. Izgara bir *torus*, yani simit
-şekli olur.
+**Bu adımda:** dünyanın kenarlarını kaldıracağız: sağ kenardan çıkan desen soldan, alttan çıkan üstten geri gelecek.
+Ayrıca sağ üstte kaç canlı hücre olduğunu gösteren `Alive 123` gibi bir yazı göreceksin.
 
-Başa sarmayı `%` (kalan) operatörü yapar. `(c + dc) % COLS`, `60`'ı `0`'a çevirir. Ama `-1`'e yardımı olmaz: JavaScript'te
-`-1 % 60`, `-1`'dir. Önce `COLS` eklemek sayıyı pozitif tutar, gerekmediğinde de `%` onu yeniden çıkarır:
+**Neden?** Şu an kenarlar duvar gibi. Kayarak ilerleyen bir planör (glider) kenara çarpınca bozulup kareye döner.
+Birçok Hayat Oyunu programı dünyayı **başa saran** (wrap around) yapar: son sütunun sağı ilk sütundur, en üst satırın
+üstü en alt satırdır. Eski video oyunlarında ekranın sağından çıkıp solundan giren karakter gibi. Böyle bir dünyanın
+şekli simittir (torus).
+
+**Kalan işareti `%`.** `a % b`, `a`'yı `b`'ye böldüğünde **kalanı** verir: `7 % 3` = 1, `60 % 60` = 0, `5 % 60` = 5.
+Bu tam istediğimiz şey: sütun 60 olursa (tahtanın dışı) `60 % 60` ile 0'a, yani en sola döner.
+
+Bir sorun var: sola taşınca sütun `-1` olur ve JavaScript'te `-1 % 60` yine `-1`'dir. Çözüm, önce `COLS` eklemek:
+`(-1 + 60) % 60` = 59, yani en sağ sütun. Gerek yoksa da zarar vermez: `(5 + 60) % 60` = 5.
 
 ```js
 grid[(r + dr + ROWS) % ROWS][(c + dc + COLS) % COLS]
 ```
 
-Bir torus için iyi bir test: bir planör sonsuza dek hareket eder. Her 4 nesilde bir hücre çapraz ilerler ve 48'e 60'lık bir
-dünyada 4 × 240 = 960 nesil sonra tam başladığı yere döner (240, hem 48'in hem 60'ın bölebildiği en küçük sayıdır).
+Artık komşunun tahtanın içinde olup olmadığını sormamıza gerek yok; her komşu bir yere denk gelir.
 
-Canlıları da sayarız. `reduce` bir satırı toplar, ikinci bir `reduce` da satırları toplar.
+Güzel bir deneme: 48 × 60'lık bu dünyada bir planör her 4 nesilde bir kare çapraz kayar ve 960 nesil sonra tam başladığı
+yere döner.
+
+**Canlıları saymak (`reduce`).** `reduce` bir listeyi tek bir değere indirir; burada hepsini toplar:
+
+```js
+[1, 0, 1].reduce((a, b) => a + b, 0) // 2
+```
+
+"`0`'dan başla; her elemanı (`b`) o ana kadarki toplama (`a`) ekle." Izgarada iki kat yaparız: içteki `reduce` bir
+satırı toplar, dıştaki `reduce` satırların toplamlarını toplar. Sonuç canlı hücre sayısıdır.
+
+**Sağa hizalı yazı.** `ctx.textAlign = 'right'` yazının **sağ ucunu** verdiğin `x`'e koyar. `canvas.width - 8` sağ
+kenardan 8 piksel içeri demektir, böylece yazı ne kadar uzarsa uzasın kenardan taşmaz.
 
 # --task--
 
@@ -50,9 +69,41 @@ Canlıları da sayarız. `reduce` bir satırı toplar, ikinci bir `reduce` da sa
 
 # --task-tr--
 
-1. `countNeighbors`'ı tahtanın dışındaki hücreleri atlamak yerine kenarlardan başa saracak şekilde değiştir.
-2. `population()` yaz: canlı hücre sayısı.
-3. `(canvas.width - 8, 24)`'e sağa hizalı `Alive 123` çiz.
+1. `countNeighbors` fonksiyonunda komşuyu tahtada mı diye soran üç satırı (`const nr = ...`, `const nc = ...` ve
+   `if (nr >= 0 ...`) sil, yerine başa saran tek satırı yaz. Üstündeki yorumu da güncelle. Fonksiyon şöyle olmalı:
+
+   ```js
+   // Live neighbours among the 8 around (r, c). The edges wrap around, so the world has no border.
+   function countNeighbors(r, c) {
+     let count = 0
+     for (let dr = -1; dr <= 1; dr++) {
+       for (let dc = -1; dc <= 1; dc++) {
+         if (dr === 0 && dc === 0) continue
+         count += grid[(r + dr + ROWS) % ROWS][(c + dc + COLS) % COLS] // ← değişti
+       }
+     }
+     return count
+   }
+   ```
+
+2. `step()` fonksiyonunun kapanış `}`'sinin altına canlı hücreleri sayan fonksiyonu ekle:
+
+   ```js
+   const population = () => grid.reduce((sum, row) => sum + row.reduce((a, b) => a + b, 0), 0)
+   ```
+
+3. `draw()`'un en sonunda, `ctx.fillText('Generation ' + generation, 8, 24)` satırının altına (fonksiyonun son `}`'sinden
+   önce) iki satır ekle:
+
+   ```js
+     ctx.fillText('Generation ' + generation, 8, 24)
+     ctx.textAlign = 'right'                                   // ← yeni
+     ctx.fillText('Alive ' + population(), canvas.width - 8, 24) // ← yeni
+   }
+   ```
+
+4. **Çalıştır**'a bas. Sağ üstte `Alive` ve bir sayı görmelisin; oyuna tıklayıp **N**'ye bastıkça kenara gelen desenler
+   karşı taraftan devam etmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

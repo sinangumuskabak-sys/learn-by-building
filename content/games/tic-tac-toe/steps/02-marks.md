@@ -29,27 +29,85 @@ const y = Math.floor(index / 3) * CELL + CELL / 2
 
 # --explanation-tr--
 
-3×3 tahta bir durumdur: hangi hücrede X, hangisinde O var, hangisi boş. Satırlardan oluşan bir ızgara
-kullanabilirsin, ama **9 hücrelik düz bir dizi** daha basittir ve küçük bir formül indeks ile konum arasında çeviri
-yapar:
+**Bu adımda:** tahtanın içeriğini (hangi kutuda X, hangisinde O var) bir listede tutacağız ve bu listeden
+çizeceğiz. Liste şimdilik boş olduğu için ekran aynı görünecek; ama kontroller, içine X ve O koyup doğru çizip
+çizmediğine bakacak.
 
-```
-indeks:       0 1 2        satır  = Math.floor(indeks / 3)
-              3 4 5        sütun  = indeks % 3
-              6 7 8        indeks = satır * 3 + sütun
-```
-
-`%` kalandır: `7 % 3` `1`'dir, yani 7. hücre 1. sütundadır. `Math.floor(7 / 3)` `2`'dir, yani 2. satırdadır. Bu "düz
-dizi + satır/sütun formülü" hilesini her ızgara oyununda kullanacaksın: 2048, Mayın Tarlası, Tetris...
-
-Boş hücre boş metindir, `''`. Bir işareti çizmek için onu hücresinin ortasına büyük bir yazı olarak koy.
-`textAlign = 'center'` ve `textBaseline = 'middle'` ile `fillText`'e verdiğin nokta yazının **ortası** olur; hücre
-merkezi yeterlidir:
+**Dizi (array).** 9 kutunun her birinin içeriğini sırayla tutan bir listeye **dizi** denir:
 
 ```js
-const x = (index % 3) * CELL + CELL / 2
-const y = Math.floor(index / 3) * CELL + CELL / 2
+let board = ['', '', '', '', '', '', '', '', '']
 ```
+
+- Köşeli parantez `[ ]` diziyi açar ve kapatır; elemanlar virgülle ayrılır.
+- `''` iki tırnak arasında hiçbir şey olmayan **boş yazıdır**. Boş kutu demek. Dolu bir kutuda `'X'` ya da
+  `'O'` olacak.
+- `let` kullanıyoruz, çünkü tahta oyun boyunca değişecek (1. adımda gördüğün değişken).
+- Elemanlara **sıra numarasıyla (index)** ulaşılır ve sayma **0'dan başlar**: `board[0]` sol üst kutu,
+  `board[8]` sağ alt kutu.
+
+**Sıra numarası ↔ satır ve sütun.** Kutular soldan sağa, yukarıdan aşağı numaralanır:
+
+```
+sıra:   0 1 2        satır  = Math.floor(sıra / 3)
+        3 4 5        sütun  = sıra % 3
+        6 7 8        sıra   = satır * 3 + sütun
+```
+
+- `/` bölme demektir. `Math.floor(...)` sonucu **aşağı yuvarlar** (küsuratı atar): `7 / 3 = 2.33...` →
+  `2`. Yani 7 numaralı kutu 2. satırda (satırlar da 0'dan sayılır).
+- `%` **bölümden kalan** demektir: `7 % 3` → 7'nin içinde iki tane 3 var, 1 artar → `1`. Yani 7 numaralı kutu
+  1. sütunda.
+
+Bu "düz dizi + satır/sütun formülü" numarasını her ızgara oyununda kullanacaksın.
+
+**Fonksiyon (function).** Birlikte çalışan satırlara bir ad verip onları tek komutla çalıştırmanın yolu. Yemek
+tarifi gibi: bir kez yazarsın, istediğin zaman uygularsın.
+
+```js
+function draw() {
+  // tarif buraya
+}
+draw()
+```
+
+`function draw() { ... }` tarifi **tanımlar**, tek başına hiçbir şey çizmez. `draw()` ise tarifi **çağırır**:
+şimdi uygula. Tahta değiştikçe `draw()`'u yeniden çağırıp her şeyi baştan çizeceğiz.
+
+**Yazı çizmek.** X ve O'yu büyük harfler olarak çizeriz:
+
+```js
+ctx.font = 'bold 64px sans-serif'   // kalın, 64 piksel, sade yazı tipi
+ctx.textAlign = 'center'            // verilen x, yazının yatay ortası olsun
+ctx.textBaseline = 'middle'         // verilen y, yazının dikey ortası olsun
+ctx.fillText('X', 50, 50)           // 'X'i (50, 50) noktasına ortalayarak yaz
+```
+
+Kutunun ortası: sütun × 100 + 50 ve satır × 100 + 50 (`CELL / 2` = 50).
+
+**Her kutu için bir şey yapmak.**
+
+```js
+board.forEach((mark, index) => {
+  // her kutu için bir kez çalışır
+})
+```
+
+- `forEach` → "dizinin her elemanı için şunu yap".
+- `(mark, index) => { ... }` → her elemanda çalışacak küçük bir fonksiyon. `=>` (ok), fonksiyon yazmanın kısa
+  yoludur. Parantezdeki adlara **parametre** denir: `mark` kutunun içeriği (`'X'`, `'O'` ya da `''`), `index`
+  kutunun sıra numarası.
+- `if (mark === '') return` → `===` "eşit mi?" diye sorar. "Kutu boşsa, bu kutu için dur, sıradakine geç."
+  `return` fonksiyondan hemen çıkar.
+
+**Kısa seçim: `? :`.**
+
+```js
+ctx.fillStyle = mark === 'X' ? '#f38ba8' : '#89b4fa'
+```
+
+"`mark` X mi? Evetse pembe (`'#f38ba8'`), değilse mavi (`'#89b4fa'`)." Soru işaretinden önce soru, iki noktanın
+iki yanında iki cevap.
 
 # --task--
 
@@ -61,11 +119,51 @@ const y = Math.floor(index / 3) * CELL + CELL / 2
 
 # --task-tr--
 
-1. `let board = ['', '', '', '', '', '', '', '', '']` ekle.
-2. Çizimi `function draw()` içine taşı. Izgaradan sonra boş olmayan her hücrenin işaretini hücrenin ortasına,
-   `'bold 64px sans-serif'` yazı tipiyle, yatayda ve dikeyde ortalanmış olarak `fillText` ile çiz. X için
-   `'#f38ba8'`, O için `'#89b4fa'` kullan.
-3. `draw()`'u bir kez çağır.
+1. `const CELL = 100` satırının altına bir satır boşluk bırak ve tahtayı ekle (tırnak çiftlerini say: 9 tane):
+
+   ```js
+   let board = ['', '', '', '', '', '', '', '', '']
+   ```
+
+2. Şimdi çizim kodunu bir fonksiyona alacağız. Arka planı boyayan `ctx.fillStyle = '#1e1e2e'` satırından
+   döngünün kapanan `}` işaretine kadar olan her şeyi sil ve yerine şunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e1e2e'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#585b70'
+     for (let i = 1; i < 3; i++) {
+       ctx.fillRect(i * CELL - 2, 0, 4, canvas.height)
+       ctx.fillRect(0, i * CELL - 2, canvas.width, 4)
+     }
+
+     ctx.font = 'bold 64px sans-serif' // ← yeni
+     ctx.textAlign = 'center' // ← yeni
+     ctx.textBaseline = 'middle' // ← yeni
+     board.forEach((mark, index) => { // ← yeni
+       if (mark === '') return // ← yeni
+       ctx.fillStyle = mark === 'X' ? '#f38ba8' : '#89b4fa' // ← yeni
+       const x = (index % 3) * CELL + CELL / 2 // ← yeni
+       const y = Math.floor(index / 3) * CELL + CELL / 2 // ← yeni
+       ctx.fillText(mark, x, y) // ← yeni
+     }) // ← yeni
+   }
+   ```
+
+   Üstteki kısım 1. adımdaki kodun aynısı, sadece iki boşluk içeri kaydı. `})` kapanışına dikkat: `}` küçük
+   fonksiyonu, `)` ise `forEach(` parantezini kapatır.
+
+3. Fonksiyonun son `}` işaretinin altına bir satır boşluk bırak ve onu çağır:
+
+   ```js
+   draw()
+   ```
+
+4. **Çalıştır**'a bas. Tahta bir öncekiyle aynı görünmeli (tahta henüz boş). Alttaki kontrollerin hepsi yeşil
+   olmalı. Merak edersen `board` dizisindeki ilk `''`'yi geçici olarak `'X'` yapıp çalıştır: sol üst kutuda
+   pembe bir X görürsün. Sonra geri `''` yap, yoksa ilk kontrol kırmızı kalır.
 
 # --tests--
 

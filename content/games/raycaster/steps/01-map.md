@@ -28,25 +28,67 @@ in this game comes from these two numbers.
 
 # --explanation-tr--
 
-İlk 3B nişancı oyunlarının bir sırrı vardı: dünyaları aslında 3B değildi. Bölüm yukarıdan görülen **düz bir ızgaradır** ve
-3B resim her karede ondan hesaplanır. Bu yüzden oyunun gerçekten yaşadığı yerden başlıyoruz: bir harita.
+**Bu adımda:** labirentin haritasını yukarıdan bakarak çizeceğiz. Sağda açık renkli duvar kareleri, koyu zemin,
+yeşil bir çıkış karesi ve sol üstte küçük sarı bir kare (sen) ile baktığın yönü gösteren sarı bir çizgi göreceksin.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan kısımlar **yorumdur**:
+bilgisayar atlar, sadece insanlar için not.
+
+**Canvas ve fırça.** Sayfada 480×320 piksellik boş bir resim alanı (`canvas`, kimliği `game`) var. Önce onu buluruz,
+sonra çizim aracını (context) alırız:
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+`const` bir şeye kalıcı bir ad (**sabit**) verir: kutuya etiket yapıştırmak gibi. Nokta (`.`) "bunun içindeki şu
+komut" demektir, tırnak içi (`'game'`) bir **yazıdır**. `ctx.fillStyle = renk` fırçaya renk sürer,
+`ctx.fillRect(x, y, en, boy)` dikdörtgen boyar. Canvas'ın **sol üst köşesi** `(0, 0)`'dır; `x` sağa, `y` **aşağı**
+doğru büyür.
+
+**Dünya aslında düz bir harita.** İlk 3D nişancı oyunlarının sırrı: dünyaları gerçekten 3D değildi. Bölüm
+yukarıdan görülen **düz bir ızgaradır** (grid); 3D görüntü her karede bundan hesaplanır. Haritayı yazılarla
+tutarız:
 
 ```
 '#....#.....#'      # taş duvar   2 tuğla duvar   E çıkış   . zemin
 ```
 
-Oyuncunun yalnızca bir döşemesi değil, döşemenin **içinde** bir konumu vardır: `{ x: 1.5, y: 1.5 }` (1, 1) döşemesinin
-ortasıdır. Ve oyuncu bir yöne, radyan cinsinden bir **açıya** bakar: `0` sağa (+x) bakar, `Math.PI / 2` aşağı bakar (+y,
-çünkü ekranda y aşağı doğru büyür), `Math.PI` sola bakar.
+`MAP` bir **dizidir** (array, köşeli parantez `[ ]` içinde sıralı bir liste). Her elemanı haritanın bir satırı
+olan bir yazı. `MAP[1]` ikinci satırdır (sayma **0'dan** başlar), `MAP[1][3]` o satırın dördüncü harfi.
 
-Oyuncunun nereye baktığını çizmek için açı boyunca 1 döşeme git:
+**Oyuncu bir karenin içinde bir noktadır.** `{ x: 1.5, y: 1.5, angle: 0 }` bir **nesnedir** (object): süslü
+parantez içinde `ad: değer` çiftleri. `player.x` "oyuncunun x'i". `1.5`, (1, 1) karesinin tam ortası demek. `let`
+ile oluşturulan **değişkenin** içi, `const`'tan farklı olarak sonradan değişebilir.
+
+**Yön = açı.** `angle` oyuncunun baktığı yön, **radyan** cinsinden: `0` sağa (+x), `Math.PI / 2` aşağı, `Math.PI`
+(π, yarım tur) sola bakar. Baktığın yöne 1 kare gitmek için:
 
 ```js
 x + Math.cos(angle), y + Math.sin(angle)
 ```
 
-`cos` ve `sin` bir açıyı 1 uzunluğunda bir adıma çevirir: ne kadar yana ve ne kadar aşağı. Bu oyundaki her hareket ve her
-ışın bu iki sayıdan gelir.
+`cos` ve `sin` bir açıyı 1 uzunluğunda bir adıma çevirir: ne kadar yana, ne kadar aşağı. Bu oyundaki her hareket
+ve her ışın bu iki sayıdan çıkar.
+
+**Yeni parçalar:**
+
+- **Fonksiyon:** `function reset() { ... }` bir talimat grubuna ad verir (tanımlar); `reset()` onu çalıştırır
+  (çağırır).
+- **`dizi.forEach((eleman, sıra) => { ... })`**: dizinin her elemanı için içerdeki kodu çalıştırır. `(line, row) =>`
+  "bu elemana `line`, sırasına `row` de" demektir. `=>` ile yazılan şey kısa, adsız bir fonksiyondur.
+- **`[...line]`**: bir yazıyı harflerine ayırıp diziye çevirir: `[...'#.E']` → `['#', '.', 'E']`. Satırın başındaki
+  `;` bir önceki satırla karışmasın diye konur (satır `[` ile başladığı için).
+- **`koşul ? a : b`**: "doğruysa `a`, değilse `b`". Zincirlenebilir: `ch === '.' ? zemin : ch === 'E' ? yeşil : duvar`.
+  `===` "eşit mi?" demektir.
+- **Çizgi:** `ctx.beginPath()` yeni çizim, `moveTo(x, y)` kalemi koy, `lineTo(x, y)` oraya çiz, `stroke()` boya;
+  `strokeStyle` çizgi rengi.
+- Her kare `MINI = 24` piksel. Harita karesi `(col, row)` ekranda `(col * MINI, row * MINI)`'dan başlar; `*` çarpma,
+  `/` bölmedir.
+- **Oyun döngüsü:** `requestAnimationFrame(loop)` tarayıcıya "sonraki ekran yenilemesinde `loop`'u çağır" der.
+  `loop` çizer ve kendini tekrar ister; saniyede yaklaşık 60 kez.
 
 # --task--
 
@@ -59,12 +101,87 @@ x + Math.cos(angle), y + Math.sin(angle)
 
 # --task-tr--
 
-1. Çözümdeki `MAP`'i ve `MINI = 24`'ü (döşeme başına harita pikseli) ekle. `reset()` oyuncuyu
-   `{ x: 1.5, y: 1.5, angle: 0 }`'a koyar.
-2. Her karede çiz: `'#0f172a'` bir arka plan, sonra haritanın her döşemesini bir `MINI` karesi olarak: zemin
-   `'rgba(15, 23, 42, 0.6)'`, çıkış `'#22c55e'`, her duvar `'rgba(226, 232, 240, 0.8)'`.
-3. Oyuncuyu konumunda ortalanmış, yarım döşeme genişliğinde `'#facc15'` bir kare olarak ve oyuncudan `angle` yönünde 1
-   döşeme öteye `'#facc15'` bir çizgi olarak çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırakıp haritayı ve kare boyunu ekle (haritayı aynen kopyala):
+
+   ```js
+   // # stone wall, 2 brick wall, E the exit (a wall you walk into), . floor.
+   const MAP = [
+     '############',
+     '#....#.....#',
+     '#.##.#.###.#',
+     '#.#..#...#.#',
+     '#.#.###2#..#',
+     '#.#.....#.##',
+     '#.#22#.##..#',
+     '#..........#',
+     '###.##.#.#.#',
+     '#...#..#.#.#',
+     '#.#...##.#E#',
+     '############',
+   ]
+   const MINI = 24 // map pixels per tile
+   ```
+
+3. Altına oyuncuyu ve onu başlangıca koyan `reset()` fonksiyonunu yaz:
+
+   ```js
+   let player
+
+   function reset() {
+     player = { x: 1.5, y: 1.5, angle: 0 }
+   }
+   ```
+
+4. Altına `draw()` fonksiyonunu yaz. Önce arka planı, sonra haritanın her karesini, en son oyuncuyu ve baktığı yönü
+   çizer:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     // The map, seen from above.
+     MAP.forEach((line, row) => {
+       ;[...line].forEach((ch, col) => {
+         ctx.fillStyle = ch === '.' ? 'rgba(15, 23, 42, 0.6)' : ch === 'E' ? '#22c55e' : 'rgba(226, 232, 240, 0.8)'
+         ctx.fillRect(col * MINI, row * MINI, MINI, MINI)
+       })
+     })
+     ctx.fillStyle = '#facc15'
+     ctx.fillRect(player.x * MINI - MINI / 4, player.y * MINI - MINI / 4, MINI / 2, MINI / 2)
+     ctx.strokeStyle = '#facc15'
+     ctx.beginPath()
+     ctx.moveTo(player.x * MINI, player.y * MINI)
+     ctx.lineTo((player.x + Math.cos(player.angle)) * MINI, (player.y + Math.sin(player.angle)) * MINI)
+     ctx.stroke()
+   }
+   ```
+
+   Oyuncunun karesi yarım kare (`MINI / 2`) enindedir ve çeyrek kare (`MINI / 4`) geri kaydırılır ki ortası tam
+   oyuncunun noktasına gelsin.
+
+5. En alta döngüyü ve başlatma satırlarını ekle:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda harita, sağ altta yeşil çıkış, sol üstte sağa bakan sarı oyuncu
+   görünmeli; alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa renk yazılarını karşılaştır: `'rgba(...)'`
+   içindeki virgül ve boşluklar da önemli.
 
 # --tests--
 

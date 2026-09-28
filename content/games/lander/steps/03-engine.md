@@ -23,20 +23,62 @@ The flame is drawn inside the same `save`/`restore` as the lander, so it tilts w
 
 # --explanation-tr--
 
-İniş aracının altında tek bir motor vardır ve her zaman aracın baktığı yöne iter. Dümdüz yukarı bakarken (`angle` 0)
-dümdüz yukarı iter. Eğikken itkinin bir kısmı yana gider ve yana gitmenin tek yolu da budur:
+**Bu adımda:** aracı sen kullanacaksın. ← ve → ile araç sola/sağa eğilecek, ↑ basılıyken motor yanacak: aracın
+altında turuncu bir alev görünecek ve araç baktığı yöne itilecek. Telefonda ekranın sol, orta ve sağ üçte birine
+dokunarak aynı şeyleri yapabileceksin.
+
+**Motor nereye iter?** Motor aracın altındadır ve aracı hep **baktığı yöne** iter. Dik dururken (`angle` 0) tam
+yukarı iter. Eğikken itmenin bir kısmı yana gider; yana gitmenin tek yolu da budur:
 
 ```js
 lander.vx += Math.sin(lander.angle) * THRUST
-lander.vy -= Math.cos(lander.angle) * THRUST   // eksi: yukarı daha küçük bir y
+lander.vy -= Math.cos(lander.angle) * THRUST   // eksi: yukarı, daha küçük y demek
 ```
 
-Oyunun ve her "itki" oyununun (Asteroids de aynı biçimde çalışır) kalbi budur: motor konumu değil **hızı** değiştirir;
-bu yüzden bıraktıktan sonra araç hareket etmeye devam eder ve durmak da başlamak kadar plan ister. Sağa kaymayı durdurmak için
-sola eğilip motoru yakmalısın.
+`Math.sin` ve `Math.cos` açıyı "ne kadarı yana, ne kadarı yukarı" oranına çevirir. Açı 0 iken `sin` 0 (hiç yana yok),
+`cos` 1 (tamamı yukarı); araç tam yana yattığında tersi olur. Açılar derece değil **radyan** cinsindendir: yarım tur
+(180°) yaklaşık 3.14'tür (`Math.PI`).
 
-Yakıt her yakışı bir karar yapar. Motorun her karesi 400'den 1'e mal olur ve depo boşken motor hiçbir şey yapmaz. Alev, aracın
-aynı `save`/`restore`'unun içinde çizilir; böylece bedavaya onunla birlikte eğilir.
+Bu oyunun kalbidir: motor **konumu değil hızı** değiştirir. Tuşu bıraksan da araç gitmeye devam eder; durmak da
+başlamak kadar plan ister. Sağa kaymayı durdurmak için sola eğilip motoru yakman gerekir.
+
+**Tuş notu: `keys`.** Tuşları basılı tutarak oynayacağız. Tarayıcı bir tuşa basılınca `keydown`, bırakılınca `keyup`
+**olayı** gönderir. `addEventListener` ile "bu olay olunca şunu yap" deriz. Olaylar sadece hangi tuşun basılı olduğunu
+bir nesneye not eder; `update()` her karede bu nota bakar:
+
+```js
+document.addEventListener('keydown', (event) => {
+  keys[event.key] = true        // örn. keys.ArrowUp = true
+})
+```
+
+`(event) => { ... }` olay olunca çağrılan küçük bir fonksiyondur; `event.key` basılan tuşun adıdır (`'ArrowUp'`,
+`' '` boşluk). Köşeli parantez, adı değişkende duran alana yazar.
+
+**Sayfa kaymasın.** Ok tuşları ve Boşluk normalde sayfayı kaydırır. `event.preventDefault()` "tarayıcının bu tuşla
+normalde yaptığını yapma" der. `event.key.startsWith('Arrow')` "tuş adı `Arrow` ile mi başlıyor?" diye sorar.
+
+**Yakıt.** Motorun her karesi 400 yakıttan 1 harcar; depo boşsa motor çalışmaz. "Motor şu an yanıyor mu?" sorusunu
+küçük bir fonksiyona koyarız. `&&` "ve" demektir: üç şartın hepsi doğru olmalı:
+
+```js
+return state === 'flying' && keys.ArrowUp && lander.fuel > 0
+```
+
+**Dokunmatik.** `pointerdown` parmak (ya da fare) ekrana değince, `pointerup` kalkınca gelir. `pointercancel`
+dokunuş yarıda kesilirse gelir. Dokunulan yerin canvas'ın hangi üçte birinde olduğunu hesaplarız:
+
+- `canvas.getBoundingClientRect()` → canvas'ın ekrandaki konumu ve boyu (`rect.left`, `rect.width`).
+- `(event.clientX - rect.left) / rect.width` → dokunuşun canvas içindeki yeri, 0 (sol) ile 1 (sağ) arası. `* 3`
+  ile 0–3 arası olur: 1'den küçükse sol, 2'den küçükse orta, yoksa sağ.
+- `koşul ? a : b` → koşul doğruysa `a`, değilse `b`. İki tane art arda: "1'den küçükse sol ok, değilse (2'den
+  küçükse yukarı ok, değilse sağ ok)".
+
+Parmak kalkınca üç tuşu da bırakan `stopTouch` fonksiyonunu iki olaya birden veririz. Bir fonksiyonu adıyla, `()`
+olmadan vermek "olay olunca bunu çağır" demektir.
+
+**Alev.** Aracın içinde, gövdeden önce çizilen turuncu küçük bir üçgendir. 2. adımdaki `save`/`translate`/`rotate`
+içinde çizildiği için araçla birlikte kendiliğinden eğilir. Ucu her karede rastgele uzayıp kısalır ki titresin.
 
 # --task--
 
@@ -51,13 +93,95 @@ aynı `save`/`restore`'unun içinde çizilir; böylece bedavaya onunla birlikte 
 
 # --task-tr--
 
-1. `THRUST = 0.1`, `SPIN = 0.05`, bir `keys` nesnesi (`keydown`/`keyup`, oklar ve Boşluk için `preventDefault()`) ve araca
-   `fuel: 400` ekle.
-2. `burning()` yaz: uçuyor, `ArrowUp` basılı ve yakıt var. `update()` içinde yerçekiminden önce: sol ve sağ oklar `angle`'ı
-   `SPIN` kadar değiştirir; yanarken yukarıdaki gibi açı boyunca it ve 1 yakıt harca.
-3. `pointerdown`'da canvas'ın sol, orta ya da sağ üçte biri için `ArrowLeft`, `ArrowUp` ya da `ArrowRight`'ı basılı tut;
-   `pointerup` ve `pointercancel`'da bırak.
-4. Yanarken `drawLander()` içinde gövdeden önce `'#f97316'` bir alev çiz: `(-5, 8)`, `(5, 8)` ve `(0, 16 + Math.random() * 8)`.
+1. `const GRAVITY = ...` satırının altına iki sabit ekle:
+
+   ```js
+   const THRUST = 0.1 // speed gained per frame of engine, along the direction the lander points
+   const SPIN = 0.05 // radians per frame
+   ```
+
+2. `let state ...` satırının altına tuş notunu ekle:
+
+   ```js
+   const keys = {}
+   ```
+
+3. `reset()` içinde araca yakıt ekle:
+
+   ```js
+     lander = { x: 60, y: 40, vx: 1, vy: 0, angle: 0, fuel: 400 }   // ← değişti
+   ```
+
+4. `reset()`'in kapanan `}`'sinden sonra bir boş satır bırak ve (`function update()`'in **üstüne**) klavye,
+   dokunmatik ve motor kodunu yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow') || event.key === ' ') event.preventDefault()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+
+   // Touch: hold the left third to turn left, the right third to turn right, the middle for the engine.
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const third = ((event.clientX - rect.left) / rect.width) * 3
+     keys[third < 1 ? 'ArrowLeft' : third < 2 ? 'ArrowUp' : 'ArrowRight'] = true
+   })
+   function stopTouch() {
+     keys.ArrowLeft = false
+     keys.ArrowUp = false
+     keys.ArrowRight = false
+   }
+   canvas.addEventListener('pointerup', stopTouch)
+   canvas.addEventListener('pointercancel', stopTouch)
+
+   function burning() {
+     return state === 'flying' && keys.ArrowUp && lander.fuel > 0
+   }
+   ```
+
+5. `update()` içinde, `if (state !== 'flying') return` ve boş satırdan sonra, `lander.vy += GRAVITY` satırının
+   **üstüne** eğilme ve motor kodunu ekle:
+
+   ```js
+   function update() {
+     if (state !== 'flying') return
+
+     if (keys.ArrowLeft) lander.angle -= SPIN                                                   // ← yeni
+     if (keys.ArrowRight) lander.angle += SPIN                                                  // ← yeni
+     if (burning()) {                                                                           // ← yeni
+       // The engine pushes along the direction the lander points: angle 0 is straight up.
+       lander.vx += Math.sin(lander.angle) * THRUST                                             // ← yeni
+       lander.vy -= Math.cos(lander.angle) * THRUST                                             // ← yeni
+       lander.fuel -= 1                                                                         // ← yeni
+     }                                                                                          // ← yeni
+     lander.vy += GRAVITY
+   ```
+
+   Geri kalanı aynen kalır.
+
+6. `drawLander()` içinde, `ctx.rotate(lander.angle)` satırının altına, gövdenin rengini seçen
+   `ctx.fillStyle = '#e2e8f0'` satırının **üstüne** alevi ekle:
+
+   ```js
+     ctx.rotate(lander.angle)
+     if (burning()) {                                  // ← yeni
+       ctx.fillStyle = '#f97316'                       // ← yeni
+       ctx.beginPath()                                 // ← yeni
+       ctx.moveTo(-5, 8)                               // ← yeni
+       ctx.lineTo(5, 8)                                // ← yeni
+       ctx.lineTo(0, 16 + Math.random() * 8)           // ← yeni
+       ctx.fill()                                      // ← yeni
+     }                                                 // ← yeni
+     ctx.fillStyle = '#e2e8f0'
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. ↑'ya basılı tut: alev çıkmalı ve araç yavaşlayıp yükselmeli.
+   ← / → ile eğil ve motoru yakarak yana git. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa tuş
+   adlarının büyük harflerine bak: `ArrowUp`, `ArrowLeft`, `ArrowRight`.
 
 # --tests--
 

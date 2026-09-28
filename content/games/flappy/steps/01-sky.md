@@ -21,18 +21,60 @@ Colors can be names (`'gold'`), or hex codes like `'#70c5ce'`: two hex digits ea
 
 # --explanation-tr--
 
-Bu oyun uzun: sayfada `<canvas id="game" width="400" height="600">` var. Her canvas oyununda olduğu gibi canvas'ı ve
-çizim yaptığın nesne olan 2D **bağlamını** (context) alarak başlarsın.
+**Bu adımda:** oyunun arka planını, yani gökyüzünü açık maviye boyayacağız. Çalıştırınca sağdaki uzun alan
+baştan aşağı gök mavisi olacak.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan satırlar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) nedir?** Sayfada boş bir resim alanı var. Bu oyun için alan **uzun**: 400 piksel eninde, 600 piksel
+boyunda. Adı `canvas`, kimliği (id) `game`:
+
+```html
+<canvas id="game" width="400" height="600"></canvas>
+```
+
+Oyundaki her şeyi (kuşu, boruları, skoru) bu alanın üstüne **boyayarak** göstereceğiz. Tıpkı bir kâğıda resim
+yapmak gibi: önce kâğıdı bulursun, sonra eline fırçayı alırsın.
+
+**1. Kâğıdı bul.** Sayfadan `game` kimlikli elemanı isteriz ve ona bir ad veririz:
 
 ```js
 const canvas = document.getElementById('game')
+```
+
+Bunu parça parça okuyalım:
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile adlandırılan şeye **sabit** denir:
+  bir kutuya etiket yapıştırmak gibidir, sonra hep o etiketle çağırırsın.
+- `document` → sayfanın kendisi.
+- `.getElementById('game')` → "kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut" demektir.
+  Tırnak içindeki `'game'` bir **yazıdır** (metin).
+
+**2. Fırçayı al.** Canvas'a doğrudan çizilmez; önce onun çizim aracını (bağlam, **context**) alırız:
+
+```js
 const ctx = canvas.getContext('2d')
 ```
 
-Sonra arka planı boyarsın: `fillStyle` ile rengi seç, sonra canvas kadar büyük bir dikdörtgen doldur. `400` ve `600`
-yerine `canvas.width` ve `canvas.height` kullanmak, boyut bir gün değişirse kodun doğru kalmasını sağlar.
+`ctx` artık senin fırçan. Onunla iki şey yaparsın: **renk seçmek** ve **şekil boyamak**.
 
-Renkler ad (`'gold'`) ya da `'#70c5ce'` gibi onaltılık kod olabilir: kırmızı, yeşil ve mavi için ikişer hane.
+```js
+ctx.fillStyle = 'orange'      // fırçaya turuncu boya sür
+ctx.fillRect(10, 20, 50, 30)  // bir dikdörtgen boya: x, y, genişlik, yükseklik
+```
+
+**Konum nasıl verilir?** Canvas'ın **sol üst köşesi** `(0, 0)` noktasıdır. `x` sağa gittikçe, `y` ise
+**aşağı** indikçe büyür (okuldaki grafiğin tersine). Yukarıdaki örnek: soldan 10, yukarıdan 20 piksel içeride,
+50 piksel eninde ve 30 piksel boyunda turuncu bir dikdörtgen.
+
+**Neden `400` ve `600` yazmıyoruz?** Canvas'ın enini `canvas.width`, boyunu `canvas.height` ile sorabilirsin. Sayıyı
+elle yazmak yerine bunları kullanırsan, canvas'ın boyu bir gün değişse bile kodun doğru kalır.
+
+**Renkler** `'gold'` (altın sarısı) gibi İngilizce adlarla ya da `'#70c5ce'` gibi kodlarla yazılır. `#`'ten
+sonraki altı karakter ikişer ikişer kırmızı, yeşil ve mavinin ne kadar olduğunu söyler (`70`, `c5`, `ce`). Bu
+kodları ezberlemen gerekmez; `'#70c5ce'` bizim gök mavimiz.
 
 # --task--
 
@@ -41,8 +83,31 @@ Renkler ad (`'gold'`) ya da `'#70c5ce'` gibi onaltılık kod olabilir: kırmız�
 
 # --task-tr--
 
-1. Canvas'ı `canvas`'ta, 2D bağlamını `ctx`'te tut.
-2. Canvas'ın tamamını gökyüzü rengi `'#70c5ce'` ile doldur.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve şunu yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   ```
+
+2. Bir alt satıra fırçayı alan satırı yaz:
+
+   ```js
+   const ctx = canvas.getContext('2d')
+   ```
+
+3. Bir satır boşluk bırak, sonra bütün alanı gök mavisine boyayan iki satırı ekle:
+
+   ```js
+   ctx.fillStyle = '#70c5ce'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+   ```
+
+   `(0, 0)` köşesinden başlayıp canvas'ın eni (400) ve boyu (600) kadar, yani bütün alanı kaplayan bir dikdörtgen
+   boyuyoruz.
+
+4. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağdaki oyun alanı baştan aşağı açık maviye dönmeli ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı bir kontrol kalırsa yazdığını yukarıdakilerle harf harf karşılaştır:
+   büyük/küçük harf, nokta ve tırnaklar önemlidir.
 
 # --tests--
 

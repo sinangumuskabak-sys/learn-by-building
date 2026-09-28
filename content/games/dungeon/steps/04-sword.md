@@ -24,21 +24,34 @@ anywhere outside the pad swings.
 
 # --explanation-tr--
 
-Boşluk kılıcı savurur. Bir savurma 12 kare sürer ve bu sırada oyuncu yerinde durur, kılıç oyuncunun baktığı yöne doğru dışarı
-çıkar. `dir`'i hatırlamanın karşılığı buradadır.
+**Bu adımda:** Boşluk tuşuyla kılıç sallayacaksın. Baktığın yönde, oyuncunun önünden açık gri bir çubuk kısa bir
+süre fırlayacak. Savururken yerinde duracaksın.
 
-Kılıç, oyuncunun konumundan ve yönünden hesaplanan bir kutudan ibarettir:
+**Savurma bir sayaçtır.** `swing` "savurmanın kaç karesi kaldı?" sorusunun cevabıdır. Boşluğa basınca `swing = 12`
+olur; her karede 1 azalır; 0 olunca savurma biter. Saniyede 60 kare olduğu için bu, beşte bir saniye eder. Savurma
+sürerken oyuncu yürümez.
+
+**Kılıç sadece bir kutudur.** 2. adımda oyuncunun baktığı yönü `dir`'de hatırlamıştık; işte şimdi işe yarıyor.
+Kılıcın kutusunu oyuncunun yerinden ve yönünden hesaplarız:
 
 ```js
-const cx = player.x + SIZE / 2 + dx * 15   // ortadan, bakılan yönde 15 piksel
-const w = dx ? 30 : 8                       // bakılan yönde uzun, enine ince
+const cx = player.x + SIZE / 2 + dx * 15   // oyuncunun ortasından, baktığı yöne 15 piksel
+const w = dx ? 30 : 8                      // baktığı yönde uzun (30), yana doğru ince (8)
 ```
 
-Oyuncunun ortasından önündeki 30 piksele kadar uzanır. Kenardan değil ortadan başlaması önemlidir: sana zaten ulaşmış bir düşman
-hâlâ kılıcın kutusunun içindedir.
+- `player.x + SIZE / 2` oyuncunun ortasıdır. Ona `dx * 15` ekleriz: sağa bakıyorsa (`dx = 1`) 15 sağa, sola bakıyorsa
+  (`dx = -1`) 15 sola, yukarı-aşağı bakıyorsa (`dx = 0`) hiç kaymaz.
+- `dx ? 30 : 8` → "`dx` sıfır değilse 30, sıfırsa 8". JavaScript'te `0` "yanlış" gibi davranır, diğer sayılar "doğru".
+- `const [dx, dy] = player.dir` → `[1, 0]` gibi bir diziyi iki ayrı ada açar.
+- Sonuçta kutu, merkezi `(cx, cy)` olan `w` enli, `h` boylu bir dikdörtgendir; sol üst köşesi `cx - w / 2`, `cy - h / 2`.
 
-Bir savurma sürerken yenisi başlayamaz; bu yüzden Boşluk'u basılı tutmak kılıcı bir bıçak duvarına çevirmez. Telefonda yön tuşunun
-dışında herhangi bir yere dokunmak savurur.
+Kutu oyuncunun ortasından başlayıp 30 piksel öne uzanır. Kenardan değil ortadan başlaması önemli: sana zaten değmiş bir
+düşman da kılıcın kutusunun içinde kalır.
+
+**Basılı tutmak kılıç duvarı yapmasın.** Bir tuşu basılı tutunca tarayıcı `keydown` olayını tekrar tekrar gönderir;
+bu tekrarlarda `event.repeat` `true` olur. Savurmayı sadece `!event.repeat` (tekrar **değilse**) ve `swing === 0`
+(şu an savurma yoksa) iken başlatırız. Telefonda pad'in dışında herhangi bir yere dokunmak savurur: pad'e bakan `if`'e
+bir `else if` ekleriz ("pad'in içinde değilse ve savurma yoksa").
 
 # --task--
 
@@ -49,10 +62,95 @@ dışında herhangi bir yere dokunmak savurur.
 
 # --task-tr--
 
-1. `swing` ekle (`reset()`'te `0`). Boşluk (tekrar olmayan), sürmekte olan yoksa 12 karelik bir savurma başlatır; yön tuşunun
-   dışına dokunmak da.
-2. Oyuncu yalnızca savurmuyorken yürür. `swing`'i her karede geri say.
-3. Anlatıldığı gibi `{ x, y, w, h }` döndüren `swordBox()` yaz ve savururken `'#e5e7eb'` ile çiz.
+1. `let player` satırının altına sayacı ekle:
+
+   ```js
+   let swing // frames left of the sword swing
+   ```
+
+2. `reset()` fonksiyonunun **en başına** (`const start = ...` satırının üstüne) ekle:
+
+   ```js
+   function reset() {
+     swing = 0 // ← yeni
+     const start = findIn(ROOMS[0][0], 'P')
+   ```
+
+3. `keydown` olayının içini şöyle yap:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     held[event.key] = true
+     if (DIRS[event.key] || event.key === ' ') event.preventDefault() // ← değişti
+     if (event.key === ' ' && !event.repeat && swing === 0) swing = 12 // ← yeni
+   })
+   ```
+
+   `' '` Boşluk tuşunun adıdır. `preventDefault`, Boşluk'un sayfayı aşağı kaydırmasını da engeller.
+
+4. Dokunma kısmında yorumu değiştir ve `pointerdown`'daki `if (Math.hypot(...` satırının hemen altına `else if` ekle:
+
+   ```js
+   // Touch: the pad in the corner moves, a tap anywhere else swings the sword. // ← değişti
+   ```
+
+   ```js
+     if (Math.hypot(dx, dy) < PAD.r) padDir = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]
+     else if (swing === 0) swing = 12 // ← yeni
+   })
+   ```
+
+5. `pointerup` olayının kapanış `})`'sinden sonra, `function update()`'in **üstüne** `swordBox` fonksiyonunu yaz:
+
+   ```js
+   // The sword: a box from the middle of the player out to 30 pixels in front, so it also hits an enemy right on top of you.
+   function swordBox() {
+     const [dx, dy] = player.dir
+     const cx = player.x + SIZE / 2 + dx * 15
+     const cy = player.y + SIZE / 2 + dy * 15
+     const w = dx ? 30 : 8
+     const h = dy ? 30 : 8
+     return { x: cx - w / 2, y: cy - h / 2, w, h }
+   }
+   ```
+
+6. `update()` içinde iki değişiklik yap: yürümeyi sadece savurma yokken yaptır, ve fonksiyonun en sonunda sayacı azalt:
+
+   ```js
+     if (dir && swing === 0) { // ← değişti
+       player.dir = dir
+       move(player, dir[0] * SPEED, dir[1] * SPEED)
+     }
+   ```
+
+   ```js
+       enter(rx, ry)
+       return
+     }
+
+     if (swing > 0) swing -= 1 // ← yeni
+   }
+   ```
+
+   Yeni satır, odadan çıkma bloğunun kapanış `}`'sinden sonra, `update`'in son `}`'sinden önce durur.
+
+7. `draw()` içinde oyuncuyu çizen `ctx.fillRect(player.x, ...)` satırının altına, `ctx.restore()`'un **üstüne** kılıcı ekle:
+
+   ```js
+     ctx.fillStyle = '#16a34a'
+     ctx.fillRect(player.x, player.y, SIZE, SIZE)
+     if (swing > 0) { // ← yeni (buradan)
+       const s = swordBox()
+       ctx.fillStyle = '#e5e7eb'
+       ctx.fillRect(s.x, s.y, s.w, s.h)
+     } // ← (buraya kadar)
+     ctx.restore()
+   ```
+
+   `restore`'dan önce çiziyoruz ki kılıç da odayla birlikte 48 piksel aşağı kaysın.
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Boşluk'a bas: baktığın yönde gri bir çubuk kısa süre görünmeli.
+   Alttaki kontrollerin hepsi yeşil olmalı. Savururken hâlâ yürüyebiliyorsan `if (dir && swing === 0)` satırını kontrol et.
 
 # --tests--
 

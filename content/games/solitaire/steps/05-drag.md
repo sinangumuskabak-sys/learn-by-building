@@ -25,20 +25,34 @@ pile.
 
 # --explanation-tr--
 
-Dokunmak ilk geçerli yeri seçer ama bazen başka bir yer istersin; örneğin iki papazdan ikincisini. Bu yüzden kartlar **sürüklenebilir**
-de.
+**Bu adımda:** kartları **sürükleyebileceksin**. Bir karta basılı tutup çekince kart (ve üstündeki kartlar) parmağını ya
+da fareyi izleyecek; istediğin yığının üstünde bırakınca oraya konacak. Kurala uymuyorsa kartlar yerine geri dönecek.
+Sadece dokunup bırakmak eskisi gibi otomatik taşıyacak.
 
-Sürükleme, işaretçi basılıyken üç şeyi hatırlamak zorundadır:
+**Neden?** Dokunmak ilk uygun yeri seçer, ama bazen başka bir yer istersin; örneğin iki papazdan ikincisinin üstünü.
 
-- **ne** tutuluyor: önceki gibi yığın ve sıra;
-- **nereden tutuldu**: `dx, dy`, işaretçinin kartın köşesine uzaklığı; böylece kart köşesini parmağının altına koymak için zıplamaz;
-- **hareket etti mi**: yerinde basıp bırakmak (4 pikselden az) hâlâ bir dokunuştur.
+**Sürüklerken üç şeyi hatırlamak gerekir:**
 
-Sürüklerken kaynak yığın tutulan kartlar **olmadan** çizilir ve tutulan kartlar en son, işaretçide çizilir; böylece her şeyin üstünde
-süzülürler.
+- **ne** tutuluyor: yığın ve sıra numarası (önceki gibi `from`, `index`);
+- **nereden tutuldu**: `dx`, `dy`, parmağın kartın sol üst köşesine uzaklığı. Böylece kart, köşesi parmağının altına
+  gelecek şekilde zıplamaz;
+- **hareket etti mi**: yerinde basıp bırakmak (4 pikselden az) hâlâ bir dokunuştur (`moved: false`).
 
-Bırakınca hedef, işaretçinin değil tutulan kartın **ortasının** altındaki yığındır: nereden tuttuğun fark etmeksizin doğru hissettirir.
-`tryMove` reddederse hiçbir şey değişmez ve kartlar olduğu yerde yeniden görünür, çünkü yığından hiç ayrılmamışlardır.
+**Hareket olayı.** `pointermove`, parmak ya da fare hareket ettikçe gelen olaydır. Her seferinde `drag.x`, `drag.y`'yi
+yeni konuma güncelleriz. `Math.hypot(a, b)` iki nokta arasındaki düz mesafeyi verir (Pisagor): son konumdan 4 pikselden
+fazla kaydıysa `moved = true`.
+
+**Parçalara ayırmak.** `const { from, index, moved } = drag` → `drag` nesnesinin üç alanını aynı adlı üç sabite çıkarır;
+`const from = drag.from` ... yazmanın kısasıdır.
+
+**Nereye bırakıldı?** Hedef, parmağın değil tutulan kartın **ortasının** altındaki yığındır: kartı nereden tutarsan tut
+doğal hissettirir. Kartın sol üst köşesi `drag.x - drag.dx`'tir; ortası ise ona yarım en (`CW / 2`) eklenmiş hâlidir.
+`tryMove` reddederse hiçbir şey değişmez: kartlar zaten yığından hiç çıkmamıştı, sadece başka yerde çizilmişlerdi.
+
+**Çizim.** Sürüklerken kaynak yığın tutulan kartlar **olmadan** çizilir: `hidden` (gizli), kaç kartın çizileceğidir.
+`drag && drag.from === key ? drag.index : pile.length` → sürükleme varsa **ve** bu yığından ise sadece `drag.index`'e
+kadar, değilse hepsi. Tutulan kartlar en son, parmağın yanında çizilir ki her şeyin üstünde yüzsünler; her biri bir
+öncekinden `UP_STEP` (22) aşağıda. `forEach((card, i) => ...)` listedeki her kart için çalışır, `i` sıra numarasıdır.
 
 # --task--
 
@@ -51,12 +65,70 @@ Bırakınca hedef, işaretçinin değil tutulan kartın **ortasının** altında
 
 # --task-tr--
 
-1. `pointerdown`'da `drag` ayrıca `dx`, `dy` (işaretçi eksi kartın köşesi), `x`, `y` (işaretçi) ve `moved: false` saklar.
-2. Sürüklerken `pointermove`'da `x` ve `y`'yi güncelle ve işaretçi basıştan 4 pikselden fazla uzaklaşınca `moved`'u ayarla.
-3. Bırakınca: hareket etmediyse bir dokunuştur (`autoMove`); değilse tutulan kartın ortasının, `(x - dx + CW / 2, y - dy + CH / 2)`,
-   çarptığı yığına `tryMove` et.
-4. Sürüklerken kaynak yığını yalnızca `drag.index`'e kadar, sonra tutulan kartları `(x - dx, y - dy)`'de, her biri bir öncekinden
-   `UP_STEP` aşağıda çiz.
+1. `let drag` satırının yorumunu güncelle:
+
+   ```js
+   let drag // { from, index, cards, dx, dy, x, y, moved } while a card is held
+   ```
+
+2. `pointerdown` dinleyicisinde `drag = { from: h.key, index: h.index }` satırını sil ve yerine üç satır yaz. Hemen
+   altına (`})`'den sonra) `pointermove` dinleyicisini ekle:
+
+   ```js
+     if (h.key === 'waste' || h.key[0] === 'f') h.index = pile.length - 1 // only the top card of these
+     const cx = pileX(h.key)                                                                               // ← yeni
+     const cy = cardY(h.key, h.index)                                                                      // ← yeni
+     drag = { from: h.key, index: h.index, dx: p.x - cx, dy: p.y - cy, x: p.x, y: p.y, moved: false }       // ← değişti
+   })
+
+   canvas.addEventListener('pointermove', (event) => {                                                     // ← yeni
+     if (!drag) return
+     const p = toCanvas(event)
+     if (Math.hypot(p.x - drag.x, p.y - drag.y) > 4) drag.moved = true
+     drag.x = p.x
+     drag.y = p.y
+   })
+   ```
+
+3. `pointerup` dinleyicisini değiştir. Tamamen şöyle olmalı:
+
+   ```js
+   document.addEventListener('pointerup', () => {
+     if (!drag) return
+     const { from, index, moved } = drag                                        // ← yeni
+     if (!moved) autoMove(from, index)                                          // ← değişti
+     else {                                                                     // ← yeni
+       // Drop on the pile under the middle of the held card.
+       const target = hit(drag.x - drag.dx + CW / 2, drag.y - drag.dy + CH / 2)  // ← yeni
+       if (target) tryMove(from, index, target.key)                             // ← yeni
+     }                                                                          // ← yeni
+     drag = null
+   })
+   ```
+
+4. `draw()` içindeki yığın döngüsünü değiştir ve döngüden sonra tutulan kartları çiz. `for (const [key, pile] ...`
+   satırından `Moves` yazısının üstündeki boş satıra kadar şöyle olmalı:
+
+   ```js
+     for (const [key, pile] of Object.entries(piles)) {
+       const x = pileX(key)
+       // An empty place shows as an outline.
+       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
+       ctx.lineWidth = 2
+       ctx.strokeRect(x, key[0] === 't' ? TAB_Y : TOP_Y, CW, CH)
+       const hidden = drag && drag.from === key ? drag.index : pile.length      // ← yeni
+       // The stock, the waste and the foundations only need their top card.
+       const first = key[0] === 't' ? 0 : Math.max(0, hidden - 1)              // ← değişti
+       for (let i = first; i < hidden; i++) drawCardAt(pile[i], x, cardY(key, i))   // ← değişti
+     }
+     // The held cards follow the pointer, on top of everything.
+     if (drag) {                                                               // ← yeni
+       piles[drag.from].slice(drag.index).forEach((card, i) => drawCardAt(card, drag.x - drag.dx, drag.y - drag.dy + i * UP_STEP))
+     }                                                                         // ← yeni
+   ```
+
+5. **Çalıştır**'a bas. Açık bir kartı basılı tutup başka bir sütunun üstüne sürükle ve bırak: kural uyuyorsa orada
+   kalmalı, uymuyorsa yerine dönmeli. Sadece tıklamak eskisi gibi çalışmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

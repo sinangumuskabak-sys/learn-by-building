@@ -17,14 +17,31 @@ key is used, the door becomes floor, and `taken` remembers that too, so it stays
 
 # --explanation-tr--
 
-İkinci odadaki kapı kilitli ve anahtar ilk odanın altındaki odada. Bu, dört odayı küçük bir **sıra bulmacasına** çevirir: doğrudan
-çıkışa gidemezsin, keşfetmen gerekir.
+**Bu adımda:** sarı bir anahtar toplayıp kilitli kahverengi kapıyı açacaksın. Üst şeritte kalplerin yanında
+`Keys 0` yazacak; anahtarı alınca `Keys 1` olacak.
 
-Anahtarı almak bir kalbi almak gibi çalışır: `keysHeld`'e girer, karo zemin olur ve `taken` onu hatırlar.
+**Küçük bir sıra bulmacası.** İkinci odanın (sağ üst) altındaki kapı kilitli; anahtar ise ilk odanın altındaki odada
+(sol alt). Böylece dört oda küçük bir bulmacaya dönüşür: doğrudan çıkışa gidemezsin, önce keşfetmen gerekir.
 
-Kapıyı açmak bir anahtar ister ve kapıya doğru **yürüdüğünde** olur. Kapı bir duvardır; bu yüzden asla üstünde duramazsın; bunun
-yerine hemen önündeki karoya bak (baktığın yönde bir karonun %60'ı ilerisi). Bir kapıysa ve anahtarın varsa anahtar kullanılır, kapı
-zemin olur ve `taken` onu da hatırlar; böylece geri geldiğinde açık kalır.
+**Anahtarı almak, kalbi almak gibidir.** 6. adımda kalp için yaptığımızın aynısı: oyuncunun ortasının altındaki karo
+`k` ise anahtar sayın (`keysHeld`) 1 artar, karo zemin olur ve `taken` torbası bunu hatırlar. İkisini tek `if`'te
+birleştiriyoruz: "`k` **ya da** `h` ise: `k` ise anahtar ekle, **değilse** kalp ekle; sonra ikisinde de karoyu zemin yap
+ve hatırla."
+
+**Kapıyı açmak biraz farklı.** Kapı bir duvardır (`solidTile` onu duvar sayıyor), yani asla üstünde duramazsın. Onun
+yerine **hemen önündeki** karoya bakarız: oyuncunun ortasından, baktığın yönde bir karonun %60'ı kadar ileri
+(`T * 0.6`, yaklaşık 19 piksel). Oradaki karo `D` ise ve anahtarın varsa: anahtar harcanır, kapı zemin olur ve `taken`
+onu da hatırlar; geri geldiğinde açık kalır. Yani kapıya doğru yürüdüğün an açılır.
+
+```js
+const fc = Math.floor((cx + dx * T * 0.6) / T)   // öndeki karonun sütunu
+const fr = Math.floor((cy + dy * T * 0.6) / T)   // öndeki karonun satırı
+```
+
+`tiles[fr] && tiles[fr][fc] === 'D'` → önce "o satır var mı?" diye sorarız. Odanın kenarındaysan öndeki satır odanın
+dışında olabilir; `tiles[fr]` yoksa `&&` ikinci soruya hiç geçmez ve hata olmaz.
+
+`'Keys ' + keysHeld` yazı ile sayıyı yan yana koyar: `'Keys 1'`.
 
 # --task--
 
@@ -36,11 +53,69 @@ zemin olur ve `taken` onu da hatırlar; böylece geri geldiğinde açık kalır.
 
 # --task-tr--
 
-1. `keysHeld` ekle (`reset()`'te `0`). Oyuncunun ortasının altındaki bir `k` bir anahtar ekler, zemin olur ve alınır.
-2. Her karede oyuncunun ortasının bir karonun 0.6'sı önündeki karoyu bul. Bir `D`'yse ve bir anahtarın varsa anahtarı kullan, kapıyı
-   zemin yap ve `taken`'a ekle.
-3. Bir `k`'yi karosunda `(x + 10, y + 8)`'de `'#eab308'` 12'ye 16 bir dikdörtgen olarak ve `(100, 30)`'da beyaz,
-   `'bold 16px sans-serif'` ile `Keys 1` çiz.
+1. `let tiles ...` satırının yorumunu güncelle, `let hearts` satırının altına anahtar sayısını ekle:
+
+   ```js
+   let tiles // the current room, as arrays of characters we can change (doors open, keys are picked up)
+   ```
+
+   ```js
+   let hearts
+   let keysHeld // ← yeni
+   ```
+
+2. `reset()` içinde `hearts = 3` satırının altına ekle:
+
+   ```js
+     keysHeld = 0
+   ```
+
+3. `update()` içinde kalp toplayan `if (here === 'h') { ... }` bloğunu sil ve yerine şunu yaz (anahtar ve kalp birlikte,
+   ardından kapı):
+
+   ```js
+     if (here === 'k' || here === 'h') {
+       if (here === 'k') keysHeld += 1
+       else hearts = Math.min(3, hearts + 1)
+       tiles[row][col] = '.'
+       taken.add(id)
+     }
+     // A locked door right in front of you opens with a key.
+     const [dx, dy] = player.dir
+     const fc = Math.floor((cx + dx * T * 0.6) / T)
+     const fr = Math.floor((cy + dy * T * 0.6) / T)
+     if (tiles[fr] && tiles[fr][fc] === 'D' && keysHeld > 0) {
+       keysHeld -= 1
+       tiles[fr][fc] = '.'
+       taken.add(room.rx + ',' + room.ry + ',' + fc + ',' + fr)
+     }
+   ```
+
+   Bunların hepsi `if (swing > 0) swing -= 1` satırının üstünde kalmalı.
+
+4. `draw()` içindeki karo döngüsünde, kapıyı çizen `if (ch === 'D') { ... }` bloğu ile kalbi çizen `if (ch === 'h')`
+   bloğunun **arasına** anahtarı ekle:
+
+   ```js
+         if (ch === 'k') {
+           ctx.fillStyle = '#eab308'
+           ctx.fillRect(x + 10, y + 8, 12, 16)
+         }
+   ```
+
+5. `draw()`'da kalpleri çizen `for (let i = 0; i < 3; i++) { ... }` döngüsünün kapanış `}`'sinden hemen sonra anahtar
+   yazısını ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Keys ' + keysHeld, 100, 30)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk odanın alt boşluğundan in, sarı anahtarı al (`Keys 1`
+   olmalı), sonra yukarı çıkıp sağdaki odaya geç ve alttaki kahverengi kapıya yürü: kapı açılmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Kapı açılmıyorsa `fc`/`fr` satırlarında `0.6` ve parantezleri kontrol et.
 
 # --tests--
 

@@ -23,20 +23,44 @@ the tile is free does the player move.
 
 # --explanation-tr--
 
-Sokoban'da fizik de zaman da yok: bir tuş basışı tam olarak bir adım, bir döşemedir. Bu onu saf bir **sıra tabanlı**
-oyun yapar; XOX ve 2048 gibi döngüye ihtiyaç duymaz. Tuşu işle, durumu değiştir, yeniden çiz.
+**Bu adımda:** oyuncuyu ok tuşlarıyla yürüteceğiz. Her basış tam bir kare. Duvarlar ve (şimdilik) kutular yolu kapatacak.
 
-Ok tuşları bir arama nesnesinde `[dx, dy]` çiftleri olarak bir yöne eşlenir:
+**Sıra tabanlı oyun.** Sokoban'da fizik ve zaman yok: bir tuş = bir adım. Bu yüzden saniyede 60 kez çalışan bir oyun
+döngüsüne gerek yok. Tuşa basılınca durumu değiştirir, sonra yeniden çizeriz.
+
+**Tuşu dinlemek (olay, event).** Tarayıcı bir tuşa basıldığında `keydown` adında bir **olay** yayar:
+
+```js
+document.addEventListener('keydown', (event) => { ... })
+```
+
+"Sayfada her tuşa basıldığında `{ }` içini çalıştır." `event.key` basılan tuşun adıdır: `'ArrowLeft'` (sol ok),
+`'ArrowUp'` (yukarı ok) gibi.
+
+**Yön tablosu.** Her ok tuşu bir yöne karşılık gelir; yön `[dx, dy]` çiftiyle yazılır: `x`'e ve `y`'ye ne eklenecek.
+`y` aşağı doğru büyüdüğü için yukarı `[0, -1]`'dir. Bunları bir **nesnede** (anahtar–değer tablosu) tutarız:
 
 ```js
 const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
-move(...directions[event.key])   // çifti move(dx, dy)'ye yay
 ```
 
-`move` önce hedef döşemeye bakar: bir duvar adımı engeller, şimdilik bir kutu da engeller (itme sırada). Döşeme boşsa
-oyuncu hareket eder.
+`directions['ArrowUp']` → `[0, -1]`. Tabloda olmayan bir tuş sorulursa `undefined` (yok) gelir; `if (directions[event.key])`
+böylece "bu bir ok tuşu mu?" diye sorar.
 
-Ok tuşlarında `event.preventDefault()`, oynarken sayfanın kaymasını engeller.
+`move(...directions[event.key])` → `...` çifti açıp iki ayrı değer olarak verir: `move(0, -1)` gibi.
+
+`event.preventDefault()` tarayıcının o tuşla yapacağı kendi işini engeller: ok tuşları normalde sayfayı kaydırır.
+
+**Kutu var mı? `boxAt(x, y)`.** `boxes.find(...)` listede koşula uyan **ilk** elemanı verir, hiçbiri uymazsa `undefined`.
+Koşul: kutunun `x`'i ve (`&&`) `y`'si verilen sayılara eşit mi. `return` bulunan değeri fonksiyondan **geri verir**.
+
+**`move(dx, dy)`.** Önce gidilecek kareyi hesaplar (`player.x + dx`, `player.y + dy`). Sonra sırayla sorar:
+
+- duvar mı? (`walls.has(key(x, y))`) → `return`, yani hiçbir şey yapmadan fonksiyondan çık;
+- kutu mu? → şimdilik o da engel (itmeyi sonraki adımda ekleyeceğiz);
+- ikisi de değilse oyuncu oraya geçer: `player = { x, y }`.
+
+En sonda `draw()` çağrılır ki yeni durum ekranda görünsün.
 
 # --task--
 
@@ -48,11 +72,35 @@ Ok tuşlarında `event.preventDefault()`, oynarken sayfanın kaymasını engelle
 
 # --task-tr--
 
-1. Bir döşemedeki kutuyu ya da `undefined`'ı döndüren `boxAt(x, y)` yaz.
-2. `move(dx, dy)` yaz: hedef döşeme `player.x + dx`, `player.y + dy`; duvarsa ya da kutu varsa hiçbir şey yapma; değilse
-   oyuncuyu oraya taşı.
-3. `keydown`'da ok tuşlarını bir arama nesnesiyle yönlere eşle, `event.preventDefault()` ve `move` çağır, sonra
-   `draw()`.
+1. `loadLevel` fonksiyonunun kapanış `}`'sinin altına, `function draw()` satırından önce, bir satır boşluk bırakıp şunları
+   yaz:
+
+   ```js
+   function boxAt(x, y) {
+     return boxes.find((box) => box.x === x && box.y === y)
+   }
+
+   function move(dx, dy) {
+     const x = player.x + dx
+     const y = player.y + dy
+     if (walls.has(key(x, y))) return
+     if (boxAt(x, y)) return // pushing comes in the next step
+     player = { x, y }
+   }
+
+   const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+
+   document.addEventListener('keydown', (event) => {
+     if (directions[event.key]) {
+       event.preventDefault()
+       move(...directions[event.key])
+     }
+     draw()
+   })
+   ```
+
+2. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra ok tuşlarına bas: mavi kare her basışta bir kare yürümeli,
+   duvar ve kutudan geçememeli. Alttaki kontrollerin hepsi yeşil olmalı. `ArrowLeft` gibi adlarda büyük harflere dikkat.
 
 # --tests--
 

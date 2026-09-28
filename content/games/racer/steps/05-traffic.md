@@ -25,21 +25,50 @@ speed is the skill.
 
 # --explanation-tr--
 
-Diğer arabalar yolu paylaşır. Her birinin pist boyunca bir uzaklığı `z`, yol üzerinde bir konumu `x` ve senin en yüksek hızından yavaş
-kendi `speed`'i vardır; böylece onlara yetişir ve geçmek zorunda kalırsın.
+**Bu adımda:** yola sarı rakip arabalar gelecek. Senden yavaş gidiyorlar; onlara yetişip aralarından geçmen gerekecek.
+Arkadan çarparsan hızının çoğunu kaybedersin.
 
-Bir arabayı çizmek için bulunduğu parçayı bul: o parçanın yakın kenarı yol çizilirken zaten izdüşürüldü; yani o uzaklığın ekranda nerede
-olduğunu ve orada yolun ne kadar geniş olduğunu söyler. Oradaki bir araba yolun üçte biri genişliğinde çizilir: uzak arabalar minicik,
-yakınlar büyük çıkar. **Sprite ölçeklemenin** bütün sırrı budur: o uzaklıktaki yol genişliğiyle orantılı boyut. Uzak arabalar önce
-çizilir; böylece yakınlar onları örter.
+**Her araba bir nesne.** Bir rakip arabayı üç bilgiyle anlatırız: pist boyunca uzaklığı `z`, yoldaki yan konumu `x`
+(senin `playerX`'in gibi) ve kendi hızı `speed`. On iki arabayı `cars` adlı bir dizide (listede) tutarız:
 
-Pist döngü olduğu için "o araba ne kadar önde?" sorusu öncekiyle aynı başa sarmayı ister:
+```js
+{ z: 5000, x: 0.3, speed: 55 }
+```
+
+**Rastgelelik:** `Math.random()` her çağrıldığında 0 ile 1 arasında (1 hariç) rastgele bir sayı verir.
+`Math.random() * 1.2 - 0.6` bunu -0.6 ile 0.6 arasına, `40 + Math.random() * 30` ise 40 ile 70 arasına taşır.
+Böylece her oyunda arabalar farklı şeritte ve farklı hızda olur.
+
+**Listedeki her eleman için:** `for (const car of cars) { ... }` → "`cars` listesindeki her araba için, ona `car`
+de ve `{ }` içini yap." Sayaçlı `for`'dan daha kolay okunur.
+
+**Döngüsel pistte "ne kadar önde?"** Pist dönüyor; 15.900'deki araç 100'deki araçtan aslında sadece birkaç yüz birim
+geride olabilir. Bunun için bir yardımcı yazarız:
 
 ```js
 const ahead = (a, b) => (((b - a) % trackLength) + trackLength) % trackLength
 ```
 
-Bir arabaya arkadan çarpmak hızının çoğunu attırır: onun hızının yarısına düşersin. En yüksek hızda trafiğin arasından geçmek beceridir.
+"`a`'dan ileri doğru giderek `b`'ye kaç birim var?" sorusunun cevabı. `+ trackLength` ve ikinci `%`, farkın eksi
+çıktığı durumu (pistin sonunu geçmek) düzeltir; sonuç hep 0 ile pist uzunluğu arasında olur.
+
+**Çarpışma:** araba senin önünde 120 birimden yakınsa, yan yana farkınız 0.35'ten azsa ve sen ondan hızlıysan
+arabaya arkadan çarpmışsın demektir: hızın onun hızının yarısına düşer.
+
+**Uzaktakini küçük çiz.** Arabayı çizmek için bulunduğu parçayı buluruz. O parçanın yakın kenarı yol çizilirken zaten
+ekrana çevrilmişti (`shown` listesinde duruyor): ekrandaki yerini ve yolun oradaki genişliğini biliyoruz. Arabayı
+yolun genişliğinin üçte biri kadar çizeriz. Uzaktaki araba minik, yakındaki büyük çıkar. Uzaktakileri önce çizeriz ki
+yakındakiler onları örtsün.
+
+**Listelerle yeni işler:** hepsi listeyi baştan sona dolaşır ve her eleman için verdiğin küçük fonksiyonu çalıştırır.
+
+- `.map(f)` → her elemanı `f`'in sonucuyla değiştirip **yeni bir liste** yapar.
+- `.filter(f)` → sadece `f`'in doğru dediği elemanları tutar.
+- `.sort((a, b) => b.gap - a.gap)` → listeyi `gap`'e göre büyükten küçüğe dizer (en uzak önce).
+- `.find(f)` → `f`'in doğru dediği **ilk** elemanı verir; yoksa `undefined` (hiçbir şey).
+- `!seg` → "`seg` yok mu?" `!` "değil" demektir. `continue` → "bu elemanı bırak, sıradakine geç".
+
+Satırın başındaki noktalar (`.map`, `.filter`...) bir önceki satırın devamıdır; uzun zinciri okunur kılmak için alt alta yazılır.
 
 # --task--
 
@@ -53,13 +82,76 @@ Bir arabaya arkadan çarpmak hızının çoğunu attırır: onun hızının yar�
 
 # --task-tr--
 
-1. Pist boyunca eşit dağılmış (`z = (i + 1) × trackLength / 12`), her birinin `-0.6` ile `0.6` arasında rastgele bir `x`'i ve 40 ile 70
-   arasında rastgele bir `speed`'i olan 12 `cars` ekle.
-2. Her karede her arabayı pist boyunca ilerlet (başa sararak). Bir araba senin arabanın 120'den az önündeyse
-   (`ahead(position + PLAYER_Z, car.z)`), yatayda `0.35` içindeyse ve senden yavaşsa, hızın onun hızının yarısına düşer.
-3. Çizilen parçaları (index, yakın ve uzak kenar) tut. Kameranın `PLAYER_Z / 2` ile `DRAW × SEG` önündeki arabaları, en uzak önce,
-   parçalarının yakın kenarında `'#facc15'` dikdörtgenler olarak çiz: `w = 0.35 × near.w` genişliğinde, `0.6 × w` yüksekliğinde,
-   `near.x + car.x × near.w`'da yolun üstünde duran.
+1. `let speed` satırının hemen altına araba listesini ekle:
+
+   ```js
+   let cars
+   ```
+
+2. `reset()` içinde `speed = 0` satırının altına 12 arabayı kuran satırları ekle:
+
+   ```js
+   function reset() {
+     buildTrack()
+     position = 0
+     playerX = 0
+     speed = 0
+     cars = [] // ← yeni (bu dört satır)
+     for (let i = 0; i < 12; i++) {
+       cars.push({ z: (i + 1) * (trackLength / 12), x: Math.random() * 1.2 - 0.6, speed: 40 + Math.random() * 30 })
+     }
+   }
+   ```
+
+   Arabalar pist boyunca eşit aralıklarla dizilir.
+
+3. `const segmentAt = ...` satırının hemen altına `ahead` yardımcısını ekle:
+
+   ```js
+   // Distance from a to b going forwards along the looping track.
+   const ahead = (a, b) => (((b - a) % trackLength) + trackLength) % trackLength
+   ```
+
+4. `update()` içinde, `playerX = Math.max(-2.5, ...)` satırı ile `position += speed` satırının **arasına** arabaları
+   yürüten döngüyü ekle:
+
+   ```js
+     playerX = Math.max(-2.5, Math.min(2.5, playerX))
+
+     for (const car of cars) { // ← yeni (buradan)
+       car.z = (car.z + car.speed) % trackLength
+       const gap = ahead(position + PLAYER_Z, car.z)
+       // Driving into a car from behind: you slow down to half its speed.
+       if (gap < 120 && Math.abs(car.x - playerX) < 0.35 && speed > car.speed) speed = car.speed / 2
+     } // ← (buraya kadar)
+
+     position += speed
+   ```
+
+5. `draw()` içinde, yolu boyayan ikinci `for` döngüsünün kapanış `}`'sinden sonra, `// Your car.` yorumunun **üstüne**
+   rakip arabaları çizen kısmı ekle:
+
+   ```js
+     // The other cars, far ones first, sized by their distance.
+     const visible = cars
+       .map((car) => ({ car, gap: ahead(position, car.z) }))
+       .filter((c) => c.gap > PLAYER_Z * 0.5 && c.gap < DRAW * SEG)
+       .sort((a, b) => b.gap - a.gap)
+     for (const { car } of visible) {
+       const seg = shown.find((s) => s.index === Math.floor(car.z / SEG) % segments.length)
+       if (!seg) continue
+       const w = seg.near.w * 0.35
+       ctx.fillStyle = '#facc15'
+       ctx.fillRect(seg.near.x + car.x * seg.near.w - w / 2, seg.near.y - w * 0.6, w, w * 0.6)
+     }
+   ```
+
+   Önce görünecek kadar yakın olan arabaları seçer ve uzaktan yakına dizer; sonra her birini kendi parçasının yakın
+   kenarına, yolun üstünde duracak şekilde sarı bir dikdörtgen olarak çizer.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve hızlan: ileride sarı arabalar görmeli, yaklaştıkça
+   büyüdüklerini izlemelisin. Birine arkadan çarparsan hızın düşmeli. Alttaki kontrollerin hepsi yeşil olmalı.
+   Arabalar hiç görünmüyorsa arabaları çizen kısmın `draw()`'un **içinde** kaldığından emin ol.
 
 # --tests--
 

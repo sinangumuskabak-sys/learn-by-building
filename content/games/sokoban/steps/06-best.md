@@ -26,23 +26,47 @@ Show the record next to the move counter, so the player always knows the number 
 
 # --explanation-tr--
 
-Bir bölümü çözmek bir hedef; onu **daha az hamlede** çözmek bir sonraki. **Her** bölüm için en iyi (en az) hamle sayısını
-tut.
+**Bu adımda:** her bölüm için ayrı bir rekor tutacağız: bölümü en az kaç hamlede çözdüğün. Sağ üstte `Moves: 12  (best 9)`
+gibi, geçmen gereken sayıyı göreceksin. Sayfayı kapatıp açsan da rekorlar kalacak.
 
-`localStorage` yalnızca metin saklar, ama bütün bir nesne JSON metni olarak saklanabilir:
+**Rekorlar bir sözlükte.** Her bölümün rekorunu, bölüm numarasına göre bir **nesnede** tutarız:
 
 ```js
-let best = JSON.parse(localStorage.getItem('sokoban-best') || '{}')   // { 0: 1, 1: 9 } ya da ilk seferde {}
-...
+{ 0: 1, 1: 9 }   // 1. bölüm (numara 0) 1 hamlede, 2. bölüm (numara 1) 9 hamlede çözüldü
+```
+
+`best[level]` o bölümün rekorudur. Bölüm hiç çözülmediyse `best[level]` `undefined` (yok) olur: "henüz rekor yok" durumu
+tam budur.
+
+**Kalıcı saklamak: `localStorage`.** Tarayıcının küçük bir defteri vardır; sayfa kapansa da içindekiler kalır.
+`localStorage.setItem(ad, yazı)` kaydeder, `localStorage.getItem(ad)` okur. Defter yalnızca **yazı** saklar; bu yüzden
+nesneyi 5. adımdaki gibi JSON yazısına çevirip saklarız:
+
+```js
+let best = JSON.parse(localStorage.getItem('sokoban-best') || '{}')
 localStorage.setItem('sokoban-best', JSON.stringify(best))
 ```
 
-`|| '{}'`, henüz hiçbir şey kaydedilmediğinde mantıklı bir varsayılan verir. Bölüm numarasına göre anahtarlanan bir nesne
-küçük bir **sözlüktür**: `best[level]`, o bölüm bir kez çözülene kadar `undefined`'dır; kontrol edilecek "henüz rekor yok"
-durumu tam da budur (`=== undefined` ile; çünkü `0` gerçek bir Sokoban rekoru olamaz ama yanlışsı değerleri eksik gibi
-saymamak iyi bir alışkanlıktır).
+İlk oyunda kayıt yoktur ve `getItem` `null` verir. `|| '{}'` → "işe yarar bir değer yoksa `'{}'` kullan": `'{}'` boş bir
+nesnenin yazısıdır, böylece `best` boş sözlükle başlar.
 
-Rekoru hamle sayacının yanında göster; böylece oyuncu hep geçmesi gereken sayıyı bilir.
+**Ne zaman kaydederiz?** Her hamlenin sonunda: bölüm çözüldüyse **ve** (henüz rekor yoksa **ya da** bu sefer daha az
+hamle yapıldıysa):
+
+```js
+if (solved() && (best[level] === undefined || moves < best[level])) { ... }
+```
+
+Parantez önemli: önce içerideki "ya da" hesaplanır, sonra "ve" ile birleşir. `=== undefined` diye açıkça sorarız;
+`!best[level]` yazsaydık `0` gibi bir sayı da "yok" sayılırdı. Sokoban'da 0 hamlelik rekor olmaz, ama bu iyi bir alışkanlık.
+
+**Yazıda göstermek.** Rekor yoksa hiçbir şey, varsa `'  (best 9)'` eklenir:
+
+```js
+const record = best[level] === undefined ? '' : '  (best ' + best[level] + ')'
+```
+
+`''` boş yazıdır. `koşul ? a : b` "doğruysa `a`, değilse `b`".
 
 # --task--
 
@@ -53,10 +77,33 @@ Rekoru hamle sayacının yanında göster; böylece oyuncu hep geçmesi gereken 
 
 # --task-tr--
 
-1. `let best = JSON.parse(localStorage.getItem('sokoban-best') || '{}')` ekle.
-2. Bir hamlenin sonunda bölüm artık çözüldüyse ve `best[level]` `undefined` ya da `moves`'tan büyükse onu ayarla ve bütün
-   nesneyi `JSON.stringify` ile `'sokoban-best'` altında kaydet.
-3. Bir bölümün rekoru varsa onu hamle sayacından sonra göster: `Moves: 12  (best 9)`.
+1. `let history` satırının altına rekor sözlüğünü ekle:
+
+   ```js
+   let best = JSON.parse(localStorage.getItem('sokoban-best') || '{}') // fewest moves, per level
+   ```
+
+2. `move()` fonksiyonunun sonunda, `moves += 1` satırının altına (son `}`'den önce) rekor kontrolünü ekle:
+
+   ```js
+     moves += 1
+     if (solved() && (best[level] === undefined || moves < best[level])) { // ← yeni
+       best[level] = moves                                                  // ← yeni
+       localStorage.setItem('sokoban-best', JSON.stringify(best))           // ← yeni
+     }                                                                      // ← yeni
+   }
+   ```
+
+3. `draw()`'da hamle sayacını çizen satırı (`ctx.fillText('Moves: ' + moves, ...)`) şu iki satırla değiştir:
+
+   ```js
+     ctx.textAlign = 'right'
+     const record = best[level] === undefined ? '' : '  (best ' + best[level] + ')' // ← yeni
+     ctx.fillText('Moves: ' + moves + record, canvas.width - 12, TOP / 2)           // ← değişti
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk bölümü çöz: sağ üstte `Moves: 1  (best 1)` görmelisin. Alttaki
+   kontrollerin hepsi yeşil olmalı. Yazı kontrolü kırmızıysa `'  (best '` içindeki **iki boşluğu** kontrol et.
 
 # --tests--
 

@@ -24,22 +24,50 @@ color, but it makes the game much easier to read.
 
 # --explanation-tr--
 
-Oyuncunun bir **seçili hücreye** ihtiyacı var: ok tuşları onu hareket ettirir, bir tıklama onu herhangi bir yere koyar ve
-rakam tuşları ona yazar.
+**Bu adımda:** bir hücre seçip içine rakam yazabileceksin. Seçili hücre mavi olacak; onun satırı, sütunu ve kutusu
+açık griyle gölgelenecek. Ok tuşları seçimi taşır, tıklamak bir hücreyi seçer, rakam tuşları yazar, Backspace siler.
+Senin yazdığın rakamlar mavi ve ince görünecek.
 
-Kenardan çıkmak başa sarmalı; üst satırda Yukarı, en alta gitmeli. Sayı negatif olmadığı sürece `%` operatörü bunu yapar.
-Önce 9 eklemek onu pozitif tutar:
+**Seçili hücre.** Hangi hücrede olduğumuzu bir **nesnede** tutarız: `{ r: 4, c: 4 }` (satır 4, sütun 4: tam orta).
+Nesne süslü parantez içinde `ad: değer` alanlarıdır; `selected.r` ile okunur.
+
+**Kenardan başa sarmak.** En üst satırda yukarı basınca en alta gitmek isteriz. 1. adımda gördüğün `%` (bölümden
+kalan) bunu yapar: `9 % 9` → `0` (en alttan aşağı basınca başa döner). Ama `(0 - 1) % 9` → `-1` olur, böyle bir satır yok. Önce 9 ekleyip artı tutarız:
 
 ```js
 selected = { r: (selected.r + dr + 9) % 9, c: (selected.c + dc + 9) % 9 }
 ```
 
-Yazmak, her tuşun kullandığı küçük bir fonksiyondur: `enter(d)`. Bir rakam `d` yazar; `0`, Backspace ve Delete ise hücreyi
-boşaltan `0`'ı yazar. **Verilen** bir hücreye dokunmayı reddeder; bulmacayı koruyan o tek kontroldür.
+`dr` ve `dc` satırın ve sütunun ne kadar değişeceği (−1, 0 ya da 1). Örnek: `r = 0`, yukarı (`dr = -1`):
+`(0 - 1 + 9) % 9` = `8 % 9` = `8`, en alt satır.
 
-İyi Sudoku uygulamaları gözüne yardım eder. Bir hücre seçtiğinde onun **satırını, sütununu ve kutusunu**, yani rakamının
-yeniden görünemeyeceği üç yeri gölgelendirir ve **aynı rakamı** tutan her hücreyi vurgular. Dolgu rengini seçen birkaç
-`if`'ten ibarettir ama oyunu okumayı çok kolaylaştırır.
+**Tuşları yöne çevirmek.** Bir nesne her ok tuşunu bir `[satır farkı, sütun farkı]` çiftine bağlar:
+
+```js
+const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
+const [dr, dc] = moves[event.key]   // listenin ilk elemanı dr'ye, ikincisi dc'ye
+```
+
+`moves[event.key]` basılan tuşun adıyla nesneye bakar; ok tuşu değilse boş (`undefined`) döner, `if` bunu yanlış
+sayar. `event.preventDefault()` ok tuşlarının sayfayı kaydırmasını engeller.
+
+**Yazmak: tek bir fonksiyon.** `enter(d)` seçili hücreye `d` yazar; `0` yazmak hücreyi boşaltır. İlk satırı
+bulmacayı korur: hücre **verilmişse** hiçbir şey yapmadan çıkar (`return`).
+
+Rakam tuşu kontrolü: `event.key >= '1' && event.key <= '9'` yazılar arasında karşılaştırma yapar; tek karakterlik
+rakamlar için "1 ile 9 arasında mı?" demektir (`&&` "ve"). `Number(event.key)` `'4'`'ü `4` yapar. `||` "veya"
+demek. `if ... else if ... else if` zinciri: ilk doğru olan kısım çalışır.
+
+**Tıklanan hücreyi bulmak.** Tarayıcı tıklamanın yerini sayfaya göre verir (`event.clientX`, `clientY`).
+`canvas.getBoundingClientRect()` canvas'ın sayfadaki yerini ve ekrandaki boyunu verir; bununla canvas'ın kendi
+piksellerine çeviririz. Sonra ızgaranın başlangıcını çıkarıp hücre boyuna böler, `Math.floor` ile aşağı
+yuvarlarız: `x = 110` → `110 / 48 = 2,29` → sütun `2`. Izgaranın dışına tıklanırsa (0'dan küçük ya da 9 ve üstü)
+seçim değişmez. `{ r, c }` kısaltması `{ r: r, c: c }` demektir.
+
+**Göze yardım.** Hücreyi seçince onun **satırını, sütununu ve kutusunu** (rakamının bir daha olamayacağı üç yer)
+gölgeleriz; **aynı rakamı** taşıyan hücreleri de vurgularız. Aynı kutuda mı? `Math.floor(r / 3)` hücrenin hangi kutu
+satırında olduğunu verir (0, 1, 2); iki hücrenin hem kutu satırı hem kutu sütunu aynıysa aynı kutudadırlar. Renk
+birkaç `if` ile seçilir; **sonraki kural kazanır**, çünkü her `if` `fill`'in üstüne yazar.
 
 # --task--
 
@@ -53,13 +81,80 @@ yeniden görünemeyeceği üç yeri gölgelendirir ve **aynı rakamı** tutan he
 
 # --task-tr--
 
-1. `selected` ekle, `reset()`'te `{ r: 4, c: 4 }`.
-2. `enter(d)` yaz: seçili hücre verilen bir hücre değilse onu `d` yap.
-3. `keydown`'da: ok tuşları `selected`'ı başa sararak hareket ettirir (ve `preventDefault()`), `'1'`'den `'9'`'a o rakamla
-   `enter`'ı, `'0'`, `'Backspace'` ve `'Delete'` ise `enter(0)`'ı çağırır.
-4. `pointerdown`'da canvas piksellerine çevir ve varsa işaretçinin altındaki hücreyi seç.
-5. Her hücrenin dolgusunu seç: seçili hücrenin satırında, sütununda ya da kutusunda `'#e2e8f0'`, seçili hücrenin rakamını
-   tutuyorsa (`0` değilken) `'#bfdbfe'`, seçili hücrenin kendisi için `'#93c5fd'`, değilse beyaz. Sonraki kurallar kazanır.
+1. `let given ...` satırının hemen **altına** ekle:
+
+   ```js
+   let selected
+   ```
+
+2. `reset()` fonksiyonunun son satırı olarak başlangıç seçimini ekle:
+
+   ```js
+   function reset() {
+     grid = Array.from({ length: 9 }, (_, r) => [...PUZZLE.slice(r * 9, r * 9 + 9)].map(Number))
+     given = grid.map((row) => row.map((d) => d !== 0))
+     selected = { r: 4, c: 4 } // ← yeni
+   }
+   ```
+
+3. `reset()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp yazma fonksiyonunu, klavye ve tıklama
+   dinleyicilerini yaz:
+
+   ```js
+   function enter(d) {
+     if (given[selected.r][selected.c]) return
+     grid[selected.r][selected.c] = d
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
+     if (moves[event.key]) {
+       event.preventDefault()
+       const [dr, dc] = moves[event.key]
+       selected = { r: (selected.r + dr + 9) % 9, c: (selected.c + dc + 9) % 9 }
+     } else if (event.key >= '1' && event.key <= '9') enter(Number(event.key))
+     else if (event.key === '0' || event.key === 'Backspace' || event.key === 'Delete') enter(0)
+   })
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width - LEFT
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     const r = Math.floor((y - TOP) / SIZE)
+     const c = Math.floor(x / SIZE)
+     if (r >= 0 && r < 9 && c >= 0 && c < 9) selected = { r, c }
+   })
+   ```
+
+   `addEventListener('keydown', ...)` "tuşa basılınca şunu çalıştır", `'pointerdown'` "fareyle tıklanınca ya da
+   parmakla dokununca şunu çalıştır" der. Tarayıcı olayın bilgisini `event` içinde verir.
+
+4. `draw()` fonksiyonunun başını değiştir. Arka planı boyayan iki satırdan sonra `d` satırını ekle; döngünün içinde
+   de beyaz boyamayı renk seçimiyle değiştir:
+
+   ```js
+     const d = selected && grid[selected.r][selected.c]      // ← yeni
+     for (let r = 0; r < 9; r++) {
+       for (let c = 0; c < 9; c++) {
+         const x = LEFT + c * SIZE
+         const y = TOP + r * SIZE
+         // Light up the selected cell's row, column and box, and every cell with the same digit.
+         const sameBox = Math.floor(r / 3) === Math.floor(selected.r / 3) && Math.floor(c / 3) === Math.floor(selected.c / 3)
+         let fill = '#ffffff'                                  // ← yeni
+         if (r === selected.r || c === selected.c || sameBox) fill = '#e2e8f0'
+         if (d && grid[r][c] === d) fill = '#bfdbfe'
+         if (r === selected.r && c === selected.c) fill = '#93c5fd'
+         ctx.fillStyle = fill                                  // ← değişti
+         ctx.fillRect(x, y, SIZE, SIZE)
+         if (grid[r][c] === 0) continue
+   ```
+
+   `d` seçili hücredeki rakam. `if (d && ...)` rakam 0 ise (boş hücre) atlanır, çünkü 0 yanlış sayılır. Döngünün
+   geri kalanı (rakamı yazan satırlar ve çizgiler) aynı kalır.
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Ortadaki hücre mavi, satırı, sütunu ve kutusu gri olmalı. Ok
+   tuşlarıyla gez, boş bir hücreye rakam yaz, Backspace ile sil; verilen koyu rakamlar değişmemeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Tıklama yanlış hücreyi seçiyorsa `x` satırının sonundaki `- LEFT`'i kontrol et.
 
 # --tests--
 

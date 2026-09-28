@@ -21,19 +21,40 @@ panel so the player can plan ahead.
 
 # --explanation-tr--
 
-Her parçayı birbirinden bağımsız ve rastgele seçmek ortalamada adildir ama anlık olarak değil. Arada bir art arda dört
-S parçası verir ya da 30 tur boyunca hiç uzun I parçası çıkmaz; oyuncu kötü oyundan değil kötü şanstan kaybeder.
+**Bu adımda:** parçaları daha adil bir yöntemle, "torbadan" dağıtacağız ve sıradaki parçayı sağ panelde göstereceğiz.
+Panelin tepesinde **Next** yazısı ve altında bir sonraki parça görünecek.
 
-Modern düşen blok oyunları bir **7'li torba** kullanır: yedi parçanın her birinden birini torbaya koy, karıştır ve
-boşalana kadar ondan dağıt; sonra yeniden doldur ve karıştır. Artık her parça her yedili grupta tam bir kez çıkar. Sıra
-hâlâ tahmin edilemez, ama kıtlık ve yığılma imkânsızdır: bir I için asla 12 parçadan fazla beklemezsin.
+**Tam rastgelenin sorunu.** Her parçayı ötekilerden bağımsız rastgele seçmek ortalamada adildir ama o anda değil. Arada
+bir üst üste dört S parçası gelir ya da 30 tur boyunca uzun I hiç gelmez; oyuncu kötü oyundan değil kötü şanstan
+kaybeder.
 
-Bu, oyunların çok ötesine uzanan bir ders: **"rastgele" bir tasarım kararıdır**. Bazen gerçek bağımsızlık doğrudur
-(zar); bazen oyuncunun deneyimi garantili bir rastgelelik ister (karıştırılmış çalma listeleri, kart desteleri,
-ganimetler).
+**7'li torba (7-bag).** Modern düşen blok oyunları şöyle yapar: yedi parçanın her birinden birer tane torbaya koy,
+torbayı karıştır, boşalana kadar ondan dağıt; boşalınca yeniden doldur ve karıştır. Artık her parça her yedili grupta
+**tam bir kez** gelir. Sıra yine tahmin edilemez, ama kuraklık da sel de olmaz: bir I için hiçbir zaman 12 parçadan
+fazla beklemezsin.
 
-Torba, **sıradaki parçayı** göstermeyi de kolaylaştırır: her zaman bir parçayı önceden dağıtılmış tut ve oyuncu ileriyi
-planlayabilsin diye yan panelde çiz.
+Bu, oyunların çok ötesinde bir derstir: **"rastgele" bir tasarım kararıdır**. Bazen gerçek bağımsızlık doğrudur (zar);
+bazen oyuncunun deneyimi garantili bir rastgelelik ister (karışık çalma listesi, iskambil destesi).
+
+**Torba kodu, parça parça:**
+
+- `bag = [0, 1, 2, 3, 4, 5, 6]` → torbada şekillerin sıra numaraları var.
+- Sonraki `for` döngüsü torbayı **karıştırır** (Fisher–Yates yöntemi): sondan başa gelir, her elemanı kendisinden önceki
+  (ya da kendisi olan) rastgele bir elemanla yer değiştirir. `Math.floor(Math.random() * (i + 1))` 0 ile `i` arasında
+  rastgele bir tam sayı verir. `i--` sayacı her turda 1 azaltır.
+- `[bag[i], bag[j]] = [bag[j], bag[i]]` → iki elemanın yerini değiştirir. Satırın başındaki `;` bir önceki satırla
+  karışmasın diye konmuştur; yazman gerekir.
+- `bag.pop()` → torbanın **son** elemanını çıkarır ve verir; torba bir küçülür. `bag.length === 0` torba boş demektir.
+- `SHAPES[...].map((row) => [...row])` → o şeklin **kopyası** (asıl şablon bozulmasın diye, önceki gibi).
+
+**Sıradaki parça.** Torba sayesinde bir sonraki parçayı göstermek kolay: her zaman bir parçayı önceden çekip `next`'te
+tutarız. `spawn()` artık yeni parça olarak `next`'i kullanır ve torbadan yeni bir `next` çeker. Oyuncu böylece ileriyi
+planlayabilir.
+
+**Renk tuzağı.** `drawShape` her hücre için `ctx.fillStyle`'ı parçanın rengine değiştirir. Onun ardından yazılar da o
+renkte çıkardı; bu yüzden hemen sonra fırçayı yeniden beyaza boyarız.
+
+`randomShape()` artık kullanılmıyor, onu sileceğiz.
 
 # --task--
 
@@ -46,12 +67,73 @@ planlayabilsin diye yan panelde çiz.
 
 # --task-tr--
 
-1. `let bag` ve `let next` ekle. `takeFromBag()` yaz: torba boşsa `[0, 1, 2, 3, 4, 5, 6]` ile doldur ve karıştır
-   (Hafıza oyunundaki gibi Fisher–Yates); sonra bir indeksi `pop()` ile al ve o şeklin bir kopyasını döndür.
-   `randomShape()`'i kaldır.
-2. `newGame()` içinde parçayı çıkarmadan önce torbayı boşalt ve `next`'i dağıt. `spawn()` içinde yeni parça `next`
-   olsun, torbadan yeni bir `next` alınsın.
-3. Yan panelde `(COLS * CELL + 20, 30)` noktasına `Next` etiketini, sıradaki parçayı da `drawShape(next, 11, 2)` ile çiz.
+1. `let piece` satırının altına iki değişken ekle:
+
+   ```js
+   let board
+   let piece
+   let next // ← yeni
+   let bag // ← yeni
+   let score
+   ```
+
+2. `newGame()` fonksiyonunu şöyle yap:
+
+   ```js
+   function newGame() {
+     board = Array.from({ length: ROWS }, emptyRow)
+     bag = [] // ← yeni
+     score = 0
+     lines = 0
+     state = 'playing'
+     next = takeFromBag() // ← yeni
+     spawn()
+   }
+   ```
+
+3. `randomShape()` fonksiyonunun tamamını sil ve yerine torba fonksiyonunu yaz:
+
+   ```js
+   // The "7-bag": deal all seven pieces in a random order, then shuffle a new bag.
+   function takeFromBag() {
+     if (bag.length === 0) {
+       bag = [0, 1, 2, 3, 4, 5, 6]
+       for (let i = bag.length - 1; i > 0; i--) {
+         const j = Math.floor(Math.random() * (i + 1))
+         ;[bag[i], bag[j]] = [bag[j], bag[i]]
+       }
+     }
+     return SHAPES[bag.pop()].map((row) => [...row])
+   }
+   ```
+
+4. `spawn()` fonksiyonunun ilk satırını değiştir ve altına bir satır ekle:
+
+   ```js
+   function spawn() {
+     const shape = next // ← değişti
+     next = takeFromBag() // ← yeni
+     piece = { shape, x: Math.floor((COLS - shape.length) / 2), y: 0 }
+     if (!fits(piece.shape, piece.x, piece.y)) state = 'over'
+   }
+   ```
+
+5. `draw()` içindeki yan panelde, `ctx.textAlign = 'left'` satırı ile `ctx.fillText('Score', panel, 180)` satırı
+   arasına üç satır ekle:
+
+   ```js
+     ctx.textAlign = 'left'
+     ctx.fillText('Next', panel, 30) // ← yeni
+     drawShape(next, 11, 2) // ← yeni
+     ctx.fillStyle = 'white' // drawShape changed the fill color; the labels below need white again // ← yeni
+     ctx.fillText('Score', panel, 180)
+   ```
+
+   `drawShape(next, 11, 2)` sıradaki parçayı kuyunun dışına, 11. sütun ve 2. satır hizasına çizer.
+
+6. **Çalıştır**'a bas. Sağ panelin tepesinde **Next** ve altında bir parça görünmeli; o parça bir sonra düşen parça
+   olmalı. Alttaki kontrollerin hepsi yeşil olmalı. "white" diyen kontrol kırmızıysa `drawShape`'ten sonraki
+   `ctx.fillStyle = 'white'` satırını unutmuşsundur.
 
 # --tests--
 

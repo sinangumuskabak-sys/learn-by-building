@@ -25,22 +25,45 @@ A **streak** counts words solved in a row and goes back to 0 on a loss; the best
 
 # --explanation-tr--
 
-Kelimenin her harfi tahmin edildiğinde **kazanırsın**. Bu hepsi hakkında bir sorudur ve dizilerin tam bunu soran bir yöntemi
-vardır: `every`, test her öğe için doğruysa doğrudur.
+**Bu adımda:** oyunun sonu gelecek. Bütün harfleri bulursan yeşil `You got it! Click for the next word` yazar;
+altıncı ıskada kaybedersin, kelime kırmızıyla açılır ve `Hanged! Click to try another` yazar. Tıklama, Enter ya da
+boşluk tuşu yeni kelime başlatır. Sağ üstte art arda kaç kelime bildiğin (**seri**, streak) ve rekorun görünür.
+
+**Kazandın mı?** Kelimenin **her** harfi tahmin edildiyse kazandın. Dizilerin tam bunu soran bir komutu var:
 
 ```js
 [...word].every((l) => guessed.has(l))
 ```
 
-Altıncı ıskada **kaybedersin** ve sonra oyun kaçırdığın kelimeyi kırmızıyla göstermelidir. Adil olan budur.
+`every` ("her biri") her harf için ok fonksiyonunu çalıştırır; **hepsi** `true` derse sonuç `true` olur.
 
-`'playing'`, `'won'` ya da `'lost'` olan bir `state` bunu açık tutar. `guess` yalnızca oynarken çalışır; bittikten sonra Enter,
-Boşluk ya da bir tıklama yeni bir kelime başlatır.
+**Kaybettin mi?** Altıncı ıskada (`wrong === MAX_WRONG`). O zaman kaçırdığın kelimeyi kırmızıyla göstermek adil olur:
+`[...word].join(' ')` harfleri aralarında boşlukla yazar.
 
-Oyuncuların fark ettiği bir ayrıntı: rastgele seçim buna izin verse de aynı kelimenin art arda iki kez gelmesi bozuk hissettirir.
-Bir `do ... while` döngüsü kelime bir öncekinden farklı olana kadar yeniden seçer.
+**Durum.** Oyunun aşamasını `state` değişkeninde bir yazı olarak tutarız: `'playing'`, `'won'` ya da `'lost'`.
+`guess` sadece `'playing'` iken çalışır (`!==` "eşit değil"); bu, eski `wrong === MAX_WRONG` kontrolünün de yerini
+alır. Oyun bitince Enter, boşluk (`' '`) ya da canvas'a tıklama `newWord()` çağırır. `event.preventDefault()`, boşluk
+tuşunun sayfayı kaydırmasını engeller.
 
-Bir **seri**, art arda çözülen kelimeleri sayar ve bir kayıpta 0'a döner; en iyi seri `localStorage`'a kaydedilir.
+**Aynı kelime iki kez gelmesin.** Rastgele seçim aynı kelimeyi art arda verebilir ve bu oyuncuya bozuk gibi gelir.
+`do ... while` döngüsü **önce yapar, sonra kontrol eder**:
+
+```js
+let next
+do next = WORDS[Math.floor(Math.random() * WORDS.length)]
+while (next === word)   // eskisiyle aynıysa yeniden seç
+word = next
+```
+
+**Seri ve rekor.** `streak` kazanınca 1 artar, kaybedince 0'a döner. Seri rekoru (`best`) geçerse (`>` "büyük")
+rekor güncellenir ve `localStorage`'a yazılır. `localStorage` tarayıcının küçük bir defteridir; sayfayı yenilesen de
+içindekiler durur, ama sadece yazı saklar:
+
+- `localStorage.setItem('hangman-best', best)` → `'hangman-best'` başlığıyla yaz.
+- `localStorage.getItem('hangman-best')` → oku; hiç yazılmamışsa `null` (boş) verir.
+- `Number(...)` yazıyı sayıya çevirir; `|| 0` "boş ya da geçersizse 0 kullan" demektir.
+
+`if ... else if ...` → "kazandıysan şunu yap; **değilse**, ıskalar doldu mu diye bak".
 
 # --task--
 
@@ -55,14 +78,100 @@ Bir **seri**, art arda çözülen kelimeleri sayar ve bir kayıpta 0'a döner; e
 
 # --task-tr--
 
-1. `state` (`newWord()`'de `'playing'`), `streak = 0` ve `localStorage`'da `'hangman-best'` adıyla tutulan `best` ekle.
-2. `newWord()`, yeni kelime şimdikine eşit olduğu sürece yeniden seçer.
-3. `guess` yalnızca `'playing'` iken çalışır. Her harf tahmin edildiğinde `'won'` yap, `streak`'e 1 ekle ve yeni bir en iyiyi
-   kaydet; `MAX_WRONG` ıskada `'lost'` ve `streak = 0` yap.
-4. Oyun `'playing'` değilken Enter, Boşluk (`preventDefault()`) ya da bir tıklama `newWord()`'ü çağırır.
-5. `(260, 70)`'e `Streak 1  Best 3` çiz. `'lost'` olduğunda `masked()` yerine bütün kelimeyi `'#b91c1c'` ile çiz. Oyun
-   bittiğinde `You got it! Click for the next word` (`'#15803d'` ile) ya da `Hanged! Click to try another` (`'#b91c1c'` ile)
-   yazısını `'bold 20px sans-serif'` ile `y = 298`'de ortalı çiz.
+1. `let wrong` satırının hemen altına ekle:
+
+   ```js
+   let state // 'playing', 'won' or 'lost'
+   let streak = 0
+   let best = Number(localStorage.getItem('hangman-best')) || 0
+   ```
+
+2. `newWord()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function newWord() {
+     let next                                                    // ← yeni
+     do next = WORDS[Math.floor(Math.random() * WORDS.length)]   // ← değişti
+     while (next === word) // never the same word twice in a row
+     word = next                                                 // ← yeni
+     guessed = new Set()
+     wrong = 0
+     state = 'playing'                                           // ← yeni
+   }
+   ```
+
+   `while (next === word)` satırı da yeni.
+
+3. `guess(letter)` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function guess(letter) {
+     if (state !== 'playing' || guessed.has(letter)) return   // ← değişti
+     guessed.add(letter)
+     if (!word.includes(letter)) wrong += 1
+     if ([...word].every((l) => guessed.has(l))) {             // ← yeni
+       state = 'won'                                           // ← yeni
+       streak += 1                                             // ← yeni
+       if (streak > best) {                                    // ← yeni
+         best = streak                                         // ← yeni
+         localStorage.setItem('hangman-best', best)            // ← yeni
+       }                                                       // ← yeni
+     } else if (wrong === MAX_WRONG) {                         // ← yeni
+       state = 'lost'                                          // ← yeni
+       streak = 0                                              // ← yeni
+     }                                                         // ← yeni
+   }
+   ```
+
+4. `keydown` dinleyicisinin **en başına**, `(event) => {` satırının hemen altına ekle:
+
+   ```js
+     if (state !== 'playing' && (event.key === 'Enter' || event.key === ' ')) {
+       event.preventDefault()
+       newWord()
+       return
+     }
+   ```
+
+5. `keydown` dinleyicisinin kapanış `})`'sinden sonra bir satır boşluk bırakıp tıklama dinleyicisini ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', () => {
+     if (state !== 'playing') newWord()
+   })
+   ```
+
+6. `draw()` içinde `ctx.fillText('Misses ' + ...` satırının **üstüne** seri satırını ekle:
+
+   ```js
+     ctx.fillText('Streak ' + streak + '  Best ' + best, 260, 70)
+   ```
+
+   `'  Best '` içinde **iki** boşluk var.
+
+7. `draw()`'un sonunda, `ctx.font = 'bold 32px monospace'` satırının altındaki iki satırı (`ctx.fillStyle = '#1f2937'`
+   ve `ctx.fillText(masked(), ...)`) şununla değiştir:
+
+   ```js
+     if (state === 'lost') {
+       ctx.fillStyle = '#b91c1c'
+       ctx.fillText([...word].join(' '), canvas.width / 2, 340)
+     } else {
+       ctx.fillStyle = '#1f2937'
+       ctx.fillText(masked(), canvas.width / 2, 340)
+     }
+     if (state !== 'playing') {
+       ctx.font = 'bold 20px sans-serif'
+       ctx.fillStyle = state === 'won' ? '#15803d' : '#b91c1c'
+       ctx.fillText(state === 'won' ? 'You got it! Click for the next word' : 'Hanged! Click to try another', canvas.width / 2, 298)
+     }
+   ```
+
+   Bunlardan sonra `draw()`'un kapanış `}`'si gelir.
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Kelimeyi bulunca yeşil mesaj, altı ıskada kırmızı kelime ve
+   mesaj çıkmalı; tıklama ya da Enter yeni kelime başlatmalı. Sağ üstte `Streak` ve `Best` görünmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

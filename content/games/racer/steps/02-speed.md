@@ -24,21 +24,53 @@ On a phone, holding a finger anywhere on the game is the gas pedal.
 
 # --explanation-tr--
 
-Yol boyunca ilerlemek tek bir sayıdır: `position`, kameranın ne kadar geldiği. Her karede `speed` kadar büyür ve parçalar
-`position`'a göre çizildiği için şeritler sana doğru kayar, yol akıp gidiyormuş gibi görünür. `position` pistin sonunu geçince
-başa sarar: pist bir döngüdür.
+**Bu adımda:** yola kırmızı bir araba koyacağız ve gaza basınca yol üstüne akmaya başlayacak. Sol üstte hızın
+`km/h` olarak yazacak. Yukarı ok gaz, aşağı ok fren.
 
-Hızın kendisi yumuşakça değişir:
+**Hareket tek bir sayıdır.** 1. adımda parçaları hep `position`'a göre çizdik. Şimdi her karede (saniyede ~60 kez)
+`position`'a `speed` (hız) kadar ekleyeceğiz. `position` büyüdükçe çizgiler sana doğru kayar; yol akıyormuş gibi
+görünür. `position` pistin sonunu geçince baştan başlar: pist bir **tur**dur.
 
-- **yukarı** basılı tutmak hızlandırır,
-- **aşağı** fren yapar, çok daha sert,
-- bırakmak serbest bırakır: araba yavaşça hız kaybeder,
-- ve bir en yüksek hız vardır.
+**Hız yumuşak değişir.** Gerçek bir araba gibi üç farklı oran kullanacağız:
 
-Üç farklı oran (hızlanma, fren, serbest) sürüşü sürüş gibi hissettiren şeydir. Hız göstergesi hızı daha dostça bir sayıya, km/s'ye
-ölçekleyerek gösterir.
+- yukarı ok basılıyken hız her karede 1.2 artar,
+- aşağı ok (fren) basılıyken 3 azalır (fren çok daha sert),
+- hiçbir şeye basmazsan araba kendi kendine 0.4 yavaşlar,
+- ve bir en yüksek hız vardır (`MAX_SPEED`).
 
-Telefonda parmağı oyunun herhangi bir yerinde tutmak gaz pedalıdır.
+**Olay (event) nedir?** Kullanıcı bir tuşa bastığında tarayıcı bir **olay** yayar. Ona önceden "bu olunca şunu yap"
+diye bir fonksiyon verebilirsin:
+
+```js
+document.addEventListener('keydown', (event) => {
+  // bir tuşa basıldığında burası çalışır
+})
+```
+
+- `addEventListener('keydown', ...)` → "tuşa basılınca şu fonksiyonu çağır". `'keyup'` tuş bırakılınca olur.
+- `event.key` basılan tuşun adıdır: `'ArrowUp'`, `'ArrowDown'`, `'a'` gibi.
+
+**Hangi tuşlar basılı?** Bunu `keys` adlı boş bir nesnede tutacağız (`const keys = {}`). Tuşa basılınca
+`keys[event.key] = true`, bırakılınca `false` yazarız. Köşeli parantez `keys['ArrowUp']` ile nokta `keys.ArrowUp`
+aynı şeydir; adı bir değişkenden geliyorsa köşeli parantez kullanılır. `true` "doğru/evet", `false` "yanlış/hayır" demek.
+
+- `event.key.startsWith('Arrow')` → "tuşun adı `Arrow` ile mi başlıyor?"
+- `event.preventDefault()` → tarayıcının kendi işini yapmasını engeller. Yoksa ok tuşları sayfayı kaydırırdı.
+
+**Telefon için:** `pointerdown` parmak (ya da fare) ekrana değince, `pointerup` kalkınca, `pointercancel` dokunuş
+yarıda kesilince olur. Parmak ekrandayken `keys.ArrowUp = true` yaparız: parmak gaz pedalı olur.
+
+**`update` fonksiyonundaki yeni şeyler:**
+
+- `speed += 1.2` → "`speed`'e 1.2 ekle" (`speed = speed + 1.2`'nin kısası). `-=` çıkarır.
+- `if (...) A else if (...) B else C` → ilk doğru koşulun işini yapar, hiçbiri doğru değilse `else`'i.
+- `Math.min(MAX_SPEED, speed)` iki sayının küçüğünü, `Math.max(0, ...)` büyüğünü verir. İkisi birlikte hızı 0 ile
+  `MAX_SPEED` arasında tutar: ne eksiye düşer ne de sınırı aşar.
+
+**Yazı çizmek:** `ctx.font = 'bold 16px sans-serif'` yazı tipini, `ctx.textAlign = 'left'` hizayı ayarlar,
+`ctx.fillText(yazı, x, y)` yazıyı boyar. `Math.round` en yakın tam sayıya yuvarlar. Bir sayıyla bir yazıyı `+` ile
+yan yana koyabilirsin: `30 + ' km/h'` → `'30 km/h'`. Hızı `MAX_SPEED`'e bölüp 300 ile çarpıyoruz, böylece en yüksek
+hız ekranda "300 km/h" görünür.
 
 # --task--
 
@@ -52,13 +84,105 @@ Telefonda parmağı oyunun herhangi bir yerinde tutmak gaz pedalıdır.
 
 # --task-tr--
 
-1. `MAX_SPEED = 120`, `PLAYER_Z` (`CAMERA_HEIGHT * DEPTH`), `speed` (`reset()`'te `0`) ve `keydown`/`keyup`'tan bir `keys`
-   nesnesi ekle (oklar için `preventDefault()`). Canvas'ta parmak tutmak `ArrowUp`'ı basılı tutar.
-2. `update()` yaz: `ArrowUp` `1.2` ekler, değilse `ArrowDown` `3` düşer, değilse araba `0.4` kaybeder; hızı `0` ile `MAX_SPEED`
-   arasında tut. Sonra `speed`'i `position`'a ekle ve sona ulaşınca `trackLength`'i çıkar.
-3. Arabanı altta ortada çiz: `(W / 2 - 34, H - 44)`'te 68'e 30 `'#ef4444'` bir gövde ve `(W / 2 - 38, H - 22)` ile
-   `(W / 2 + 24, H - 22)`'de 14'e 12 iki `'#111827'` tekerlek; sol üste `30 km/h` (hız / `MAX_SPEED` × 300, yuvarlanmış;
-   `'#0f172a'`, `'bold 16px sans-serif'`, `y = 22`).
+1. `const DEPTH = ...` satırının hemen **altına** şunu ekle (arabanın kameranın ne kadar önünde durduğu):
+
+   ```js
+   const PLAYER_Z = CAMERA_HEIGHT * DEPTH // how far in front of the camera the player's car is
+   ```
+
+2. `const DRAW = 100 ...` satırının hemen altına en yüksek hızı ekle:
+
+   ```js
+   const MAX_SPEED = 120 // world units per frame
+   ```
+
+3. `let position ...` satırının hemen altına hızı ve tuş listesini ekle:
+
+   ```js
+   let speed
+   const keys = {}
+   ```
+
+4. `reset()` fonksiyonunun içine, `position = 0` satırının altına hızı sıfırlayan satırı ekle:
+
+   ```js
+   function reset() {
+     buildTrack()
+     position = 0
+     speed = 0 // ← yeni
+   }
+   ```
+
+5. `reset()` fonksiyonunun kapanış `}`'sinden sonra (yani `// Perspective: ...` yorumunun üstüne) klavye ve dokunma
+   olaylarını, sonra da `update` fonksiyonunu yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow')) event.preventDefault()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   // Touch: hold anywhere to accelerate.
+   canvas.addEventListener('pointerdown', () => {
+     keys.ArrowUp = true
+   })
+   function stopTouch() {
+     keys.ArrowUp = false
+   }
+   canvas.addEventListener('pointerup', stopTouch)
+   canvas.addEventListener('pointercancel', stopTouch)
+
+   function update() {
+     if (keys.ArrowUp) speed += 1.2
+     else if (keys.ArrowDown) speed -= 3
+     else speed -= 0.4
+     speed = Math.max(0, Math.min(MAX_SPEED, speed))
+
+     position += speed
+     if (position >= trackLength) position -= trackLength
+   }
+   ```
+
+   Son satır: `position` pist uzunluğuna ulaşınca ondan pist uzunluğunu çıkarır, böylece araba başa döner.
+
+6. `draw()` fonksiyonunun en sonuna, ikinci `for` döngüsünü kapatan `}`'den **sonra** ama `draw`'u kapatan son
+   `}`'den **önce** arabayı ve hız göstergesini çizen satırları ekle:
+
+   ```js
+       if (light) quad('#f8fafc', near.x, near.y, near.w * 0.03, far.x, far.y, far.w * 0.03)
+     }
+
+     // Your car.                                        // ← yeni (buradan aşağısı)
+     ctx.fillStyle = '#ef4444'
+     ctx.fillRect(W / 2 - 34, H - 44, 68, 30)
+     ctx.fillStyle = '#111827'
+     ctx.fillRect(W / 2 - 38, H - 22, 14, 12)
+     ctx.fillRect(W / 2 + 24, H - 22, 14, 12)
+
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText(Math.round((speed / MAX_SPEED) * 300) + ' km/h', 10, 22)
+   }
+   ```
+
+   Kırmızı dikdörtgen arabanın gövdesi, iki koyu küçük dikdörtgen tekerlekleri. En son çizildikleri için yolun üstünde görünürler.
+
+7. `loop()` fonksiyonunda `draw()`'un **üstüne** `update()` çağrısını ekle; önce hareket, sonra çizim:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra yukarı oku basılı tut: yol akmalı, hız artmalı; aşağı ok
+   frenlemeli. Alttaki kontrollerin hepsi yeşil olmalı. Hız hiç değişmiyorsa `update()` çağrısını `loop`'a eklemeyi
+   unutmuş olabilirsin.
 
 # --tests--
 

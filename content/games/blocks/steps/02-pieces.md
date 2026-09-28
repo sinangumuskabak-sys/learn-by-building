@@ -29,7 +29,11 @@ template.
 
 # --explanation-tr--
 
-Yedi parçanın her biri kendi başına minik bir ızgaradır, bir **matris**; sıfır olmayan sayılar dolu hücreleri gösterir:
+**Bu adımda:** yedi parçanın şeklini ve rengini tanımlayıp ilk parçayı çizeceğiz. Kuyunun üst ortasında mor bir
+**T** parçası göreceksin.
+
+**Parça = küçük bir ızgara.** Her parça kendi başına minik bir tablodur (**matris**): sayılardan oluşan satırların
+listesi. 0 boş, 0 olmayan sayı dolu hücre demektir:
 
 ```js
 [
@@ -39,16 +43,47 @@ Yedi parçanın her biri kendi başına minik bir ızgaradır, bir **matris**; s
 ]
 ```
 
-Sayı aynı zamanda parçanın **rengidir**: `COLORS[3]` mor. Parça yere inince aynı sayı tahtaya kopyalanır; böylece tahta,
-fazladan hiçbir veri olmadan her bloğun rengini hatırlar.
+Satırları alt alta yazınca şekli gözünle görebilirsin: üstte ortada bir blok, altında üç blok → T.
 
-Bütün matrisler **kare**dir (2×2, 3×3 ya da 4×4), bazılarında boş satırlar vardır. İsraf gibi görünür, ama ileriki bir
-adımda bir parçanın merkezi etrafında dönmesini sağlayan budur.
+**Sayı aynı zamanda renktir.** `COLORS` bir renk listesidir; `COLORS[3]` mor. Parça yere oturunca bu sayı kuyuya
+kopyalanacak; böylece kuyu her bloğun rengini ekstra bilgi tutmadan hatırlar. Listenin ilk elemanı `null` ("boş"),
+çünkü 0 boş hücre demek ve rengi yok.
 
-Düşen parça, bir matris artı kuyudaki bir konumdur, `{ shape, x, y }`; hücre cinsinden. Onu çizmek şu demek: matrisin
-`[r][c]` konumundaki her dolu hücre için `(x + c, y + r)` noktasına bir hücre çiz. Şeklin bir **kopyasını** al
-(`SHAPES[2].map((row) => [...row])`); böylece ileride düşen parçayı döndürmek ya da değiştirmek asıl şablonu asla
-değiştirmez.
+**Neden hepsi kare?** Bütün matrisler kare (2×2, 3×3 ya da 4×4), bazılarında boş satırlar var. Boşa yer harcıyor gibi
+görünür ama sonraki bir adımda parçayı merkezi etrafında döndürmemizi sağlayan şey budur.
+
+**Nesne (object).** Birkaç bilgiyi tek pakette tutar: `{ shape: ..., x: 3, y: 0 }` "şekli şu, sütunu 3, satırı 0 olan
+şey". İçindeki bilgiye nokta ile ulaşırsın: `piece.x`. Düşen parça = şekil + kuyudaki yeri (hücre cinsinden).
+
+**Kopya almak.**
+
+```js
+SHAPES[2].map((row) => [...row])
+```
+
+- `SHAPES[2]` üçüncü şekil (sayma 0'dan başlar), yani T.
+- `.map(...)` listedeki her elemanı bir fonksiyondan geçirip **yeni bir liste** yapar.
+- `(row) => [...row]` bir **ok fonksiyonu**dur (kısa yazılmış fonksiyon): soldaki `row` girdi, `=>`'nin sağı sonuç.
+  `[...row]` satırın elemanlarını yeni bir diziye döker, yani satırın **kopyasını** çıkarır.
+
+Kopya şart: sonra düşen parçayı döndürdüğümüzde asıl şablon `SHAPES` bozulmasın.
+
+**Parçayı çizmek.** Matrisin `[r][c]` konumundaki her dolu hücreyi kuyuda `(x + c, y + r)`'ye çizeriz:
+
+```js
+shape.forEach((cells, r) => {
+  cells.forEach((value, c) => {
+    if (value) drawCell(x + c, y + r, color || COLORS[value])
+  })
+})
+```
+
+- `forEach` listedeki her eleman için fonksiyonu çalıştırır; fonksiyona eleman ile **sıra numarasını** verir. Dıştaki
+  her satırı (`cells`, satır no `r`), içteki o satırdaki her sayıyı (`value`, sütun no `c`) gezer.
+- `color || COLORS[value]` → `||` burada "yoksa" gibi çalışır: `color` verildiyse onu, verilmediyse sayının rengini
+  kullan. `drawShape`'i dördüncü girdi olmadan çağırırsak `color` boş kalır.
+
+Kuyudaki dolu hücreler de artık gri değil, kendi sayılarının rengiyle çizilir: `COLORS[board[row][col]]`.
 
 # --task--
 
@@ -59,11 +94,90 @@ değiştirmez.
 
 # --task-tr--
 
-1. Çözümdeki `COLORS` ve `SHAPES` sabitlerini ekle (yedi kare matris).
-2. `let piece = { shape: SHAPES[2].map((row) => [...row]), x: 3, y: 0 }` ekle (T parçası, ortaya yakın).
-3. `shape`'in sıfır olmayan her hücresini `(x + c, y + r)` noktasına; `color` verildiyse o renkte, değilse
-   `COLORS[value]` renginde çizen `drawShape(shape, x, y, color)` yaz. Tahta hücrelerini de `COLORS[value]` ile çiz ve
-   `draw()`'un sonunda parçayı çiz.
+1. `const CELL = 24` satırının altına renk listesini ve yedi şekli ekle:
+
+   ```js
+   const COLORS = [null, '#22d3ee', '#facc15', '#a855f7', '#22c55e', '#ef4444', '#3b82f6', '#f97316']
+   // Each piece is a square matrix; the number is its color. Square matrices rotate around their center.
+   const SHAPES = [
+     [
+       [0, 0, 0, 0],
+       [1, 1, 1, 1],
+       [0, 0, 0, 0],
+       [0, 0, 0, 0],
+     ],
+     [
+       [2, 2],
+       [2, 2],
+     ],
+     [
+       [0, 3, 0],
+       [3, 3, 3],
+       [0, 0, 0],
+     ],
+     [
+       [0, 4, 4],
+       [4, 4, 0],
+       [0, 0, 0],
+     ],
+     [
+       [5, 5, 0],
+       [0, 5, 5],
+       [0, 0, 0],
+     ],
+     [
+       [6, 0, 0],
+       [6, 6, 6],
+       [0, 0, 0],
+     ],
+     [
+       [0, 0, 7],
+       [7, 7, 7],
+       [0, 0, 0],
+     ],
+   ]
+   ```
+
+   Sırayla: I, O, T, S, Z, J, L parçaları. Her birinde tam 4 dolu hücre var.
+
+2. `let board = ...` satırının altına düşen parçayı ekle:
+
+   ```js
+   let piece = { shape: SHAPES[2].map((row) => [...row]), x: 3, y: 0 }
+   ```
+
+3. `drawCell` fonksiyonunun kapanış `}`'sinin altına, bir satır boşlukla şekil çizen fonksiyonu yaz:
+
+   ```js
+   function drawShape(shape, x, y, color) {
+     shape.forEach((cells, r) => {
+       cells.forEach((value, c) => {
+         if (value) drawCell(x + c, y + r, color || COLORS[value])
+       })
+     })
+   }
+   ```
+
+4. `draw()` fonksiyonunda kuyu hücrelerini çizen satırı değiştir ve en sona parçayı çizen satırı ekle:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#1e293b'
+     ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL)
+
+     for (let row = 0; row < ROWS; row++) {
+       for (let col = 0; col < COLS; col++) {
+         if (board[row][col]) drawCell(col, row, COLORS[board[row][col]]) // ← değişti
+       }
+     }
+     drawShape(piece.shape, piece.x, piece.y) // ← yeni
+   }
+   ```
+
+5. **Çalıştır**'a bas. Kuyunun tepesinde, ortanın biraz solunda mor bir T görmelisin; alttaki kontrollerin hepsi yeşil
+   olmalı. "copy" diyen kontrol kırmızıysa `.map((row) => [...row])` kısmını unutmuşsundur.
 
 # --tests--
 

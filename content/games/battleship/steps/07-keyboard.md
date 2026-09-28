@@ -17,14 +17,38 @@ Two finishing touches:
 
 # --explanation-tr--
 
-Bazı oyuncular klavyeyi tercih eder, bazıları ise hiç işaretçi kullanamaz. Düşman denizinde sarı bir **imleç** ok tuşlarıyla hareket
-eder (kenarlarda başa sararak) ve Enter ya da Boşluk ona ateş eder. Hem dokunuş hem tuş aynı `playerShoots`'ta biter; böylece hangisini
-kullanırsan kullan kurallar aynıdır.
+**Bu adımda:** oyunu klavyeyle de oynanır yapacağız. Düşman denizinde sarı çerçeveli bir **imleç** göreceksin; ok
+tuşlarıyla onu gezdirip Enter ya da Boşluk ile ateş edeceksin. Oyun bitince düşmanın gemileri görünecek ve en iyi
+sonucun (`Best`) saklanacak.
 
-İki son dokunuş:
+**Neden klavye?** Bazı oyuncular klavyeyi tercih eder, bazıları ise fare ya da dokunmatik ekran hiç kullanamaz.
+Tıklama da tuş da aynı `playerShoots`'a varır; hangisini kullanırsan kullan kurallar aynıdır.
 
-- oyun bittiğinde düşman filosu **açığa çıkar**; böylece bulamadığın gemilerin nerede saklandığını görebilirsin;
-- en iyi sonucun, kazanmak için gereken en az atış, `localStorage`'da tutulur.
+**Yön tablosu.** Her ok tuşunun imleci ne kadar oynattığını bir nesnede tutarız:
+
+```js
+const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
+```
+
+`moves[event.key]` köşeli parantezle "adı basılan tuş olan alan" demektir. Ok tuşuysa `[satır farkı, sütun farkı]`
+gelir; başka bir tuşsa `undefined` gelir, yani `if (moves[event.key])` "ok tuşuna mı basıldı?" diye okunur.
+`const [dr, dc] = moves[event.key]` iki elemanlı listeyi açıp iki ada koyar (5. adımdaki yön döngüsünün aynısı).
+
+**Kenardan dolanmak: `%`.** `%` bölümden kalanı verir: `11 % 10` → 1, `9 % 10` → 9. İmleç en sağdan bir adım daha
+sağa gidince (sütun 10) `% N` onu 0'a, yani en sola götürür. Sola giderken `-1` olmasın diye önce `N` ekleriz:
+`(0 - 1 + 10) % 10` → 9, en sağ. Bir saatin 12'den sonra 1'e dönmesi gibi.
+
+**`else if` zinciri.** Tuş ok ise imleç oynar; değilse Enter ya da Boşluk ise ateş (oyun bittiyse yeni oyun); o da
+değilse H ise ısı haritası; hiçbiri değilse `else return` ile hiçbir şey yapılmaz.
+
+**Düşman donanmasını göstermek.** Oyun bitince bulamadığın gemilerin nerede saklandığını görmek istersin.
+`drawSea`'nın `showShips` parametresine artık `state !== 'playing'` veririz: oyun sürerken `false`, bitince `true`.
+
+**En iyi sonuç: `localStorage`.** Tarayıcının, sayfayı kapatsan da silinmeyen küçük defteridir.
+`localStorage.setItem('ad', değer)` yazar, `localStorage.getItem('ad')` okur. Defter her şeyi **yazı** olarak tutar,
+okurken `Number(...)` ile sayıya çeviririz. İlk seferde not yoktur; `|| 0` "yoksa 0 kullan" demektir. Burada en az
+atış en iyisidir; `0` "henüz kazanılmadı" anlamına gelir. Bu yüzden kazanınca: kayıt yoksa (`best === 0`) **veya** yeni
+atış sayısı daha azsa kaydederiz. Ekranda `best || '-'` → en iyi 0 ise `'-'` yazılır.
 
 # --task--
 
@@ -36,11 +60,74 @@ kullanırsan kullan kurallar aynıdır.
 
 # --task-tr--
 
-1. `cursor` ekle (`reset()`'te `{ r: 0, c: 0 }`). Ok tuşları onu başa sararak hareket ettirir; Enter ya da Boşluk ona ateş eder (ya da
-   sondan sonra yeni bir oyun başlatır). Oynarken onu `'#fde047'` bir çerçeve olarak çiz.
-2. `best`'i `localStorage`'da `'battleship-best'` adıyla tut, daha az atışlı bir kazançta kaydet ve atışların altına `Best 23` (ya da
-   `Best -`) çiz.
-3. Oyun bittiğinde düşman denizini gemileri görünür olarak çiz.
+1. `let showHeat` satırının altına iki satır ekle:
+
+   ```js
+   let cursor // { r, c } for the keyboard
+   let best = Number(localStorage.getItem('battleship-best')) || 0
+   ```
+
+2. `reset()`'in sonuna, `showHeat = false` satırının altına ekle:
+
+   ```js
+     cursor = { r: 0, c: 0 }
+   ```
+
+3. `playerShoots` içinde, kazanma bloğunda `message = 'You won in ' ...` satırının altına (`return`'den önce) ekle:
+
+   ```js
+       if (best === 0 || shots < best) {
+         best = shots
+         localStorage.setItem('battleship-best', best)
+       }
+   ```
+
+4. Enter'ı ve H'yi dinleyen `keydown` bloğunu şöyle yap:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] } // ← yeni
+     if (moves[event.key]) { // ← yeni
+       const [dr, dc] = moves[event.key]
+       cursor = { r: (cursor.r + dr + N) % N, c: (cursor.c + dc + N) % N }
+     } else if (event.key === 'Enter' || event.key === ' ') { // ← yeni
+       if (state !== 'playing') reset()
+       else playerShoots(cursor.r, cursor.c)
+     } else if (event.key === 'h' || event.key === 'H') showHeat = !showHeat
+     else return
+     event.preventDefault()
+   })
+   ```
+
+5. `draw()` içinde düşman denizini çizen satırı değiştir (oyun bitince gemiler görünür):
+
+   ```js
+     drawSea(SEA, BIG, myShots, enemyFleet, state !== 'playing', null) // ← değişti
+   ```
+
+6. Batan gemilerin çerçevelerini çizen `for` bloğunun kapanış `}`'inin altına imleci ekle:
+
+   ```js
+     if (state === 'playing') {
+       ctx.strokeStyle = '#fde047'
+       ctx.strokeRect(SEA.x + cursor.c * BIG + 1, SEA.y + cursor.r * BIG + 1, BIG - 2, BIG - 2)
+     }
+   ```
+
+7. `draw()`'un sonundaki yazıları şöyle yap (`Best` satırı eklenir, alttakiler bir satır aşağı kayar):
+
+   ```js
+     ctx.fillText('Shots ' + shots, x, HOME.y + 16)
+     ctx.fillText('Best ' + (best || '-'), x, HOME.y + 38) // ← yeni
+     ctx.fillText('Left: ' + enemyFleet.filter((s) => !sunk(s)).map((s) => s.cells.length).join(' '), x, HOME.y + 60) // ← değişti
+     ctx.fillText('H: their heat map', x, HOME.y + 82) // ← değişti
+     if (state !== 'playing') ctx.fillText('Tap or Enter: again', x, HOME.y + 104) // ← değişti
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sol üst karede sarı bir çerçeve olmalı; ok tuşları onu gezdirmeli
+   (kenardan çıkınca öbür kenardan girmeli), Enter ya da Boşluk o kareye ateş etmeli. Kazanınca `Best` yazısında atış
+   sayın görünmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

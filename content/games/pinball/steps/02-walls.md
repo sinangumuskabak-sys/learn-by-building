@@ -32,14 +32,23 @@ For now Space launches the ball up the lane at a fixed speed, and a ball that dr
 
 # --explanation-tr--
 
-Yuvarlak bir top eğik bir çizgiden nasıl seker? Üç adımda:
+**Bu adımda:** topa yerçekimi verecek ve duvarlardan sektireceğiz. Boşluk tuşuna basınca top kanaldan yukarı
+fırlayacak, tepedeki eğri duvarı dolaşıp masaya düşecek ve duvarlara çarpıp sekecek.
 
-1. Parçanın topun merkezine **en yakın noktasını bul**. Merkezi doğrunun üstüne izdüşür (`t`, uzunluğun karesine bölünmüş bir iç
-   çarpım), sonra `t`'yi 0 ile 1 arasında sınırla; böylece en yakın nokta parçanın üstünde, gerekirse bir ucunda kalır.
-2. O nokta **`R`'den yakınsa** top duvara biner. Noktadan merkeze yön **normal** `n`'dir; topu onun boyunca yalnızca değene kadar dışarı
-   it.
-3. Hızın duvara giden kısmını **yansıt**: `vn = v · n` ve negatifse (içeri gidiyorsa) `n` boyunca `(1 + bounce) × vn` çıkar.
-   `bounce = 0.5` ile top yarı hızla geri gelir.
+**Hareket nasıl olur?** Her karede topun konumuna hızını ekleriz: `ball.x += ball.vx`. `+=` "üstüne ekle"
+demektir (`a += 2`, `a = a + 2` ile aynı). Masa sana doğru eğik olduğu için **yerçekimi** her karede `vy`'yi biraz
+artırır; `y` aşağı doğru büyüdüğü için top aşağı çekilir.
+
+**Yuvarlak top eğik çizgiden nasıl seker?** Üç adımda (hepsi `hitSegment` fonksiyonunda):
+
+1. **En yakın noktayı bul.** Çizginin, topun merkezine en yakın noktası `(px, py)`. Bunu `t` adlı bir sayıyla
+   buluruz: `t = 0` çizginin başı, `t = 1` sonu, `0.5` ortası. `Math.max(0, Math.min(1, ...))` `t`'yi 0 ile 1
+   arasına sıkıştırır ki nokta çizginin dışına taşmasın (gerekirse uçta kalsın).
+2. **Çok mu yakın?** `Math.hypot(a, b)` iki nokta arasındaki uzaklığı verir (Pisagor). Uzaklık `d` yarıçap `R`'den
+   küçükse top duvara girmiş demektir. Noktadan merkeze bakan yöne **normal** (`nx, ny`) deriz; topu bu yönde
+   duvara tam değecek kadar dışarı iteriz.
+3. **Yansıt.** `vn` hızın duvara doğru olan kısmıdır. Negatifse (top duvara doğru gidiyorsa) bu kısmı ters
+   çeviririz. `bounce = 0.5` ile top yarı hızla geri döner.
 
 ```js
 const vn = ball.vx * nx + ball.vy * ny
@@ -49,12 +58,23 @@ if (vn < 0) {
 }
 ```
 
-Aynı birkaç satır dikey duvarları, eğimleri ve köşeleri halleder; masanın yalnızca parçalardan yapılmasının sebebi budur.
+**Yeni parçalar:**
 
-Masa eğiktir, bu yüzden **yerçekimi** topu nazikçe sana doğru çeker. Hızlı bir top iki kare arasında ince bir duvarın içinden
-geçebilir; bu yüzden bilardo oyunundaki gibi her kare dört küçük adıma bölünür ve hız sınırlanır.
+- **Parametre:** `function hitSegment(x1, y1, x2, y2, bounce)` çağrılırken verilen değerleri bu adlarla kullanır.
+- **`if (koşul) { ... }`**: koşul doğruysa içerdekini yap. `else` "değilse" demektir. `===` "eşit mi?", `!==`
+  "eşit değil mi?", `<` / `>` küçük / büyük, `>=` büyük ya da eşit. `&&` "ve", `||` "veya".
+- **`return`** fonksiyonu orada bitirir; `return true` / `return false` geriye "evet" / "hayır" cevabı verir.
+- **`for (let i = 0; i < SUB; i++)`**: `i` 0'dan başlar, `SUB`'dan küçük olduğu sürece içeriyi yapar, her turda
+  `i++` ile 1 artar. `SUB = 4` olduğu için 4 kez tekrar eder.
+- **Olay (event):** `document.addEventListener('keydown', (event) => { ... })` "bir tuşa basılınca bu kodu çalıştır"
+  der. `(event) => { ... }` kısa yazılmış, adsız bir fonksiyondur. `event.key` basılan tuştur: Boşluk `' '`, Aşağı
+  ok `'ArrowDown'`. `event.preventDefault()` tarayıcının kendi davranışını (sayfayı kaydırmak) engeller.
 
-Şimdilik Boşluk topu kanal boyunca sabit bir hızla fırlatır ve düşen ya da kanaldan geri yuvarlanan bir topun yerine yenisi gelir.
+**Neden 4 küçük adım?** Hızlı bir top bir karede duvarın bir yanından öbür yanına atlayabilir. Her kareyi 4 küçük
+adıma (`SUB`) bölüp hızı `MAX_SPEED` ile sınırlarsak top ince duvarlardan geçmez.
+
+**Durum:** `state` topun ne yaptığını söyler: `'ready'` (kanalda bekliyor) ya da `'playing'` (oyunda). Aşağı düşen
+ya da kanalın dibine geri yuvarlanıp duran topun yerine yeni top gelir.
 
 # --task--
 
@@ -67,12 +87,116 @@ geçebilir; bu yüzden bilardo oyunundaki gibi her kare dört küçük adıma b�
 
 # --task-tr--
 
-1. `GRAVITY = 0.12`, `SUB = 4`, `MAX_SPEED = 18` ve `state` (`newBall()`'da `'ready'`) ekle.
-2. `hitSegment(x1, y1, x2, y2, bounce)`'u anlatıldığı gibi yaz; top parçaya değdiğinde `true` döndürür.
-3. `step()` yaz: `vy`'ye `GRAVITY / SUB` ekle, `hız / SUB` kadar hareket ettir ve her duvarla çarpıştır (`bounce` 0.5). `draw()`'dan önce
-   çağrılan `update()`'i yaz: `'ready'` iken hiçbir şey; değilse `SUB` adım, sonra hızı `MAX_SPEED`'de sınırla. Canvas'ın altındaki ya
-   da kanalın dibinde duran (`x > 360`, `y > 550`, hız 0.5'in altında) bir top `newBall()` olur.
-4. `launch()` yaz: yalnızca hazırken `vy = -16` ve `'playing'`. Boşluk ve Aşağı fırlatır (`preventDefault()`).
+1. `const R = 8 // ball radius` satırının hemen altına üç sabit ekle:
+
+   ```js
+   const GRAVITY = 0.12 // the table is tilted towards you
+   const SUB = 4 // physics steps per frame
+   const MAX_SPEED = 18
+   ```
+
+2. `let ball // { x, y, vx, vy }` satırının altına durumu tutan değişkeni ekle, ve `newBall()`'un içine
+   `state = 'ready'` satırını ekle:
+
+   ```js
+   let state // 'ready' (in the lane) or 'playing'
+
+   function newBall() {
+     ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }
+     state = 'ready' // ← yeni
+   }
+   ```
+
+3. `reset()` fonksiyonunun kapanış `}`'inin altına çarpışma fonksiyonunu yaz:
+
+   ```js
+   // Push the ball out of a segment and bounce it.
+   function hitSegment(x1, y1, x2, y2, bounce) {
+     const dx = x2 - x1
+     const dy = y2 - y1
+     const t = Math.max(0, Math.min(1, ((ball.x - x1) * dx + (ball.y - y1) * dy) / (dx * dx + dy * dy)))
+     const px = x1 + t * dx
+     const py = y1 + t * dy
+     const d = Math.hypot(ball.x - px, ball.y - py)
+     if (d >= R || d === 0) return false
+     const nx = (ball.x - px) / d
+     const ny = (ball.y - py) / d
+     ball.x = px + nx * R
+     ball.y = py + ny * R
+     const vn = ball.vx * nx + ball.vy * ny
+     if (vn < 0) {
+       ball.vx -= (1 + bounce) * vn * nx
+       ball.vy -= (1 + bounce) * vn * ny
+     }
+     return true
+   }
+   ```
+
+4. Altına küçük bir fizik adımını yapan `step()` fonksiyonunu yaz. Yerçekimini ekler, topu kaydırır ve her duvarla
+   çarpıştırır:
+
+   ```js
+   function step() {
+     ball.vy += GRAVITY / SUB
+     ball.x += ball.vx / SUB
+     ball.y += ball.vy / SUB
+     for (const w of WALLS) hitSegment(w[0], w[1], w[2], w[3], 0.5)
+   }
+   ```
+
+   `w[0]` dizinin **ilk** elemanıdır; diziler 0'dan sayılır.
+
+5. Altına her karede çalışacak `update()` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     if (state === 'ready') return
+     for (let i = 0; i < SUB; i++) step()
+     const speed = Math.hypot(ball.vx, ball.vy)
+     if (speed > MAX_SPEED) {
+       ball.vx *= MAX_SPEED / speed
+       ball.vy *= MAX_SPEED / speed
+     }
+     // A ball that rolled back down the lane waits to be launched again.
+     if (ball.x > 360 && ball.y > 550 && Math.hypot(ball.vx, ball.vy) < 0.5) newBall()
+     if (ball.y > canvas.height + R) newBall() // drained: the next ball
+   }
+   ```
+
+   `*=` "şununla çarp" demektir; hız çok büyükse onu `MAX_SPEED`'e küçültür.
+
+6. Altına fırlatma fonksiyonunu ve klavye dinleyicisini yaz:
+
+   ```js
+   function launch() {
+     if (state !== 'ready') return
+     ball.vy = -16
+     state = 'playing'
+   }
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' || event.key === 'ArrowDown') {
+       event.preventDefault()
+       launch()
+     }
+   })
+   ```
+
+   `vy = -16`: eksi, yukarı doğru demek.
+
+7. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra Boşluk'a bas: top kanaldan yukarı fırlayıp masaya
+   düşmeli ve duvarlardan sekmeli. Alttaki kontrollerin hepsi yeşil olmalı. Top duvarlardan geçiyorsa
+   `hitSegment`'teki formülleri harf harf karşılaştır; özellikle parantezler önemli.
 
 # --tests--
 

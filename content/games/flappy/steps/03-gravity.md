@@ -27,24 +27,55 @@ times a second. (In this game we update once per frame. The last step makes that
 
 # --explanation-tr--
 
-Oyunlarda şeyler iki sayıyla hareket eder:
+**Bu adımda:** kuşa yerçekimi ekleyeceğiz. Çalıştırınca sarı kuş önce yavaşça, sonra gittikçe hızlanarak aşağı
+düşecek ve ekrandan çıkıp kaybolacak. (Henüz zıplayamıyor, o bir sonraki adımda.)
 
-- **konum**: nerede olduğu (`bird.y`)
-- **hız**: konumun her karede ne kadar değiştiği (`bird.vy`, "y yönündeki hız")
+**Hareket = çok hızlı değişen resimler.** Çizgi filmler gibi: ekranı saniyede yaklaşık 60 kez yeniden çizeriz ve
+her seferinde kuşu biraz farklı bir yere koyarız. Her bir resme **kare** (frame) denir.
 
-Yerçekimi kuşu doğrudan hareket ettirmez. **Hızı** değiştirir, her karede biraz. *İvme* tam olarak budur:
+**Hareket iki sayıyla anlatılır:**
+
+- **konum**: kuş nerede? (`bird.y`)
+- **hız**: her karede konum ne kadar değişiyor? (`bird.vy`, "y yönündeki hız"; İngilizce *velocity*)
+
+Yerçekimi kuşu doğrudan itmez; **hızını** her karede biraz artırır. Buna **ivme** denir:
 
 ```js
-bird.vy += GRAVITY   // düşüş gittikçe hızlanır
-bird.y += bird.vy    // sonra o anki hız kadar ilerle
+bird.vy += GRAVITY   // düşüş hızı biraz artsın
+bird.y += bird.vy    // kuş o anki hızı kadar aşağı insin
 ```
 
-`GRAVITY = 0.5` ile kuş ilk karede 0,5 px, ikincide 1 px, üçüncüde 1,5 px ilerler... Yavaş başlar ve hızlanır; gerçek
-bir düşüş de tam böyle görünür. İki satır, ve şimdiden fiziksel hissettiriyor.
+`+=` işareti "üstüne ekle" demektir: `bird.vy += GRAVITY`, "`bird.vy`'nin şimdiki değerine `GRAVITY` ekle ve sonucu
+yine `bird.vy`'ye yaz" anlamına gelir. `y` aşağı doğru büyüdüğü için `y`'yi artırmak kuşu **aşağı** indirir.
 
-Bu bir oyun döngüsünün içinde çalışır: `update()` durumu değiştirir, `draw()` gösterir, `requestAnimationFrame`
-saniyede yaklaşık 60 kez tekrarlar. (Bu oyunda her karede bir güncelleme yapıyoruz. Son adım bunu hızlı ekranlarda
-sağlam hâle getirecek.)
+`GRAVITY = 0.5` ile kuş ilk karede 0,5 piksel, ikincide 1, üçüncüde 1,5 piksel iner... Yavaş başlar ve hızlanır;
+gerçek bir düşüş de tam böyle görünür.
+
+**Büyük harfli ad neden?** `GRAVITY` (yerçekimi) oyun boyunca hiç değişmeyecek bir ayar. Böyle ayarları büyük
+harfle yazmak bir alışkanlıktır: okuyan kişi "bu bir ayar" diye hemen anlar. Satır sonundaki `// ...` açıklama bir
+yorumdur, bilgisayar atlar.
+
+**Oyun döngüsü (game loop).** Her oyunun kalbinde tekrar tekrar dönen üç iş vardır:
+
+1. `update()` → durumu değiştir (kuşu hareket ettir),
+2. `draw()` → yeni durumu ekrana çiz,
+3. bir sonraki karede yine aynısını yap.
+
+```js
+function loop() {
+  update()
+  draw()
+  requestAnimationFrame(loop)
+}
+```
+
+`requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki yenileyişinde `loop`'u çalıştır" der. `loop` da en
+sonunda kendini tekrar sıraya koyar; böylece saniyede yaklaşık 60 kez dönen bir döngü oluşur. Dikkat: burada
+`loop` **parantezsiz** yazılır. `loop()` yazsaydık "şimdi çalıştır" demiş olurduk; `loop` ise "bu tarifi al, sırası
+gelince sen çalıştır" demektir.
+
+(Bu oyunda her karede bir güncelleme yapıyoruz. Son adımda bunu çok hızlı ekranlarda da doğru çalışır hâle
+getireceğiz.)
 
 # --task--
 
@@ -57,12 +88,48 @@ Run it and watch the bird fall off the screen.
 
 # --task-tr--
 
-1. `const GRAVITY = 0.5` ekle ve kuşa bir hız ver: `bird` nesnesine `vy: 0`.
-2. `bird.vy`'ye `GRAVITY` ekleyen, sonra `bird.y`'ye `bird.vy` ekleyen `function update()` yaz.
-3. `update()`, sonra `draw()`, sonra `requestAnimationFrame(loop)` çağıran `function loop()` yaz.
-4. `draw()`'u bir kez çağırmak yerine `requestAnimationFrame(loop)` ile başlat.
+1. `const ctx = canvas.getContext('2d')` satırının altına, `let bird` satırından **önce**, yerçekimi ayarını ekle:
 
-Çalıştır ve kuşun ekrandan düşüşünü izle.
+   ```js
+   const GRAVITY = 0.5 // added to the bird's speed every frame
+   ```
+
+2. Kuşa bir hız alanı ver. `let bird` satırını şöyle değiştir:
+
+   ```js
+   let bird = { x: 100, y: 300, vy: 0, r: 14 }
+   ```
+
+   `vy: 0` kuşun başta hareketsiz olduğunu söyler.
+
+3. `let bird` satırının altına, `function draw()`'dan **önce**, kuşu hareket ettiren fonksiyonu yaz:
+
+   ```js
+   function update() {
+     bird.vy += GRAVITY
+     bird.y += bird.vy
+   }
+   ```
+
+4. `draw()` fonksiyonunun kapanış `}`'inden sonra döngü fonksiyonunu ekle:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+5. En alttaki `draw()` satırını sil ve yerine döngüyü başlatan satırı yaz:
+
+   ```js
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sarı kuş hızlanarak aşağı düşüp ekrandan çıkmalı ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: `update()` içinde önce `bird.vy`'nin, sonra `bird.y`'nin
+   değiştiğinden emin ol; sıra önemli.
 
 # --tests--
 

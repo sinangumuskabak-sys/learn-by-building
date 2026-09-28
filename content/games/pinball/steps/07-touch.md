@@ -18,14 +18,35 @@ from. After the game, a tap starts a new one.
 
 # --explanation-tr--
 
-Pinball iki elle tutulan bir telefonda mükemmeldir: **sol başparmak** sol paleti, **sağ başparmak** sağ paleti çalıştırır. Bu yüzden
-masa ikiye bölünür. Sol yarıya dokunmak sol paleti yukarıda tutar, sağ yarıya dokunmak sağı; parmağı kaldırmak paleti bırakır.
+**Bu adımda:** oyunu telefonda iki başparmakla oynanır yapacağız. Masanın sol yarısına dokununca sol palet, sağ
+yarısına dokununca sağ palet kalkacak; fırlatma kanalına parmağını basılı tutup kaldırınca top fırlayacak.
 
-Fırlatma kanalı üçüncü bir bölgedir: bir top beklerken kanala parmak basılı tutmak yayı çeker ve kaldırmak fırlatır; tıpkı Boşluk'u
-tutup bırakmak gibi.
+**Masa ikiye bölünür.** Telefon iki elle tutulunca **sol başparmak** sol paleti, **sağ başparmak** sağ paleti
+kullanır. Parmak ekrana değdiği sürece palet yukarıda kalır, kalkınca düşer.
 
-Klavyede olduğu gibi dokunmatik de yalnızca `pressed`'i değiştirir. Paletler ve fırlatıcı `pressed`'i okur ve nereden geldiğini
-umursamaz. Oyundan sonra bir dokunuş yenisini başlatır.
+**Fırlatma kanalı üçüncü bölge.** Top beklerken kanala (sağdaki şerit, `x > 350`) basılı tutmak yayı çeker,
+parmağı kaldırmak fırlatır; tıpkı Boşluk'u basılı tutup bırakmak gibi.
+
+**Dokunmak da sadece `pressed`'i değiştirir.** Klavyede olduğu gibi dokunma da yalnızca `pressed` nesnesini
+ayarlar. Paletler ve fırlatıcı `pressed`'e bakar; bilginin tuştan mı parmaktan mı geldiğini umursamaz. Oyun
+bitince bir dokunuş yeni oyun başlatır.
+
+**Yeni parçalar:**
+
+- **`pointerdown` / `pointerup`**: fare tuşuna basınca ya da parmak ekrana değince / kalkınca gelen olaylar.
+  `pointerdown`'ı canvas'a bağlarız (masaya dokunulunca), `pointerup`'ı ise bütün sayfaya (`document`): parmak
+  masanın dışında kalksa da paletler insin.
+- **Dokunulan yerin x'i.** `event.clientX` dokunuşun ekrandaki yeridir. Telefonda canvas küçültülmüş olabilir;
+  `canvas.getBoundingClientRect()` canvas'ın ekrandaki yerini ve boyunu verir. Şu satır ekran pikselini canvas
+  pikseline çevirir:
+
+  ```js
+  const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+  ```
+
+  Önce canvas'ın sol kenarını çıkarırız (canvas içindeki yer), sonra canvas'ın gerçek eni / ekrandaki eni oranıyla
+  çarparız.
+- `return reset()`: oyunu baştan kurar ve fonksiyondan çıkar; aynı dokunuş bir palet kaldırmaz.
 
 # --task--
 
@@ -36,10 +57,36 @@ umursamaz. Oyundan sonra bir dokunuş yenisini başlatır.
 
 # --task-tr--
 
-1. `pointerdown`'da: oyun bittiyse `reset()`; değilse, hazırken ve `x > 350` iken `pressed.launch`'u ayarla; aksi hâlde canvas'ın sol
-   yarısı için `pressed.left`'i, sağ yarısı için `pressed.right`'ı ayarla.
-2. Document'ın `pointerup`'ında: `pressed.launch` ayarlıysa fırlat, sonra `pressed`'in hepsini temizle.
-3. Son panel `Space or tap to play again` der.
+1. `document.addEventListener('keyup', ...)` satırının altına bir satır boşluk bırakıp dokunma kodunu yaz:
+
+   ```js
+   // Touch: the right-hand launch lane holds the launcher, the left and right halves of the table are the flippers.
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'over') return reset()
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     if (state === 'ready' && x > 350) pressed.launch = true
+     else if (x < canvas.width / 2) pressed.left = true
+     else pressed.right = true
+   })
+
+   document.addEventListener('pointerup', () => {
+     if (pressed.launch) launch()
+     pressed = { left: false, right: false, launch: false }
+   })
+   ```
+
+   Parmak kalkınca, fırlatma tutuluyorsa top fırlar; sonra bütün `pressed` sıfırlanır (paletler iner).
+
+2. `draw()`'un sonundaki oyun sonu yazısını değiştir:
+
+   ```js
+       ctx.fillText('Space or tap to play again', 200, 392) // ← değişti
+   ```
+
+3. **Çalıştır**'a bas. Oyun alanında fareyle sol yarıya basılı tut: sol palet kalkmalı; sağ yarıda sağ palet. Kanala
+   basılı tutup bırakınca top fırlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Telefonda **Oyun** sekmesinde iki
+   başparmakla deneyebilirsin.
 
 # --tests--
 

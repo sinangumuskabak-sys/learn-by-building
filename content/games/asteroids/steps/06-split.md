@@ -26,23 +26,41 @@ a loop might be walking over it. Changing an array while you loop over it is a c
 
 # --explanation-tr--
 
-İki daire, merkezleri arasındaki uzaklık yarıçaplarının toplamından küçükse değer. Tuğla Kırma'daki gibi **karesi
-alınmış** uzaklıkları karşılaştır ve karekökü atla:
+**Bu adımda:** mermiler kayalara çarpacak. Vurulan büyük kaya iki ortaya, orta kaya iki küçüğe bölünecek, küçük kaya
+yok olacak. Sol üstte de puanın görünecek.
+
+**İki daire ne zaman değer?** Merkezleri arasındaki uzaklık, iki yarıçapın toplamından **küçükse**. Uzaklık Pisagor'la
+bulunur: yatay fark `dx`, dikey fark `dy` ise uzaklık `√(dx² + dy²)`. Karekök almak yerine iki tarafın da karesini
+karşılaştırırız, sonuç aynıdır ve daha hızlıdır:
 
 ```js
 dx * dx + dy * dy < (ar + br) * (ar + br)
 ```
 
-Bir mermi minik bir dairedir (yarıçap 2). Bir asteroite çarpınca asteroit **kırılır**: kaldırılır ve zaten en küçük
-boyutta değilse aynı noktada iki küçük asteroit doğar; her biri kendi rastgele yönünde fırlar (yeni bir `makeAsteroid`
-çağrısı her birine yeni bir açı ve hız verir). Büyük iki ortaya, orta iki küçüğe dönüşür, küçük kaybolur.
+Bunu `hits(a, ar, b, br)` adında bir fonksiyona koyarız: `a` ve `b` konumu olan iki şey, `ar` ve `br` yarıçapları.
+Sonucu `return` ile verir: `<` karşılaştırması zaten `true` ya da `false` üretir. Mermi, yarıçapı 2 olan küçük bir
+daire sayılır.
 
-Bu kural zorluğun oynadıkça artmasını sağlar: büyük bir kayayı vurmak yavaş bir hedefi iki hızlı hedefe çevirir. Küçük
-kayaları vurmak daha zor olduğu için daha değerlidirler: 20, 50 ve 100 puan.
+**Kaya kırılınca** (`breakAsteroid`):
 
-`breakAsteroid`'in, bir döngü üzerinde dolaşıyorken elemanları `splice` ile çıkarmak yerine `asteroids` dizisini
-**süzülmüş** bir kopyayla değiştirdiğine dikkat et. Bir diziyi üzerinde dolaşırken değiştirmek, atlanan elemanların
-klasik kaynağıdır.
+1. Boyuna göre puan eklenir: `POINTS[asteroid.size]`. Küçük kayayı vurmak zor, o yüzden daha değerli: küçük 100,
+   orta 50, büyük 20.
+2. Kaya listeden çıkarılır: `asteroids.filter((a) => a !== asteroid)` → "bu kaya **olmayan** her şeyi tut". `!==`
+   "eşit değil" demektir.
+3. Boyu 1'den büyükse aynı yerde bir küçük boydan iki yeni kaya doğar. Her biri yeni bir `makeAsteroid` çağrısı olduğu
+   için kendi rastgele yönüne ve hızına fırlar.
+
+Bu kural oyunu oynadıkça zorlaştırır: yavaş bir büyük hedef, iki hızlı orta hedefe dönüşür.
+
+**Neden `filter`?** Bir listenin üzerinden döngüyle geçerken aynı listeden öğe silmek, bazı öğelerin atlanmasına yol
+açan klasik bir hatadır. `filter` eski listeye dokunmaz, yerine yeni bir liste koyar.
+
+**Hangi kaya vuruldu?** `asteroids.find((asteroid) => hits(...))` listede koşulu tutan **ilk** öğeyi verir; hiçbiri
+tutmazsa `undefined` (yok) verir. `if (hit)` "bir şey bulunduysa" demektir. Vuran merminin ömrünü 0 yaparız; hemen
+sonraki `filter` satırı onu siler.
+
+**Yazı çizmek.** `ctx.font = '18px monospace'` yazının boyunu ve türünü, `ctx.textAlign = 'left'` hizasını seçer.
+`ctx.fillText(yazı, x, y)` yazıyı o noktaya boyar. `String(score)` sayıyı yazıya çevirir (`20` → `'20'`).
 
 # --task--
 
@@ -55,12 +73,78 @@ klasik kaynağıdır.
 
 # --task-tr--
 
-1. `POINTS = [0, 100, 50, 20]` ve `let score = 0` ekle; iki daire için `hits(a, ar, b, br)` yaz.
-2. `breakAsteroid(asteroid)` yaz: puanını ekle, onu `filter` ile `asteroids`'tan çıkar ve boyutu 1'den büyükse
-   konumuna `size - 1` boyutunda iki yeni asteroit ekle.
-3. `update()` içinde her mermi için çarptığı bir asteroit bul (mermi yarıçapı 2); varsa onu kır ve merminin `life`'ını 0
-   yap (mermiler süzülmeden önce).
-4. Skoru sol üste `(12, 26)`, beyaz `'18px monospace'` ile yaz.
+1. `const SIZES = ...` satırının hemen altına puan tablosunu ekle:
+
+   ```js
+   const POINTS = [0, 100, 50, 20] // smaller asteroids are worth more
+   ```
+
+2. `let asteroids` satırının hemen altına puanın adını ekle:
+
+   ```js
+   let score
+   ```
+
+3. `shoot` fonksiyonunun kapanış `}`'inden sonra, `document.addEventListener('keydown', ...)` satırından önce iki
+   fonksiyon yaz: çarpışma sorusu ve kaya kırma.
+
+   ```js
+   function hits(a, ar, b, br) {
+     const dx = a.x - b.x
+     const dy = a.y - b.y
+     return dx * dx + dy * dy < (ar + br) * (ar + br)
+   }
+
+   function breakAsteroid(asteroid) {
+     score += POINTS[asteroid.size]
+     asteroids = asteroids.filter((a) => a !== asteroid)
+     if (asteroid.size > 1) {
+       asteroids.push(makeAsteroid(asteroid.x, asteroid.y, asteroid.size - 1))
+       asteroids.push(makeAsteroid(asteroid.x, asteroid.y, asteroid.size - 1))
+     }
+   }
+   ```
+
+4. `update()`'in sonunda, kayaları hareket ettiren döngüden sonra ve `bullets = bullets.filter(...)` satırından **önce**
+   şu döngüyü ekle:
+
+   ```js
+     for (const bullet of bullets) {                                                  // ← yeni
+       const hit = asteroids.find((asteroid) => hits(bullet, 2, asteroid, asteroid.r))
+       if (hit) {
+         breakAsteroid(hit)
+         bullet.life = 0
+       }
+     }
+     bullets = bullets.filter((bullet) => bullet.life > 0)
+   }
+   ```
+
+   Sıra önemli: mermi önce `life = 0` olur, sonra `filter` onu siler.
+
+5. `draw()`'un sonunda, mermileri çizen satırdan sonra ve kapanış `}`'inden önce puanı yazan satırları ekle:
+
+   ```js
+     for (const bullet of bullets) ctx.fillRect(bullet.x - 1.5, bullet.y - 1.5, 3, 3)
+
+     ctx.font = '18px monospace'         // ← yeni
+     ctx.textAlign = 'left'              // ← yeni
+     ctx.fillText(String(score), 12, 26) // ← yeni
+   }
+   ```
+
+   Renk zaten bir üstte `'white'` seçildi, o yüzden yazı da beyaz olur.
+
+6. En alttaki başlangıç satırlarının en üstüne puanı sıfırlayan satırı koy:
+
+   ```js
+   score = 0 // ← yeni
+   bullets = []
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, bir kayaya ateş et: kaya ikiye bölünmeli ve sol üstteki puan
+   artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `hits` içindeki `<` işaretine (küçük-eşit değil,
+   sadece küçük) ve `POINTS` sırasına bak.
 
 # --tests--
 

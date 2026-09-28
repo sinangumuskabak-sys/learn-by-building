@@ -28,25 +28,47 @@ restarts the level, and a move counter shows how efficient the solution is.
 
 # --explanation-tr--
 
-Sokoban'da tek bir dikkatsiz itiş bir bölümü imkânsız hâle getirebilir. Tek bir hata için bütün bölümü yeniden başlatmak
-acı verir; bu yüzden her iyi sürümde **geri alma** vardır.
+**Bu adımda:** hamleleri geri alabileceksin. **Z** son hamleyi geri alacak, **R** bölümü baştan başlatacak. Sağ üstte
+`Moves: 12` gibi bir hamle sayacı, altta da `Arrows: move   Z: undo   R: restart` ipucu göreceksin.
 
-En basit güvenilir geri alma bir **anlık görüntü geçmişidir**: her hamleden önce hamlenin değiştirebileceği her şeyin bir
-kopyasını kaydet. Geri alma son görüntüyü çıkarır ve yerine koyar.
+**Neden geri alma?** Sokoban'da tek bir dikkatsiz itiş bölümü çözülemez yapabilir (kutu köşeye sıkışır). Tek hata için
+bütün bölümü baştan oynamak can sıkar.
+
+**Fotoğraf defteri (history).** En basit ve güvenilir yol: her hamleden **önce**, hamlenin değiştirebileceği her şeyin
+(oyuncu, kutular, hamle sayısı) bir kopyasını, bir "fotoğrafını" (**snapshot**) deftere eklemek. Geri alırken son fotoğrafı
+defterden çıkarıp her şeyi ona göre geri koyarız.
 
 ```js
-history.push(JSON.stringify({ player, boxes, moves }))   // hamleden önce
-...
-;({ player, boxes, moves } = JSON.parse(history.pop()))   // geri al
+history.push(snapshot())   // hamleden önce: fotoğrafı listenin sonuna ekle
+history.pop()              // geri al: listenin SON elemanını çıkar ve ver
 ```
 
-`JSON.stringify` metin biçiminde **derin bir kopya** yapar. Bu önemli: `boxes` dizisinin kendisini eklemek aynı diziye bir
-başvuru saklardı ve bir sonraki hamle "kaydedilmiş" kopyayı da değiştirirdi. (2048'deki paylaşılan satırla aynı
-değer–başvuru dersi.) Son satır üç değişkeni birden ayarlamak için ayrıştırmalı atama kullanır; baştaki `;` ve parantezler
-gerekli, çünkü orada bir satır `{` ile başlayamaz.
+Böyle "sona ekle, sondan al" diye çalışan listeye **yığın** (stack) denir; üst üste konmuş tabaklar gibi: en son koyduğun
+tabağı ilk alırsın. Geri alma için tam uygun: en son hamle ilk geri alınır.
 
-Bir **yığın** (ekle, sonra sonuncuyu çıkar) geri alma için tam doğru biçimdir: en son değişiklik ilk geri alınır. `R`
-bölümü yeniden başlatır, bir hamle sayacı da çözümün ne kadar verimli olduğunu gösterir.
+**Neden `JSON.stringify`?** `JSON.stringify({ player, boxes, moves })` bütün bu değerleri **yazıya** çevirir, örneğin
+`'{"player":{"x":3,"y":4},"boxes":[...],"moves":0}'`. Bu gerçek bir kopyadır. `boxes` listesinin kendisini deftere
+koysaydık, defterde aynı listeye bir **işaret** (referans) olurdu; sonraki itiş kutuyu değiştirince "kaydedilmiş" hâl de
+değişirdi. Aynı fotoğrafı değil, fotoğrafın çıktısını saklamak gibi.
+
+`JSON.parse(yazı)` ters işi yapar: yazıyı yeniden nesneye çevirir.
+
+**Üç değeri birden geri koymak:**
+
+```js
+;({ player, boxes, moves } = JSON.parse(previous))
+```
+
+"Gelen nesnedeki `player`'ı `player`'a, `boxes`'ı `boxes`'a, `moves`'u `moves`'a koy." Baştaki `;` ve dıştaki parantezler
+şart: satır `{` ile başlasaydı bilgisayar onu bir kod bloğu sanırdı.
+
+`if (!previous) return` → defter boşsa `pop()` `undefined` verir; `!` "değil" demektir: "fotoğraf yoksa hiçbir şey yapma".
+
+**Yalnızca gerçekleşen hamleler.** Fotoğrafı, hamlenin olacağı **kesinleştikten** sonra çekeriz: kutu itilecekse duvar ve
+kutu kontrolünden sonra, kutu yoksa `else` ("değilse") içinde. Engellenen hamle deftere girmez ve sayılmaz.
+
+**Baştan başlamak** kolay: `loadLevel(level)` şu anki bölümü yazıdan yeniden kurar; `moves` ve `history`'yi de orada
+sıfırlarız.
 
 # --task--
 
@@ -59,12 +81,80 @@ bölümü yeniden başlatır, bir hamle sayacı da çözümün ne kadar verimli 
 
 # --task-tr--
 
-1. `let moves` ve `let history` ekle; `loadLevel()` içinde `0` ve `[]` yap.
-2. `JSON.stringify({ player, boxes, moves })` döndüren `snapshot()` yaz. `move()` içinde bir hamle gerçekleşmeden hemen
-   önce (yalnızca izin verildiyse) bir görüntü ekle, sonrasında `moves`'u 1 artır.
-3. `undo()` yaz: varsa son görüntüyü çıkar ve `player`, `boxes` ve `moves`'u ondan geri yükle. `z`'de çağır; `r`'de
-   bölümü yeniden başlat.
-4. Tepede sağa hizalı `Moves: 12` çiz ve ipucunu `Arrows: move   Z: undo   R: restart` yap.
+1. `let player` satırının altına iki değişken ekle:
+
+   ```js
+   let moves
+   let history
+   ```
+
+2. `loadLevel()` fonksiyonunun sonuna, son `}`'den hemen önce ekle:
+
+   ```js
+     moves = 0
+     history = []
+   ```
+
+3. `solved()` fonksiyonunun kapanış `}`'sinin altına `snapshot()`'ı yaz:
+
+   ```js
+   function snapshot() {
+     return JSON.stringify({ player, boxes, moves })
+   }
+   ```
+
+4. `move()` fonksiyonunun alt kısmını şöyle değiştir:
+
+   ```js
+     const box = boxAt(x, y)
+     if (box) {
+       const bx = x + dx
+       const by = y + dy
+       if (walls.has(key(bx, by)) || boxAt(bx, by)) return // a box cannot push into a wall or another box
+       history.push(snapshot()) // ← yeni
+       box.x = bx
+       box.y = by
+     } else {                   // ← yeni
+       history.push(snapshot()) // ← yeni
+     }
+     player = { x, y }
+     moves += 1                 // ← yeni
+   }
+   ```
+
+5. `move()`'un kapanış `}`'sinin altına `undo()`'yu yaz:
+
+   ```js
+   function undo() {
+     const previous = history.pop()
+     if (!previous) return
+     ;({ player, boxes, moves } = JSON.parse(previous))
+   }
+   ```
+
+6. `keydown` dinleyicisinde, Boşluk satırının (`if (event.key === ' ' ...`) hemen üstüne iki satır ekle:
+
+   ```js
+     if (event.key === 'z') undo()
+     if (event.key === 'r') loadLevel(level)
+   ```
+
+7. `draw()`'da `Level` yazısının altına hamle sayacını ekle ve ipucunu değiştir:
+
+   ```js
+     ctx.fillText('Level ' + (level + 1) + '/' + LEVELS.length, 12, TOP / 2)
+     ctx.textAlign = 'right'                                     // ← yeni
+     ctx.fillText('Moves: ' + moves, canvas.width - 12, TOP / 2) // ← yeni
+   ```
+
+   ```js
+       ctx.fillText('Arrows: move   Z: undo   R: restart', canvas.width / 2, canvas.height - 16) // ← değişti
+   ```
+
+   (İpucunda bölümler arasında **üç boşluk** var.)
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Birkaç adım at: `Moves` artmalı. **Z** son adımı geri almalı, **R**
+   bölümü baştan başlatmalı (küçük harf; Caps Lock kapalı olsun). Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

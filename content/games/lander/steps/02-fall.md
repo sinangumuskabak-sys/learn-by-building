@@ -29,25 +29,54 @@ lander back on the other.
 
 # --explanation-tr--
 
-Ay'da yerçekimi zayıftır; bu yüzden iniş aracı yavaşça aşağı süzülür ve her karede biraz hızlanır. Yan hızını da korur:
-boşlukta onu hiçbir şey yavaşlatmaz.
+**Bu adımda:** iniş aracı (lander) gökyüzünde belirecek ve yavaşça, gittikçe hızlanarak düşecek; bir yandan da sağa
+kayacak. Ayakları zemine değince duracak. Ekranın bir yanından çıkarsa öbür yanından geri gelecek.
 
-İniş aracı yakında eğilecek ve eğik bir üçgeni her köşesini `sin` ve `cos` ile hesaplayarak çizmek zahmetli olurdu. Canvas
-bunu senin için **çizimin kendisini** taşıyıp döndürerek yapabilir:
+**Hız ve yerçekimi.** Aracın konumu (`x`, `y`) yanında hızı da vardır: `vx` her karede sağa kaç piksel gideceği,
+`vy` her karede aşağı kaç piksel gideceği. Ay'da yerçekimi zayıftır: her karede `vy`'ye biraz (`0.025`) ekleriz,
+böylece düşüş yavaş yavaş hızlanır. Boşlukta hiçbir şey yana hareketi yavaşlatmaz, o yüzden `vx` aynı kalır.
 
 ```js
-ctx.save()                     // normal çizim konumunu hatırla
-ctx.translate(lander.x, lander.y)   // (0, 0) artık aracın ortası
-ctx.rotate(lander.angle)       // ve "yukarı" artık aracın yukarısı
-...aracı (0, 0) çevresine, eğik değilmiş gibi çiz...
-ctx.restore()                  // geri kalan her şey için normale dön
+lander.vy += GRAVITY    // += "üstüne ekle": lander.vy = lander.vy + GRAVITY
+lander.x += lander.vx
+lander.y += lander.vy
 ```
 
-2B oyunlarda dönen neredeyse her şey böyle çizilir: onu kendi merkezi çevresinde basitçe çiz, `translate` ve `rotate` yerine
-koysun.
+**Durum (state).** Araç ya uçuyordur (`'flying'`) ya da yere inmiştir (`'down'`). Bunu `state` değişkeninde bir yazı
+olarak tutarız. `update()`'in ilk satırı:
 
-Bir ayak zemine değince (sol ayağın, ortanın ya da sağ ayağın altındaki zemin artık ayakların altında değilse) araç durur.
-Bunun bir iniş mi yoksa bir kaza mı olduğu sonra gelecek. Ekranın bir yanından çıkmak aracı öbür yandan geri getirir.
+```js
+if (state !== 'flying') return
+```
+
+`if (koşul) iş` → koşul doğruysa işi yap. `!==` "eşit değil" demektir. Tek başına `return` "burada dur, fonksiyonun
+gerisini yapma" demektir. Yani araç yerdeyse hiçbir şey hareket etmez.
+
+**Kenardan dolanma: `%`.** `%` bölümden kalanı verir: `490 % 480` → 10. Aracın `x`'ine önce 480 ekleyip sonra 480'e
+göre kalanını alırsak `x` hep 0 ile 480 arasında kalır: sağdan çıkan soldan (`485` → `5`), soldan çıkan sağdan
+(`-3` → `477`) girer.
+
+**Yere değdi mi?** Aracın ayakları ortasının 10 piksel altında, 9 piksel (`FEET`) solunda ve sağındadır. Sol ayağın,
+ortanın ya da sağ ayağın altındaki zemini 1. adımdaki `groundY` ile buluruz. Ayak `y`'si zemin `y`'sine ulaştıysa
+ya da geçtiyse (`>=` "büyük veya eşit"; hatırla, `y` aşağı doğru büyür) araç iner. Üç koşuldan biri yeterli olduğu
+için onları `||` ("veya") ile bağlarız.
+
+**Döndürerek çizmek.** Araç ileride eğilecek. Eğik bir üçgenin her köşesini trigonometriyle hesaplamak zor olurdu.
+Canvas bunu bizim için yapar: kâğıdı kaydırıp çevirir, biz düz çizeriz:
+
+```js
+ctx.save()                          // şu anki çizim ayarını hatırla
+ctx.translate(lander.x, lander.y)   // (0, 0) artık aracın ortası
+ctx.rotate(lander.angle)            // "yukarı" artık aracın yukarısı
+// ...aracı (0, 0) etrafında, eğik değilmiş gibi çiz...
+ctx.restore()                       // hatırladığın ayara dön
+```
+
+`restore` önemlidir: yoksa sonra çizilen her şey de kaymış ve dönmüş olur. 2D oyunlarda dönen hemen her şey böyle
+çizilir.
+
+Aracın gövdesi bir üçgendir: tepesi `(0, -12)`'de (ortanın 12 piksel yukarısı), alt köşeleri `(9, 8)` ve `(-9, 8)`'de.
+Ayakları 2×2'lik iki küçük karedir. Üçgen, 1. adımdaki zemin gibi `beginPath`/`moveTo`/`lineTo`/`fill` ile çizilir.
 
 # --task--
 
@@ -61,13 +90,89 @@ Bunun bir iniş mi yoksa bir kaza mı olduğu sonra gelecek. Ekranın bir yanın
 
 # --task-tr--
 
-1. `FEET = 9` ve `GRAVITY = 0.025` ekle. `reset()` ayrıca `lander = { x: 60, y: 40, vx: 1, vy: 0, angle: 0 }`'ı yaratır ve
-   `state = 'flying'` yapar.
-2. Uçmuyorsa hiçbir şey yapmayan `update()` yaz: `vy`'ye `GRAVITY` ekle, `vx` ve `vy` kadar hareket ettir, `x`'i
-   `(x + canvas.width) % canvas.width` ile sar. Ayaklar `y + 10`'dadır; bu `x - FEET`, `x` ya da `x + FEET`'teki `groundY`'ye
-   ulaşırsa durum `'down'` olur.
-3. `save`, `translate`, `rotate` ve `restore` ile `drawLander()` yaz: `'#e2e8f0'` bir üçgen `(0, -12)`, `(9, 8)`, `(-9, 8)` ve
-   `(-FEET, 8)` ile `(FEET - 2, 8)`'de 2'ye 2 iki ayak. Zeminden sonra çiz.
+1. `const STEP = 40 ...` satırının altına iki sabit ekle:
+
+   ```js
+   const FEET = 9 // the feet are this far left and right of the middle, and 10 below it
+   const GRAVITY = 0.025 // speed gained per frame, downwards
+   ```
+
+2. `let pad ...` satırının altına iki değişken ekle:
+
+   ```js
+   let lander
+   let state // 'flying' or 'down'
+   ```
+
+3. `reset()` fonksiyonuna aracı ve durumu ekle:
+
+   ```js
+   function reset() {
+     makeGround()
+     lander = { x: 60, y: 40, vx: 1, vy: 0, angle: 0 }   // ← yeni
+     state = 'flying'                                   // ← yeni
+   }
+   ```
+
+4. `reset()`'in kapanan `}`'sinden sonra bir boş satır bırak ve (`function draw()`'un **üstüne**) `update()`'i yaz:
+
+   ```js
+   function update() {
+     if (state !== 'flying') return
+
+     lander.vy += GRAVITY
+     lander.x += lander.vx
+     lander.y += lander.vy
+     // Leaving one side brings the lander back on the other.
+     lander.x = (lander.x + canvas.width) % canvas.width
+
+     const feet = lander.y + 10
+     if (feet >= groundY(lander.x - FEET) || feet >= groundY(lander.x) || feet >= groundY(lander.x + FEET)) state = 'down'
+   }
+   ```
+
+   Son `if` satırı uzun ama tek satırdır; bölmeden yaz.
+
+5. `update()`'in altına bir boş satır bırak ve aracı çizen fonksiyonu yaz:
+
+   ```js
+   function drawLander() {
+     ctx.save()
+     ctx.translate(lander.x, lander.y)
+     ctx.rotate(lander.angle)
+     ctx.fillStyle = '#e2e8f0'
+     ctx.beginPath()
+     ctx.moveTo(0, -12)
+     ctx.lineTo(9, 8)
+     ctx.lineTo(-9, 8)
+     ctx.fill()
+     ctx.fillRect(-FEET, 8, 2, 2)
+     ctx.fillRect(FEET - 2, 8, 2, 2)
+     ctx.restore()
+   }
+   ```
+
+6. `draw()`'un sonunda, pisti çizen `ctx.fillRect(pad.x1, ...)` satırından sonra bir boş satır bırak ve aracı çiz:
+
+   ```js
+     ctx.fillRect(pad.x1, pad.y - 2, pad.x2 - pad.x1, 4)
+
+     drawLander()     // ← yeni
+   }
+   ```
+
+7. `loop()` fonksiyonunun başına `update()` çağrısını ekle:
+
+   ```js
+   function loop() {
+     update()         // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Sol üstte açık gri bir üçgen belirmeli, sağa kayarak gittikçe hızlanıp düşmeli ve zemine
+   değince durmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

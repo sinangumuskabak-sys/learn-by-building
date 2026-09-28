@@ -27,24 +27,45 @@ counter starts again.
 
 # --explanation-tr--
 
-Köşeleri olan bir yol boyunca bir şeyi nasıl hareket ettirirsin? Onu yönlendirmek ("köşeye kadar sağa git, sonra aşağı
-dön") çabucak karışır. Çok daha basit bir fikir var: her düşmana **tek bir sayı** ver: `d`, yol boyunca yürüdüğü mesafe.
-Hareket etmek yalnızca `e.d += SPEED`'dir ve bir fonksiyon mesafeyi bir noktaya çevirir:
+**Bu adımda:** düşmanları yola çıkaracağız. Kırmızı daireler soldan birer birer girip yol boyunca kıvrılarak yürüyecek
+ve sağdan çıkıp kaybolacak.
 
-```js
-function pointAt(d) {
-  yolun her düz parçası için:
-    d bu parçaya sığıyorsa: onun boyunca d döşeme ötedeki noktayı döndür
-    değilse: d -= parçanın uzunluğu ve sonrakini dene
-  return null   // sonu geçti
-}
-```
+**Köşeli bir yolda nasıl yürünür?** Düşmanı yönlendirmek ("köşeye kadar sağa git, sonra aşağı dön") çabuk karışır.
+Çok daha basit bir fikir var: her düşmana **tek bir sayı** ver, `d`: yol boyunca yürüdüğü mesafe (kare cinsinden).
+Yürümek yalnızca `e.d += SPEED` olur; bir fonksiyon da mesafeyi haritadaki bir noktaya çevirir. Otobüs hattı gibi
+düşün: "durağa 3,5 km kaldı" demek, otobüsün hangi sokakta olduğunu söylemeye yeter.
 
-Buna bir yolu **parametrelemek** denir ve karşılığını tekrar tekrar verir: "hangi düşman geçmeye en yakın?" yalnızca en
-büyük `d`'dir, "geçti mi?" de `pointAt(d) === null`'dır.
+**Nesne (object).** Birkaç bilgiyi tek pakette tutar: `{ d: 0 }` "mesafesi 0 olan bir şey"; `{ x: 3, y: 1.5 }` bir
+nokta. İçindeki bilgiye nokta ile ulaşırsın: `e.d`, `p.x`. Her düşman bir nesnedir; hepsi `enemies` dizisinde durur.
 
-Düşmanlar birer birer gelir: bir `spawnIn` sayacı geri sayar; bitince yeni bir düşman `d = 0`'da başlar ve sayaç yeniden
-başlar.
+**`pointAt(d)`, parça parça.** Yolu köşeden köşeye düz parçalara ayırıp sırayla bakarız:
+
+- Bir parçanın uzunluğu: `Math.abs(bx - ax) + Math.abs(by - ay)`. `Math.abs` bir sayının **eksisini atar** (mutlak
+  değer): `Math.abs(-4)` → `4`. Parça düz olduğu için iki farktan biri zaten 0'dır.
+- `if (d <= length)` → mesafe bu parçanın içine düşüyorsa (`<=` küçük ya da eşit), noktayı hesaplayıp **geri ver**:
+  başlangıç köşesinden, parçanın yönünde (`Math.sign`) `d` kare ilerisi. `return` fonksiyonu o anda bitirir.
+- Değilse `d -= length` → bu parçanın uzunluğunu mesafeden düş (`-=` "üstünden çıkar") ve sonraki parçaya bak.
+- Hiçbir parçaya sığmadıysa düşman yolun sonunu geçmiştir: `return null` ("hiçbir şey").
+
+Bir yolu bu şekilde tek sayıyla ifade etmeye **parametreleme** denir ve defalarca işe yarar: "geçmeye en yakın düşman
+hangisi?" sorusu en büyük `d`'dir; "geçti mi?" sorusu `pointAt(d) === null`'dır.
+
+**Birer birer gelmek.** `toSpawn` daha kaç düşman geleceğini, `spawnIn` bir sonrakine kaç kare kaldığını sayar. Her
+karede `spawnIn` 1 azalır; 0'a ya da altına inince yeni bir düşman `{ d: 0 }` ile yola girer, `toSpawn` 1 azalır ve
+`spawnIn` yeniden 45 olur. Ekran saniyede yaklaşık 60 kare çizildiği için bu, üç çeyrek saniyede bir düşman demektir.
+`enemies.push(...)` diziye sona bir eleman ekler.
+
+**Yolun sonu.** Her karede bütün düşmanlar `SPEED` kadar yürür. Sonra
+`enemies.filter((e) => pointAt(e.d) !== null)` yalnızca hâlâ yolda olanları tutar: `filter` koşulu sağlayanlardan yeni
+bir liste yapar, `!==` "eşit değil" demektir.
+
+**`update` ve `draw` ayrımı.** `update()` oyunun durumunu bir kare ilerletir (hesap), `draw()` o anki durumu çizer
+(resim). Döngü her karede önce `update()`, sonra `draw()` çağırır.
+
+**Daire çizmek.** Canvas'ta daire bir **yol** (path) olarak çizilir: `ctx.beginPath()` yeni bir şekle başla,
+`ctx.arc(x, y, yarıçap, başlangıç, bitiş)` merkezi `(x, y)` olan bir yay ekle, `ctx.fill()` içini boya. Açılar
+**radyan** cinsindendir; `0`'dan `Math.PI * 2`'ye kadar tam bir tur demektir. Düşmanı karenin ortasına koymak için
+noktaya `0.5` ekleyip `TILE` ile çarparız.
 
 # --task--
 
@@ -58,13 +79,94 @@ başlar.
 
 # --task-tr--
 
-1. `SPEED = 0.03` ile `enemies`, `toSpawn` ve `spawnIn` ekle; `reset()` onları `[]`, `30` ve `0` yapar.
-2. Yukarıdaki gibi `pointAt(d)` yaz. `a` köşesinden `b` köşesine bir parça `|bx - ax| + |by - ay|` uzunluğundadır ve onun
-   boyunca `d` döşeme ötedeki nokta `ax + Math.sign(bx - ax) * d`, `ay + Math.sign(by - ay) * d`'dir.
-3. `update()` yaz: gelecek düşman kaldıkça `spawnIn`'i geri say; `0` ya da altındaysa `{ d: 0 }` ekle, `toSpawn`'u geri say
-   ve `spawnIn = 45` yap. Sonra her düşmanı `SPEED` kadar ilerlet ve sonu geçenleri çıkar.
-4. Her düşmanı noktasının ortasında 11 yarıçaplı `'#dc2626'` bir daire olarak çiz: yatayda `(x + 0.5) * TILE`, dikeyde
-   `TOP + (y + 0.5) * TILE`.
+1. `PATH` listesinin kapanış `]`'sinin hemen altına hız sabitini ekle:
+
+   ```js
+   const SPEED = 0.03 // tiles per frame
+   ```
+
+2. `let road` satırının altına üç değişken ekle:
+
+   ```js
+   let road // keys of the tiles the road covers
+   let enemies // ← yeni
+   let toSpawn // enemies still to come // ← yeni
+   let spawnIn // frames until the next one // ← yeni
+   ```
+
+3. `reset()` fonksiyonunu şöyle yap, sonra altına iki yeni fonksiyon yaz:
+
+   ```js
+   function reset() {
+     findRoad()
+     enemies = [] // ← yeni
+     toSpawn = 30 // ← yeni
+     spawnIn = 0 // ← yeni
+   }
+
+   // Where on the road an enemy is after walking `d` tiles (null once it is past the end).
+   function pointAt(d) {
+     for (let i = 1; i < PATH.length; i++) {
+       const [ax, ay] = PATH[i - 1]
+       const [bx, by] = PATH[i]
+       const length = Math.abs(bx - ax) + Math.abs(by - ay)
+       if (d <= length) return { x: ax + Math.sign(bx - ax) * d, y: ay + Math.sign(by - ay) * d }
+       d -= length
+     }
+     return null
+   }
+
+   function update() {
+     if (toSpawn > 0) {
+       spawnIn -= 1
+       if (spawnIn <= 0) {
+         enemies.push({ d: 0 })
+         toSpawn -= 1
+         spawnIn = 45
+       }
+     }
+
+     for (const e of enemies) e.d += SPEED
+     // Walked off the end of the road: gone.
+     enemies = enemies.filter((e) => pointAt(e.d) !== null)
+   }
+   ```
+
+   `for (const e of enemies)` dizideki her düşman için bir kez çalışır; her turda o anki düşmanın adı `e` olur.
+
+4. `draw()` fonksiyonunda, kareleri çizen iki döngünün altına, fonksiyonun kapanış `}`'sinden önce düşmanları çizen
+   döngüyü ekle:
+
+   ```js
+         ctx.fillRect(col * TILE, TOP + row * TILE, TILE, TILE)
+       }
+     }
+
+     for (const e of enemies) { // ← yeni
+       const p = pointAt(e.d) // ← yeni
+       const x = (p.x + 0.5) * TILE // ← yeni
+       const y = TOP + (p.y + 0.5) * TILE // ← yeni
+       ctx.fillStyle = '#dc2626' // ← yeni
+       ctx.beginPath() // ← yeni
+       ctx.arc(x, y, 11, 0, Math.PI * 2) // ← yeni
+       ctx.fill() // ← yeni
+     } // ← yeni
+   }
+   ```
+
+5. `loop()` fonksiyonunda `draw()`'dan önce `update()` çağrısını ekle:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+6. **Çalıştır**'a bas. Kırmızı daireler soldan birer birer girip yol boyunca yürümeli ve sağdan çıkmalı; alttaki
+   kontrollerin hepsi yeşil olmalı. Düşmanlar yoldan sapıyorsa `pointAt` içindeki `Math.sign` ve `d -= length`
+   satırlarını kontrol et.
 
 # --tests--
 

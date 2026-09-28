@@ -30,14 +30,53 @@ after every change. Turn-based games (chess, cards, puzzles) are usually built t
 
 # --explanation-tr--
 
-Bir tıklama olayı farenin nerede olduğunu söyler, ama canvas koordinatlarında değil **sayfa** koordinatlarında
-(`event.clientX`, `event.clientY`). İki şey farklı olabilir:
+**Bu adımda:** tahtaya tıklayarak oynayacağız. Çalıştırıp bir kutuya tıklayınca orada X belirecek, sonraki
+tıklamada O; sıra her seferinde değişecek. Dolu bir kutuya tıklamak hiçbir şey yapmayacak.
 
-1. **Konum**: canvas sayfanın sol üst köşesinden başlamaz. Başladığı yeri çıkar.
-2. **Ölçek**: canvas içeride 300 piksel genişliğindedir ama daha büyük ya da küçük *gösterilebilir* (burada oyun
-   paneline sığacak şekilde büyütülüyor). `canvas.width / gösterilenGenişlik` ile çarp.
+**Sıra kimde?** Bu da bir durum bilgisi: `let player = 'X'`. X oynayınca `'O'` olur, O oynayınca `'X'`.
 
-`canvas.getBoundingClientRect()` ikisini de verir; canvas'ın ekranda nerede olduğunu ve ne büyüklükte gösterildiğini:
+**Değer döndüren fonksiyon.** Bir fonksiyon işini bitirince çağırana bir cevap verebilir. Buna **dönüş değeri**
+denir ve `return` ile verilir:
+
+```js
+function play(index) {
+  if (board[index] !== '') return false
+  board[index] = player
+  player = player === 'X' ? 'O' : 'X'
+  return true
+}
+```
+
+Bunu parça parça okuyalım:
+
+- `play(index)` → fonksiyon bir kutu numarası alır (parametre, 2. adımdaki gibi).
+- `!==` → "eşit **değil** mi?" (`===`'in tersi). "Kutu boş değilse..."
+- `return false` → "...hamle olmadı" cevabını ver ve çık. `true` (doğru) ve `false` (yanlış) evet/hayır
+  cevaplarıdır; tırnaksız yazılır.
+- `board[index] = player` → kutuya sırası gelen oyuncunun işaretini koy. Tek `=` değiştirir.
+- `player = player === 'X' ? 'O' : 'X'` → "X ise O yap, değilse X yap": sırayı değiştir.
+- `return true` → "hamle oldu" cevabı.
+
+**Olay (event).** Tarayıcı, sayfada bir şey olunca (tıklama, tuşa basma) bunu duyurur. Sen de "şu olunca şunu
+yap" diye kayıt olursun. Kapı zili gibi: zil çalınca kapıya gidersin.
+
+```js
+canvas.addEventListener('click', (event) => {
+  // canvas'a her tıklandığında burası çalışır
+})
+```
+
+`'click'` olayın adı, `(event) => { ... }` olunca çalışacak fonksiyon. `event` tıklama hakkında bilgi taşır.
+
+**Tıklama nereye denk geldi?** `event.clientX` ve `event.clientY` farenin yerini verir ama **sayfaya göre**,
+canvas'a göre değil. İki şey farklı olabilir:
+
+1. **Konum:** canvas sayfanın sol üst köşesinde başlamıyor. Başladığı yeri çıkarmak gerekir.
+2. **Ölçek:** canvas içeride 300 piksel ama ekranda daha büyük ya da küçük **gösterilebilir** (burada oyun paneline
+   sığacak şekilde büyütülüyor). `canvas.width / gösterilenGenişlik` ile çarpmak gerekir.
+
+`canvas.getBoundingClientRect()` ikisini de verir: canvas ekranda nerede (`left`, `top`) ve ne kadar büyük
+gösteriliyor (`width`, `height`):
 
 ```js
 const rect = canvas.getBoundingClientRect()
@@ -45,12 +84,14 @@ const x = (event.clientX - rect.left) * (canvas.width / rect.width)
 const y = (event.clientY - rect.top) * (canvas.height / rect.height)
 ```
 
-Ölçek adımını atlamak çok yaygın bir hatadır: tıklamalar senin ekranında kusursuz çalışır, telefonda yanlış hücreye
-düşer. Canvas noktasından hücre `Math.floor(x / CELL)` ve `Math.floor(y / CELL)`'dir; sonra önceki adımdaki indeks
-formülü.
+Parantezler matematikteki gibi önce hesaplanır. Ölçek adımını atlamak çok yaygın bir hatadır: senin ekranında
+tıklamalar doğru çalışır, telefonda yanlış kutuya düşer.
 
-Bu oyunda animasyon yok, bu yüzden **oyun döngüsüne gerek yok**. Tıklamalar arasında hiçbir şey değişmez; her
-değişiklikten sonra `draw()` çağırman yeter. Sıra tabanlı oyunlar (satranç, kart, bulmaca) genelde böyle yapılır.
+Canvas üstündeki noktadan kutuya geçmek kolay: sütun `Math.floor(x / CELL)`, satır `Math.floor(y / CELL)`, sonra
+2. adımdaki formül: `satır * 3 + sütun`.
+
+**Oyun döngüsü yok.** Bu oyunda hareket eden bir şey yok; iki tıklama arasında hiçbir şey değişmez. O yüzden her
+değişiklikten sonra `draw()`'u çağırmak yeter. Satranç, kart ve bulmaca oyunları genelde böyle yazılır.
 
 # --task--
 
@@ -62,11 +103,43 @@ değişiklikten sonra `draw()` çağırman yeter. Sıra tabanlı oyunlar (satran
 
 # --task-tr--
 
-1. `let player = 'X'` (sıranın kimde olduğu) ekle.
-2. `function play(index)` yaz: `board[index]` boş değilse `false` döndür. Değilse oraya `player`'ı koy, `player`'ı
-   diğer işarete çevir ve `true` döndür.
-3. Canvas üzerinde `click`'i dinle: tıklamayı `getBoundingClientRect()` ile canvas koordinatlarına çevir (konum **ve**
-   ölçek), hücre indeksini bul, `play(index)` çağır, sonra `draw()`.
+1. `let board = [...]` satırının hemen altına şunu ekle:
+
+   ```js
+   let player = 'X'
+   ```
+
+2. Bir satır boşluk bırak ve hamle fonksiyonunu yaz (`function draw()` satırından önce):
+
+   ```js
+   function play(index) {
+     if (board[index] !== '') return false
+     board[index] = player
+     player = player === 'X' ? 'O' : 'X'
+     return true
+   }
+   ```
+
+3. Bir satır boşluk bırak ve tıklamayı dinleyen kodu yaz (yine `function draw()`'dan önce):
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     // The canvas may be displayed at a different size than its 300×300 pixels, so scale the click.
+     const rect = canvas.getBoundingClientRect()
+     const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+     const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+     const index = Math.floor(y / CELL) * 3 + Math.floor(x / CELL)
+     play(index)
+     draw()
+   })
+   ```
+
+   `//` ile başlayan satır yorumdur, yazmasan da olur. `draw` aşağıda tanımlı olsa da sorun değil: tıklama
+   olduğunda bütün dosya çoktan okunmuş olur.
+
+4. **Çalıştır**'a bas. Oynamak için tahtadaki kutulara tıkla: sırayla pembe X ve mavi O belirmeli, dolu kutuya
+   tıklamak bir şey değiştirmemeli. Alttaki kontrollerin hepsi yeşil olmalı. "Tıklamalar ölçeklenmeli" kontrolü
+   kırmızıysa `x` ve `y` satırlarındaki `* (canvas.width / rect.width)` kısımlarını kontrol et.
 
 # --tests--
 

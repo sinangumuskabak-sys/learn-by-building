@@ -23,20 +23,44 @@ Space shoots, and so does letting go of the pointer: on a phone you tap where yo
 
 # --explanation-tr--
 
-Bir atış, yan duvarlardan sekerek karede `SPEED` piksel düz bir çizgide uçar: sol kenarı geçince `vx`'i ters çevir ve balonu içeri
-geri koy. Bir şeye **değer değmez** durur:
+**Bu adımda:** balonu ateşleyeceğiz. **Boşluk**'a basınca (ya da fareyi/parmağı bırakınca) yüklü balon nişan yönünde uçacak,
+yan duvarlardan sekecek, tavana ya da bir balona değince durup ızgaraya oturacak.
 
-- tavana, ya da
-- merkezler `2R`'den az uzak olduğunda ızgaradaki bir balona (biraz hoşgörülü olsun diye `2R - 4` kullanırız; böylece bir atış
-  tam yeterince geniş görünen bir boşluktan geçebilir).
+**Uçan balon (`shot`).** Uçan balonu bir **nesnede** tutarız: `{ x, y, vx, vy, color }`. `x`, `y` yeri; `vx`, `vy` her
+karede ne kadar yana ve yukarı/aşağı gideceği (**hız**, velocity); `color` rengi. Uçan balon yoksa `shot` `null`'dır
+("hiçbir şey").
 
-Durduğu yer neredeyse hiç tam bir hücre değildir, bu yüzden en yakın boş hücreye **oturur**. Bu tek adım serbest hareketi yeniden
-ızgaraya çevirir ve sonrasındaki her şey (eşleşme, düşme) yalnızca hücreleri düşünmek zorundadır.
+**Ateş etmek.** Hız, nişan açısından gelir: 2. adımdaki çizginin ucu gibi, ama 80 yerine `SPEED` = 12 piksel:
+`vx = Math.cos(aim) * SPEED`, `vy = Math.sin(aim) * SPEED`. Atıştan sonra sıradaki balon atıcıya geçer (`loaded = next`)
+ve yeni bir sıradaki seçilir. `if (shot) return` → zaten uçan bir balon varsa ikinciyi atma.
 
-Hızlı bir balon tek karede bir boşluğun üstünden atlayabilir ya da başka bir balonun içine girebilir; bu yüzden her kare, her biri
-değmeyi kontrol eden üç küçük adıma bölünür.
+**Uçuş ve sekme (`update`).** Her karede balonun yerine hızını ekleriz (`shot.x += shot.vx`). Sol ya da sağ kenarı geçerse
+(`shot.x < R || shot.x > canvas.width - R`; `||` "ya da") yatay hızı ters çeviririz: `shot.vx = -shot.vx`. Balonu da
+duvarın içine geri koyarız ki duvarın içinde takılmasın: `Math.max(R, Math.min(canvas.width - R, shot.x))` sayıyı iki sınır
+arasında tutar (2. adımdaki `clampAim` gibi).
 
-Boşluk ateş eder, işaretçiyi bırakmak da: telefonda nişan almak istediğin yere dokunursun ve balon oraya uçar.
+**Küçük adımlar.** Hızlı bir balon tek karede bir boşluğun üstünden atlayabilir ya da başka bir balonun içine girebilir.
+Bu yüzden her kareyi **üç küçük adıma** böleriz; her adımda hızın üçte birini (`shot.vx / 3`) ekleyip "değdi mi?" diye
+sorarız. `for (let i = 0; i < 3 && shot; i++)` → "en fazla 3 kez, balon hâlâ uçtuğu sürece".
+
+**Değdi mi? (`touches`)** Balon şu durumlarda durur:
+
+- tavana değdiyse: `y - R <= TOP` (balonun üst kenarı, üst şeridin altına ulaştı);
+- ızgaradaki bir balona değdiyse: iki merkez arası `2R`'den (iki yarıçap) azsa. `Math.hypot(dx, dy)` iki nokta arasındaki
+  uzaklığı verir (Pisagor). `2 * R - 4` kullanırız: biraz hoşgörülü, böylece tam sığacak kadar görünen bir aralıktan balon
+  geçebilir.
+
+Bir şey bulunca `return true` (doğru) ile hemen cevap verir; hiçbir şey yoksa en sonda `return false` (yanlış).
+
+**Izgaraya oturtmak (`snap`).** Balonun durduğu yer neredeyse hiç tam bir hücre olmaz, bu yüzden **en yakın boş hücreye**
+yerleşir. Bütün boş hücreleri gezer ve en yakınını `nearest`'ta tutarız: `!nearest || d < nearest.d` → "henüz aday yoksa ya
+da bu daha yakınsa, yeni aday bu". `{ r, c, d }`, `{ r: r, c: c, d: d }`'nin kısa yazımıdır. Bu tek adım serbest hareketi
+yeniden ızgaraya çevirir; bundan sonraki her şey (eşleşme, düşme) yalnızca hücrelerle uğraşır.
+
+`attach(r, c, color)` rengi o hücreye koyar. Şimdilik tek satır; sonraki adımlarda büyüyecek.
+
+**Nasıl ateş edilir?** `keydown`'a Boşluk (`' '`) eklenir. Telefonda ise nişan için ekrana dokunup **bıraktığında** balon
+gider: `pointerup` olayı. `() => shoot()` "olay gelince `shoot()`'u çağır" diyen kısa bir fonksiyondur.
 
 # --task--
 
@@ -50,13 +74,120 @@ Boşluk ateş eder, işaretçiyi bırakmak da: telefonda nişan almak istediğin
 
 # --task-tr--
 
-1. `SPEED = 12` ve `shot` (`reset()`'te `null`) ekle. `shoot()` yaz: uçan bir şey yoksa yüklü balonu atıcıdan nişan boyunca fırlat,
-   sonra `loaded = next` yap ve yeni bir `next` seç.
-2. `touches(x, y)` yaz: tavanda (`y - R <= TOP`) ya da ızgaradaki bir balona `2R - 4` yakınken true.
-3. Merkezi en yakın boş hücre `{ r, c }`'yi döndüren `snap(x, y)`'yi ve rengi oraya koyan `attach(r, c, color)`'u yaz.
-4. `draw()`'dan önce `update()` yaz: karede üç adımda atışı hızının üçte biri kadar hareket ettir, yan duvarlardan sektir ve değince
-   onu `snap`'teki hücreye bağla ve `shot = null` yap.
-5. Boşluk ateş eder (`preventDefault()`), `pointerup` ateş eder ve uçan balon çizilir.
+1. `const SHOOTER = ...` satırının altına ekle:
+
+   ```js
+   const SPEED = 12
+   ```
+
+2. `let next ...` satırının altına ekle:
+
+   ```js
+   let shot // the bubble in flight: { x, y, vx, vy, color }, or null
+   ```
+
+3. `reset()`'te `aim = -Math.PI / 2` satırının hemen altına ekle:
+
+   ```js
+     shot = null
+   ```
+
+4. `reset()`'in kapanış `}`'sinin altına, `const clampAim = ...` satırından önce, şu fonksiyonları yaz:
+
+   ```js
+   function shoot() {
+     if (shot) return
+     shot = { x: SHOOTER.x, y: SHOOTER.y, vx: Math.cos(aim) * SPEED, vy: Math.sin(aim) * SPEED, color: loaded }
+     loaded = next
+     next = pickColor()
+   }
+
+   // Does a bubble at (x, y) touch the ceiling or a bubble in the grid?
+   function touches(x, y) {
+     if (y - R <= TOP) return true
+     for (let r = 0; r < ROWS; r++) {
+       for (let c = 0; c < cols(r); c++) {
+         if (grid[r][c] < 0) continue
+         const p = cellPos(r, c)
+         if (Math.hypot(p.x - x, p.y - y) < 2 * R - 4) return true
+       }
+     }
+     return false
+   }
+
+   // The empty cell closest to where the bubble stopped.
+   function snap(x, y) {
+     let nearest = null
+     for (let r = 0; r < ROWS; r++) {
+       for (let c = 0; c < cols(r); c++) {
+         if (grid[r][c] >= 0) continue
+         const p = cellPos(r, c)
+         const d = Math.hypot(p.x - x, p.y - y)
+         if (!nearest || d < nearest.d) nearest = { r, c, d }
+       }
+     }
+     return nearest
+   }
+
+   function attach(r, c, color) {
+     grid[r][c] = color
+   }
+
+   function update() {
+     if (!shot) return
+     // A few small steps per frame, so the bubble cannot jump past a gap.
+     for (let i = 0; i < 3 && shot; i++) {
+       shot.x += shot.vx / 3
+       shot.y += shot.vy / 3
+       if (shot.x < R || shot.x > canvas.width - R) {
+         shot.vx = -shot.vx // bounce off the side walls
+         shot.x = Math.max(R, Math.min(canvas.width - R, shot.x))
+       }
+       if (touches(shot.x, shot.y)) {
+         const cell = snap(shot.x, shot.y)
+         attach(cell.r, cell.c, shot.color)
+         shot = null
+       }
+     }
+   }
+   ```
+
+5. `keydown` dinleyicisine Boşluk'u ekle; dinleyici şöyle olmalı:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') aim = clampAim(aim - 0.04)
+     else if (event.key === 'ArrowRight') aim = clampAim(aim + 0.04)
+     else if (event.key === ' ') shoot() // ← yeni
+     else return
+     event.preventDefault()
+   })
+   ```
+
+6. `canvas.addEventListener('pointerdown', pointAt)` satırının altına ekle:
+
+   ```js
+   canvas.addEventListener('pointerup', () => shoot())
+   ```
+
+7. `draw()`'un sonuna, `drawBubble(SHOOTER.x + 60, SHOOTER.y + 10, next, 12)` satırının altına uçan balonu çizen satırı ekle:
+
+   ```js
+     if (shot) drawBubble(shot.x, shot.y, shot.color)
+   ```
+
+8. En alttaki `loop()`'ta `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. **Boşluk**'a bas ya da ekrana tıklayıp bırak: balon uçmalı,
+   duvarlardan sekmeli ve bir balona değince yanına oturmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

@@ -27,24 +27,48 @@ Finally, a click after the game ends starts a new one, reusing `newGame()`.
 
 # --explanation-tr--
 
-Mayın Tarlası'nı mayın **olmayan** her hücre açıldığında kazanırsın. Bayraklar sayılmaz: her şeyi açıp tek bir bayrak
-bile koymamış bir oyuncu yine de kazanmıştır. Bu yüzden kontrol ızgara üzerinde tek bir satırdır:
+**Bu adımda:** oyunu kazanılabilir yapıp bir saat ekleyeceğiz. Sağ üstte `⏱ 0` gibi saniye sayacı çıkacak; bütün
+güvenli hücreleri açınca üstte yeşil **You win! Best: 12s** yazacak. Oyun bitince bir tıklama yeni oyun başlatacak.
+
+**Ne zaman kazanılır?** Mayınsız **bütün** hücreler açıldığında. Bayraklar önemli değildir: hiç bayrak koymadan her
+şeyi açan oyuncu da kazanmıştır. Kontrol tek satırdır:
 
 ```js
 grid.flat().every((cell) => cell.mine || cell.revealed)
 ```
 
-Onu her başarılı açıştan sonra çalıştır. Kazanınca kalan mayınları otomatik olarak bayrakla; çözülmüş tahtayı gösteren
-hoş bir dokunuş.
+`every` "listedeki **her** eleman bu koşulu sağlıyor mu?" diye sorar ve `true` ya da `false` verir. Koşul: "hücre ya
+mayınlı ya da açık". Bunu her açılıştan sonra kontrol ederiz. Kazanınca kalan mayınlara otomatik bayrak koymak,
+çözülmüş tahtayı güzelce gösterir.
 
-Bu kadar kısa bir oyun hızla ilgilidir; bir **zamanlayıcı** ekle. İlk tıklamada başlar (sayfa yüklenince değil; o,
-tahtayı okumayı cezalandırırdı) ve oyun bitince durur. Başlangıç ve bitiş zamanlarını sakla; ekrandaki sayı çizerken
-onlardan **türetilir**. En iyi (en düşük) süre `localStorage`'a kaydedilir. Burada iki tuzak saklı. "En iyi" *daha
-küçük* demek, bu yüzden karşılaştırma `<`. Ve "henüz rekor yok" `0` olmamalı: yıldırım hızında bir galibiyet gerçekten
-0 tam saniye sürer ve o zaman "rekor yok" gibi görünüp daha yavaş bir oyunun altında ezilir. "Hiçbir şey" için `null`
-kullan ve onu açıkça kontrol et (`localStorage.getItem`, anahtar hiç kaydedilmediyse `null` döndürür).
+**Zaman.** `requestAnimationFrame` `loop`'u çağırırken ona bir sayı verir: sayfa açıldığından beri geçen süre,
+**milisaniye** cinsinden (1 saniye = 1000 milisaniye). `function loop(time)` bu sayıyı `time` adıyla alır; biz de
+onu her karede `now` değişkenine yazarız. Böylece kodun her yerinde "şu an" `now`'dır.
 
-Son olarak, oyun bittikten sonraki bir tıklama `newGame()`'i yeniden kullanarak yenisini başlatır.
+**Saat.** Saat ilk tıklamada başlar (sayfa açılınca değil; yoksa tahtaya bakmak cezalandırılırdı) ve oyun bitince
+durur. Başlangıç ve bitiş anlarını `startTime` ve `endTime`'da saklarız. Ekrandaki sayı her çizimde bunlardan
+**hesaplanır**:
+
+```js
+const seconds = state === 'ready' ? 0 : Math.floor(((state === 'playing' ? now : endTime) - startTime) / 1000)
+```
+
+Parça parça: henüz başlamadıysa 0. Başladıysa: oynanıyorsa "şimdi", bittiyse "bitiş anı"ndan başlangıcı çıkar,
+1000'e bölüp aşağı yuvarla → geçen tam saniye.
+
+**En iyi süreyi saklamak (`localStorage`).** Tarayıcının küçük bir defteridir; sayfa kapansa bile içine yazılanı
+hatırlar. `localStorage.setItem('mines-best', best)` yazar, `localStorage.getItem('mines-best')` okur. Hiç
+yazılmamışsa `getItem` `null` ("hiçbir şey") verir. Defter her şeyi **yazı** olarak sakladığı için `Number(saved)` ile
+sayıya çeviririz.
+
+İki tuzak var:
+
+- "En iyi" demek **daha küçük** süre demek; karşılaştırma `<` ile yapılır.
+- "Henüz rekor yok" için `0` kullanılamaz: şimşek hızında bir galibiyet gerçekten 0 saniye sürebilir, o zaman "rekor
+  yok" gibi görünür ve daha yavaş bir süre onun üstüne yazılırdı. "Hiçbir şey" için `null` kullanır ve açıkça
+  `best === null` diye kontrol ederiz.
+
+**Yazı hizası.** `ctx.textAlign = 'right'` yazının verilen noktada **bitmesini** sağlar; saati sağ kenara yaslamak için.
 
 # --task--
 
@@ -59,14 +83,125 @@ Son olarak, oyun bittikten sonraki bir tıklama `newGame()`'i yeniden kullanarak
 
 # --task-tr--
 
-1. `let startTime`, `let endTime` ve `let now = 0` (döngünün `time`'ından ayarlanır) ekle; `best`'i
-   `localStorage.getItem('mines-best')`'ten yükle: hiçbir şey kaydedilmediyse `null`, değilse sayı. Başlangıç zamanını
-   ilk açışta ayarla.
-2. Bir açış hücreleri açtıktan sonra mayınsız her hücre açıksa `win()` çağır: `state = 'won'` yap, saati durdur, her
-   mayını bayrakla ve `best` `null` ise ya da daha azsa saniyeleri yeni rekor olarak kaydet.
-3. `lose()` da saati durdursun. Kazanılmış ya da kaybedilmiş oyunda bir tıklama `newGame()` başlatsın.
-4. Tepede sağa hizalı `⏱ 12` (saniye) çiz. Kazanınca yeşil `You win! Best: 12s`, kaybedince kırmızı
-   `Boom! Click to retry` göster.
+1. `let state` satırını ve hemen altını şöyle yap (yorum değişti, altına beş satır eklendi):
+
+   ```js
+   let state // 'ready' (before the first click), 'playing', 'won' or 'lost' // ← değişti
+   let startTime // ← yeni
+   let endTime // ← yeni
+   let now = 0 // ← yeni
+   // null means "no best time yet"; 0 would be a real (very fast) time. // ← yeni
+   const saved = localStorage.getItem('mines-best') // ← yeni
+   let best = saved === null ? null : Number(saved) // ← yeni
+   ```
+
+2. `newGame()` içinde `state = 'ready'` satırının altına saati sıfırlayan iki satır ekle:
+
+   ```js
+     state = 'ready'
+     startTime = 0 // ← yeni
+     endTime = 0 // ← yeni
+   }
+   ```
+
+3. `reveal(start)` içinde iki yer değişiyor. İlk tıklama bölümüne başlangıç anını ekle:
+
+   ```js
+     if (state === 'ready') {
+       placeMines(start)
+       state = 'playing'
+       startTime = now // ← yeni
+     }
+   ```
+
+   ve fonksiyonun en sonuna, `while` döngüsünü kapatan `}`'nin altına, fonksiyonun kapanış `}`'sinden önce kazanma
+   kontrolünü ekle:
+
+   ```js
+       }
+     }
+     if (grid.flat().every((cell) => cell.mine || cell.revealed)) win() // ← yeni
+   }
+   ```
+
+4. `toggleFlag` içindeki ilk satırı değiştir (kazanınca da bayrak konmasın):
+
+   ```js
+     if (cell.revealed || state === 'won' || state === 'lost') return // ← değişti
+   ```
+
+5. `lose()` fonksiyonuna saati durduran satırı ekle:
+
+   ```js
+   function lose() {
+     state = 'lost'
+     endTime = now // ← yeni
+     for (const cell of grid.flat()) if (cell.mine) cell.revealed = true
+   }
+   ```
+
+6. `lose()`'un altına, bir satır boşlukla `win()` fonksiyonunu yaz:
+
+   ```js
+   function win() {
+     state = 'won'
+     endTime = now
+     for (const cell of grid.flat()) if (cell.mine) cell.flagged = true
+     const seconds = Math.floor((endTime - startTime) / 1000)
+     if (best === null || seconds < best) {
+       best = seconds
+       localStorage.setItem('mines-best', best)
+     }
+   }
+   ```
+
+7. `canvas.addEventListener('click', ...)` bloğunun içindeki `if (state === 'lost') return` satırını sil, yerine şunu
+   yaz. Blok şöyle olmalı:
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     if (state === 'won' || state === 'lost') { // ← değişti
+       newGame() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     const cell = cellAt(event)
+     if (cell) reveal(cell)
+   })
+   ```
+
+8. `draw()` içinde, hücre döngüsünden sonraki kısmı fonksiyonun sonuna kadar şöyle yap:
+
+   ```js
+     const flags = grid.flat().filter((cell) => cell.flagged).length
+     const seconds = state === 'ready' ? 0 : Math.floor(((state === 'playing' ? now : endTime) - startTime) / 1000) // ← yeni
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px monospace'
+     ctx.textAlign = 'left'
+     ctx.fillText('💣 ' + (MINES - flags), 10, TOP / 2)
+     ctx.textAlign = 'right' // ← yeni
+     ctx.fillText('⏱ ' + seconds, canvas.width - 10, TOP / 2) // ← yeni
+
+     if (state === 'won' || state === 'lost') { // ← değişti
+       ctx.textAlign = 'center'
+       ctx.fillStyle = state === 'won' ? '#4ade80' : '#f87171' // ← değişti
+       ctx.fillText(state === 'won' ? 'You win! Best: ' + best + 's' : 'Boom! Click to retry', canvas.width / 2, TOP / 2) // ← değişti
+     }
+   }
+   ```
+
+9. `loop` fonksiyonunu, zamanı alacak şekilde değiştir:
+
+   ```js
+   function loop(time) { // ← değişti
+     now = time // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+10. **Çalıştır**'a bas ve oyna. İlk tıklamayla sağ üstteki saat saymaya başlamalı. Bütün güvenli hücreleri açınca
+    yeşil yazı çıkmalı; mayına basınca kırmızı **Boom! Click to retry** yazmalı ve bir tıklama yeni oyun başlatmalı.
+    Alttaki kontrollerin hepsi yeşil olmalı. Saat hep 0 kalıyorsa `loop(time)` ve `now = time` satırlarına bak.
 
 # --tests--
 

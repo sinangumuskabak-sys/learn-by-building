@@ -21,18 +21,31 @@ classic check that a move generator is right.
 
 # --explanation-tr--
 
-Piyonlar en karmaşık basit taştır. Şunları yapan tek taştır:
+**Bu adımda:** piyonları oynatacağız. Bir piyona tıklayınca önünde bir ya da iki nokta çıkacak; çaprazında rakip taş
+varsa oraya da nokta çıkacak. Karşı uca ulaşan piyon vezire dönüşecek.
 
-- yalnızca **ileri** gider; bu beyaz için tahtada yukarı, siyah için aşağıdır (`-1` ya da `1` olan bir `dir`),
-- **farklı** gider ve alır: boş bir kareye dümdüz ileri, ama almak için çapraz ileri,
-- başlangıç satırından, iki kare de boşsa **iki kare** gidebilir,
-- öbür uca ulaşınca vezire dönüşür (**terfi eder**).
+**Piyon en karmaşık basit taştır.** Şu özellikleri olan tek taş odur:
 
-Yönü bir değişken olarak yazmak, aynı kodun iki rengi de işlemesi demektir: hangi taraf oynarsa oynasın `r + dir` "bir adım
-ileri"dir.
+- sadece **ileri** gider: beyaz için tahtada yukarı, siyah için aşağı (`dir`, yön: `-1` ya da `1`);
+- **farklı** gider ve yer: düz ileri boş kareye gider, ama yemek için çapraz ileri gider;
+- başlangıç satırındaysa, iki kare de boşsa **iki kare** gidebilir;
+- karşı uca ulaşınca vezire dönüşür (**terfi**, promotion).
 
-Piyonlar eklenince başlangıç konumunda beyazın tam **20** hamlesi olur: 16 piyon hamlesi ve 4 at hamlesi. Bu sayı bir hamle
-üretecinin doğru olduğunun bilinen bir kontrolüdür.
+**Yönü değişken yapmak.** Beyaz için `dir = -1` (satır numarası azalır, yukarı), siyah için `1`. Böylece aynı kod iki
+renk için de çalışır: `r + dir` hangi taraf oynarsa oynasın "bir adım ileri" demektir; `r + 2 * dir` iki adım.
+
+**Yeni parçalar:**
+
+- **`!` (değil):** `!board[r + dir][c]` "önündeki kare boşsa" demek (boş yazı "yok" sayılır, `!` onu tersine çevirir).
+- **`for (const dc of [-1, 1])`**: sol çapraz (`-1`) ve sağ çapraz (`1`) için içeriyi iki kez yapar.
+- **`continue`**: kare tahtanın dışındaysa bu turu atla (önceki adımda gördün).
+- **Terfi bilgisi:** son satıra giden hamleye `{ promo: 'Q' }` eklenir. `promote(tr)` son satırsa bu nesneyi, değilse
+  boş nesne `{}` döndürür; `add` onu `...extra` ile hamleye kopyalar. Sonuç: `{ from: [1, 0], to: [0, 0], promo: 'Q' }`.
+- `play()`'de: `m.promo ? piece[0] + m.promo : piece` → hamlede terfi varsa taşın rengi + `'Q'` (örneğin `'wQ'`),
+  yoksa taşın kendisi.
+
+Piyonlar eklenince başlangıç dizilişinde beyazın tam **20** hamlesi olur: 16 piyon hamlesi ve 4 at hamlesi. Bu sayı,
+hamle üreten kodun doğru olup olmadığının klasik bir kontrolüdür.
 
 # --task--
 
@@ -43,10 +56,48 @@ Piyonlar eklenince başlangıç konumunda beyazın tam **20** hamlesi olur: 16 p
 
 # --task-tr--
 
-1. `pseudoMoves` içinde her piyon için: o kare boşsa bir adım ileri, sonra o kare de boşsa başlangıç satırından (beyaz için 6,
-   siyah için 1) iki adım; bir rakip taşın üstüne çapraz bir adım ileri.
-2. Son satıra (beyaz için 0, siyah için 7) giden bir piyon hamlesi `promo: 'Q'` alır ve `play()` oraya piyon yerine bir vezir
-   koyar.
+1. `pseudoMoves` içinde, kayan taşlar bloğunun (`if (kind === 'R' || kind === 'B' || kind === 'Q') { ... }`) kapanış
+   `}`'inin hemen altına piyon bloğunu ekle:
+
+   ```js
+         if (kind === 'P') {
+           const dir = color === 'w' ? -1 : 1
+           const last = color === 'w' ? 0 : 7
+           const promote = (tr) => (tr === last ? { promo: 'Q' } : {})
+           if (!board[r + dir][c]) {
+             add(r, c, r + dir, c, promote(r + dir))
+             const start = color === 'w' ? 6 : 1
+             if (r === start && !board[r + 2 * dir][c]) add(r, c, r + 2 * dir, c)
+           }
+           for (const dc of [-1, 1]) {
+             const tr = r + dir
+             const tc = c + dc
+             if (!inside(tr, tc)) continue
+             if (board[tr][tc] && board[tr][tc][0] !== color) add(r, c, tr, tc, promote(tr))
+           }
+         }
+   ```
+
+   İki kare ilerleme, sadece bir kare ilerleme mümkünse (ilk kare boşsa) denenir; çünkü o satır ilk `if`'in
+   içinde.
+
+2. `play()` fonksiyonunda taşı yeni kareye koyan satırı değiştir:
+
+   ```js
+   function play(m) {
+     const [fr, fc] = m.from
+     const [tr, tc] = m.to
+     const piece = board[fr][fc]
+     board[tr][tc] = m.promo ? piece[0] + m.promo : piece // ← değişti
+     board[fr][fc] = ''
+     turn = other(turn)
+     selected = null
+     targets = []
+   }
+   ```
+
+3. **Çalıştır**'a bas. Bir beyaz piyona tıkla: önünde iki nokta çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı.
+   Siyah piyonlar yanlış yöne gidiyorsa `dir` satırındaki `-1` ve `1`'in yerini kontrol et.
 
 # --tests--
 

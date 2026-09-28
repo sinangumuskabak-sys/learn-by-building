@@ -24,22 +24,63 @@ fresh frog at the start, `reset()` starts a whole new game. Game over is just an
 
 # --explanation-tr--
 
-Kurbağa ızgarada yaşıyor ama arabalar akıcı hareket ediyor; bir araba kurbağanın döşemesine yarım döşeme girmiş olabilir.
-Çarpışma, x ekseninde **iki aralığın örtüşmesidir** (her zaman aynı satırdalar):
+**Bu adımda:** arabalar kurbağayı ezecek. Sağ üstte `Lives: 3` yazacak; bir arabaya çarpınca bir can gidecek ve
+yeni bir kurbağa alttan başlayacak. Canlar bitince tahta kararacak, `Game Over` ve `Press Space to play again`
+yazacak; Boşluk'a basınca (ya da dokununca) yeni oyun başlayacak.
+
+**İki aralığın üst üste binmesi.** Kurbağa döşemelerde yaşıyor ama arabalar akıcı kayıyor; bir araba kurbağanın
+döşemesine yarım döşeme girmiş olabilir. İkisi hep aynı satırda olduğu için sadece yatayda bakarız: kurbağanın
+kapladığı aralık ile arabanın kapladığı aralık üst üste biniyor mu?
 
 ```
-kurbağa:   [x + 0.15, x + 0.85]      döşemesinden biraz küçük
-araba:     [carX, carX + len]
-çarpışma   kurbağa.sol < araba.sağ  &&  kurbağa.sağ > araba.sol
+kurbağa:  [x + 0.15, x + 0.85]     döşemesinden biraz küçük
+araba:    [carX, carX + len]
+çarpar:   kurbağa.sol < araba.sağ  &&  kurbağa.sağ > araba.sol
 ```
 
-Kurbağayı her yandan döşemenin 0.15'i kadar küçültmek **affedici bir çarpışma kutusudur**: kurbağanın döşemesinin
-köşesini sıyıran bir araba sayılmaz. Oyuncular bunu adil hisseder; tam bir kutu, ıskalayan bir arabanın çarpması gibi
-hissettirirdi.
+`&&` "**ve**" demektir: iki koşul da doğruysa çarpışma var. Kâğıda iki çizgi çizip dene: kurbağanın solu arabanın
+sağından önce **ve** kurbağanın sağı arabanın solundan sonraysa, çizgiler üst üste biner.
 
-Bir çarpışmadan sonra kurbağa bir can kaybeder ve altta yeni bir kurbağa başlar. İki fonksiyon bunu düzenli tutar:
-`newFrog()` başlangıca yeni bir kurbağa koyar, `reset()` tümüyle yeni bir oyun başlatır. Oyun sonu da başka bir
-**durumdur**: `'over'` iken `update()` ve `hop()` hiçbir şey yapmaz, Boşluk yeniden başlatır.
+**Affedici çarpışma kutusu.** Kurbağayı her yandan döşemenin 0,15'i kadar küçültmek **affedici** bir kutudur
+(forgiving hitbox): kurbağanın döşemesinin sadece köşesini sıyıran bir araba sayılmaz. Oyuncular bunu adil bulur;
+tam ölçülü bir kutu "bana değmedi ki!" hissi verir.
+
+`some` bir listenin **en az bir** elemanı için sorunun doğru olup olmadığını söyler:
+
+```js
+items(lane).some((x) => frog.x + 0.15 < x + lane.len && frog.x + 0.85 > x)
+```
+
+"Bu şeritteki arabalardan herhangi biri kurbağayla üst üste biniyor mu?"
+
+**Kurbağa hangi şeritte?** `find` listede koşulu tutan **ilk** elemanı verir; bulamazsa "hiçbir şey" (`undefined`)
+verir. Kurbağa çimendeyse ya da güvenli şeritteyse o satırda şerit yoktur:
+
+```js
+LANES.find((lane) => lane.row === row)
+```
+
+`if (lane && hitByCar(lane))` → "bir şerit varsa **ve** oradaki bir araba çarpıyorsa". Şerit yoksa `&&`'nin sağına
+hiç bakılmaz.
+
+**Toparlamak için iki fonksiyon.** `newFrog()` başlangıca yeni bir kurbağa koyar; `reset()` bütünüyle yeni bir oyun
+başlatır (canlar, durum, şeritler, kurbağa). Değişkenleri en üstte değersiz tanımlarız (`let frog`); değerlerini
+`reset()` verir. `die()` (öl) bir can düşürür: can kaldıysa yeni kurbağa, kalmadıysa oyun biter.
+
+**Durum.** Oyunun bittiğini tek bir değişkende tutarız: `state` (durum), `'playing'` (oyunda) ya da `'over'`
+(bitti). `'over'` iken `update()` ve `hop()` hiçbir şey yapmaz:
+
+```js
+if (state !== 'playing') return
+```
+
+`!==` "eşit değil mi?" diye sorar, `return` fonksiyondan hemen çıkar. Yani "oyunda değilsek hiçbir şey yapma".
+
+**Yarı saydam renk.** `'rgba(15, 23, 42, 0.75)'` kırmızı, yeşil, mavi miktarı (0–255) ve son olarak **opaklık**
+(0 görünmez, 1 tam) ile yazılmış bir renktir. 0,75 opak koyu lacivert, tahtanın üstüne bir perde gibi çekilir; tahta
+hafifçe arkadan görünür.
+
+`'Lives: ' + lives` yazı ile sayıyı birleştirir: `'Lives: 3'`.
 
 # --task--
 
@@ -56,16 +97,136 @@ Bir çarpışmadan sonra kurbağa bir can kaybeder ve altta yeni bir kurbağa ba
 
 # --task-tr--
 
-1. `let frog = ...`'yu `let frog`, `let lives` ve `let state` ile değiştir. `newFrog()` (`{ x: 5, y: START_ROW }`'da bir
-   kurbağa) ve `reset()` (3 can, `'playing'` durumu, her şeridin `offset`'i yeniden `0`, yeni bir kurbağa) yaz ve döngü
-   başlamadan `reset()` çağır.
-2. Varsa o satırdaki şeridi döndüren `laneAt(row)` ve yukarıdaki affedici aralıklarla `hitByCar(lane)` yaz.
-3. `die()` yaz: bir can eksik; can kaldıysa yeni bir kurbağa, yoksa `'over'` durumu.
-4. `update()` içinde oynanmıyorsa hiçbir şey yapma; şeritleri hareket ettirdikten sonra kurbağanın satırında bir şerit
-   varsa ve bir araba ona çarpıyorsa `die()`. `hop()` da oynanmıyorsa hiçbir şey yapmamalı; oyun bittiğinde Boşluk (ya
-   da dokunuş) `reset()` yapmalı.
-5. Tepede sağa hizalı `Lives: 3` çiz (beyaz, `'bold 18px sans-serif'`). Oyun bittiğinde tahtayı
-   `'rgba(15, 23, 42, 0.75)'` ile ört ve `Game Over` ile `Press Space to play again` yaz.
+1. `let frog = { x: 5, y: START_ROW }` ve altındaki `for (const lane of LANES) lane.offset = 0` satırlarını sil ve
+   yerlerine şunu yaz:
+
+   ```js
+   let frog
+   let lives
+   let state // 'playing' or 'over'
+
+   function newFrog() {
+     frog = { x: 5, y: START_ROW }
+   }
+
+   function reset() {
+     lives = 3
+     state = 'playing'
+     for (const lane of LANES) lane.offset = 0
+     newFrog()
+   }
+
+   function laneAt(row) {
+     return LANES.find((lane) => lane.row === row)
+   }
+   ```
+
+2. `hop()` fonksiyonunun başına bir satır ekle ve fonksiyonun hemen altına `die()`'ı yaz:
+
+   ```js
+   function hop(dx, dy) {
+     if (state !== 'playing') return   // ← yeni
+     frog.x = Math.min(COLS - 1, Math.max(0, frog.x + dx))
+     frog.y = Math.min(START_ROW, Math.max(0, frog.y + dy))
+   }
+
+   function die() {
+     lives -= 1
+     if (lives > 0) {
+       newFrog()
+       return
+     }
+     state = 'over'
+   }
+   ```
+
+   `lives -= 1` canı bir azaltır. `lives > 0` ise yeni kurbağa gelir ve `return` ile çıkılır; değilse son satıra
+   inilir ve oyun biter.
+
+3. `keydown` dinleyicisinde, `if (direction) { ... }` bloğunun kapanış `}`'inden sonra, `})`'den **önce** bir satır
+   ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     const direction = DIRECTIONS[event.key]
+     if (direction) {
+       event.preventDefault()
+       // One hop per press: holding the key down does not hop again.
+       if (!event.repeat) hop(...direction)
+     }
+     if (event.key === ' ' && state === 'over') reset()   // ← yeni
+   })
+   ```
+
+4. `pointerup` dinleyicisinde, `swipeStart = null` satırının altındaki ilk `if`'i şöyle değiştir (oyun bittiyse
+   dokunuş yeni oyun başlatsın):
+
+   ```js
+     swipeStart = null
+     if (state === 'over') {                                          // ← yeni
+       reset()                                                        // ← yeni
+     } else if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) {          // ← değişti
+       hop(0, -1)
+     } else if (Math.abs(dx) > Math.abs(dy)) {
+   ```
+
+   Geri kalanı aynen kalır.
+
+5. `pointerup` kodunun kapanış `})`'inden sonra, `function update()`'ten **önce** çarpışma fonksiyonunu yaz ve
+   `update()`'i şöyle değiştir:
+
+   ```js
+   function hitByCar(lane) {
+     return items(lane).some((x) => frog.x + 0.15 < x + lane.len && frog.x + 0.85 > x)
+   }
+
+   function update() {
+     if (state !== 'playing') return                   // ← yeni
+     for (const lane of LANES) lane.offset += lane.speed
+
+     const lane = laneAt(frog.y)                        // ← yeni
+     if (lane && hitByCar(lane)) die()                  // ← yeni
+   }
+   ```
+
+6. `draw()` fonksiyonunda, kurbağayı çizen `ctx.fillRect(frog.x * TILE + 6, ...)` satırının altına (fonksiyonun
+   kapanış `}`'inden önce) şunları ekle:
+
+   ```js
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'right'
+     ctx.fillText('Lives: ' + lives, canvas.width - 10, 27)
+
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 32px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 32)
+     }
+   ```
+
+   `ctx.font` yazı tipini ve boyunu, `ctx.textAlign = 'right'` verilen noktanın yazının sağ ucu olmasını
+   (`'center'` ortası) söyler. `fillText` yazıyı o noktaya boyar.
+
+7. En alttaki `requestAnimationFrame(loop)` satırının **üstüne** oyunu hazırlayan çağrıyı ekle:
+
+   ```js
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+   Bunu unutursan `frog` boş kalır ve hiçbir şey çizilmez.
+
+8. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla, sonra yukarı okla yola çık. Bir arabaya
+   çarpınca `Lives:` bir azalmalı ve kurbağa başa dönmeli; canlar bitince `Game Over` çıkmalı ve Boşluk yeni oyun
+   başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `hitByCar` satırındaki `0.15`, `0.85`
+   sayılarını ve `<`, `>` yönlerini kontrol et.
 
 # --tests--
 

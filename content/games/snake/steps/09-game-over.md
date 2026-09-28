@@ -29,26 +29,53 @@ the middle of the text, which makes centering easy.
 
 # --explanation-tr--
 
-Oyunun kaybetme yolu olmalı. Yılan'da iki tane var:
+**Bu adımda:** oyunu kaybedilebilir yapacağız. Yılan duvara ya da kendi gövdesine çarpınca duracak ve tahtanın
+ortasında beyaz harflerle `Game Over` (Oyun Bitti) yazısı çıkacak.
 
-- **Duvara çarpmak**: yeni baş ızgaranın dışında. Sütunlar `0`'dan `COLS - 1`'e kadar gider; "dışarıda" demek
-  `x < 0`, `x >= COLS`, `y < 0` ya da `y >= ROWS` demektir.
-- **Kendine çarpmak**: yeni baş, gövdenin zaten kullandığı bir hücrede. Bu, yem yerleştirirken sorduğun
-  `snake.some(...)` sorusunun aynısı.
+**İki kaybetme yolu:**
 
-İkisini de yeni başı eklemeden **önce** kontrol et. Biri doğruysa hamle gerçekleşmez: oyun biter.
+- **Duvara çarpmak:** yeni baş ızgaranın dışına çıkar. Sütunlar `0`'dan `COLS - 1`'e (yani 19'a) kadar gider.
+  "Dışarıda" demek: `x < 0` (solda dışarıda), `x >= COLS` (sağda dışarıda), `y < 0` (yukarıda) ya da
+  `y >= ROWS` (aşağıda). `<` "küçüktür" demektir.
+- **Kendine çarpmak:** yeni baş, gövdenin zaten kullandığı bir hücreye gelir. Bu, 7. adımda yemi yerleştirirken
+  sorduğun `snake.some(...)` sorusunun aynısı.
 
-"Oyun bitti" de diğer her şey gibi bir durumdur: bir boolean.
+```js
+const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS
+```
+
+`||` "**veya**" demektir: dört koşuldan **herhangi biri** doğruysa sonuç doğrudur. (7. adımdaki `&&` ise
+"hepsi doğruysa" demekti.)
+
+İki kontrolü de yeni başı yılana **eklemeden önce** yaparız. Biri doğruysa hamle hiç yapılmaz: oyun biter ve
+`return` ile `update()`'ten çıkarız. Böylece yılan tahtanın içinde, son hâlinde kalır.
+
+**Doğru/yanlış değeri (boolean).** "Oyun bitti mi?" de bir durumdur. Cevabı ya **evet** ya **hayır** olan
+bilgiler için iki özel değer vardır: `true` (doğru) ve `false` (yanlış). Bunlar tırnaksız yazılır.
 
 ```js
 let gameOver = false
 ```
 
-`true` olunca döngü çizmeye devam eder (oyuncu son tahtayı görsün diye) ama `update()` çağırmayı bırakır. Çizim
-fonksiyonu da buna bakar ve üste bir mesaj boyar.
+Oyun bitince `gameOver = true` olur. Döngü çizmeye devam eder (oyuncu son tahtayı görsün diye) ama artık
+`update()`'i çağırmaz:
 
-Yazı da şekiller gibi çizilir: yazı tipini ve hizalamayı ayarla, sonra `fillText(yazı, x, y)`. `textAlign = 'center'`
-ile `x` yazının ortası olur; ortalamak kolaylaşır.
+```js
+if (!gameOver && time - last >= SPEED) {
+```
+
+"Oyun bitmediyse **ve** yeterince zaman geçtiyse". `!gameOver` "oyun bitmedi" diye okunur (8. adımdaki `!`).
+
+**Yazı çizmek.** Yazı da şekil gibi boyanır: önce yazı tipi ve hizalama, sonra `fillText(yazı, x, y)`.
+
+```js
+ctx.font = '32px sans-serif'   // 32 piksel boyunda, sade bir yazı tipi
+ctx.textAlign = 'center'       // x noktası yazının ortası olsun
+ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+```
+
+`textAlign = 'center'` olunca `x` yazının **ortasını** gösterir. `canvas.width / 2` tahtanın tam ortası (200)
+olduğu için yazı ortalanır.
 
 # --task--
 
@@ -61,12 +88,57 @@ ile `x` yazının ortası olur; ortalamak kolaylaşır.
 
 # --task-tr--
 
-1. `let gameOver = false` ekle.
-2. `update()` içinde yeni `head`'i hesapladıktan hemen sonra: ızgaranın dışındaysa ya da yılanın herhangi bir
-   parçasının üstündeyse `gameOver = true` yap ve yılanı değiştirmeden `return` et.
-3. `loop()` içinde `update()`'i yalnızca oyun bitmemişse çağır (çizim her karede sürsün).
-4. `draw()`'un sonunda, `gameOver` doğruysa tahtanın ortasına `'white'` renkte `Game Over` yaz (örneğin
-   `ctx.font = '32px sans-serif'`, `ctx.textAlign = 'center'`).
+1. `let score = 0` satırının hemen altına şunu ekle:
+
+   ```js
+   let gameOver = false
+   ```
+
+2. `update()` fonksiyonunda, yeni başı hesaplayan `const head = ...` satırının **hemen altına** çarpma
+   kontrollerini ekle (`snake.unshift(head)` satırından önce). Fonksiyonun başı şöyle olsun:
+
+   ```js
+   function update() {
+     dir = nextDir
+     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
+     const hitWall = head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS // ← yeni
+     const hitSelf = snake.some((part) => part.x === head.x && part.y === head.y) // ← yeni
+     if (hitWall || hitSelf) { // ← yeni
+       gameOver = true // ← yeni
+       return // ← yeni
+     } // ← yeni
+     snake.unshift(head)
+     // ... geri kalanı aynı
+   ```
+
+3. `draw()` fonksiyonunda, yılanı çizen `for` döngüsünün kapanan `}` işaretinden sonra, fonksiyonun kapanan
+   `}` işaretinden **önce** şunu ekle:
+
+   ```js
+     if (gameOver) {
+       ctx.fillStyle = 'white'
+       ctx.font = '32px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+     }
+   ```
+
+4. `loop()` fonksiyonunda `if` satırına `!gameOver &&` ekle:
+
+   ```js
+   function loop(time) {
+     if (!gameOver && time - last >= SPEED) { // ← değişti
+       last = time
+       update()
+     }
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+5. **Çalıştır**'a bas ve hiçbir tuşa basmadan bekle: yılan sağ duvara çarpıp durmalı ve ortada `Game Over`
+   yazmalı. Alttaki kontrollerin hepsi yeşil olmalı. Yılan duvardan çıkıp kayboluyorsa, çarpma kontrolünü
+   `snake.unshift(head)` satırının **altına** yazmış olabilirsin; üstüne taşı.
 
 # --tests--
 

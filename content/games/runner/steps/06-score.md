@@ -25,21 +25,44 @@ new run.
 
 # --explanation-tr--
 
-Sonsuz koşucunun bitiş çizgisi yoktur; skor **ne kadar uzağa gittiğindir**. Her karede hızı bir `distance` sayacına
-ekle ve `distance / 10`'u aşağı yuvarlayarak göster; böylece sayılar tatmin edici bir hızda artar.
+**Bu adımda:** oyuna skor, rekor ve yeniden başlama gelecek. Sağ üstte `HI 00120  00042` gibi bir yazı (rekor ve
+şimdiki skor) göreceksin; oyun ilerledikçe hızlanacak; "Game Over"dan sonra Boşluk'a basınca yeni koşu başlayacak.
 
-Hem sonsuz *hem de* ilginç kalsın diye dünya her karede biraz hızlanır:
+**Skor = ne kadar uzağa gittin.** Bitiş çizgisi yok. Her kare hızı bir sayaca ekleriz: `distance += speed`. Ekranda
+`distance / 10`'u aşağı yuvarlayarak (`Math.floor`) gösteririz; sayılar hoş bir hızla artar.
+
+**Yavaş yavaş hızlanmak.**
 
 ```js
 speed = Math.min(12, speed + 0.003)
 ```
 
-`0.003` hiçbir şey gibi görünür ama bir dakikada (3600 kare) +10,8 eder; 12'de sınırlanmasa başlangıç hızını iki
-katından fazlasına çıkarırdı. Karelik küçük değişiklikler birikir. Bir oyunu ayarlarken hep sor: "bu bir dakika sonra
-neye dönüşür? beş dakika sonra?".
+`Math.min(a, b)` iki sayıdan **küçük olanı** verir. Yani hız `0.003` artar ama 12'yi asla geçmez (tavan). `0.003`
+hiç gibi görünür ama bir dakikada (3600 kare) +10,8 eder. Küçük değişiklikler birikir; bir oyunu ayarlarken hep sor:
+"bu bir dakika sonra neye dönüşür?"
 
-`00042` gibi skorlar `String(score).padStart(5, '0')` kullanır: metni soldan beş karaktere kadar sıfırla doldur. Rekor,
-diğer oyunlardaki gibi `localStorage`'a kaydedilir ve her zamanki gibi tek bir `reset()` fonksiyonu her yeni koşuyu kurar.
+**Sayıyı sıfırlarla doldurmak.** `00042` gibi göstermek için önce sayıyı yazıya çeviririz (`String(42)` → `'42'`),
+sonra `.padStart(5, '0')` ile soluna 5 karakter olana kadar `'0'` ekleriz → `'00042'`. Yazılar `+` ile
+**birleştirilir**: `'HI ' + '00120'` → `'HI 00120'`. `ctx.textAlign = 'right'` verdiğin `x`'i yazının **sağ ucu**
+yapar; böylece yazı sağ kenara yaslanır.
+
+**Rekoru saklamak (`localStorage`).** Sayfayı kapatsan da tarayıcının hatırladığı küçük bir defterdir. Her kayıt bir
+ad ve bir yazıdır:
+
+```js
+localStorage.setItem('runner-best', 124)       // deftere yaz
+localStorage.getItem('runner-best')            // oku → '124' (yazı olarak) ya da hiç yoksa null
+```
+
+`Number(...)` yazıyı sayıya çevirir. İlk kez oynarken kayıt yoktur; `Number(null)` `0` verir, `|| 0` da sayı
+çevrilemezse bile `0` olmasını garanti eder (`a || b` → "`a` boş/sıfırsa `b`'yi al").
+
+**`reset()`: her koşuyu aynı yerden başlatmak.** Yeniden başlarken her değişkeni ilk değerine döndürmemiz gerek. Bu
+değerleri iki yerde yazarsak bir gün biri unutulur. Onun yerine değişkenleri **değersiz** tanımlarız (`let runner`)
+ve bütün ilk değerleri tek bir fonksiyona koyarız. Oyun açılırken de, her yeniden başlamada da onu çağırırız.
+
+`if`'in içinde birden çok satır olunca süslü parantez `{ }` şarttır; hepsi birlikte ya çalışır ya atlanır. Bir `if`
+başka bir `if`'in içinde de olabilir: "çarptıysan, **ve** skor rekordan büyükse, kaydet".
 
 # --task--
 
@@ -55,15 +78,102 @@ diğer oyunlardaki gibi `localStorage`'a kaydedilir ve her zamanki gibi tek bir 
 
 # --task-tr--
 
-1. `runner`, `state`, `obstacles`, `speed`, `nextIn` ve yeni bir `distance`'ı `let` ile değersiz tanımla ve onlara
-   başlangıç değerlerini veren `function reset()` yaz (zeminde `vy: 0` ile koşucu, `'ready'`, `[]`, `6`, `60`, `0`).
-   Açılışta çağır.
-2. Koşarken her karede `distance`'a `speed` ekle ve `speed`'i `12`'ye kadar `0.003` artır.
-3. `let best = Number(localStorage.getItem('runner-best')) || 0` ekle. Koşu bitince `score = Math.floor(distance / 10)`
-   ile yeni rekoru `'runner-best'` altında kaydet.
-4. Oyun bittiğinde `jump()` hiçbir şey yapmamak yerine `reset()` çağırmalı.
-5. `(canvas.width - 10, 24)` noktasına sağa hizalı, `'16px monospace'` ile `HI 00120  00042` (rekor, iki boşluk, skor;
-   ikisi de 5 haneye doldurulmuş) yaz; `Game Over`'ın altına da `Press Space to try again`.
+1. `let runner = ...`'dan `let nextIn = 60 ...`'a kadar olan beş satırı sil ve yerine değersiz tanımları, rekoru ve
+   `reset()` fonksiyonunu yaz:
+
+   ```js
+   let runner
+   let state // 'ready', 'running' or 'over'
+   let obstacles
+   let speed
+   let distance
+   let nextIn // frames until the next obstacle
+   let best = Number(localStorage.getItem('runner-best')) || 0
+
+   function reset() {
+     runner = { x: 50, y: GROUND - 44, w: 40, h: 44, vy: 0 }
+     state = 'ready'
+     obstacles = []
+     speed = 6
+     distance = 0
+     nextIn = 60
+   }
+   ```
+
+   `reset()` içinde `let` yok: yukarıda tanımlanmış değişkenlere değer veriyoruz, yenilerini açmıyoruz.
+
+2. `jump()` fonksiyonunda, oyun bittiyse artık baştan başlasın:
+
+   ```js
+   function jump() {
+     if (state === 'over') { // ← değişti
+       reset()               // ← yeni
+       return
+     }                       // ← yeni
+     state = 'running'
+     if (onGround()) runner.vy = JUMP
+   }
+   ```
+
+3. `update()` fonksiyonunda, yere inme `if`'inin kapanan `}`'sinin altına mesafe ve hız satırlarını ekle; en
+   sondaki çarpma satırını da rekoru kaydeden hâle getir. Fonksiyonun ikinci yarısı şöyle olmalı:
+
+   ```js
+     distance += speed                            // ← yeni
+     speed = Math.min(12, speed + 0.003)          // ← yeni
+
+     nextIn -= 1
+     if (nextIn <= 0) spawn()
+     for (const o of obstacles) o.x -= speed
+     obstacles = obstacles.filter((o) => o.x + o.w > 0)
+
+     if (obstacles.some(hits)) {                  // ← değişti
+       state = 'over'
+       const score = Math.floor(distance / 10)
+       if (score > best) {
+         best = score
+         localStorage.setItem('runner-best', best)
+       }
+     }
+   }
+   ```
+
+4. `draw()` fonksiyonunda, kaktüsleri çizen `for` satırından sonrasını şöyle yap:
+
+   ```js
+     const score = Math.floor(distance / 10)                        // ← yeni
+     ctx.fillStyle = '#334155'
+     ctx.font = '16px monospace'                                    // ← yeni
+     ctx.textAlign = 'right'                                        // ← yeni
+     ctx.fillText('HI ' + String(best).padStart(5, '0') + '  ' + String(score).padStart(5, '0'), canvas.width - 10, 24) // ← yeni
+
+     ctx.textAlign = 'center'
+     if (state === 'ready') {
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Press Space to start', canvas.width / 2, canvas.height / 2)
+     }
+     if (state === 'over') {
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+       ctx.font = '16px sans-serif'                                 // ← yeni
+       ctx.fillText('Press Space to try again', canvas.width / 2, canvas.height / 2 + 28) // ← yeni
+     }
+   }
+   ```
+
+   `'HI '`'dan sonra bir, iki sayı arasında **iki** boşluk var. `monospace` her harfin aynı genişlikte olduğu yazı
+   tipidir; rakamlar kaymaz.
+
+5. En alttaki `requestAnimationFrame(loop)` satırının hemen **üstüne** oyunu hazırlayan çağrıyı ekle:
+
+   ```js
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ üstte skor artmalı, çarpınca rekor güncellenmeli ve
+   Boşluk yeni bir koşu başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Skor yazısı testi kırmızıysa
+   boşlukları say: `'HI '` ve `'  '`.
 
 # --tests--
 

@@ -18,15 +18,34 @@ would otherwise touch it every frame and rack up thousands of points.
 
 # --explanation-tr--
 
-**Tamponlar**, topu uzağa tekmeleyen ve puan getiren yuvarlak hedeflerdir. Dairedirler ve merkezler arası uzaklık iki yarıçapın
-toplamından az olduğunda top bir daireye değer.
+**Bu adımda:** masaya topu hızla geri iten üç kırmızı yuvarlak **tampon** (bumper) ve bir skor ekleyeceğiz. Top bir
+tampona çarpınca tampon kısa bir an sarı yanacak, sol üstteki `Score` 100 artacak.
 
-Düz bir duvar aldığı hızın yalnızca bir kısmını geri verir. Bir tampon tam tersidir: enerji **ekler**. Topun tampona doğru hızını
-(`-vn`) sıfırlarız ve sonra dışarı doğru sabit 6'lık bir tekme ekleriz; böylece yavaş bir top bile hızla uçar. Pinball'u canlı yapan
-budur.
+**Top daireye ne zaman değer?** İki dairenin merkezleri arasındaki uzaklık, iki yarıçapın toplamından küçükse
+(`d < b.r + R`). Merkezden topa giden yön yine **normal**dir (`nx, ny`); topu bu yönde tam değecek kadar dışarı
+iteriz.
 
-Her çarpma 100 puan getirir ve tamponu 10 kare yakar. Yanıkken başka çarpmalar puan getirmez: yoksa bir tampona sıkışan top her karede
-ona değip binlerce puan toplardı.
+**Tampon enerji ekler.** Duvar, aldığı hızın bir kısmını geri verir. Tampon ise tersine hız **ekler**: topun tampona
+doğru olan hızını sıfırlarız (`-vn`) ve üstüne dışarı doğru sabit 6 birimlik bir tekme ekleriz. Yavaş gelen top bile
+hızla uçar; pinball'u canlı yapan budur.
+
+**Çift puanı önlemek.** Her vuruş 100 puan verir ve tamponu 10 kare boyunca yakar (`flash[i] = 10`). Yanarken
+gelen vuruşlar puan vermez; yoksa tampona sıkışan bir top her karede değip binlerce puan toplardı.
+
+**Yeni parçalar:**
+
+- **Nesne listesi:** `BUMPERS` her biri `{ x, y, r }` (merkez ve yarıçap) olan üç nesneden oluşan bir dizidir.
+  `b.r` "`b` tamponunun yarıçapı" demektir.
+- **`dizi.map(...)`**: her eleman için yeni bir değer üretip yeni bir dizi yapar. `BUMPERS.map(() => 0)` her tampon
+  için bir `0` koyar: `[0, 0, 0]`. `flash.map((n) => Math.max(0, n - 1))` her sayıyı 1 azaltır ama 0'ın altına
+  indirmez.
+- **`dizi.forEach(fonksiyon)`**: her eleman için fonksiyonu çağırır ve ona elemanı (`b`) ve sırasını (`i`, 0'dan
+  başlar) verir. `BUMPERS.forEach(hitBumper)` yani `hitBumper(BUMPERS[0], 0)`, `hitBumper(BUMPERS[1], 1)`, ...
+- **`koşul ? a : b`**: "koşul doğruysa `a`, değilse `b`". `flash[i] > 0 ? '#fde047' : '#e11d48'` yanıyorsa sarı,
+  değilse kırmızı seçer.
+- **Yazı çizmek:** `ctx.font` yazı tipini, `ctx.textAlign` hizalamayı ayarlar; `ctx.fillText(yazı, x, y)` yazar.
+  `'Score ' + score` bir yazıyla bir sayıyı yan yana ekler: `score` 0 ise `'Score 0'` olur.
+- `score += 100` skoru 100 artırır.
 
 # --task--
 
@@ -38,11 +57,95 @@ ona değip binlerce puan toplardı.
 
 # --task-tr--
 
-1. `BUMPERS` (çözümdeki üç daire), `score` ve `flash` ekle (`reset()`'te `0` ve üç sıfır).
-2. `hitBumper(b, i)` yaz: top tampona biniyorsa onu merkezden gelen çizgi boyunca dışarı it, hızına normal boyunca `(-vn + 6)` ekle ve
-   `flash[i]` 0'sa `score`'a 100 ekle; sonra `flash[i] = 10` yap. `step()` onu her tampon için çağırır.
-3. `update()` her `flash`'ı 0'a kadar azaltır.
-4. Tamponları `'#e11d48'`, yanıkken `'#fde047'` ve `(30, 50)`'ye `Score 0` çiz (beyaz, `'bold 16px sans-serif'`).
+1. `WALLS` listesinin kapanış `]` satırının hemen altına tamponları ekle:
+
+   ```js
+   const BUMPERS = [
+     { x: 100, y: 160, r: 22 },
+     { x: 200, y: 120, r: 22 },
+     { x: 280, y: 280, r: 22 },
+   ]
+   ```
+
+2. `let state ...` satırının altına iki değişken ekle:
+
+   ```js
+   let score
+   let flash // frames each bumper stays lit
+   ```
+
+3. `reset()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function reset() {
+     score = 0                      // ← yeni
+     flash = BUMPERS.map(() => 0)   // ← yeni
+     newBall()
+   }
+   ```
+
+4. `hitSegment` fonksiyonunun kapanış `}`'inin altına tampon çarpışmasını yaz:
+
+   ```js
+   function hitBumper(b, i) {
+     const dx = ball.x - b.x
+     const dy = ball.y - b.y
+     const d = Math.hypot(dx, dy)
+     if (d >= b.r + R) return
+     const nx = dx / d
+     const ny = dy / d
+     ball.x = b.x + nx * (b.r + R)
+     ball.y = b.y + ny * (b.r + R)
+     // A bumper kicks the ball away, faster than it came.
+     const vn = ball.vx * nx + ball.vy * ny
+     ball.vx += (-vn + 6) * nx
+     ball.vy += (-vn + 6) * ny
+     if (flash[i] === 0) score += 100
+     flash[i] = 10
+   }
+   ```
+
+5. `step()` fonksiyonunun sonuna, duvar satırının altına bir satır ekle:
+
+   ```js
+     for (const w of WALLS) hitSegment(w[0], w[1], w[2], w[3], 0.5)
+     BUMPERS.forEach(hitBumper) // ← yeni
+   }
+   ```
+
+6. `update()` fonksiyonunun **en başına**, `if (state === 'ready') return` satırından önce ekle:
+
+   ```js
+   function update() {
+     flash = flash.map((n) => Math.max(0, n - 1)) // ← yeni
+     if (state === 'ready') return
+   ```
+
+   Böylece tampon ışıkları top beklerken de söner.
+
+7. `draw()` fonksiyonunda duvarları çizen `for` döngüsünün kapanış `}`'inin hemen altına tamponları çiz:
+
+   ```js
+     BUMPERS.forEach((b, i) => {
+       ctx.fillStyle = flash[i] > 0 ? '#fde047' : '#e11d48'
+       ctx.beginPath()
+       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
+       ctx.fill()
+     })
+   ```
+
+8. `draw()`'un en sonunda, topu çizen `ctx.fill()` satırının altına (fonksiyonun kapanış `}`'inden önce) skoru yaz:
+
+   ```js
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score ' + score, 30, 50)
+   ```
+
+9. **Çalıştır**'a bas. Üç kırmızı tampon ve sol üstte `Score 0` görünmeli. Oyuna tıklayıp Boşluk'a bas: top bir
+   tampona çarpınca tampon sarı yanmalı, skor artmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

@@ -23,20 +23,71 @@ the direction. A very short movement is a **tap**, and a tap hops forward, which
 
 # --explanation-tr--
 
-Bir yarış oyunundaki araba gibi değil, kurbağa bir tuş basılı tutulurken kaymaz: her basış bir döşemelik **tam olarak
-bir zıplamadır**. Bu, hareketi hassas yapar; oyunun buna ihtiyacı var, çünkü yol tek bir döşemelik hatayı cezalandırır.
+**Bu adımda:** kurbağayı zıplatacağız. Ok tuşlarına her basışta kurbağa o yöne tam bir döşeme zıplayacak ve
+tahtanın dışına çıkamayacak. Telefonda ekranı kaydırarak ya da dokunarak da zıplatabileceksin.
 
-Bir incelik var. Bir tuşu basılı tuttuğunda tarayıcı `keydown`'u tekrar tekrar gönderir (otomatik tekrar) ve bu
-olayların her birinde `event.repeat === true` olur. Tekrarları yok saymak "bir basış, bir zıplama" kuralını korur:
+**Her basış, bir zıplama.** Yarış oyunundaki araba gibi tuş basılıyken kaymaz: her basış **tam bir döşemelik** bir
+zıplamadır. Bu hareketi hassas yapar; oyunun buna ihtiyacı var, çünkü yol tek bir döşemelik hatayı bile cezalandırır.
+
+**Zıplama fonksiyonu.** `hop(dx, dy)` kurbağayı `dx` sütun ve `dy` satır kaydırır:
 
 ```js
-if (!event.repeat) hop(...direction)
+function hop(dx, dy) {
+  frog.x = Math.min(COLS - 1, Math.max(0, frog.x + dx))
+  frog.y = Math.min(START_ROW, Math.max(0, frog.y + dy))
+}
 ```
 
-`hop` kurbağayı `Math.min` ve `Math.max` ile tahtanın içinde tutar; böylece asla ekrandan çıkamaz.
+- `dx`, `dy` fonksiyona verilen iki bilgidir (**parametre**): sola zıplama `hop(-1, 0)`, yukarı `hop(0, -1)`.
+  Yukarı gitmek satır numarasını **küçültür**, çünkü satırlar yukarıdan sayılıyor.
+- `Math.max(a, b)` iki sayıdan büyüğünü, `Math.min(a, b)` küçüğünü verir. İkisi birlikte değeri bir aralığa
+  **sıkıştırır**: `Math.max(0, ...)` 0'ın altına inmesine, `Math.min(COLS - 1, ...)` 11'i geçmesine izin vermez.
+  Böylece kurbağa asla ekrandan çıkamaz.
 
-Telefonda ok tuşları yok. Bir **kaydırma** `pointerdown`'dan `pointerup`'a kadar ölçülür: uzun olan eksen yönü belirler.
-Çok kısa bir hareket bir **dokunuştur** ve dokunuş ileri zıplatır; oyuncunun en sık yaptığı hamle budur.
+**Olaylar: "şu olunca şunu yap".** Tarayıcı bir tuşa basıldığında `'keydown'` adlı bir **olay** yayınlar; biz de onu
+dinleriz:
+
+```js
+document.addEventListener('keydown', (event) => {
+  // her tuş basışında bu satırlar çalışır
+})
+```
+
+`(event) => { ... }` adı olmayan, oracıkta yazılmış bir fonksiyondur (**ok fonksiyonu**). Tarayıcı onu çağırırken
+içine olayın bilgilerini `event` adıyla verir. `event.key` basılan tuşun adıdır: `'ArrowLeft'`, `'ArrowUp'` gibi.
+
+**Yön tablosu.** Hangi tuşun hangi yöne gittiğini bir nesnede tutarız. Her yön iki sayılık bir **dizidir**
+(liste, köşeli parantezle yazılır): `[dx, dy]`.
+
+```js
+const DIRECTIONS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+const direction = DIRECTIONS[event.key]
+```
+
+`DIRECTIONS[event.key]` → "tabloda, adı basılan tuş olan alanı getir". (Köşeli parantez, alan adı bir değişkende
+durduğunda kullanılır.) Sol oka basıldıysa `direction` `[-1, 0]` olur. Tabloda olmayan bir tuşsa (mesela `A`)
+"hiçbir şey" (`undefined`) gelir ve `if (direction)` yanlış sayılır; o tuşu görmezden geliriz.
+
+**`hop(...direction)`**: baştaki üç nokta listeyi açıp elemanlarını tek tek verir. `[-1, 0]` için bu,
+`hop(-1, 0)` yazmakla aynıdır.
+
+**Basılı tutma tuzağı.** Bir tuşu basılı tutunca tarayıcı `keydown`'ı tekrar tekrar gönderir (otomatik tekrar); bu
+tekrarlarda `event.repeat` doğrudur. `!` "değil" demektir: `if (!event.repeat)` = "tekrar değilse". Böylece "bir
+basış, bir zıplama" kuralı korunur.
+
+`event.preventDefault()` tarayıcının o tuşla normalde yaptığı işi (ok tuşlarıyla sayfayı kaydırmak) engeller.
+
+**Telefonda kaydırma.** Telefonda ok tuşu yok. Bir **kaydırma** (swipe), parmağın değdiği yerden (`pointerdown`)
+kalktığı yere (`pointerup`) kadar ölçülür. Başlangıç noktasını bir değişkende hatırlarız; başta boştur: `null`
+("hiçbir şey"). Parmak kalkınca:
+
+- `dx`, `dy`: yatayda ve dikeyde ne kadar gidildi. `Math.abs(sayı)` eksisini atar, yani sadece büyüklüğüne bakar.
+- İki yönde de 20 pikselden kısa bir hareket **dokunuştur** ve ileri (yukarı) zıplatır; oyuncunun en sık yaptığı
+  hareket budur.
+- Değilse, hangi eksende daha çok gidildiyse o yöne bir döşeme. `Math.sign(sayı)` artıysa `1`, eksiyse `-1` verir:
+  yönü söyler.
+
+`else if` "değilse, eğer şuysa", tek başına `else` "hiçbiri değilse" demektir. Sadece biri çalışır.
 
 # --task--
 
@@ -49,12 +100,59 @@ Telefonda ok tuşları yok. Bir **kaydırma** `pointerdown`'dan `pointerup`'a ka
 
 # --task-tr--
 
-1. Kurbağayı `dx` sütun ve `dy` satır hareket ettiren `hop(dx, dy)` yaz; `x`'i `0` ile `COLS - 1`, `y`'yi `0` ile
-   `START_ROW` arasında tut.
-2. `keydown`'da ok tuşunu `[dx, dy]` çiftlerinden oluşan bir `DIRECTIONS` nesnesinde ara. Bir ok tuşu için
-   `event.preventDefault()` çağır ve yalnızca `event.repeat` false ise zıpla.
-3. Canvas'ta bir `pointerdown`'ın nerede başladığını hatırla. `pointerup`'ta: iki eksende de 20 pikselden kısa bir
-   hareket yukarı zıplatır; değilse uzun eksen boyunca bir döşeme zıpla (`Math.sign` yönü verir).
+1. `let frog = { x: 5, y: START_ROW }` satırının altına bir boş satır bırak ve zıplama fonksiyonunu yaz:
+
+   ```js
+   function hop(dx, dy) {
+     frog.x = Math.min(COLS - 1, Math.max(0, frog.x + dx))
+     frog.y = Math.min(START_ROW, Math.max(0, frog.y + dy))
+   }
+   ```
+
+2. Altına bir boş satır bırak, yön tablosunu ve tuşları dinleyen kodu ekle:
+
+   ```js
+   const DIRECTIONS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+   document.addEventListener('keydown', (event) => {
+     const direction = DIRECTIONS[event.key]
+     if (direction) {
+       event.preventDefault()
+       // One hop per press: holding the key down does not hop again.
+       if (!event.repeat) hop(...direction)
+     }
+   })
+   ```
+
+3. Altına bir boş satır bırak ve dokunmatik kaydırmayı ekle:
+
+   ```js
+   // Touch: a swipe hops that way, a short tap hops forward.
+   let swipeStart = null
+   canvas.addEventListener('pointerdown', (event) => {
+     swipeStart = { x: event.clientX, y: event.clientY }
+   })
+   canvas.addEventListener('pointerup', (event) => {
+     if (!swipeStart) return
+     const dx = event.clientX - swipeStart.x
+     const dy = event.clientY - swipeStart.y
+     swipeStart = null
+     if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) {
+       hop(0, -1)
+     } else if (Math.abs(dx) > Math.abs(dy)) {
+       hop(Math.sign(dx), 0)
+     } else {
+       hop(0, Math.sign(dy))
+     }
+   })
+   ```
+
+   Parmak değince başlangıç noktası (`event.clientX`, `event.clientY`: sayfadaki konum) saklanır. Parmak kalkınca
+   fark hesaplanır, başlangıç silinir ve zıplanır. `if (!swipeStart) return`: başlangıç yoksa hiçbir şey yapma.
+
+4. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla (bu dokunuş zaten kurbağayı bir kez
+   ileri zıplatır), sonra ok tuşlarına bas: kurbağa her basışta bir kare zıplamalı ve kenarlarda durmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `DIRECTIONS` içindeki tuş adlarının büyük harflerini ve
+   `...direction`'daki üç noktayı kontrol et.
 
 # --tests--
 

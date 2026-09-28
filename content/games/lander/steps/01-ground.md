@@ -28,25 +28,78 @@ The ground is drawn as one filled shape: start at the bottom left, go through ev
 
 # --explanation-tr--
 
-Ay yüzeyi, her 40 pikselde bir olan ve düz çizgilerle birleşen yüksekliklerin bir listesidir. Rastgele yükseklikler tepeleri
-yapar; birkaç noktanın aynı yüksekliği paylaştığı düz bir parça da **iniş pistidir**.
+**Bu adımda:** Ay yüzeyini çizeceğiz. Sağda lacivert bir gökyüzü, altında gri, inişli çıkışlı tepeler ve tepelerin
+arasında düz, yeşil bir iniş pisti göreceksin. Her **Çalıştır**'da tepeler rastgele yeniden oluşur.
+
+Bu ilk adım uzun, çünkü birçok temel şeyi birlikte öğreneceğiz. Acele etme; kodu parça parça yazacaksın.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur. `//` ile başlayan kısımlar **yorumdur**: bilgisayar atlar,
+sadece insanlar için not.
+
+**Canvas ve fırça.** Sayfada 480×360 piksellik bir resim alanı (`canvas`, kimliği `game`) var. Önce onu bulur,
+sonra çizim aracını (bağlam, **context**) alırız:
+
+```js
+const canvas = document.getElementById('game')   // sayfada kimliği 'game' olanı bul
+const ctx = canvas.getContext('2d')              // onun fırçasını al
+```
+
+`const ad = ...` bir şeye ad (etiket) verir; buna **sabit** denir. Nokta (`.`) "bunun içindeki" demektir. Tırnak
+içindekiler **yazıdır** (metin). `ctx.fillStyle = '#020617'` fırçanın rengini seçer (`#` ile başlayan renk kodu),
+`ctx.fillRect(x, y, en, boy)` bir dikdörtgen boyar. Canvas'ın **sol üst köşesi** `(0, 0)`'dır; `x` sağa, `y`
+**aşağı** doğru büyür. Yani büyük `y` daha alçak demektir.
+
+**Değişken: `let`.** `let ground` "adı `ground` olan bir kutu aç" demek. `const`'tan farkı, içindekini sonra
+değiştirebilmendir. `=` olmadan yazılırsa kutu şimdilik boştur.
+
+**Dizi (array): bir liste.** Zemin, her 40 pikselde bir yükseklikten oluşan bir listedir:
+`[250, 300, 280, ...]`. Listenin elemanlarına sıra numarasıyla ulaşılır ve sayma **0'dan başlar**: `ground[0]` ilk,
+`ground[1]` ikinci eleman. `ground.length` listenin eleman sayısıdır. 480 / 40 = 12 aralık, yani 13 nokta vardır.
 
 ```js
 ground = Array.from({ length: points }, () => 210 + Math.random() * 120)
 ```
 
-Sonra oyunun yalnızca noktalarda değil, **her** `x`'te zeminin yüksekliğine ihtiyacı olacak. İki nokta arasında zemin düz bir
-çizgidir; öyleyse `x`'in etrafındaki iki noktayı bul ve `x`'in ne kadar ilerde olduğuna göre aralarında karıştır:
+Bu satır "`points` tane elemanlı bir liste yap; her elemanı `() => ...` ile hesapla" der. `() => ...` adı
+olmayan küçük bir fonksiyondur (ok fonksiyonu). `Math.random()` 0 ile 1 arasında rastgele bir sayı verir; 120 ile
+çarpıp 210 ekleyince 210 ile 330 arasında rastgele bir yükseklik olur.
+
+**Fonksiyon.** `function makeGround() { ... }` bir iş listesine ad verip saklar (tarif yazmak gibi). Tarif
+yazılınca hemen çalışmaz; `makeGround()` diye **çağırınca** çalışır. `return` bir fonksiyonun sonucunu geri verir.
+
+**Pist.** Rastgele bir yerde yan yana 3 noktaya aynı yüksekliği veririz; aradaki 2 aralık (80 piksel) düz olur:
+
+- `Math.floor(sayı)` → sayının küsuratını atar: `Math.floor(3.7)` → 3. Böylece rastgele bir **tam** sıra numarası
+  elde ederiz. `1 + ...` ilk noktayı atlar ki pist kenara yapışmasın.
+- `for (let i = start; i <= start + width; i++) ground[i] = y` → bir **döngü**: `i`'yi `start`'tan başlat, `start + 2`
+  olana kadar (`<=` "küçük veya eşit") her turda bir artır (`i++`) ve o noktanın yüksekliğini `y` yap.
+- `pad = { x1: ..., x2: ..., y }` → bir **nesne**: birbirine ait bilgileri `ad: değer` çiftleriyle tek pakette tutar.
+  Sadece `y` yazmak, `y: y` yazmanın kısasıdır. İçinden `pad.x1` diye okunur.
+
+**Herhangi bir `x`'te zemin nerede?** İleride aracın ayağının altındaki zemini bilmemiz gerekecek, ama elimizde sadece
+her 40 pikseldeki noktalar var. İki nokta arası düz bir çizgi olduğu için: `x`'in hangi iki nokta arasında olduğunu
+buluruz (`i`) ve aradaki yolun ne kadarını gittiğini (`t`, 0 ile 1 arası) hesaplarız:
 
 ```js
-const t = (x - i * STEP) / STEP          // i. noktada 0, i + 1. noktada 1
+const t = (x - i * STEP) / STEP                  // i. noktada 0, bir sonrakinde 1
 return ground[i] + (ground[i + 1] - ground[i]) * t
 ```
 
-Bu **doğrusal ara değerlemedir** (linear interpolation), oyunlarda en çok kullanılan formüllerden biri: renkleri geçişli
-değiştirmek, bir şeyi A'dan B'ye akıcıca taşımak ve sayıları canlandırmak da böyle yapılır.
+Örnek: noktalar 100 ve 200, `x` tam ortada (`t = 0.5`) → 100 + 100 × 0.5 = 150. Buna **doğrusal ara değer**
+(linear interpolation) denir; oyunlarda renk geçişinden yumuşak harekete kadar her yerde kullanılır.
+`Math.max`/`Math.min` `i`'yi listenin içinde tutar (ikisinden büyüğünü/küçüğünü verirler).
 
-Zemin tek bir dolu şekil olarak çizilir: sol alttan başla, her noktadan geç, sağ altta bitir.
+**Şekil çizmek (path).** Zemini tek bir dolu şekil olarak çizeriz: kalemi sol alt köşeye koy, her noktaya çizgi çek,
+sağ alt köşeye in, içini boya:
+
+- `ctx.beginPath()` → yeni bir şekle başla.
+- `ctx.moveTo(x, y)` → kalemi kaldırıp buraya koy. `ctx.lineTo(x, y)` → buraya çizgi çek.
+- `ground.forEach((y, i) => ...)` → listenin her elemanı için bir kez çalışır; `y` elemanın değeri, `i` sıra numarası.
+- `ctx.fill()` → çizilen şeklin içini boya.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "ekranı yenilemeden önce `loop`'u çağır" der. `loop` en
+sonda kendini yeniden istediği için saniyede ~60 kez çizim yapılır.
 
 # --task--
 
@@ -59,12 +112,94 @@ Zemin tek bir dolu şekil olarak çizilir: sol alttan başla, her noktadan geç,
 
 # --task-tr--
 
-1. `STEP = 40` ekle ve `makeGround()` yaz: `ground` `210` ile `330` arasında `canvas.width / STEP + 1` rastgele yükseklik
-   alır. Pist sığacak biçimde `1`'den başlayan rastgele bir başlangıç noktası, `250` ile `320` arasında rastgele bir `y` seç,
-   pistin 3 noktasını (2 adım genişlik) o `y`'ye ayarla ve `pad = { x1, x2, y }`'yi piksel olarak kaydet.
-2. `i`'yi `0` ile `ground.length - 2` arasında tutarak doğrusal ara değerlemeyle `groundY(x)` yaz.
-3. Her karede çiz: `'#020617'` bir gökyüzü, bütün noktalardan geçen tek bir `'#475569'` şekil olarak zemin ve pisti `y`'sinde
-   ortalı 4 piksel yüksekliğinde `'#22c55e'` bir çubuk olarak.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı alan satırları yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir boş satır bırak ve nokta aralığını yaz:
+
+   ```js
+   const STEP = 40 // the ground is a line through a point every STEP pixels
+   ```
+
+3. Bir boş satır bırak ve iki boş değişkeni aç:
+
+   ```js
+   let ground // y of the ground at x = 0, STEP, 2 * STEP, ...
+   let pad // { x1, x2, y }: the flat landing pad
+   ```
+
+4. Bir boş satır bırak ve zemini üreten fonksiyonu yaz:
+
+   ```js
+   // Random hills, with one flat stretch: the pad.
+   function makeGround() {
+     const points = canvas.width / STEP + 1
+     ground = Array.from({ length: points }, () => 210 + Math.random() * 120)
+     const width = 2
+     const start = 1 + Math.floor(Math.random() * (points - 2 - width))
+     const y = 250 + Math.random() * 70
+     for (let i = start; i <= start + width; i++) ground[i] = y
+     pad = { x1: start * STEP, x2: (start + width) * STEP, y }
+   }
+   ```
+
+5. Bir boş satır bırak ve her `x` için zemin yüksekliğini veren fonksiyonu yaz:
+
+   ```js
+   // The ground between two points is a straight line: find where x is along it.
+   function groundY(x) {
+     const i = Math.max(0, Math.min(ground.length - 2, Math.floor(x / STEP)))
+     const t = (x - i * STEP) / STEP
+     return ground[i] + (ground[i + 1] - ground[i]) * t
+   }
+   ```
+
+6. Bir boş satır bırak ve oyunu kuran `reset()` fonksiyonunu yaz (şimdilik sadece zemini üretir):
+
+   ```js
+   function reset() {
+     makeGround()
+   }
+   ```
+
+7. Bir boş satır bırak ve çizim fonksiyonunu yaz: gökyüzü, zemin şekli, yeşil pist (4 piksel yüksek, `y`'nin 2
+   piksel üstünden başlar ki ortalansın):
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#020617'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#475569'
+     ctx.beginPath()
+     ctx.moveTo(0, canvas.height)
+     ground.forEach((y, i) => ctx.lineTo(i * STEP, y))
+     ctx.lineTo(canvas.width, canvas.height)
+     ctx.fill()
+     ctx.fillStyle = '#22c55e'
+     ctx.fillRect(pad.x1, pad.y - 2, pad.x2 - pad.x1, 4)
+   }
+   ```
+
+8. Bir boş satır bırak ve oyun döngüsünü yazıp oyunu başlat:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+9. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda koyu gökyüzü, gri tepeler ve tepelerin arasında yeşil bir pist
+   görmelisin; alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa parantezleri ve süslü parantezleri tek tek
+   karşılaştır; büyük/küçük harf de önemlidir (`Math.floor`, `forEach`).
 
 # --tests--
 

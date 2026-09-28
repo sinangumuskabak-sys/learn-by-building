@@ -29,28 +29,48 @@ The same function gives us two features:
 
 # --explanation-tr--
 
-Bir tahtanın hamlesi bitebilir: hiçbir yerdeki hiçbir takas eşleşme yapmaz ve oyuncu sonsuza dek sıkışır. Oyunun bunu fark
-etmesi gerekir.
+**Bu adımda:** oyun sıkışmayı önleyecek ve ipucu verecek. Beş saniye hiçbir şey yapmazsan olası bir hamlenin iki
+mücevheri **sarı** çerçeveyle gösterilecek. Hiç hamle kalmayan bir tahta ise kendiliğinden yenisiyle değişecek.
 
-**Herhangi** bir hamlenin var olup olmadığını nasıl bilebiliriz? En basit dürüst cevap: hepsini dene. Yalnızca 112 komşu çift
-var (her hücre sağındaki ve altındaki komşusuyla) ve her biri için takas eder, `findMatches()`'i çağırır ve geri takas ederiz.
-Tahta tam olarak eski hâlinde kalır ve bir hamle olup olmadığını, hangisi olduğunu öğreniriz:
+**Sıkışan tahta.** Bir tahtada hamle bitebilir: hiçbir takas eşleşme yapmaz ve oyuncu sonsuza kadar takılır kalır.
+Oyun bunu fark etmeli.
+
+**Herhangi bir hamle var mı?** En basit dürüst cevap: hepsini dene. Sadece 112 komşu çifti var (her hücre sağındaki
+ve altındaki komşusuyla). Her biri için takas et, `findMatches()`'e bak, geri takas et. Tahta tam olarak eski hâline
+döner; biz de hamle olup olmadığını ve hangisi olduğunu öğreniriz:
 
 ```js
 swap(a, b)
 const found = findMatches().size > 0
-swap(a, b)            // ne bulursak bulalım her zaman geri al
+swap(a, b)            // ne bulursak bulalım, her zaman geri al
 if (found) return { a, b }
 ```
 
-Bu "dene ve geri al" kalıbı oyun yapay zekâlarının da düşünme biçimidir: bir satranç motoru tahtasında bir hamle oynar, bakar
-ve geri alır.
+Bu "dene ve geri al" yöntemi oyun yapay zekâlarının da düşünme şeklidir: bir satranç programı hamleyi kendi
+tahtasında oynar, bakar ve geri alır.
 
-Aynı fonksiyon bize iki özellik verir:
+- `if (r + dr >= N || c + dc >= N) continue` → komşu tahtanın dışına taşıyorsa (son sütunun sağı, son satırın altı)
+  atla.
+- `return { a, b }` iki hücreyi bir nesnede birlikte döner (`{ a: a, b: b }`'nin kısası). Hiç bulunamazsa en alttaki
+  `return null` çalışır.
 
-- **sıkışan tahta yok:** yeni bir oyun `hasMove()` bir şey bulana kadar yeniden zar atar ve bir hamleden sonra mücevherler
-  yerleştiğinde hiç hamle kalmamışsa eskisinin yerine taze bir tahta gelir;
-- **bir ipucu:** beş saniye boşta kalınca (300 kare) olası bir hamleyi sarıyla çerçevele.
+**Aynı fonksiyon iki özellik verir:**
+
+- **Sıkışan tahta yok:** yeni oyun, `hasMove()` bir şey bulana kadar tahtayı yeniden kurar (`do ... while`, 1. adımda
+  gördüğün gibi: en az bir kez yap, koşul doğru olduğu sürece tekrarla). Bir hamleden sonra mücevherler yere
+  indiğinde hiç hamle kalmamışsa taze bir tahta eskisinin yerine geçer. `!hasMove()` → "hamle **yoksa**"
+  (`null` yanlış sayılır, `!` onu tersine çevirir).
+- **İpucu:** oyuncu beş saniye (300 kare) boş durursa olası bir hamle sarıyla çerçevelenir. `idleFor` her boş
+  karede bir artar; bir hamle yapılınca sıfırlanır.
+
+**Birden çok çerçeveyi tek döngüyle çizmek.** Seçim beyaz, ipucunun iki hücresi sarı. Üç `[hücre, renk]` çiftini
+bir listeye koyup gezeriz; hücre yoksa (`null`) atlarız:
+
+```js
+for (const [cell, color] of [[selected, '#ffffff'], [hint && hint.a, '#fde047'], [hint && hint.b, '#fde047']])
+```
+
+`hint && hint.a` → "ipucu varsa onun `a`'sı, yoksa `null`". İpucu yokken `hint.a` yazmak hata verirdi.
 
 # --task--
 
@@ -64,13 +84,91 @@ Aynı fonksiyon bize iki özellik verir:
 
 # --task-tr--
 
-1. `hasMove()` yaz: her hücreyi sağındaki ve altındaki komşusuyla dene; eşleşme yapan ilk `{ a, b }`'yi ya da `null`
-   döndür.
-2. `reset()`'te `!hasMove()` olduğu sürece `newBoard()`'u tekrarla (bir `do ... while`).
-3. Mücevherler yeni eşleşme olmadan yere indiğinde `'idle'`'a dön ve hamle olmadığı sürece bir `newBoard()` yap.
-4. `idleFor` ve `hint` ekle (`reset()`'te ve eşleşen her takastan sonra `0` ve `null`). `'idle'`'da `idleFor`'u artır ve
-   `300`'de `hint = hasMove()` yap.
-5. İpucunun iki hücresini seçimle aynı biçimde sarı (`'#fde047'`) bir çerçeveyle çiz.
+1. `let drop ...` satırının hemen **altına** iki değişken ekle:
+
+   ```js
+   let idleFor // frames since the last move
+   let hint // a possible move, shown after five idle seconds
+   ```
+
+2. `reset()` fonksiyonunda `newBoard()` satırını `do ... while`'a çevir, sonuna iki satır ekle:
+
+   ```js
+   function reset() {
+     do newBoard()         // ← değişti
+     while (!hasMove())    // ← yeni
+     selected = null
+     score = 0
+     phase = 'idle'
+     drop = board.map((row) => row.map(() => 0))
+     idleFor = 0           // ← yeni
+     hint = null           // ← yeni
+   }
+   ```
+
+3. `swap()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp hamle arayan fonksiyonu yaz:
+
+   ```js
+   // Is there any swap that would make a match? Try each one, look, and swap back.
+   function hasMove() {
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         for (const [dr, dc] of [[0, 1], [1, 0]]) {
+           if (r + dr >= N || c + dc >= N) continue
+           const a = { r, c }
+           const b = { r: r + dr, c: c + dc }
+           swap(a, b)
+           const found = findMatches().size > 0
+           swap(a, b)
+           if (found) return { a, b }
+         }
+       }
+     }
+     return null
+   }
+   ```
+
+4. `trySwap()` içinde `chain = 0` satırının hemen **altına** ekle:
+
+   ```js
+     idleFor = 0
+     hint = null
+   ```
+
+5. `update()` fonksiyonunun sonunu şöyle değiştir (`// Landed: ...` yorumundan itibaren):
+
+   ```js
+       // Landed: new matches make a cascade; otherwise the move is over.
+       if (findMatches().size > 0) startClearing()
+       else {                                          // ← değişti
+         phase = 'idle'
+         // No swap left anywhere: a fresh board.
+         while (!hasMove()) newBoard()                 // ← yeni
+       }
+       return                                          // ← yeni
+     }
+     idleFor += 1                                      // ← yeni
+     if (idleFor === 300) hint = hasMove()             // ← yeni
+   }
+   ```
+
+   `'clearing'` ve `'falling'` evreleri `return` ile çıktığı için son iki satır yalnızca `'idle'` evresinde çalışır.
+
+6. `draw()` içinde `if (selected) { ... }` bloğunun tamamını sil, yerine şunu yaz:
+
+   ```js
+     // Outline the selected gem, and after five idle seconds, a possible move.
+     ctx.lineWidth = 3
+     for (const [cell, color] of [[selected, '#ffffff'], [hint && hint.a, '#fde047'], [hint && hint.b, '#fde047']]) {
+       if (!cell) continue
+       ctx.strokeStyle = color
+       ctx.strokeRect(LEFT + cell.c * SIZE + 2, TOP + cell.r * SIZE + 2, SIZE - 4, SIZE - 4)
+     }
+   ```
+
+7. **Çalıştır**'a bas ve beş saniye hiçbir şeye dokunma: iki mücevher sarı çerçeveyle işaretlenmeli. O iki
+   mücevheri takas edince sarı çerçeve kaybolmalı. Alttaki kontrollerin hepsi yeşil olmalı. İpucu hiç çıkmıyorsa
+   `update()`'teki `return`'ün `idleFor += 1`'den **önce**, `'falling'` bloğunun içinde olduğunu kontrol et.
 
 # --tests--
 

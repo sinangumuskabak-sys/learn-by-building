@@ -25,22 +25,40 @@ check that promise.
 
 # --explanation-tr--
 
-Taşları karıştırmanın akla gelen yolu diziyi bir deste kart gibi karıştırmaktır. Bu bir tuzaktır: bu bulmacanın bütün
-dizilişlerinin **yarısı**, ne yaparsan yap asla çözülemez. 1880'lerde bir bulmaca yapımcısı yalnızca 14 ile 15'i geri takas
-etmek için ödül koydu; kimse kazanamadı, çünkü imkânsızdır.
+**Bu adımda:** oyun her açılışta taşları karıştıracak. Sağda artık karışık bir tahta göreceksin ve onu kaydırarak
+yeniden sıraya dizmeye çalışacaksın. Karıştırma, tahtanın **her zaman çözülebilir** olmasını garanti edecek.
 
-Neden? Her kaydırma iki şeyi birlikte değiştirir: **tersinim** sayısını (tahtayı satır satır okurken yanlış sırada olan taş
-çiftleri) ve boşluğun bulunduğu satırı. Sonuç 4'e 4 bir tahta için bir kuraldır:
+**Neden kart gibi karıştırmıyoruz?** Akla gelen ilk yol listeyi bir deste kart gibi karıştırmak. Ama bu bir tuzak:
+bu bulmacanın bütün dizilişlerinin **yarısı** ne yaparsan yap çözülemez. 1880'lerde bir bulmacacı yalnızca 14 ile
+15'in yeri değişmiş tahtayı düzeltene ödül vaat etti; kimse kazanamadı, çünkü imkânsız.
+
+**Kural.** Her kaydırma iki şeyi birlikte değiştirir: **ters çiftlerin** (inversion) sayısını (tahtayı satır satır
+okurken büyük sayının küçükten önce geldiği çiftler) ve boşluğun satırını. 4×4 tahta için sonuç:
 
 ```
-çözülebilir  <=>  tersinimler + (boşluğun alttan, 1'den başlayarak sayılan satırı) tek sayıdır
+çözülebilir  <=>  ters çiftler + (boşluğun alttan sayılan satırı, 1'den başlayarak) tek sayıdır
 ```
 
-Bir kaydırma bu kuralı asla bozamaz; bu yüzden onu bozan bir diziliş çözülmüş tahtaya asla ulaşamaz.
+Bir kaydırma bu kuralı asla bozamaz; kuralı bozan bir diziliş de çözülmüş tahtaya asla ulaşamaz.
 
-Karıştırmanın güvenli yolu çözülmüş başlayıp **gerçek hamleler** yapmaktır: bir taşın boşluğa 200 rastgele kaydırılması, az
-önce yapılanı asla geri almadan. Bu yolla ulaşılan her konum hamleleri tersten oynayarak çözülebilir. `solvable()` bu sözü
-kontrol etmek için tutulur.
+**Güvenli karıştırma: gerçek hamleler.** Çözülmüş tahtadan başlayıp 200 kez rastgele gerçek bir kaydırma yaparız;
+az önce yapılanı hiç geri almayız. Böyle ulaşılan her diziliş, hamleleri tersinden oynayarak çözülebilir.
+`solvable()` fonksiyonunu bu sözü kontrol etmek için yine de yazarız.
+
+**Yeni parçalar:**
+
+- `Math.random()` 0 ile 1 arasında rastgele bir ondalık sayı verir; `options[Math.floor(Math.random() * options.length)]`
+  listeden rastgele bir eleman seçer.
+- `neighbors(gap).filter((i) => i !== previous)` → boşluğun komşularından, boşluğun az önce geldiği kare **hariç**
+  olanları tutar (`filter` süzer, `!==` "eşit değil").
+- `let previous = -1` → başta "önceki yok" demek için hiçbir kareye denk gelmeyen bir sayı.
+- `for (let b = a + 1; ...)` iç döngü: her sayıyı kendinden sonra gelen **her** sayıyla karşılaştırır; büyükse
+  `inversions++` (1 artır).
+- `% 2 === 1` → 2'ye bölümden kalan 1 mi, yani **tek sayı mı?**
+- `tiles.every((t, i) => t === solvedTiles()[i])` → her konumdaki taş, çözülmüş tahtadakiyle aynı mı? Hepsi aynıysa
+  `true`.
+- `do shuffle(200) while (isSolved())` → **önce yap, sonra kontrol et** döngüsü: karıştır; sonuç şans eseri
+  çözülmüş çıktıysa yeniden karıştır.
 
 # --task--
 
@@ -53,12 +71,57 @@ kontrol etmek için tutulur.
 
 # --task-tr--
 
-1. `shuffle(count)` yaz: boşluktan başlayarak `count` kez, boşluğun az önce geldiği kare hariç rastgele bir komşusunu seç ve o
-   taşı boşluğa kaydır.
-2. `solvable(list)` yaz: taşlar arasındaki (boşluk olmadan) tersinimleri say, boşluğun alttan sayılan satırını
-   (`N - rowOf(gap)`) ekle ve toplamın tek olduğunu kontrol et.
-3. `isSolved()` yaz. `reset()` çözülmüş başlar ve 200 kaydırmayla karıştırır, sonuç tesadüfen çözülmüşse yeniden; sonra
-   `moves = 0` yapar.
+1. `neighbors` fonksiyonunun kapanış `}`'sinden sonra, `function reset()`'ten önce bir satır boşluk bırakıp iki
+   fonksiyon ekle:
+
+   ```js
+   // Mix the tiles by making random slides, so the puzzle can always be solved.
+   function shuffle(count) {
+     let gap = tiles.indexOf(0)
+     let previous = -1
+     for (let n = 0; n < count; n++) {
+       const options = neighbors(gap).filter((i) => i !== previous) // do not undo the last slide
+       const i = options[Math.floor(Math.random() * options.length)]
+       tiles[gap] = tiles[i]
+       tiles[i] = 0
+       previous = gap
+       gap = i
+     }
+   }
+
+   // A position can be solved when the number of pairs out of order, plus the gap's row counted from the bottom, is odd.
+   function solvable(list) {
+     const numbers = list.filter((t) => t !== 0)
+     let inversions = 0
+     for (let a = 0; a < numbers.length; a++) {
+       for (let b = a + 1; b < numbers.length; b++) if (numbers[a] > numbers[b]) inversions++
+     }
+     const gapRowFromBottom = N - rowOf(list.indexOf(0))
+     return (inversions + gapRowFromBottom) % 2 === 1
+   }
+   ```
+
+2. `reset()` fonksiyonunu şöyle değiştir ve hemen altına `isSolved`'u ekle:
+
+   ```js
+   function reset() {
+     tiles = solvedTiles()
+     do shuffle(200)        // ← yeni
+     while (isSolved())     // ← yeni
+     moves = 0
+   }
+
+   function isSolved() {
+     return tiles.every((t, i) => t === solvedTiles()[i])
+   }
+   ```
+
+   `moves = 0` karıştırmadan **sonra** gelmeli ki karıştırma hamle sayılmasın. `isSolved` `reset`'in altında
+   tanımlansa da sorun yok: `function` ile yazılan fonksiyonlar dosyanın her yerinden çağrılabilir.
+
+3. **Çalıştır**'a bas. Sağda karışık bir tahta görmelisin; her çalıştırmada farklı olmalı. Oynamak için önce oyuna
+   tıkla ve taşları kaydır. Alttaki kontrollerin hepsi yeşil olmalı. Karıştırma kontrolü kırmızıysa `previous = gap` ve
+   `gap = i` satırlarının sırasını kontrol et.
 
 # --tests--
 

@@ -28,25 +28,56 @@ readable, and much easier to debug when it goes wrong.
 
 # --explanation-tr--
 
-İçinden geçilebilen borular pek zorlayıcı değil. **Çarpışma tespiti** gerekiyor: kuş bir boruyla üst üste biniyor mu?
+**Bu adımda:** borulara çarpmayı ekleyeceğiz. Kuş bir boruya değerse `Game Over` çıkacak; sadece aradaki açıklıktan
+geçerse oyun sürecek.
 
-Dairenin dikdörtgenle tam kesişim matematiği var, ama oyunlar çoğu zaman daha ucuz bir hile kullanır: kuşu, dairesini
-çevreleyen **kare kutu** gibi düşün (`x - r`'den `x + r`'ye, `y - r`'den `y + r`'ye). Kutuları kontrol etmek yalnızca
+**Çarpışma tespiti (collision detection).** İçinden geçilebilen borular pek zorlayıcı değil. Sormamız gereken:
+"kuş bir boruyla üst üste biniyor mu?"
+
+Daire ile dikdörtgenin çarpışmasını tam hesaplamak mümkün, ama oyunlar çoğu zaman daha kolay bir hile kullanır: kuşu,
+dairesini içine alan **kare kutu** gibi düşünürüz. Kutunun sol kenarı `bird.x - bird.r`, sağ kenarı
+`bird.x + bird.r`, üst kenarı `bird.y - bird.r`, alt kenarı `bird.y + bird.r`. Kutuları karşılaştırmak sadece
 kenarları karşılaştırmaktır.
 
-Soruyu iki basit soruya böl:
+Soruyu iki basit soruya bölelim:
 
-1. **Kuş borunun hizasında mı?** Yatay aralıkları, kuşun sağ kenarı borunun sol kenarını geçtiğinde *ve* kuşun sol
-   kenarı borunun sağ kenarından önce olduğunda kesişir:
+1. **Kuş borunun hizasında mı?** (yatayda üst üste biniyorlar mı?) Kuşun sağ kenarı borunun sol kenarını geçmişse
+   **ve** kuşun sol kenarı borunun sağ kenarına gelmemişse:
+
    ```js
    bird.x + bird.r > pipe.x && bird.x - bird.r < pipe.x + PIPE_WIDTH
    ```
-2. **Tamamen açıklığın içinde mi?** Üst kenarı `gapY`'nin altında, alt kenarı `gapY + GAP`'in üstünde.
 
-Kuş, **1 doğru ve 2 yanlış** olduğunda çarpar. Her parçaya ad vermek (`overlapsX`, `insideGap`) kuralı okunur yapar
-ve bir şeyler ters gittiğinde hata ayıklamayı çok kolaylaştırır.
+2. **Kuş tamamen açıklığın içinde mi?** Üst kenarı `gapY`'nin altında **ve** alt kenarı `gapY + GAP`'in üstünde.
 
-`array.some(fn)` ise "kuş *herhangi bir* boruya çarpıyor mu?" sorusunu tek satırda cevaplar.
+Kuş, **1 doğru ve 2 yanlış** olduğunda çarpar.
+
+Yeni işaretler:
+
+- `&&` → "**ve**". İki taraf da doğruysa sonuç doğrudur. (`||` "veya" idi.)
+- `!` → "**değil**". Doğruyu yanlışa, yanlışı doğruya çevirir. `!insideGap` = "açıklığın içinde değil".
+- `>` "büyük mü?", `<` "küçük mü?" diye sorar.
+
+**Parametre ve `return`.** Bu kez fonksiyonumuz dışarıdan bir bilgi alacak ve bir cevap verecek:
+
+```js
+function hitsPipe(pipe) {
+  ...
+  return overlapsX && !insideGap
+}
+```
+
+- `hitsPipe(pipe)` → fonksiyon çağrılırken parantez içine bir boru verilir; içeride ona `pipe` denir
+  (**parametre**).
+- `return değer` → fonksiyondan çıkarken bu değeri **geri ver**. Önceki adımda `return` sadece "çık" demekti;
+  arkasına bir şey yazınca "çık ve bunu cevap olarak götür" demek olur. Burada cevap doğru ya da yanlış.
+
+Her parçaya bir ad vermek (`overlapsX` = "yatayda binişiyor", `insideGap` = "açıklığın içinde") kuralı okunur yapar
+ve bir şey ters gittiğinde hatayı bulmayı çok kolaylaştırır.
+
+**`some`: "herhangi biri tutuyor mu?"** `pipes.some(hitsPipe)`, listedeki boruları tek tek `hitsPipe`'a verir;
+**en az biri** için cevap doğruysa sonuç doğrudur. "Kuş **herhangi bir** boruya çarptı mı?" sorusunun tek satırlık
+hâli.
 
 # --task--
 
@@ -56,9 +87,28 @@ ve bir şeyler ters gittiğinde hata ayıklamayı çok kolaylaştırır.
 
 # --task-tr--
 
-1. Kuşun kutusu boruyla yatayda kesişiyor ve açıklığın tamamen içinde değilse `true` döndüren
-   `function hitsPipe(pipe)` yaz (yukarıdaki iki koşul).
-2. `update()` içinde `pipes.some(hitsPipe)` doğru olduğunda da oyunu bitir (`state = 'over'`).
+1. `addPipe()` fonksiyonunun kapanış `}`'inden sonra bir boş satır bırak ve çarpışmayı soran fonksiyonu yaz:
+
+   ```js
+   function hitsPipe(pipe) {
+     const overlapsX = bird.x + bird.r > pipe.x && bird.x - bird.r < pipe.x + PIPE_WIDTH
+     const insideGap = bird.y - bird.r > pipe.gapY && bird.y + bird.r < pipe.gapY + GAP
+     return overlapsX && !insideGap
+   }
+   ```
+
+2. `update()` fonksiyonunun sonundaki `if (hitGround || hitSky) state = 'over'` satırını şöyle değiştir:
+
+   ```js
+     if (hitGround || hitSky || pipes.some(hitsPipe)) state = 'over'   // ← değişti
+   ```
+
+   Artık yere, tavana **veya** herhangi bir boruya değmek oyunu bitirir. `hitsPipe` burada parantezsiz yazılır:
+   onu `some` her boru için kendisi çağırır.
+
+3. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla, sonra Boşluk'a bas. Kuşu bir boruya
+   çarptır: `Game Over` çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `>` ve `<` işaretlerinin
+   yönünü ve `!insideGap`'teki ünlemi kontrol et.
 
 # --tests--
 

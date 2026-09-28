@@ -18,14 +18,64 @@ like this cost one line and make a game much easier to read.
 
 # --explanation-tr--
 
-Oyun alanı 10 hücre genişliğinde ve 20 hücre yüksekliğinde bir **kuyu**. 2048'deki gibi 2 boyutlu bir sayı dizisi: boş
-hücre için `0`, dolu hücre için başka bir şey (ileride sayı hangi renk olduğunu söyleyecek).
+**Bu adımda:** düşen blok oyununun (Tetris benzeri) oyun alanını çizeceğiz. Sağda, koyu bir zeminin solunda biraz
+daha açık renkli, uzun bir dikdörtgen göreceksin: blokların düşeceği **kuyu**. Sağda kalan boşluk ileride skor ve
+sıradaki parça için.
 
-Kuyu 240 piksel genişliğinde (24'lük 10 hücre), canvas ise 360; geriye skor ve sıradaki parça için bir yan panel kalır.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan kısımlar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
 
-Her hücre, yuvasından her kenarda 1 piksel küçük çizilir (`col * CELL + 1`, boyut `CELL - 2`). Bu, bloklar arasında ince
-koyu bir çizgi bırakır; böylece bir yığın blok büyük tek bir leke yerine ayrı parçalar olarak okunur. Böyle küçük görsel
-kararlar tek satıra mal olur ve bir oyunu çok daha okunur yapar.
+**Canvas (tuval) nedir?** Sayfada 360 piksel eninde, 480 piksel boyunda boş bir resim alanı var; kimliği (id)
+`game`. Oyundaki her şeyi bu alana **boyayarak** göstereceğiz. Önce kâğıdı buluruz, sonra fırçayı alırız:
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir: bir
+  kutuya etiket yapıştırmak gibi, sonra hep o etiketle çağırırsın.
+- `document.getElementById('game')` → "sayfada kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `ctx` bizim **fırçamız** (çizim bağlamı, context). `ctx.fillStyle = '#1e293b'` fırçaya renk sürer,
+  `ctx.fillRect(x, y, en, boy)` o renkle dikdörtgen boyar. Renkler `'#0f172a'` gibi kodlarla yazılır.
+
+**Konum:** Canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür.
+
+**Sabitler:** kuyu 10 sütun (`COLS`), 20 satır (`ROWS`), bir hücre 24 piksel (`CELL`). Kuyu 10 × 24 = 240 piksel
+eninde; canvas 360 olduğu için sağda 120 piksellik bir yan panel kalır.
+
+**Dizi (array) ve kuyu.** Dizi sıralı bir listedir: `[0, 0, 1]`. Sıra numarası (index) **0'dan** başlar. Kuyumuz
+**dizilerden oluşan bir dizi**: 20 satır, her satır 10 sayılık bir dizi. `0` boş hücre demek, başka bir sayı dolu
+hücre (ileride sayı, hangi renk olduğunu da söyleyecek). `board[19][0]` "en alttaki satırın en soldaki hücresi"dir.
+
+**Fonksiyon.** Bir işi yapan, adı olan bir talimat paketidir. Önce tanımlarsın, sonra adıyla çağırırsın:
+
+```js
+function emptyRow() {
+  return Array(COLS).fill(0)
+}
+```
+
+- `Array(COLS)` 10 yuvalı bir dizi açar, `.fill(0)` hepsini 0 ile doldurur.
+- `return` sonucu **geri verir**: `emptyRow()` yazılan yere `[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]` gelir.
+
+```js
+let board = Array.from({ length: ROWS }, emptyRow)
+```
+
+`let` ile açılan kutunun içine sonradan başka şey konabilir (`const`'un tersine). `Array.from({ length: ROWS }, emptyRow)`
+"20 elemanlı bir dizi yap, her elemanı `emptyRow`'u çağırarak üret" demektir. Böylece her satır **kendi** dizisi olur;
+bir satırı değiştirmek ötekileri etkilemez.
+
+**Parametre.** `drawCell(col, row, color)` üç **girdi** alır: çağırırken `drawCell(0, 19, '#94a3b8')` dersen içeride
+`col` 0, `row` 19, `color` gri olur. Her hücreyi yuvasından her kenarda 1 piksel küçük çizeriz (`+ 1`, boy `CELL - 2`);
+aradaki ince koyu çizgi sayesinde üst üste yığılan bloklar tek bir yığın değil, ayrı parçalar gibi okunur.
+
+**Döngü.** `for (let row = 0; row < ROWS; row++) { ... }` bir sayaçla döner: `row` 0'dan başlar, 20'den küçük olduğu
+sürece içi çalışır, her turun sonunda `row++` ile 1 artar. İçindeki ikinci döngü sütunları gezer; böylece 200 hücrenin
+hepsine bakılır. `if (board[row][col])` "bu hücre 0 değilse (doluysa)" demektir: 0 "yok", diğer sayılar "var" sayılır.
 
 # --task--
 
@@ -38,12 +88,64 @@ kararlar tek satıra mal olur ve bir oyunu çok daha okunur yapar.
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut; `COLS = 10`, `ROWS = 20` ve `CELL = 24` ekle.
-2. `COLS` sıfırdan oluşan bir dizi döndüren `emptyRow()` yaz ve `let board`'u `Array.from({ length: ROWS }, emptyRow)`
-   ile kur (her satır kendi dizisi).
-3. `(col * CELL + 1, row * CELL + 1)` noktasını `CELL - 2` boyutunda dolduran `drawCell(col, row, color)` ile şu
-   `draw()`'u yaz: arka plan `'#0f172a'`, kuyu `'#1e293b'` (sol üstten `COLS * CELL` × `ROWS * CELL`) ve sıfır olmayan
-   her hücre `'#94a3b8'`. `draw()`'u çağır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırakıp üç sabiti ekle:
+
+   ```js
+   const COLS = 10
+   const ROWS = 20
+   const CELL = 24
+   ```
+
+3. Altına boş satır üreten fonksiyonu ve kuyuyu yaz:
+
+   ```js
+   function emptyRow() {
+     return Array(COLS).fill(0)
+   }
+
+   let board = Array.from({ length: ROWS }, emptyRow)
+   ```
+
+4. Altına tek bir hücre çizen fonksiyonu yaz:
+
+   ```js
+   function drawCell(col, row, color) {
+     ctx.fillStyle = color
+     ctx.fillRect(col * CELL + 1, row * CELL + 1, CELL - 2, CELL - 2)
+   }
+   ```
+
+5. Altına her şeyi çizen `draw()` fonksiyonunu yaz ve en sona onu çağıran satırı ekle:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#1e293b'
+     ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL)
+
+     for (let row = 0; row < ROWS; row++) {
+       for (let col = 0; col < COLS; col++) {
+         if (board[row][col]) drawCell(col, row, '#94a3b8')
+       }
+     }
+   }
+
+   draw()
+   ```
+
+   Önce bütün canvas'ı en koyu renge, sonra kuyuyu biraz daha açık bir laciverte boyar, en son dolu hücreleri çizer.
+   Kuyu şimdilik tamamen boş.
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda solda duran uzun, lacivert bir kuyu görmelisin; alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa büyük/küçük harfleri ve parantezleri kontrol et.
 
 # --tests--
 

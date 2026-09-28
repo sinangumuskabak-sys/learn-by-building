@@ -17,15 +17,42 @@ shuffle that is always solvable (and the math behind it), smooth sliding and a r
 
 # --explanation-tr--
 
-Her hamleden sonra tahtanın yeniden sıraya girip girmediğini kontrol et. Girdiyse oyun hamle almayı bırakır, taşlar yeşile döner
-ve hamle sayısı şimdiye kadarki en iyiyle karşılaştırılır.
+**Bu adımda:** bulmacayı çözünce oyun bunu fark edecek: taşlar yeşile döner, sağ üstte `Solved! Click to shuffle`
+yazar ve hamle sayın en iyi sonuçla (rekorla) karşılaştırılır. Tıklayınca (ya da boşluk tuşuyla) yeni bir karışık
+tahta gelir; sağ üstte `Best 42` gibi rekorun görünür.
 
-Işın izleme oyunundaki gibi burada da **daha az** daha iyidir; bu yüzden "bu yeni bir rekor mu?" `best === 0 || moves < best`
-olarak okunur: henüz rekor yok ya da daha küçük bir sayı. Rekoru `localStorage`'a kaydetmek onun yeniden yüklemeden sonra da
-kalmasını sağlar.
+**Durum.** Oyunun aşamasını `state` değişkeninde bir yazı olarak tutarız: `'playing'` (oynanıyor) ya da `'solved'`
+(çözüldü). Her hamleden sonra `isSolved()` ile bakarız; çözüldüyse durum `'solved'` olur ve `move()` artık hamle
+kabul etmez: `if (state !== 'playing' || slide) return` → "oyun sürmüyorsa **veya** (`||`) bir taş kayıyorsa çık".
 
-Çözülmüş bir tahtaya tıklamak (ya da Boşluk) yenisini karıştırır. Bu bulmacayı tamamlar: ızgara komşuları olan düz bir dizi, her
-zaman çözülebilen bir karıştırma (ve arkasındaki matematik), akıcı kaydırma ve geçilecek bir rekor.
+**Burada az olan iyidir.** Rekor "en az hamle"dir. "Bu yeni rekor mu?" sorusu şöyle okunur:
+
+```js
+best === 0 || moves < best
+```
+
+"Henüz rekor yoksa (0) **veya** bu hamle sayısı rekordan küçükse." İlk çözüşünde rekor 0 olduğu için ne yaparsan yap
+rekor olur.
+
+**Rekoru saklamak: `localStorage`.** Değişkenler sayfa kapanınca silinir. `localStorage` tarayıcının küçük bir
+defteridir; sayfayı yenilesen de içindekiler durur. Ama sadece **yazı** saklar:
+
+- `localStorage.setItem('fifteen-best', best)` → `'fifteen-best'` başlığıyla yaz.
+- `localStorage.getItem('fifteen-best')` → oku; hiç yazılmamışsa `null` (boş) verir.
+- `Number(...)` yazıyı sayıya çevirir; `|| 0` "sonuç boş ya da geçersizse 0 kullan" demektir.
+
+**Yeni tahta.** Çözülmüş tahtada tıklama `reset()` çağırır ve `return` ile çıkar (taş kaydırma koduna inmez).
+Klavyede boşluk tuşunun adı `' '` (iki tırnak arasında bir boşluk).
+
+**İç içe kısa `if`.** Sağ üstteki yazı tek satırda seçilir:
+
+```js
+state === 'solved' ? 'Solved! Click to shuffle' : best ? 'Best ' + best : ''
+```
+
+`? :` kısa bir `if`/`else`'tir: "çözüldüyse bu yazı; değilse, rekor varsa `'Best 42'`; o da yoksa boş yazı". `best`
+0 ise "yanlış" sayılır. `ctx.textAlign = 'right'` yazının **sağ ucunu** verilen noktaya (`canvas.width - LEFT`,
+tahtanın sağ kenarı) koyar.
 
 # --task--
 
@@ -38,12 +65,76 @@ zaman çözülebilen bir karıştırma (ve arkasındaki matematik), akıcı kayd
 
 # --task-tr--
 
-1. `state` (`reset()`'te `'playing'`) ve `best` (`localStorage` `'fifteen-best'`'ten) ekle.
-2. Oynanmıyorsa `move()` hiçbir şey yapmaz. Bir hamleden sonra tahta çözüldüyse durum `'solved'` olur ve hamleler en iyiyi
-   geçiyorsa `best` olarak kaydedilir.
-3. Çözülmüşken bir tıklama ya da Boşluk `reset()` çağırır.
-4. Çözülünce taşları `'#16a34a'` çiz. Sağ üste (`canvas.width - LEFT`'e sağa hizalı), çözülmüşse `Solved! Click to shuffle`,
-   değilse en iyi varsa `Best 42` göster.
+1. `let moves` satırının hemen altına ekle:
+
+   ```js
+   let state // 'playing' or 'solved'
+   ```
+
+2. `let slide ...` satırının hemen altına ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('fifteen-best')) || 0
+   ```
+
+3. `reset()` içinde `moves = 0` satırının altına ekle:
+
+   ```js
+     state = 'playing'
+   ```
+
+4. `move(i)` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function move(i) {
+     if (state !== 'playing' || slide) return                  // ← değişti
+     const gap = tiles.indexOf(0)
+     if (!neighbors(gap).includes(i)) return
+     slide = { tile: tiles[i], from: i, to: gap, frame: 0 }
+     tiles[gap] = tiles[i]
+     tiles[i] = 0
+     moves += 1
+     if (isSolved()) {                                         // ← yeni
+       state = 'solved'                                        // ← yeni
+       if (best === 0 || moves < best) {                       // ← yeni
+         best = moves                                          // ← yeni
+         localStorage.setItem('fifteen-best', best)            // ← yeni
+       }                                                       // ← yeni
+     }                                                         // ← yeni
+   }
+   ```
+
+5. `pointerdown` dinleyicisinin **en başına**, `(event) => {` satırının hemen altına ekle:
+
+   ```js
+     if (state === 'solved') {
+       reset()
+       return
+     }
+   ```
+
+6. `keydown` dinleyicisinde, `if (from !== undefined) { ... }` bloğunu kapatan `}`'den sonra ve dinleyicinin kapanış
+   `})`'sinden önce ekle:
+
+   ```js
+     if (event.key === ' ' && state === 'solved') reset()
+   ```
+
+7. `drawTile` fonksiyonunun ilk satırını şöyle değiştir:
+
+   ```js
+     ctx.fillStyle = state === 'solved' ? '#16a34a' : '#f59e0b'   // ← değişti
+   ```
+
+8. `draw()`'un sonunda `ctx.fillText('Moves ' + moves, LEFT, 36)` satırının altına ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText(state === 'solved' ? 'Solved! Click to shuffle' : best ? 'Best ' + best : '', canvas.width - LEFT, 36)
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bulmacayı çöz (biraz sürebilir). Çözünce taşlar yeşile dönmeli ve sağ üstte `Solved! Click to shuffle` yazmalı;
+   tıklayınca yeni tahta gelmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

@@ -28,25 +28,44 @@ useful refactoring there is.
 
 # --explanation-tr--
 
-Bir maçın bir sonu olmalı. `WIN_SCORE` sayıya ilk ulaşan oyuncu kazanır, oyun bir zafer mesajında donar ve Boşluk
-yeni bir maç başlatır.
+**Bu adımda:** maçın bir sonu olacak. İlk 5 sayıya ulaşan kazanacak, oyun durup ortada "Left player wins!" gibi bir
+mesaj gösterecek; Boşluk (Space) tuşuna basınca yeni maç başlayacak.
 
-Bu, neredeyse her oyunda göreceğin aynı biçim:
+**Oyunun hâli: `state`.** Oyun ya oynanıyordur (`'playing'`) ya da bitmiştir (`'over'`). Bunu bir yazı olarak
+`state` değişkeninde tutarız. Neredeyse her oyunda aynı döngü vardır:
 
 ```
 reset()  →  'playing'  →  biri kazanır  →  'over'  →  Boşluk  →  reset()
 ```
 
-İki yeniden düzenleme bunu temiz yapar:
+**Değersiz değişken.** `let left` gibi `=` olmadan yazılan değişken açılır ama içi boştur (`undefined`). Değerini
+sonra `reset()` verecek.
 
-- **`reset()`** yepyeni bir maçı kurar (raketler, skorlar, durum, ilk servis) ve hem açılışta *hem de* yeniden
-  başlatmada çağrılır; böylece ikisi de hep aynı şekilde başlar.
-- **`point(winner)`** biri sayı aldığında olan her şeyi halleder: sayıyı ekle, kazananı kontrol et, servis at.
-  `update()`'teki iki "top sahadan çıktı" kontrolü tek satıra iner. Kurallar değişince (iki farkla mı kazanılsın?)
-  değiştirilecek tek bir yer olur.
+**İki yeni fonksiyon.** Kodu toparlamak için tekrar eden işleri adı olan fonksiyonlara çıkarırız (buna
+**fonksiyon çıkarmak**, extracting a function, denir):
 
-Tekrarlanan adımları iyi adlandırılmış bir fonksiyona çekmeye **fonksiyon çıkarma** denir. En yaygın ve en yararlı
-yeniden düzenlemedir.
+- **`reset()`**: yepyeni bir maç kurar: raketler baştan, skorlar sıfır, `state = 'playing'`, ilk servis. Hem oyun
+  açılırken hem yeniden başlarken çağrılır; ikisi hep aynı şekilde başlar.
+- **`point(winner)`**: biri sayı alınca olan her şey: sayıyı ekle, kazandı mı bak, servis at. `update()`'teki iki
+  "top dışarı çıktı" kontrolü tek satıra iner. Kurallar değişirse tek yeri değiştirirsin.
+
+**Erken çıkmak: `return`.** 3. adımda `return` bir sonucu geri veriyordu. Tek başına `return` ise "burada dur,
+fonksiyonun gerisini yapma" demektir:
+
+```js
+if (state !== 'playing') return   // oyun bitmişse update hiçbir şey yapmasın
+```
+
+`!==` "eşit değil mi" demektir (`===`'nin tersi). `>=` "büyük veya eşit" demektir: skor 5 ya da üstüyse.
+
+**Kime servis?** `winner === left ? 1 : -1` → kazanan sol oyuncuysa top sağa (sayıyı kaybeden sağ oyuncuya), değilse
+sola gider.
+
+**Yazıları birleştirmek.** `+` yazılar arasında kullanılınca onları uç uca ekler:
+`'Left' + ' player wins!'` → `'Left player wins!'`.
+
+**Boşluk tuşu.** Boşluk tuşunun adı tek bir boşluk karakteridir: `' '`. Maç sürerken yanlışlıkla sıfırlamasın diye
+yalnızca oyun bitmişken `reset()` çağırırız; iki koşul `&&` ("ve") ile bağlanır.
 
 # --task--
 
@@ -61,14 +80,105 @@ yeniden düzenlemedir.
 
 # --task-tr--
 
-1. `const WIN_SCORE = 5` ve `let state` ekle. `let left`, `let right` ve `let ball`'ı değersiz tanımla.
-2. İki raketi (eskisi gibi, `score: 0` ile) oluşturan, `state = 'playing'` yapan ve `serve(1)` çağıran
-   `function reset()` yaz. Döngüyü başlatmadan önce `reset()` çağır.
-3. `function point(winner)` yaz: `winner.score`'u 1 artır; `WIN_SCORE`'a ulaştıysa `state = 'over'` yap; değilse
-   diğer oyuncuya doğru servis at (`serve(winner === left ? 1 : -1)`). Onu `update()` içinde kullan.
-4. `update()`, durum `'playing'` değilse hiçbir şey yapmamalı.
-5. Durum `'over'` iken ortaya `Left player wins!` ya da `Right player wins!` ve `Press Space to play again` yaz;
-   Boşluk da `reset()` çağırsın (yalnızca oyun bittiyse).
+1. `const BALL = 10 ...` satırının altına kazanma sayısını ekle:
+
+   ```js
+   const WIN_SCORE = 5
+   ```
+
+2. `let left = ...`, `let right = ...` ve `let ball = ...` satırlarını **sil** ve yerlerine değersiz değişkenleri yaz.
+   `let twoPlayers = false` ile `const keys = {}` yerinde kalır. Bu bölüm şöyle olmalı:
+
+   ```js
+   let left                               // ← değişti
+   let right                              // ← değişti
+   let ball                               // ← değişti
+   let state // 'playing' or 'over'       // ← yeni
+   let twoPlayers = false
+   const keys = {}
+   ```
+
+3. `const keys = {}` satırından sonra bir boş satır bırak ve `reset()` fonksiyonunu yaz:
+
+   ```js
+   function reset() {
+     left = { x: 20, y: 160, score: 0 }
+     right = { x: canvas.width - 20 - PADDLE_W, y: 160, score: 0 }
+     state = 'playing'
+     serve(1)
+   }
+   ```
+
+4. `keydown` dinleyicisine Boşluk satırını ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === '2') twoPlayers = !twoPlayers
+     if (event.key === ' ' && state === 'over') reset()    // ← yeni
+   })
+   ```
+
+5. `serve` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function touches`'ın **üstüne**) şunu yaz:
+
+   ```js
+   function point(winner) {
+     winner.score += 1
+     if (winner.score >= WIN_SCORE) {
+       state = 'over'
+       return
+     }
+     // Serve toward the player who just lost the point.
+     serve(winner === left ? 1 : -1)
+   }
+   ```
+
+6. `update()`'in en başına, `function update() {` satırının hemen altına ekle:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return          // ← yeni
+     if (keys.w) left.y -= PADDLE_SPEED
+   ```
+
+7. `update()`'in sonundaki skor bloğunu (`if (ball.x + BALL < 0) { ... } else if (...) { ... }`, 7 satırın tamamı)
+   sil ve yerine şu iki satırı yaz:
+
+   ```js
+     if (ball.x + BALL < 0) point(right)        // ← değişti
+     else if (ball.x > canvas.width) point(left) // ← değişti
+   }
+   ```
+
+8. `draw()` içinde topu çizen satırı, top sadece oyun sürerken çizilsin diye değiştir:
+
+   ```js
+     if (state === 'playing') ctx.fillRect(ball.x, ball.y, BALL, BALL)   // ← değişti
+   ```
+
+9. `draw()` içinde, sağ skoru yazan `ctx.fillText(String(right.score), ...)` satırından sonra bir boş satır bırak ve
+   (gri ipucu satırlarının **üstüne**) kazanan mesajını ekle:
+
+   ```js
+     if (state === 'over') {
+       const winner = left.score >= WIN_SCORE ? 'Left' : 'Right'
+       ctx.font = 'bold 32px sans-serif'
+       ctx.fillText(winner + ' player wins!', canvas.width / 2, canvas.height / 2)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 32)
+     }
+   ```
+
+10. En alttaki `requestAnimationFrame(loop)` satırının hemen **üstüne** maçı kuran çağrıyı ekle:
+
+    ```js
+    reset()
+    requestAnimationFrame(loop)
+    ```
+
+11. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Biri 5 sayıya ulaşınca top kaybolmalı, ortada kazanan yazısı
+    çıkmalı; Boşluk'a basınca skorlar sıfırlanıp yeni maç başlamalı. Alttaki kontrollerin hepsi yeşil olmalı.
+    Kırmızı kalırsa `reset()` satırını `requestAnimationFrame(loop)`'tan **önce** yazdığından emin ol.
 
 # --tests--
 

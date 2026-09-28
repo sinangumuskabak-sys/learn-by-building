@@ -22,19 +22,47 @@ that direction: Left slides the tile on the right of the gap to the left.
 
 # --explanation-tr--
 
-Yalnızca **boşluğun yanındaki** bir taş hareket edebilir ve onu hareket ettirmek onu yalnızca boşlukla takas eder. Öyleyse asıl
-soru şu: hangi kareler `i` karesinin yanında?
+**Bu adımda:** taşları kaydırabileceksin. Boşluğun yanındaki bir taşa tıklayınca boşluğa kayar; ok tuşları da aynı
+işi yapar. Sol üstte `Moves 1` gibi bir hamle sayacı görünecek.
 
-Düz bir dizide komşular `i - N` (üst), `i + N` (alt), `i - 1` (sol) ve `i + 1`'dir (sağ); ama kenarlarda dikkat: 3. kare ilk
-satırın sonundadır ve `3 + 1 = 4` bir komşu değil, **sonraki satırın başıdır**. Her birini eklemeden önce satırı ve sütunu
-kontrol etmek bu bilinen başa sarma hatasını önler:
+**Hangi taş hareket edebilir?** Sadece **boşluğun yanındaki** taş; hareket de onun boşlukla yer değiştirmesidir.
+Asıl soru: `i` karesinin komşuları hangileri?
+
+Tek sıralı listede komşular `i - N` (üst), `i + N` (alt), `i - 1` (sol) ve `i + 1` (sağ)'dır. Ama kenarlara dikkat:
+3 numaralı kare ilk satırın sonunda; `3 + 1 = 4` ise **bir alt satırın başı**, komşu değil. Her komşuyu eklemeden
+önce satırı ve sütunu kontrol ederek bu klasik hatadan kaçınırız:
 
 ```js
-if (colOf(i) < N - 1) list.push(i + 1)   // yalnızca i son sütunda değilse
+if (colOf(i) < N - 1) list.push(i + 1)   // i son sütunda değilse sağ komşu var
 ```
 
-Bir tıklama işaretçinin altındaki kareyi hesaplar; ok tuşları, taşı o yönde boşluğa **doğru** hareket ettirdiğinde en iyi
-hissettirir: Sol, boşluğun sağındaki taşı sola kaydırır.
+`if (koşul) komut` → koşul doğruysa komutu çalıştır. `<` "küçük", `>` "büyük" demektir. `list.push(şey)` listenin
+sonuna ekler.
+
+**Hamle.** `tiles.indexOf(0)` → `0`'ın (boşluğun) listede kaçıncı konumda olduğunu bulur.
+`neighbors(gap).includes(i)` → "`i`, boşluğun komşuları arasında var mı?" (`true`/`false`). Başındaki `!` "değil"
+demektir: komşu değilse `return` ile çık, hiçbir şey yapma. Komşuysa taşı boşluğa yaz, eski yerini boşluk (`0`) yap
+ve `moves += 1` ile hamleyi 1 artır.
+
+**Tıklama.** `canvas.addEventListener('pointerdown', (event) => { ... })` → canvas'a basılınca (fare ya da parmak)
+içindeki kodu çalıştırır. `event.clientX/Y` ekrandaki konumdur; canvas ekranda farklı boyda görünebildiği için
+`getBoundingClientRect()` ile canvas'ın ekrandaki yerini alıp konumu canvas piksellerine çeviririz. Sonra tahtanın
+sol üst köşesini (`LEFT`, `TOP`) çıkarır, bir kare + aralık genişliğine (`SIZE + GAP`) bölüp aşağı yuvarlayarak
+sütunu ve satırı buluruz. `col >= 0 && col < N && ...` → tıklama tahtanın içindeyse (`&&` "ve", `>=` "büyük ya da
+eşit"). Konum `row * N + col`'dur.
+
+**Ok tuşları.** `document.addEventListener('keydown', ...)` → bir tuşa basılınca çalışır; basılan tuşun adı
+`event.key` (`'ArrowLeft'` gibi). Oklar taşı boşluğa **doğru** o yönde götürür: Sol ok, boşluğun **sağındaki** taşı
+sola kaydırır. Hangi taşın geleceğini küçük bir sözlükten (**nesne**) buluruz:
+
+```js
+{ ArrowLeft: 1, ArrowRight: -1, ArrowUp: N, ArrowDown: -N }[event.key]
+```
+
+Sol okta `1` (boşluğun sağı), başka bir tuşta `undefined` ("yok") çıkar. `from !== undefined` ise (`!==` "eşit
+değil") ok tuşudur: `event.preventDefault()` sayfanın kaymasını engeller, taş komşuysa hareket eder.
+
+`ctx.textBaseline = 'alphabetic'` yazıyı normal satır çizgisine oturtur (taşlar için `'middle'` yapmıştık).
 
 # --task--
 
@@ -49,13 +77,81 @@ hissettirir: Sol, boşluğun sağındaki taşı sola kaydırır.
 
 # --task-tr--
 
-1. `neighbors(i)` yaz: `i`'nin üstündeki, altındaki, solundaki ve sağındaki, tahtada olan kareler.
-2. `moves` ekle (`reset()`'te `0`) ve `move(i)` yaz: `i` boşluğun komşusuysa taşı boşluğa takas et ve `moves`'a 1 ekle.
-3. `pointerdown`'da canvas piksellerine çevir, sütunu ve satırı hesapla (her kare ve boşluğu `SIZE + GAP` genişliğindedir) ve
-   tahtadaysa o kareyi `move` et.
-4. Ok tuşları `gap + 1`'deki (Sol), `gap - 1`'deki (Sağ), `gap + N`'deki (Yukarı) ya da `gap - N`'deki (Aşağı) taşı yalnızca
-   boşluğun komşusuysa hareket ettirir (`preventDefault()` et).
-5. Sol üste `Moves 3` çiz (`LEFT`, `y = 36`, beyaz, `'bold 18px sans-serif'`).
+1. `let tiles ...` satırının hemen altına ekle:
+
+   ```js
+   let moves
+   ```
+
+2. `const solvedTiles = ...` satırının altına bir satır boşluk bırakıp komşuları bulan fonksiyonu ekle:
+
+   ```js
+   // The squares next to position i (up, down, left, right), staying inside the board.
+   function neighbors(i) {
+     const list = []
+     if (rowOf(i) > 0) list.push(i - N)
+     if (rowOf(i) < N - 1) list.push(i + N)
+     if (colOf(i) > 0) list.push(i - 1)
+     if (colOf(i) < N - 1) list.push(i + 1)
+     return list
+   }
+   ```
+
+3. `reset()` fonksiyonuna `moves = 0` ekle:
+
+   ```js
+   function reset() {
+     tiles = solvedTiles()
+     moves = 0   // ← yeni
+   }
+   ```
+
+4. `reset()`'in kapanış `}`'sinden sonra, `function squareX(i)`'den önce bir satır boşluk bırakıp şunları ekle:
+
+   ```js
+   // Slide the tile at position i into the gap, if it is next to the gap.
+   function move(i) {
+     const gap = tiles.indexOf(0)
+     if (!neighbors(gap).includes(i)) return
+     tiles[gap] = tiles[i]
+     tiles[i] = 0
+     moves += 1
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width - LEFT
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height - TOP
+     const col = Math.floor(x / (SIZE + GAP))
+     const row = Math.floor(y / (SIZE + GAP))
+     if (col >= 0 && col < N && row >= 0 && row < N) move(row * N + col)
+   })
+
+   // An arrow moves the tile on the other side of the gap in that direction: Left slides the tile right of the gap to the left.
+   document.addEventListener('keydown', (event) => {
+     const gap = tiles.indexOf(0)
+     const from = { ArrowLeft: 1, ArrowRight: -1, ArrowUp: N, ArrowDown: -N }[event.key]
+     if (from !== undefined) {
+       event.preventDefault()
+       if (neighbors(gap).includes(gap + from)) move(gap + from)
+     }
+   })
+   ```
+
+5. `draw()` fonksiyonunun sonunda, `tiles.forEach(...)` bloğunu kapatan `})`'den sonra ve fonksiyonun kapanış
+   `}`'sinden önce bir satır boşluk bırakıp hamle sayacını çiz:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textBaseline = 'alphabetic'
+     ctx.textAlign = 'left'
+     ctx.fillText('Moves ' + moves, LEFT, 36)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: 15'e ya da 12'ye tıkla, boşluğa kaymalı. Ok tuşlarını da dene.
+   Uzaktaki bir taşa tıklamak hiçbir şey yapmamalı; `Moves` her kaymada 1 artmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Kenar kontrolü kırmızıysa `neighbors` içindeki `N - 1` karşılaştırmalarını kontrol et.
 
 # --tests--
 

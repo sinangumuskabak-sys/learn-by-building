@@ -35,32 +35,61 @@ on copies of the board.
 
 # --explanation-tr--
 
-Üç tanesinin sıralandığını nasıl kontrol edersin? Her satır, sütun ve köşegen için uzun bir `if` zinciri yazabilirsin.
-Çok daha iyi bir fikir: yalnızca **8 kazanan çizgi** var; onları **veri** olarak yaz ve üzerlerinde döngü kur.
+**Bu adımda:** kazananı bulan iki fonksiyon yazacağız. Oyunda görünür bir değişiklik olmayacak (onu bir sonraki
+adımda kullanacağız); kontroller bu fonksiyonlara farklı tahtalar verip doğru cevabı bulup bulmadıklarına bakacak.
+
+**Üçü yan yana nasıl bulunur?** Her satır, sütun ve çapraz için uzun bir `if` zinciri yazabilirdin. Çok daha iyi
+bir fikir: kazandıran sadece **8 çizgi** var. Onları **veri** olarak bir kez yaz, sonra hepsine sırayla bak.
 
 ```js
 const LINES = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],   // satırlar
   [0, 3, 6], [1, 4, 7], [2, 5, 8],   // sütunlar
-  [0, 4, 8], [2, 4, 6],              // köşegenler
+  [0, 4, 8], [2, 4, 6],              // çaprazlar
 ]
 ```
 
-Bir çizgi, üç hücresinde **aynı işaret varsa ve o işaret boş değilse** kazanır. ("Boş değil" kısmını unutursan boş
-bir tahtada hiçlikten oluşan sekiz kazanan çizgi olur!) Dizi ayrıştırma (destructuring) üç indekse ad verir:
+Bu bir **dizilerin dizisi**: 8 elemanı var, her eleman da 3 kutu numarası tutan küçük bir dizi. (Kutu
+numaralarını 2. adımdaki resimden hatırla: 0 sol üst, 4 orta, 8 sağ alt.)
+
+**Bir çizgi ne zaman kazandırır?** Üç kutusunda **aynı işaret varsa ve o işaret boş değilse**. ("Boş değil"
+kısmını unutursan boş tahtada sekiz tane "hiçlik kazandı" çizgisi bulursun!)
 
 ```js
 LINES.find(([a, b, c]) => cells[a] !== '' && cells[a] === cells[b] && cells[a] === cells[c])
 ```
 
-`find` ilk eşleşen çizgiyi, hiç yoksa `undefined` döndürür.
+Bunu parça parça okuyalım:
 
-Bir yığın özel durumu küçük bir tabloya ve tek bir genel döngüye çevirmeye **veri güdümlü kod** denir. Daha kısadır
-ve bir kural eklemek (daha büyük tahta, yeni çizgi biçimleri) mantığı değil veriyi düzenlemek demektir.
+- `LINES.find(test)` → "testi geçen **ilk** çizgiyi bul ve ver". Hiçbiri geçmezse **boş** bir değer verir:
+  `undefined` ("tanımsız, yok").
+- `([a, b, c]) => ...` → her çizgi için çalışan küçük fonksiyon. Köşeli parantezli yazım, çizginin üç numarasına
+  sırayla `a`, `b`, `c` adlarını verir. `[0, 4, 8]` için `a` 0, `b` 4, `c` 8 olur.
+- `&&` → "**ve**": üç koşulun hepsi doğru olmalı. `a` boş değil **ve** `a` ile `b` aynı **ve** `a` ile `c` aynı.
 
-İki fonksiyon da global `board`'u okumak yerine tahtayı parametre (`cells`) olarak alır. Bu onları **saf** (pure)
-yapar: aynı girdi, aynı çıktı, test etmesi kolay. Bilgisayar oyuncusu ileride tam olarak buna ihtiyaç duyacak;
-hamleleri tahtanın kopyaları üzerinde denemek için.
+Bir yığın özel durumu küçük bir tablo artı tek bir genel döngüye çevirmeye **veriye dayalı kod** denir. Daha
+kısadır ve yeni bir kural eklemek (daha büyük tahta gibi) mantığı değil, veriyi değiştirmeyi gerektirir.
+
+**Sonuç: kazanan, berabere ya da devam.**
+
+```js
+function outcome(cells) {
+  const line = winningLine(cells)
+  if (line) return cells[line[0]]
+  if (cells.every((cell) => cell !== '')) return 'draw'
+  return null
+}
+```
+
+- `if (line)` → "bir çizgi bulunduysa". `undefined` yanlış sayılır, bulunmuş bir dizi doğru sayılır.
+- `cells[line[0]]` → çizginin ilk kutusundaki işaret: `'X'` ya da `'O'`, yani kazanan.
+- `cells.every(test)` → "**her** kutu testi geçiyor mu?" Hepsi doluysa ve kimse kazanmadıysa: `'draw'` (berabere).
+- `return null` → `null` "henüz bir şey yok" demenin değeridir: oyun sürüyor. `return` fonksiyondan hemen çıktığı
+  için, yukarıdaki bir `return` çalıştıysa aşağıdakiler hiç çalışmaz.
+
+**Neden `board` değil de `cells`?** İki fonksiyon da tahtayı bir **parametre** olarak alıyor, dışarıdaki `board`'a
+kendileri bakmıyor. Böylece aynı girdiye hep aynı cevabı verirler ve denemesi kolay olur. Bilgisayar oyuncusu
+ileride tam buna ihtiyaç duyacak: hamleleri tahtanın kopyaları üzerinde deneyecek.
 
 # --task--
 
@@ -71,10 +100,41 @@ hamleleri tahtanın kopyaları üzerinde denemek için.
 
 # --task-tr--
 
-1. Yukarıdaki `LINES` sabitini ekle.
-2. İlk kazanan çizgiyi (3 indeksli bir dizi) ya da `undefined` döndüren `function winningLine(cells)` yaz.
-3. O işaretin kazanan bir çizgisi varsa `'X'` ya da `'O'`, her hücre dolu ve kimse kazanmadıysa `'draw'`, oyun hâlâ
-   sürüyorsa `null` döndüren `function outcome(cells)` yaz.
+1. `const CELL = 100` satırının hemen altına 8 kazanan çizgiyi ekle:
+
+   ```js
+   const LINES = [
+     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+     [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+     [0, 4, 8], [2, 4, 6], // diagonals
+   ]
+   ```
+
+2. `let player = 'X'` satırının altına bir boş satır bırak ve kazanan çizgiyi bulan fonksiyonu yaz
+   (`function play(index)`'ten önce):
+
+   ```js
+   function winningLine(cells) {
+     return LINES.find(([a, b, c]) => cells[a] !== '' && cells[a] === cells[b] && cells[a] === cells[c])
+   }
+   ```
+
+   `return` burada `find`'ın bulduğu cevabı fonksiyonun cevabı olarak geri verir.
+
+3. Onun altına bir boş satır bırak ve sonucu söyleyen fonksiyonu yaz:
+
+   ```js
+   function outcome(cells) {
+     const line = winningLine(cells)
+     if (line) return cells[line[0]]
+     if (cells.every((cell) => cell !== '')) return 'draw'
+     return null
+   }
+   ```
+
+4. **Çalıştır**'a bas. Oyun bir öncekiyle aynı çalışmalı (kazanan henüz ekranda gösterilmiyor). Alttaki
+   kontrollerin hepsi yeşil olmalı. "Son hamlede kazanmak berabere değil kazançtır" kontrolü kırmızıysa,
+   `outcome` içinde `every` satırını `if (line)` satırının **üstüne** yazmış olabilirsin; sıra önemli.
 
 # --tests--
 

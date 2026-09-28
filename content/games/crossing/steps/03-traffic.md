@@ -32,29 +32,72 @@ Describing a lane by a formula instead of a list of objects means nothing ever h
 
 # --explanation-tr--
 
-Her yol şeridi bir araba listesiyle değil, birkaç sayıyla tanımlanır:
+**Bu adımda:** yola trafik ekleyeceğiz. Beş gri yol şeridinin her birinde kendi renginde arabalar (bazı şeritlerde
+iki döşemelik kamyonlar) sağa ya da sola akacak; bir kenardan çıkan araba öbür kenardan geri girecek. (Çarpışma henüz
+yok, arabaların içinden geçebilirsin.)
+
+**Bir şeridi birkaç sayıyla tarif etmek.** Her arabayı ayrı ayrı tutmak yerine, her yol şeridini birkaç sayıyla
+tarif ederiz:
 
 ```js
 { row: 7, speed: -0.05, len: 1, spacing: 4, color: '#ef4444' }
 ```
 
-Bir şeritteki arabalar `spacing` döşeme aralıklıdır ve hepsi şeridin `speed`'iyle hareket eder (kare başına döşeme;
-negatif sola demek). Yani zamanla değişen tek şey şerit başına bir sayıdır: her karede `speed` kadar büyüyen `offset`.
+- `row`: hangi satırda, `color`: arabaların rengi.
+- `len`: bir arabanın boyu (döşeme cinsinden; kamyonlar 2).
+- `spacing`: arabalar arası mesafe (döşeme): her 4 döşemede bir araba.
+- `speed`: her karede kaç döşeme gittikleri; **eksi sola** demek.
 
-Arabalar şu an nerede? Bir taraftan çıkan araba öbür taraftan geri gelmeli; bu yüzden konumlar kalan operatörü `%` ile
-**başa sarar**. Şerit her `period` döşemede bir tekrar eder; bu, `spacing`'in ekran artı bir arabadan geniş bir katıdır.
-Böylece bir araba başa sarmadan önce her zaman tamamen ekran dışındadır:
+Beş şeridi bir **diziye** (liste, köşeli parantezle yazılır) koyarız: `LANES` (şeritler). Listenin her elemanı bir
+nesnedir; okunur olsun diye her birini ayrı satıra yazıp sonuna virgül koyarız.
+
+Şeritteki bütün arabalar aynı hızla gittiği için zamanla değişen tek şey, şerit başına **bir sayıdır**: `offset`
+(kayma). Her karede `speed` kadar büyür (ya da küçülür). Başta hepsi 0:
 
 ```js
-(start + offset) % p        // JavaScript'te offset negatifken negatif olabilir!
+for (const lane of LANES) lane.offset = 0
+```
+
+`for (const lane of LANES)` → "listedeki her şerit için, ona sırayla `lane` de". Nesneye yeni bir alan böyle,
+doğrudan değer vererek eklenebilir.
+
+**Arabalar şu an nerede? Başa sarmak.** Bir kenardan çıkan araba öbür kenardan geri gelmeli. Bunun için **bölümden
+kalan** işlemini (`%`) kullanırız: `17 % 16` = 1, `16 % 16` = 0. Bir sayı ne kadar büyürse büyüsün, `% 16` onu hep 0 ile
+16 arasına geri sarar, tıpkı saatin 12'den sonra 1'e dönmesi gibi.
+
+Şerit her `period` (periyot) döşemede bir kendini tekrar eder. Periyot, `spacing`'in ekrandan artı bir arabadan
+geniş olan bir katıdır; böylece araba başa sarmadan önce ekrandan tamamen çıkmış olur:
+
+```js
+lane.spacing * Math.ceil((COLS + lane.len) / lane.spacing)
+```
+
+`Math.ceil(sayı)` sayıyı **yukarı** yuvarlar (`3.25` → `4`). Kırmızı şerit için: `(12 + 1) / 4 = 3.25` → `4`, çarpı 4
+= 16.
+
+**Eksi sayı tuzağı.** JavaScript'te `-3 % 16` sonucu `13` değil `-3`'tür! Sola giden arabalarda `offset` eksi olduğu
+için bu önemli. Çözüm: bir kez daha `p` ekleyip yine `%` almak:
+
+```js
 ((start + offset) % p + p) % p   // her zaman 0 ile p arasında
 ```
 
-JavaScript'te `-3 % 16`, `13` değil `-3`'tür. `p` ekleyip yeniden `%` almak, iki yönde de çalışan bir modülonun bilinen
-çaresidir. Sonda `len` çıkarmak bir arabanın sol kenarın hemen dışından başlamasını sağlar.
+Sonunda `len` çıkarırız ki araba sol kenarın hemen dışından başlayabilsin.
 
-Bir şeridi nesne listesiyle değil formülle tanımlamak, hiçbir şeyin yaratılması, silinmesi ya da geri dönüştürülmesi
-gerekmediği anlamına gelir.
+**`items(lane)`: arabaların listesi.** Bu fonksiyon boş bir liste açar, her araba için hesaplanan sol kenarı
+`push` ile listenin sonuna ekler ve listeyi `return` ile geri verir:
+
+```js
+for (let start = 0; start < p; start += lane.spacing) { ... }
+```
+
+Bu `for` döngüsü sayacı 1'er değil `spacing`'er artırır: 0, 4, 8, 12 gibi. Her `start` bir arabadır.
+
+Bir şeridi nesne listesi yerine bir formülle tarif etmek şu demek: hiçbir şeyin yaratılması, silinmesi ya da geri
+dönüştürülmesi gerekmez.
+
+**`update()`.** Döngüde çizimden önce her şeridin `offset`'ine hızını ekleyen bir fonksiyon çağırırız: önce durumu
+güncelle, sonra çiz.
 
 # --task--
 
@@ -68,13 +111,83 @@ gerekmediği anlamına gelir.
 
 # --task-tr--
 
-1. Çözümdeki `LANES` dizisini (beş yol şeridi) ekle ve her şeridin `offset`'ini `0` yap.
-2. `period(lane)` yaz: `spacing` çarpı `Math.ceil((COLS + len) / spacing)`.
-3. Her arabanın sol kenarını (döşeme olarak) döndüren `items(lane)` yaz: `0`'dan periyoda kadar `spacing` adımlarla her
-   `start` için başa sarılmış `start + offset`, eksi `len`.
-4. Her şeridin `speed`'ini `offset`'ine ekleyen `update()` yaz ve döngüde `draw()`'dan önce çağır.
-5. Her arabayı şeridinin renginde çiz: soldan `x * TILE + 2`, satırının tepesinden 6 piksel aşağıda, `len * TILE - 4`
-   genişliğinde ve `TILE - 12` yüksekliğinde.
+1. `// Rows from the top: ...` yorum satırının hemen altına şeritlerin listesini ekle:
+
+   ```js
+   // speed is in tiles per frame (negative = to the left), len and spacing in tiles.
+   const LANES = [
+     { row: 7, speed: -0.05, len: 1, spacing: 4, color: '#ef4444' },
+     { row: 8, speed: 0.035, len: 2, spacing: 6, color: '#f59e0b' },
+     { row: 9, speed: -0.06, len: 1, spacing: 5, color: '#e879f9' },
+     { row: 10, speed: 0.03, len: 1, spacing: 4, color: '#38bdf8' },
+     { row: 11, speed: -0.025, len: 2, spacing: 5, color: '#f97316' },
+   ]
+   ```
+
+2. `let frog = { x: 5, y: START_ROW }` satırının hemen altına, her şeridin kaymasını sıfırlayan satırı ekle:
+
+   ```js
+   for (const lane of LANES) lane.offset = 0
+   ```
+
+3. Bir boş satır bırak ve periyot ile araba konumlarını hesaplayan iki fonksiyonu yaz:
+
+   ```js
+   // A lane repeats every `period` tiles, which is always wider than the screen plus one car or log.
+   function period(lane) {
+     return lane.spacing * Math.ceil((COLS + lane.len) / lane.spacing)
+   }
+
+   // Left edges (in tiles) of the cars or logs in a lane right now.
+   function items(lane) {
+     const p = period(lane)
+     const xs = []
+     for (let start = 0; start < p; start += lane.spacing) {
+       xs.push((((start + lane.offset) % p) + p) % p - lane.len)
+     }
+     return xs
+   }
+   ```
+
+   `push` satırındaki parantezleri dikkatle say: açılan her parantez kapanmalı.
+
+4. Dokunmatik kodunun (`canvas.addEventListener('pointerup', ...)`) kapanış `})`'inden sonra, `function rowColor`'dan
+   **önce**, şeritleri kaydıran fonksiyonu yaz:
+
+   ```js
+   function update() {
+     for (const lane of LANES) lane.offset += lane.speed
+   }
+   ```
+
+5. `draw()` fonksiyonunda, satırları çizen `for` döngüsünün kapanış `}`'inden sonra (kurbağadan **önce**) arabaları
+   çiz:
+
+   ```js
+     for (const lane of LANES) {
+       ctx.fillStyle = lane.color
+       for (const x of items(lane)) {
+         ctx.fillRect(x * TILE + 2, TOP + lane.row * TILE + 6, lane.len * TILE - 4, TILE - 12)
+       }
+     }
+   ```
+
+   Her şerit için rengini seç, sonra o şeritteki her arabayı bir dikdörtgen olarak çiz: soldan 2, üstten 6 piksel
+   içeride, boyu kadar geniş (kenarlarda 2'şer piksel boşluk) ve 28 piksel yüksek.
+
+6. `loop()` fonksiyonunda `draw()`'dan **önce** `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update()   // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Yol şeritlerinde renkli arabalar akmalı; kenardan çıkan araba öbür
+   taraftan girmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `LANES`'teki sayıları ve `items`
+   içindeki `+ p) % p` kısmını kontrol et.
 
 # --tests--
 

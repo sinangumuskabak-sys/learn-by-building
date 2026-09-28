@@ -21,17 +21,41 @@ The best score is kept in `localStorage` like in the other games, and saved at t
 
 # --explanation-tr--
 
-Skor yalnızca **ne kadar yükseğe çıktığındır**: başlangıç platformu ile oyuncunun ulaştığı en yüksek nokta arasındaki
-mesafe (ayaklardan ölçülür), onlarca piksel olarak. "Şimdiye kadarki en yüksek" sürekli güncellenen bir maksimumdur:
+**Bu adımda:** skor ekleyeceğiz. Sol üstte `Score: ...`, sağ üstte `Best: ...` yazacak. En iyi skor, sayfayı kapatıp
+açsan bile hatırlanacak.
+
+**Skor = ne kadar yükseğe çıktın.** Başlangıç platformu ile oyuncunun ayaklarının ulaştığı en yüksek nokta arasındaki
+mesafe, 10'a bölünmüş hâliyle. Dünyada `y` aşağı doğru büyüdüğü için "daha yüksek" **daha küçük** `y` demektir. Bu
+yüzden ayakların yerini (`player.y + player.h`) `START_Y`'den çıkarırız, tersini değil:
 
 ```js
 score = Math.max(score, Math.floor((START_Y - player.y - player.h) / 10))
 ```
 
-`Math.max` skorun yalnızca artmasını sağlar: daha alçak bir platforma geri düşmek puan götürmez. Dünya y'si aşağı doğru
-büyüdüğü için "daha yüksek" **daha küçük** bir y demektir; bu yüzden ayaklar `START_Y`'den çıkarılır, tersi değil.
+Parça parça:
 
-En iyi skor diğer oyunlardaki gibi `localStorage`'da tutulur ve oyunun bittiği anda kaydedilir.
+- `START_Y - player.y - player.h` → ayakların başlangıçtan kaç piksel yukarıda olduğu.
+- `/ 10` → onda birini alır; 300 piksel 30 puan olur.
+- `Math.floor(...)` → sayıyı **aşağı yuvarlar**, virgülden sonrasını atar (`30.7` → `30`).
+- `Math.max(a, b)` → ikisinden **büyüğünü** verir. Yani yeni değer eskisinden büyükse skor yükselir, değilse aynı
+  kalır. Aşağıdaki bir platforma geri düşmek puan götürmez.
+
+**Yazı ile sayıyı birleştirmek.** `'Score: ' + score` bir yazının sonuna sayıyı ekler: skor 30 ise sonuç
+`'Score: 30'` olur. `+` sayılarda toplar, yazılarda yan yana ekler.
+
+**Hafıza: `localStorage`.** Tarayıcının küçük bir defteri vardır; sayfa kapansa bile içindekiler kalır.
+`localStorage.setItem('doodle-best', best)` "bu ada bu değeri yaz" demektir; `localStorage.getItem('doodle-best')`
+okur. Defter her şeyi **yazı** olarak saklar, bu yüzden okurken `Number(...)` ile sayıya çeviririz. Hiç kayıt yoksa
+sonuç sayı olmaz; `|| 0` "o zaman 0 kullan" demektir:
+
+```js
+let best = Number(localStorage.getItem('doodle-best')) || 0
+```
+
+En iyi skoru oyun bittiği anda, yalnızca yeni skor daha büyükse (`score > best`) kaydederiz.
+
+**Yazının hizası.** `textAlign = 'left'` ile yazı verdiğin noktadan sağa doğru, `'right'` ile o noktada **biten**
+şekilde yazılır. Bu yüzden `Best` yazısını `canvas.width - 10` noktasına sağa hizalı yazarız; sağ kenara yapışık durur.
 
 # --task--
 
@@ -42,10 +66,62 @@ En iyi skor diğer oyunlardaki gibi `localStorage`'da tutulur ve oyunun bittiği
 
 # --task-tr--
 
-1. `let score` (`0`'a sıfırlanır) ve `let best = Number(localStorage.getItem('doodle-best')) || 0` ekle.
-2. `update()` içinde kamerayı taşıdıktan sonra `Math.floor((START_Y - player.y - player.h) / 10)` daha büyükse `score`'u ona çıkar.
-3. Oyun yeni bir en iyi skorla bittiğinde onu `'doodle-best'` altında kaydet.
-4. Sol üste `Score: 30`, sağ üste `Best: 120` yaz (`'#0f172a'`, `'bold 18px sans-serif'`).
+1. En üstteki değişkenlerde `let highest ...` satırının altına `let score` ekle; `let state ...` satırının altına en
+   iyi skoru hafızadan okuyan satırı ekle:
+
+   ```js
+   let highest // ...
+   let score // ← yeni
+   let state // ...
+   let best = Number(localStorage.getItem('doodle-best')) || 0 // ← yeni
+   const keys = {}
+   ```
+
+2. `reset()` fonksiyonunda `highest = START_Y` satırının altına skoru sıfırlayan satırı ekle:
+
+   ```js
+     highest = START_Y
+     score = 0 // ← yeni
+     state = 'playing'
+   ```
+
+3. `update()` fonksiyonunda kamerayı hareket ettiren `if (player.y < cameraY + 200) ...` satırının hemen altına skoru
+   güncelleyen satırı ekle:
+
+   ```js
+     if (player.y < cameraY + 200) cameraY = player.y - 200
+     score = Math.max(score, Math.floor((START_Y - player.y - player.h) / 10)) // ← yeni
+     fillPlatforms()
+   ```
+
+4. Yine `update()`'in sonunda, `state = 'over'` satırının altına rekoru kaydeden kısmı ekle:
+
+   ```js
+     if (player.y > cameraY + canvas.height) {
+       state = 'over'
+       if (score > best) { // ← yeni
+         best = score // ← yeni
+         localStorage.setItem('doodle-best', best) // ← yeni
+       } // ← yeni
+     }
+   }
+   ```
+
+5. `draw()` fonksiyonunda oyuncuyu çizen satırların altına, `if (state === 'over') {` satırından **önce** skorları
+   yazan satırları ekle:
+
+   ```js
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score: ' + score, 10, 26)
+     ctx.textAlign = 'right'
+     ctx.fillText('Best: ' + best, canvas.width - 10, 26)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Tırmandıkça sol üstteki skor artmalı; düşünce sağ üstteki `Best`
+   güncellenmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `'doodle-best'` adının iki yerde de aynı
+   yazıldığına ve `'Score: '` içindeki iki nokta ile boşluğa bak.
 
 # --tests--
 

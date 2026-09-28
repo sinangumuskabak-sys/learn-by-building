@@ -29,26 +29,38 @@ bounces back.
 
 # --explanation-tr--
 
-Bir takas ancak bir eşleşme yaparsa sayılır. Öyleyse `findMatches()`'e ihtiyacımız var: bir satırda ya da sütunda tek
-renkten üç ya da daha fazlasının parçası olan **her** hücre.
+**Bu adımda:** oyun, bir takasın eşleşme yapıp yapmadığını anlayacak. Üçlü oluşturmayan bir takas geri sekecek:
+iki mücevher yer değiştirmiş gibi olur ama hemen eski yerlerine döner. Üçlü yapan takas ise kalacak. (Silme sonraki
+adımda.)
 
-Fikir, her sırayı **ilk mücevherinden başlayarak bir kez** gezmek. Her hücre için iki yöne bakarız: sağ `[0, 1]` ve aşağı
-`[1, 0]`. O yöndeki bir önceki hücre aynı renkteyse bu hücre zaten saydığımız bir sıranın ortasındadır ve onu atlarız. Değilse
-rengin ne kadar devam ettiğini sayarız:
+**Bütün eşleşmeleri bulmak.** `findMatches()` bir satırda ya da sütunda aynı renkten üç ya da daha fazlasının parçası
+olan **her** hücreyi bulur.
+
+**Her sırayı bir kez, ilk mücevherinden say.** Her hücre için iki yöne bakarız: sağa `[0, 1]` ve aşağı `[1, 0]`
+(satır farkı, sütun farkı). O yönde **bir önceki** hücre aynı renkse, bu hücre zaten saydığımız bir sıranın
+ortasındadır; atlarız (`continue`). Değilse rengin ne kadar devam ettiğini sayarız:
 
 ```js
 let length = 1
-while (sonraki hücre tahtada && aynı mücevher) length++
-if (length >= 3) // `length` hücrenin hepsini ekle
+while (sonraki hücre tahtada && aynı renk) length++
+if (length >= 3) // bu length kadar hücrenin hepsini ekle
 ```
 
-Dört ya da beşlik bir sıra da aynı yolla bulunur. Bir mücevher aynı anda hem bir satır sırasında **hem de** bir sütun
-sırasında olabilir (L ya da T şekli), bu yüzden hücreleri bir `Set`'te toplarız: aynı hücreyi iki kez eklemek onu bir kez
-tutar. Bir hücreyi tek sayı olarak, `r * N + c` diye saklarız, çünkü `Set` nesneleri kimliğe göre karşılaştırır ve
-`{ r: 2, c: 3 }` hiçbir zaman başka bir `{ r: 2, c: 3 }`'e eşit olmaz. Satır `Math.floor(cell / N)`, sütun `cell % N`'dir.
+- `for (const [dr, dc] of [[0, 1], [1, 0]])` iki elemanlı listeyi gezer; her turda çiftin ilk sayısını `dr`,
+  ikincisini `dc` adıyla alır.
+- `while (koşul) ...` koşul doğru olduğu sürece tekrarlar. `length++` bir artırır.
+- `r + dr * length` o yönde `length` adım ötedeki satır (sağa bakarken `dr = 0`, satır değişmez).
 
-Bununla `trySwap` takas eder, bakar ve hiçbir şey eşleşmediyse **geri takas eder**; tıpkı işe yaramayan bir takasın geri
-sektiği gerçek oyundaki gibi.
+**Küme (Set).** Bir mücevher aynı anda hem yatay hem dikey bir sıranın parçası olabilir (L ya da T şekli). Hücreleri
+bir `Set`'te toplarız: aynı şeyi iki kez eklesen de bir kez tutar. `new Set()` boş bir küme yapar, `.add(x)` ekler,
+`.size` kaç eleman olduğunu verir.
+
+Hücreyi tek bir **sayı** olarak saklarız: `r * N + c` (ör. satır 2, sütun 3 → `2 * 8 + 3 = 19`). Çünkü `Set` iki
+nesneyi içerikleriyle değil **kimlikleriyle** karşılaştırır; `{ r: 2, c: 3 }` başka bir `{ r: 2, c: 3 }`'e asla eşit
+sayılmaz. Geri çevirmek kolay: satır `Math.floor(19 / 8)` = 2, sütun `19 % 8` = 3.
+
+**Geri sekmek.** `trySwap` önce takas eder, sonra bakar; hiç eşleşme yoksa **geri takas eder** ve `false` döner.
+Gerçek oyundaki gibi, işe yaramayan takas geri seker.
 
 # --task--
 
@@ -57,8 +69,50 @@ sektiği gerçek oyundaki gibi.
 
 # --task-tr--
 
-1. `findMatches()` yaz: satırlarda ve sütunlarda 3 ya da daha uzun bir sıradaki her hücre için `r * N + c` içeren bir `Set`.
-2. `trySwap`'ta takastan sonra `findMatches()` boşsa geri takas et ve `false` döndür.
+1. `reset()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp eşleşme bulan fonksiyonu yaz:
+
+   ```js
+   // Every cell that is part of three or more of the same color in a row or a column.
+   function findMatches() {
+     const cells = new Set()
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         const gem = board[r][c]
+         for (const [dr, dc] of [[0, 1], [1, 0]]) {
+           // Only start counting at the first gem of a run.
+           const pr = r - dr
+           const pc = c - dc
+           if (pr >= 0 && pc >= 0 && board[pr][pc] === gem) continue
+           let length = 1
+           while (r + dr * length < N && c + dc * length < N && board[r + dr * length][c + dc * length] === gem) length++
+           if (length >= 3) for (let i = 0; i < length; i++) cells.add((r + dr * i) * N + (c + dc * i))
+         }
+       }
+     }
+     return cells
+   }
+   ```
+
+   `pr`, `pc` bir önceki hücre. `while` satırı uzun: "sonraki hücre tahtanın içinde **ve** aynı renkteyse uzunluğu
+   bir artır". Son satır sıra 3 ya da daha uzunsa her hücresini kümeye ekler.
+
+2. `trySwap()` fonksiyonunu, eşleşme yoksa geri takas edecek şekilde değiştir:
+
+   ```js
+   function trySwap(a, b) {
+     if (Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return false
+     swap(a, b)
+     if (findMatches().size === 0) { // ← yeni
+       swap(a, b) // no match: the gems go back
+       return false                   // ← yeni
+     }                                // ← yeni
+     return true
+   }
+   ```
+
+3. **Çalıştır**'a bas. Yan yana iki mücevheri takas etmeyi dene: üçlü yapmıyorsa yerlerine dönmeli, üçlü yapıyorsa
+   yer değiştirmiş kalmalı. Alttaki kontrollerin hepsi yeşil olmalı. `findMatches` testi kırmızıysa `continue`
+   satırındaki `board[pr][pc] === gem` ve `cells.add(...)` içindeki parantezleri kontrol et.
 
 # --tests--
 

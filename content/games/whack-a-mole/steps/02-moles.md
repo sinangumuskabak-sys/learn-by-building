@@ -27,24 +27,49 @@ the next pop 700 ms later.
 
 # --explanation-tr--
 
-Her köstebek yaklaşık bir saniye yukarıda kalmalı, sonra kendi kendine saklanmalı. Her delik için kare sayabilirsin ama
-daha şık bir yol var: köstebeğin **ne zamana kadar** yukarıda olduğunu sakla.
+**Bu adımda:** köstebekler çıkmaya başlayacak. Sağda deliklerin ortasında kahverengi köstebekler (daha küçük daireler)
+belirecek, yaklaşık bir saniye kalıp kendiliğinden kaybolacak; her 0,7 saniyede bir yenisi çıkacak.
+
+**Oyun döngüsü.** Artık resim kendiliğinden değişiyor, bu yüzden ekranı saniyede ~60 kez yeniden çizmemiz gerekir:
 
 ```js
-hole.upUntil = now + 1000       // sonraki 1000 ms boyunca yukarıda
+function loop(time) {
+  now = time
+  update()   // durumu ilerlet
+  draw()     // çiz
+  requestAnimationFrame(loop)
+}
+```
+
+`requestAnimationFrame(loop)` tarayıcıya "bir sonraki karede `loop`'u çağır" der. Tarayıcı çağırırken `loop`'a o anki
+zamanı **milisaniye** (ms, saniyenin binde biri) olarak verir: `time` bir **parametredir**, yani fonksiyona verilen
+değer. Onu her karede bir kez `now` değişkenine yazarız ki o karedeki her şey aynı zamana baksın.
+
+**"Ne zamana kadar?" diye saklamak.** Her köstebek yaklaşık bir saniye yukarıda kalmalı. Her delik için kare kare geri
+sayım yapmak yerine daha düzgün bir yol var: köstebeğin **ne zamana kadar** yukarıda olduğunu saklamak.
+
+```js
+hole.upUntil = now + 1000       // önümüzdeki 1000 ms boyunca yukarıda
 const up = now < hole.upUntil   // şu an yukarıda mı?
 ```
 
-Köstebek saklanırken hiçbir şeyin olması gerekmez: `now` `upUntil`'i geçince kontrol kendiliğinden yanlış olur. Tek bir
-zaman damgası, yoksa her karede azaltman gerekecek bir geri sayımın yerini alır. Zaman damgaları ("ne zamana kadar?",
-"ne zamandan beri?") bir süre devam eden her şey için en kullanışlı araçlardan biridir: güçlendirmeler, dokunulmazlık,
-bekleme süreleri, animasyonlar.
+Köstebek saklanırken hiçbir şey yapmamız gerekmez: `now`, `upUntil`'i geçince soru kendiliğinden "hayır" olur. `<`
+"küçük mü?" demektir, cevabı `true` (doğru) ya da `false` (yanlış) olur. Bu tür zaman damgaları, süreli her şey için
+(güçlendirme, dokunulmazlık, bekleme süresi) çok kullanışlıdır.
 
-`now` oyun döngüsünden gelir: `requestAnimationFrame` fonksiyonuna o anki zamanı milisaniye olarak verir. Onu her
-karede bir kez bir değişkene yaz; böylece o karedeki her şey aynı zamanda anlaşır.
+**Sıradaki köstebek.** Aynı fikir: `nextPop` "sıradaki köstebek ne zaman çıkacak?" `now >= nextPop` (`>=` "büyük ya da
+eşit") olunca:
 
-Yeni köstebekler benzer bir takvimle çıkar: `now` `nextPop`'a ulaşınca rastgele **boş** bir delikten bir köstebek
-çıkar ve bir sonrakini 700 ms sonraya ayarla.
+- `holes.filter((hole) => !isUp(hole))` → yukarıda köstebeği **olmayan** delikleri yeni bir listeye süzer. `filter`
+  her eleman için oklu küçük fonksiyonu (`=>`) çalıştırır ve `true` diyenleri tutar. `!` "değil" demektir.
+- `if (empty.length > 0)` → boş delik varsa (`length` listedeki eleman sayısı). `if` bir **koşuldur**: doğruysa `{ }`
+  içini çalıştırır.
+- `empty[Math.floor(Math.random() * empty.length)]` → rastgele bir boş delik. `Math.random()` 0 ile 1 arasında
+  rastgele bir ondalık sayı verir; liste boyuyla çarpıp `Math.floor` ile aşağı yuvarlayınca rastgele bir sıra çıkar.
+- `nextPop = now + 700` → bir sonraki 700 ms sonra.
+
+**`return`.** `function isUp(hole) { return now < hole.upUntil }` → `return` sonucu geri verir; `isUp(delik)` diye
+sorunca `true` ya da `false` alırsın.
 
 # --task--
 
@@ -57,12 +82,67 @@ Yeni köstebekler benzer bir takvimle çıkar: `now` `nextPop`'a ulaşınca rast
 
 # --task-tr--
 
-1. Her deliğe `upUntil: 0` ver; `let now = 0` ve `let nextPop = 0` ekle.
-2. `now < hole.upUntil` döndüren `function isUp(hole)` yaz.
-3. `update()` yaz: `now >= nextPop` olunca, yukarıda olmayan delikler arasından rastgele birini seç, `upUntil`'ini
-   `now + 1000` yap ve `nextPop = now + 700` ayarla.
-4. `now = time` yapan, `update()` ve `draw()` çağıran ve sonraki kareyi isteyen `loop(time)` yaz. Başlat.
-5. `draw()` içinde köstebeği yukarıda olan her deliğe `32` yarıçaplı `'#92400e'` bir daire çiz.
+1. `holes.push(...)` satırında nesnenin sonuna `upUntil: 0` alanını ekle:
+
+   ```js
+       holes.push({ x: col * CELL + CELL / 2, y: TOP + row * CELL + CELL / 2, upUntil: 0 })
+   ```
+
+2. Delik döngülerini kapatan iki `}`'nin altına bir satır boşluk bırakıp şunları ekle:
+
+   ```js
+   let now = 0 // time of the current frame, in ms
+   let nextPop = 0 // when the next mole pops up
+
+   function isUp(hole) {
+     return now < hole.upUntil
+   }
+
+   function update() {
+     if (now >= nextPop) {
+       const empty = holes.filter((hole) => !isUp(hole))
+       if (empty.length > 0) {
+         const hole = empty[Math.floor(Math.random() * empty.length)]
+         hole.upUntil = now + 1000
+       }
+       nextPop = now + 700
+     }
+   }
+   ```
+
+3. `draw()` içindeki delik döngüsünü şöyle değiştir (`ctx.fillStyle = '#3f2d1d'` satırı döngünün içine taşınıyor,
+   çünkü köstebek rengi onu her turda değiştiriyor):
+
+   ```js
+     for (const hole of holes) {
+       ctx.fillStyle = '#3f2d1d'                    // ← taşındı
+       ctx.beginPath()
+       ctx.arc(hole.x, hole.y, HOLE_R, 0, Math.PI * 2)
+       ctx.fill()
+       if (isUp(hole)) {                            // ← yeni
+         ctx.fillStyle = '#92400e'                  // ← yeni
+         ctx.beginPath()                            // ← yeni
+         ctx.arc(hole.x, hole.y, 32, 0, Math.PI * 2) // ← yeni
+         ctx.fill()                                 // ← yeni
+       }                                            // ← yeni
+     }
+   ```
+
+4. En alttaki `draw()` satırını sil ve yerine oyun döngüsünü yaz:
+
+   ```js
+   function loop(time) {
+     now = time
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+5. **Çalıştır**'a bas. Deliklerde köstebekler çıkıp kaybolmalı, aynı anda birkaç tane görebilirsin. Alttaki
+   kontrollerin hepsi yeşil olmalı. Hiç köstebek çıkmıyorsa en alttaki `requestAnimationFrame(loop)` satırını kontrol et.
 
 # --tests--
 

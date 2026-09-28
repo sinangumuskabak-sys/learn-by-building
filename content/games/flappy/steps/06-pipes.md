@@ -32,27 +32,73 @@ top or bottom edge.
 
 # --explanation-tr--
 
-Kuş aslında hiç ileri gitmez. **Dünya** onun yanından geriye doğru kayar. Yandan kaydırmalı oyunların çoğu böyle
-çalışır: oyuncuyu sabit bir `x` civarında tut, diğer her şeyi sola kaydır.
+**Bu adımda:** yeşil borular ekleyeceğiz. Oyun başlayınca sağ kenardan belirli aralıklarla üstte ve altta ikişer
+yeşil dikdörtgen çıkacak, aralarında bir boşluk olacak ve sola doğru kayacaklar. (Çarpma henüz yok, borunun
+içinden geçebilirsin.)
 
-Bir boru çifti tek bir nesnedir: `x`'i ve açıklığın başladığı `gapY`. İki yeşil dikdörtgen çizerken ondan türetilir:
+**Kuş aslında ileri gitmiyor.** **Dünya** kuşun yanından geriye kayıyor. Yandan görünen oyunların çoğu böyle çalışır:
+oyuncu hep aynı `x` noktasında kalır, geri kalan her şey sola kaydırılır.
+
+**Bir boru çifti = bir nesne.** Her boru için iki bilgi yeter: `x` (soldan uzaklığı) ve `gapY` (açıklığın başladığı
+yükseklik). İki yeşil dikdörtgeni çizerken bunlardan hesaplarız:
 
 ```
-üst boru:  y = 0'dan             gapY'ye kadar
-alt boru:  y = gapY + GAP'ten    en alta kadar
+üst boru:  y = 0'dan            gapY'ye kadar
+alt boru:  y = gapY + GAP'ten   canvas'ın dibine kadar
 ```
 
-Borular sürekli değişen bir **dizide** yaşar:
+`GAP` açıklığın boyu (160 piksel).
 
-- **üret**: her `PIPE_EVERY` karede bir, sağ kenara yeni bir boru ekle. Kareleri bir sayaçla say ve kalan
-  operatörünü kullan: `frame % PIPE_EVERY === 0` 90., 180., 270. karelerde doğrudur...
-- **taşı**: her karede her borunun `x`'inden `PIPE_SPEED` çıkar.
-- **sil**: bir boru sol kenardan tamamen çıkınca onu kaldır. `array.filter` yalnızca istediğin elemanları tutar.
+**Dizi (array): sıralı bir liste.** Ekranda aynı anda birkaç boru olacak. Birden çok şeyi tutmak için **dizi**
+kullanırız. Köşeli parantezle yazılır:
 
-Son kısmı unutmak *bellek sızıntısı* denen gerçek bir hatadır: dizi sonsuza kadar büyür ve oynadıkça oyun yavaşlar.
+```js
+let pipes = []                        // boş bir liste
+pipes.push({ x: 400, gapY: 200 })     // listenin sonuna bir boru ekle
+pipes.length                          // listede kaç şey var? (şimdi 1)
+pipes[0]                              // ilk eleman (sayma 0'dan başlar!)
+```
 
-Rastgele açıklık konumu, bir aralığa ölçeklenmiş `Math.random()` kullanır; açıklık asla üst ya da alt kenara
-yapışmasın diye bir pay bırakılır.
+**Her eleman için bir kez: `for ... of` döngüsü.**
+
+```js
+for (const pipe of pipes) pipe.x -= PIPE_SPEED
+```
+
+"`pipes` listesindeki her eleman için, o elemana sırayla `pipe` de ve `pipe.x`'ten `PIPE_SPEED` çıkar." `-=`
+"üstünden çıkar" demektir (`+=`'nin tersi). Döngünün yapacağı iş birden fazla satırsa `{ }` içine yazılır.
+
+**Borular üç iş yapar:**
+
+- **Doğmak:** her `PIPE_EVERY` (90) karede bir, sağ kenarda yeni bir boru eklenir. Kareleri `frame` adlı bir sayaçla
+  sayarız. `%` işareti **bölümden kalanı** verir: `180 % 90` sıfırdır, `181 % 90` birdir. Yani
+  `frame % PIPE_EVERY === 0` sadece 90, 180, 270... karelerinde doğrudur.
+- **Kaymak:** her karede her borunun `x`'inden `PIPE_SPEED` (2) çıkarılır.
+- **Silinmek:** sol kenardan tamamen çıkan boru listeden atılır. `filter` bir listenin sadece istediğin elemanlarını
+  tutan yeni bir liste verir:
+
+  ```js
+  pipes = pipes.filter((pipe) => pipe.x + PIPE_WIDTH > 0)
+  ```
+
+  "Sağ kenarı (`pipe.x + PIPE_WIDTH`) hâlâ 0'dan büyük olan boruları tut." Buradaki ok fonksiyonunda `{ }` yok; o
+  zaman `=>`'nin sağındaki sorunun cevabı (doğru/yanlış) doğrudan geri verilir.
+
+Son maddeyi unutmak gerçek bir hatadır (*bellek sızıntısı*, memory leak): liste sonsuza kadar büyür ve oynadıkça oyun
+yavaşlar.
+
+**Rastgele açıklık.** `Math.random()` her çağrıldığında 0 ile 1 arasında (1 hariç) rastgele bir kesirli sayı
+verir. Onu istediğimiz aralığa büyütürüz:
+
+```js
+const gapY = 60 + Math.random() * (canvas.height - GAP - 120)
+```
+
+`canvas.height - GAP - 120` = 600 − 160 − 120 = 320. Rastgele sayı 320 ile çarpılınca 0–320 arası olur, 60 eklenince
+60–380 arası. Böylece açıklık hiçbir zaman üst ya da alt kenara yapışmaz (60 piksellik pay kalır).
+
+`{ x: canvas.width, gapY }` içindeki `gapY` kısaltmadır: `gapY: gapY` yazmakla aynıdır ("`gapY` alanına `gapY`
+sabitinin değerini koy").
 
 # --task--
 
@@ -69,16 +115,68 @@ yapışmasın diye bir pay bırakılır.
 
 # --task-tr--
 
-1. `PIPE_WIDTH = 60`, `GAP = 160`, `PIPE_SPEED = 2`, `PIPE_EVERY = 90` sabitlerini ve `let pipes = []`,
-   `let frame = 0` değişkenlerini ekle.
-2. `pipes`'a `{ x: canvas.width, gapY }` ekleyen `function addPipe()` yaz; `gapY`, `60` ile
-   `canvas.height - GAP - 60` arasında rastgele bir sayı olsun:
-   `const gapY = 60 + Math.random() * (canvas.height - GAP - 120)`.
-3. `update()` içinde (oyun sürerken), zemin kontrolünden önce: `frame`'i 1 artır ve `frame % PIPE_EVERY === 0`
-   olduğunda `addPipe()` çağır; her boruyu `PIPE_SPEED` kadar sola kaydır; sonra yalnızca sağ kenarı
-   (`pipe.x + PIPE_WIDTH`) hâlâ `0`'dan büyük olan boruları tut.
-4. `draw()` içinde kuştan önce, her boruyu `PIPE_WIDTH` genişliğinde iki `'green'` dikdörtgen olarak çiz: üstteki
-   `0`'dan `gapY`'ye, alttaki `gapY + GAP`'ten canvas'ın altına.
+1. `const FLAP = -8 ...` satırının altına boru ayarlarını ekle:
+
+   ```js
+   const PIPE_WIDTH = 60
+   const GAP = 160
+   const PIPE_SPEED = 2
+   const PIPE_EVERY = 90 // frames between new pipes
+   ```
+
+2. `let state = 'ready' ...` satırının altına boru listesini ve kare sayacını ekle:
+
+   ```js
+   let pipes = []
+   let frame = 0
+   ```
+
+3. `canvas.addEventListener('pointerdown', flap)` satırının altına bir boş satır bırak ve yeni boru ekleyen
+   fonksiyonu yaz:
+
+   ```js
+   function addPipe() {
+     const gapY = 60 + Math.random() * (canvas.height - GAP - 120)
+     pipes.push({ x: canvas.width, gapY })
+   }
+   ```
+
+4. `update()` fonksiyonuna, kuşu hareket ettiren satırlarla `hitGround` satırı arasına boruların doğma, kayma ve
+   silinme satırlarını ekle:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return
+     bird.vy += GRAVITY
+     bird.y += bird.vy
+
+     frame += 1                                                // ← yeni
+     if (frame % PIPE_EVERY === 0) addPipe()                   // ← yeni
+     for (const pipe of pipes) pipe.x -= PIPE_SPEED            // ← yeni
+     pipes = pipes.filter((pipe) => pipe.x + PIPE_WIDTH > 0)   // ← yeni
+
+     const hitGround = bird.y + bird.r >= canvas.height
+     const hitSky = bird.y - bird.r <= 0
+     if (hitGround || hitSky) state = 'over'
+   }
+   ```
+
+5. `draw()` fonksiyonunda, gökyüzünü boyayan `ctx.fillRect(0, 0, canvas.width, canvas.height)` satırının altına,
+   kuştan **önce**, boruları çizen satırları ekle (önce çizilen arkada kalır):
+
+   ```js
+     ctx.fillStyle = 'green'
+     for (const pipe of pipes) {
+       ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.gapY)
+       ctx.fillRect(pipe.x, pipe.gapY + GAP, PIPE_WIDTH, canvas.height - pipe.gapY - GAP)
+     }
+   ```
+
+   Alt borunun boyu: canvas'ın boyundan açıklığın bittiği yer çıkarılınca kalan kısım.
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla, sonra Boşluk'a bas: birkaç saniyede
+   bir sağdan yeşil borular gelip sola kaymalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: sayıları
+   (60, 160, 2, 90) ve `addPipe` içindeki `120`'yi kontrol et.
 
 # --tests--
 

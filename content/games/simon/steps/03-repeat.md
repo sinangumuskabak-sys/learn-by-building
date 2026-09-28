@@ -24,20 +24,64 @@ too: Q W on the top row and A S below mirror the layout, and 1 to 4 also work.
 
 # --explanation-tr--
 
-Şimdi oyuncu diziyi tekrarlar. `inputAt` nereye kadar geldiğini sayar. Her basış **tek** bir adıma karşı kontrol edilir:
+**Bu adımda:** diziyi sen tekrarlayacaksın. Gösteri bitince tuşlara tıklayarak (ya da klavyeyle) diziyi
+tekrarlarsın. Doğru bilirsen dizi bir tuş uzar ve yeni gösteri başlar; yanlış basarsan üstte
+`Wrong! Click to retry` (Yanlış! Yeniden denemek için tıkla) yazar.
 
-```js
-if (pad !== sequence[inputAt]) -> yanlış: oyun bitti
-else inputAt += 1 ve o son adımsa: sonraki tur
+**Adım adım kontrol.** `inputAt`, oyuncunun dizinin kaçıncı adımında olduğunu sayar. Her basış dizinin **tek**
+bir adımıyla karşılaştırılır:
+
+```
+basılan tuş !== sequence[inputAt]  →  yanlış: oyun biter ('over')
+değilse inputAt += 1; son adımsa: yeni tur
 ```
 
-Bütün cevabı beklemek yerine basış basış kontrol etmek, bir hatanın turu oyuncuların beklediği gibi hemen bitirmesi demektir.
+Cevabın tamamını beklemek yerine her basışı hemen kontrol etmek, oyuncunun beklediği gibi, hatanın turu anında
+bitirmesini sağlar.
 
-Basışlar yalnızca oyuncunun sırasında sayılır: bilgisayar diziyi gösterirken tıklamalar yok sayılır. Bu yine iş başındaki durum
-makinesidir: aynı tıklama bir durumda "cevap", başka bir durumda hiçbir şey demektir.
+**Hâl makinesi.** Basışlar sadece oyuncunun sırasında (`'input'`) sayılır; bilgisayar gösteri yaparken tıklamalar
+yok sayılır. Oyun bittiğinde (`'over'`) ise tıklama yeni oyun başlatır. Aynı tıklama, oyunun hâline göre farklı
+anlama gelir. Oyunun hâlini tutan bu düzene **hâl makinesi (state machine)** denir.
 
-Bir tıklama, tahtanın hangi yarısında olduğuna (sol ya da sağ, üst ya da alt) bakılarak bir tuşa çevrilir. Klavye de çalışır:
-üst sırada Q W ve altta A S düzeni yansıtır; 1'den 4'e de çalışır.
+**Olaylar (events).** Tarayıcı, sayfada bir şey olunca (tıklama, tuşa basma) bunu duyurur; sen de "şu olunca şunu
+yap" diye kayıt olursun:
+
+```js
+canvas.addEventListener('pointerdown', (event) => { ... })   // canvas'a basıldı (fare ya da parmak)
+document.addEventListener('keydown', (event) => { ... })     // bir klavye tuşuna basıldı
+```
+
+`event`, olay hakkındaki bilgidir: `event.key` basılan tuşun adı, `event.clientX`/`clientY` tıklamanın sayfadaki
+yeri.
+
+**Tıklamayı canvas piksellerine çevirmek.** Canvas ekranda farklı yerde ve farklı boyda gösterilebilir.
+`canvas.getBoundingClientRect()` canvas'ın ekrandaki yerini (`left`, `top`) ve gösterilen boyunu (`width`,
+`height`) verir. Canvas'ın başladığı yeri çıkarıp oranla çarparak tıklamanın canvas içindeki `x`, `y`'sini
+buluruz.
+
+**Hangi tuş?** `padAt(x, y)` tıklamanın hangi çeyreğe düştüğüne bakar:
+
+```js
+if (y < TOP) return -1
+return (y - TOP < HALF ? 0 : 2) + (x < HALF ? 0 : 1)
+```
+
+- Üstteki yazı şeridindeyse (`y < TOP`, `<` küçüktür) tuş yok: `-1`.
+- Üst yarıdaysa 0, alt yarıdaysa 2; sol yarıdaysa 0, sağ yarıdaysa 1 eklenir. Sağ alt: 2 + 1 = 3.
+
+**Klavye.** Q W üst sırada, A S alt sırada, tuşların dizilişine benzer; 1–4 de çalışır. Tuş adından tuş
+numarasına bir **arama tablosu** (nesne) kullanırız:
+
+```js
+const KEYS = { q: 0, w: 1, a: 2, s: 3, 1: 0, 2: 1, 3: 2, 4: 3 }
+```
+
+- `event.key in KEYS` → "bu tuş adı tabloda var mı?"
+- `KEYS[event.key]` → köşeli parantezle, adı değişkende duran alanı okuruz: `'w'` basıldıysa `1`.
+- `event.repeat` → tuş basılı tutulunca tarayıcı tekrar tekrar `keydown` gönderir; `repeat` bunlarda doğrudur.
+  Onları yok sayarız (`if (event.repeat) return`).
+- `event.preventDefault()` → Boşluk tuşunun sayfayı kaydırma gibi olağan işini engeller.
+- `&&` "ve" demektir: "Boşluk basıldı **ve** oyun bitti".
 
 # --task--
 
@@ -50,13 +94,86 @@ Bir tıklama, tahtanın hangi yarısında olduğuna (sol ya da sağ, üst ya da 
 
 # --task-tr--
 
-1. `KEYS = { q: 0, w: 1, a: 2, s: 3, 1: 0, 2: 1, 3: 2, 4: 3 }` ve `inputAt` (`nextRound()`'da `0`) ekle.
-2. `press(pad)` yaz: yalnızca durum `'input'` iken. Yanlış bir tuş durumu `'over'` yapar; doğru bir tuş `inputAt`'e 1 ekler ve
-   son adımdan sonra `nextRound()` çağırır.
-3. `padAt(x, y)` yaz: `TOP`'un üstünde `-1`, değilse çeyreğe göre 0'dan 3'e. `pointerdown`'da (canvas piksellerinde) o tuşa
-   bas ya da oyun bittiyse `reset()`. `keydown`'da (tekrarları yok sayarak) tuşa karşılık gelen tuşa bas; bittiyse Boşluk
-   sıfırlar.
-4. Mesaj oyuncunun sırasında `Your turn: 2/5`, bitince `Wrong! Click to retry` olur.
+1. `const PADS = [...]` listesinin altına, `const SHOW_FRAMES` satırının **üstüne** klavye tablosunu ekle:
+
+   ```js
+   const KEYS = { q: 0, w: 1, a: 2, s: 3, 1: 0, 2: 1, 3: 2, 4: 3 }
+   ```
+
+2. `let timer` satırının hemen altına oyuncunun sayacını ekle:
+
+   ```js
+   let inputAt // how many pads of the sequence the player has repeated
+   ```
+
+   İstersen `let state` satırının yorumunu da `// 'showing', 'input' or 'over'` yap; artık üç hâl var. Yorum
+   olduğu için kontrolleri etkilemez.
+
+3. `nextRound()` fonksiyonunun son satırı olarak sayacı sıfırla:
+
+   ```js
+     timer = 40 // a short pause before the sequence is shown
+     inputAt = 0 // ← yeni
+   }
+   ```
+
+4. `light` fonksiyonunun altına (`function update()`'ten önce) basışı kontrol eden ve tıklamayı tuşa çeviren
+   fonksiyonları, sonra da iki olay dinleyicisini yaz:
+
+   ```js
+   function press(pad) {
+     if (state !== 'input') return
+     if (pad !== sequence[inputAt]) {
+       state = 'over'
+       return
+     }
+     inputAt += 1
+     if (inputAt === sequence.length) nextRound()
+   }
+
+   function padAt(x, y) {
+     if (y < TOP) return -1
+     return (y - TOP < HALF ? 0 : 2) + (x < HALF ? 0 : 1)
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'over') {
+       reset()
+       return
+     }
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     const pad = padAt(x, y)
+     if (pad >= 0) press(pad)
+   })
+   document.addEventListener('keydown', (event) => {
+     if (event.repeat) return
+     if (event.key in KEYS) press(KEYS[event.key])
+     if (event.key === ' ' && state === 'over') {
+       event.preventDefault()
+       reset()
+     }
+   })
+   ```
+
+   `>=` "büyük ya da eşit" demektir: `pad >= 0` "gerçek bir tuşa basıldıysa".
+
+5. `draw()` fonksiyonunun son satırı olan `ctx.fillText(state === 'showing' ? 'Watch...' : 'Your turn', ...)`
+   satırını sil ve yerine üç satır yaz:
+
+   ```js
+     let message = state === 'showing' ? 'Watch...' : 'Your turn: ' + inputAt + '/' + sequence.length
+     if (state === 'over') message = 'Wrong! Click to retry'
+     ctx.fillText(message, canvas.width - 10, 27)
+   ```
+
+   `'Your turn: ' + inputAt + '/' + sequence.length` → ör. `'Your turn: 2/5'`: beşten ikisini tekrarladın.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Gösteriyi izle, sonra aynı tuşa tıkla (ya da Q, W, A, S):
+   dizi bir uzamalı. Yanlış tuşa basınca `Wrong! Click to retry` yazmalı, tıklayınca yeni oyun başlamalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Tıklamalar hiçbir şey yapmıyorsa `Your turn` yazısını bekledin mi, bak:
+   gösteri sırasında basışlar bilerek yok sayılıyor.
 
 # --tests--
 

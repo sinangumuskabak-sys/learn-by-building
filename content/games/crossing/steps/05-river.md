@@ -25,22 +25,40 @@ may hang over the end of a log.
 
 # --explanation-tr--
 
-Nehir yolun kuralını ters çevirir: yolda bir arabaya dokunmak öldürür; nehirde bir kütüğe **dokunmamak** öldürür. Kütük
-şeritleri tam olarak aynı şerit nesnelerini ve aynı `items()` fonksiyonunu `log: true` ile kullanır; şeritleri sayılarla
-tanımlamanın karşılığı budur.
+**Bu adımda:** nehre kütükler ekleyeceğiz. Beş mavi nehir şeridinde kahverengi kütükler sağa sola akacak. Kurbağa
+bir kütüğe zıplarsa onunla birlikte sürüklenecek; suya düşerse ya da kütük onu ekranın dışına taşırsa bir can
+gidecek.
 
-Bir kütüğün üstünde durmak **onunla birlikte hareket etmek** demektir. Her karede kurbağa şeridin hızıyla taşınır:
+**Nehir kuralı tersine çevirir.** Yolda arabaya **değmek** öldürür; nehirde bir kütüğe **değmemek** öldürür.
+Kütük şeritleri, yol şeritleriyle tamamen aynı nesneleri ve aynı `items()` fonksiyonunu kullanır; tek fark
+`log: true` alanıdır ("bu bir kütük şeridi"). Şeritleri sayılarla tarif etmenin karşılığını şimdi alıyoruz: hiç yeni
+hareket kodu yazmıyoruz. Kütük şeritlerinin `color` alanı yok, çünkü hepsi aynı kahverengiyle çizilecek.
+
+**Kütükte durmak = onunla birlikte gitmek.** Her karede kurbağa, şeridin hızı kadar taşınır:
 
 ```js
 frog.x += lane.speed
 ```
 
-Artık `frog.x` tam sayı değil. Binerken sorun değil ama kurbağa sağlam zemine geri zıpladığında yol yine döşeme döşeme
-hizalansın diye `Math.round` ile ızgaraya yeniden **oturmalı**.
+Artık `frog.x` tam sayı olmayabilir (mesela 5,4). Kütükteyken sorun değil; ama kurbağa sağlam zemine geri zıplayınca
+`Math.round` ile ızgaraya yeniden **oturmalı** ki yolda döşeme döşeme hizalı kalsın. `Math.round(sayı)` en yakın tam
+sayıya yuvarlar: `4.4` → `4`, `4.6` → `5`.
 
-Suya düşmenin iki yolu daha var: kurbağanın ortasının altında kütük yok, ya da kütük kurbağayı ekranın kenarından dışarı
-taşıyor. "Altımda kütük var mı?" için kurbağanın **ortasını** (`x + 0.5`) kullanmak yine affedici bir seçimdir:
-kurbağanın yarısı kütüğün ucundan sarkabilir.
+**Suya düşmenin iki yolu daha.** Kurbağanın ortasının altında kütük yoksa, ya da kütük onu ekranın kenarından
+dışarı taşırsa. "Altımda kütük var mı?" sorusu için kurbağanın **ortasını** (`frog.x + 0.5`) kullanmak yine affedici
+bir seçim: kurbağanın yarısı kütüğün ucundan sarkabilir.
+
+**`!` ile iki soru.** `if (!lane || !lane.log)` → "şerit **yoksa** **veya** şerit kütük şeridi **değilse**". `!`
+"değil", `||` "veya" demektir.
+
+**Kısa "eğer": `? :`.** Çizimde kütükler ve arabalar için farklı değer seçeriz:
+
+```js
+lane.log ? '#92400e' : lane.color   // kütükse kahverengi, değilse şeridin rengi
+```
+
+"Soru `?` evetse şu `:` değilse bu" diye okunur. Kütükler arabalardan biraz daha kalın çizilir: kenardan 6 yerine 4
+piksel içeride başlar (`inset`, iç boşluk).
 
 # --task--
 
@@ -53,12 +71,80 @@ kurbağanın yarısı kütüğün ucundan sarkabilir.
 
 # --task-tr--
 
-1. Çözümdeki beş nehir şeridini (satır 1-5, `log: true` ile) `LANES`'in başına ekle.
-2. `onLog(lane)` yaz: kurbağanın ortası `frog.x + 0.5`, şeridin kütüklerinden birinin kesinlikle içinde mi.
-3. `update()` içinde: araba şeridinde arabalara eskisi gibi bak. Kütük şeridinde kurbağa bir kütükte değilse `die()`;
-   değilse onu `lane.speed` kadar taşı ve bu `frog.x`'i `-0.5`'in altına ya da `COLS - 0.5`'in üstüne çıkarırsa `die()`.
-4. `hop()` içinde, hareketten sonra: yeni satırda şerit yoksa ya da kütük şeridi değilse `frog.x`'i yuvarla.
-5. Kütükleri 6 yerine 4 piksel içeriden `'#92400e'` çiz.
+1. `const LANES = [` satırının hemen altına, yani listenin **başına**, beş nehir şeridini ekle:
+
+   ```js
+   const LANES = [
+     { row: 1, speed: 0.025, len: 3, spacing: 5, log: true },     // ← yeni
+     { row: 2, speed: -0.035, len: 4, spacing: 6, log: true },    // ← yeni
+     { row: 3, speed: 0.02, len: 2, spacing: 4, log: true },      // ← yeni
+     { row: 4, speed: -0.03, len: 3, spacing: 5, log: true },     // ← yeni
+     { row: 5, speed: 0.04, len: 4, spacing: 6, log: true },      // ← yeni
+     { row: 7, speed: -0.05, len: 1, spacing: 4, color: '#ef4444' },
+     ...
+   ```
+
+   Yol şeritleri aynen altında kalır.
+
+2. `hop()` fonksiyonunun sonuna, sağlam zemine inince hizalayan satırları ekle:
+
+   ```js
+   function hop(dx, dy) {
+     if (state !== 'playing') return
+     frog.x = Math.min(COLS - 1, Math.max(0, frog.x + dx))
+     frog.y = Math.min(START_ROW, Math.max(0, frog.y + dy))
+     const lane = laneAt(frog.y)                                   // ← yeni
+     // Back on solid ground: line up with the grid again.
+     if (!lane || !lane.log) frog.x = Math.round(frog.x)           // ← yeni
+   }
+   ```
+
+3. `hitByCar()` fonksiyonunun kapanış `}`'inden sonra bir boş satır bırak ve "kütükte miyim?" fonksiyonunu yaz:
+
+   ```js
+   function onLog(lane) {
+     const middle = frog.x + 0.5
+     return items(lane).some((x) => middle > x && middle < x + lane.len)
+   }
+   ```
+
+   Kurbağanın ortası herhangi bir kütüğün sol ucundan sonra **ve** sağ ucundan önceyse kütüktedir.
+
+4. `update()` fonksiyonunun son satırını (`if (lane && hitByCar(lane)) die()`) sil ve yerine şunu yaz:
+
+   ```js
+     if (!lane) return
+     if (!lane.log) {
+       if (hitByCar(lane)) die()
+       return
+     }
+     if (!onLog(lane)) {
+       die()
+       return
+     }
+     // The log carries the frog; being carried off the screen is a splash too.
+     frog.x += lane.speed
+     if (frog.x < -0.5 || frog.x > COLS - 0.5) die()
+   ```
+
+   Sırayla: şerit yoksa (çimen) hiçbir şey yapma. Yol şeridiyse arabaları kontrol et ve çık. Kütük şeridiyse ve
+   kütükte değilsen suya düştün. Kütükteysen onunla kay; ekrandan taşarsan yine suya düştün.
+
+5. `draw()` fonksiyonunda arabaları çizen döngüyü şöyle değiştir:
+
+   ```js
+     for (const lane of LANES) {
+       ctx.fillStyle = lane.log ? '#92400e' : lane.color     // ← değişti
+       const inset = lane.log ? 4 : 6                        // ← yeni
+       for (const x of items(lane)) {
+         ctx.fillRect(x * TILE + 2, TOP + lane.row * TILE + inset, lane.len * TILE - 4, TILE - inset * 2)   // ← değişti
+       }
+     }
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Nehirde kahverengi kütükler akmalı. Oynamak için önce oyuna tıkla,
+   yolu geçip güvenli şeritten bir kütüğe zıpla: kurbağa kütükle birlikte kaymalı; suya zıplarsan bir can gitmeli.
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `update()`'teki `return`'leri unutmadığından emin ol.
 
 # --tests--
 

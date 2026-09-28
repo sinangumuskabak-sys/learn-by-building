@@ -21,18 +21,43 @@ Finally, the best score is kept in `localStorage`.
 
 # --explanation-tr--
 
-Bir boşluğa ulaşmak için duvardan sekerek yapılan bant atışları oyunun kalbidir ama gözle kestirmesi zordur. Bu yüzden kısa nişan
-çizgisi bir **kılavuz** olur: gerçek bir atışın kurallarını tam olarak izleyen, duvarlardan seken ve balonun ilk bir şeye değeceği
-yerde duran noktalı bir yol.
+**Bu adımda:** kısa nişan çizgisi, **seken bir kılavuza** dönüşecek: atışın gerçekten izleyeceği yolu gösteren, duvarlardan
+seken noktalı bir çizgi. Ayrıca atıcı yalnızca tahtada hâlâ bulunan renkleri verecek ve sağ üstte en iyi puanın
+(`Best 1100` gibi) görünecek.
 
-Bu küçük bir **simülasyondur**: hayali bir balon, gerçeğiyle aynı duvar kuralı ve aynı `touches` testiyle 4 piksellik adımlarla
-hareket eder ve her beşinci adımda bir nokta çizilir. Aynı kuralları kullandığı için kılavuz asla yalan söyleyemez.
+**Neden kılavuz?** Duvardan sektirip bir boşluğa ulaşan atışlar oyunun kalbidir, ama gözle tahmin etmek zordur.
 
-Bir incelik daha: atıcı yalnızca **tahtada hâlâ olan** renkleri sunar. Oyunun sonlarına doğru yalnızca iki ya da üç renk kalır ve
-artık olmayan bir renkte balon almak, hiçbir şey yapamayacağın boşa bir atış olurdu. Izgaradaki renklerden bir `Set` seçenekleri
-verir. Tahta boşken herhangi bir renk olur.
+**Küçük bir benzetim (simulation).** Kılavuz, "sahte" bir balonu atıcıdan başlatıp gerçek atışla **aynı kurallarla**
+yürütür:
 
-Son olarak en iyi puan `localStorage`'da tutulur.
+- her adımda 4 piksel ilerler (`Math.cos(aim) * 4`, `Math.sin(aim) * 4`, 3. adımdaki hız hesabı gibi);
+- yan duvarı geçince yatay yönü ters çevirir (`vx = -vx`);
+- gerçek atışın kullandığı `touches` testi "bir şeye değdi mi?" der; değdiyse `break` ile döngüden **tamamen çıkar**
+  (`continue` yalnızca o turu atlıyordu, `break` bütün döngüyü bitirir);
+- en fazla 200 adım atar ve her 5. adımda (`i % 5 === 0`) 3×3 piksellik küçük bir nokta çizer. `x - 1.5` noktayı tam
+  ortalar.
+
+Aynı kuralları kullandığı için kılavuz, atışın gideceği yeri doğru gösterir. `vx` değiştiği için `let`, `vy` hiç
+değişmediği için `const`'tur. Bu kılavuz eski nişan çizgisinin yerini alır.
+
+**Yalnızca işe yarar renkler.** Oyunun sonlarına doğru tahtada iki üç renk kalır. Tahtada artık olmayan bir renkte balon
+almak, hiçbir şey yapamayacağın boşa bir atış olur. Yeni `pickColor`:
+
+```js
+const present = [...new Set(grid.flat().filter((color) => color >= 0))]
+```
+
+- `grid.flat()` iç içe listeyi tek düz listeye çevirir: `[[1, -1], [3, 1]]` → `[1, -1, 3, 1]`.
+- `filter` boşları (`-1`) atar: `[1, 3, 1]`.
+- `new Set(...)` tekrarları siler (kümede her şey bir kez bulunur): `{1, 3}`. `[...küme]` onu yeniden listeye çevirir.
+
+Tahta boşsa `present.length` 0'dır ve bütün renkler seçenek olur: `COLORS.map((_, i) => i)` → `[0, 1, 2, 3, 4]` (her
+rengin kendisini değil numarasını al; `_` "bu değeri kullanmıyorum" demenin yaygın yoludur). `koşul ? a : b` ile ikisinden
+biri seçilir, sonra rastgele biri döner. `present.length` 0 değilse "doğru" sayılır.
+
+**En iyi puan (`localStorage`).** Tarayıcının küçük bir defteridir; sayfa kapansa da içindekiler kalır.
+`localStorage.getItem('bubbles-best')` okur, `setItem` kaydeder. Defter yazı saklar; `Number(...)` sayıya çevirir,
+`|| 0` "kayıt yoksa 0 kullan" der. Oyun bittiğinde (`state !== 'playing'`) puan rekoru geçmişse kaydederiz.
 
 # --task--
 
@@ -44,11 +69,68 @@ Son olarak en iyi puan `localStorage`'da tutulur.
 
 # --task-tr--
 
-1. `pickColor`'ı ızgarada hâlâ olan renkler arasından (boşken herhangi bir renkten) seçen biriyle değiştir.
-2. `guide()` yaz: atıcıdan bir noktayı nişan boyunca 4 piksel (`vx`'i yan duvarlardan sektirerek) en fazla 200 kez ilerlet, `touches`
-   ona değince dur ve her beşinci adımda `'rgba(255, 255, 255, 0.5)'` 3'e 3 bir nokta çiz. Nişan çizgisinin yerini alır.
-3. `best`'i `localStorage`'da `'bubbles-best'` adıyla tut; bir oyun daha yüksek bir puanla bittiğinde kaydet ve
-   `(canvas.width - 10, 21)`'e sağa hizalı `Best 1100` çiz.
+1. `let state // 'playing', 'won' or 'lost'` satırının altına ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('bubbles-best')) || 0
+   ```
+
+2. `const pickColor = ...` satırını sil ve yerine şunu yaz:
+
+   ```js
+   // The colors still on the board, so the shooter never offers a useless one.
+   function pickColor() {
+     const present = [...new Set(grid.flat().filter((color) => color >= 0))]
+     const choices = present.length ? present : COLORS.map((_, i) => i)
+     return choices[Math.floor(Math.random() * choices.length)]
+   }
+   ```
+
+3. `attach()`'in en sonuna, `} else if (cells.some(...)) state = 'lost'` satırının altına (son `}`'den önce) ekle:
+
+   ```js
+     if (state !== 'playing' && score > best) {
+       best = score
+       localStorage.setItem('bubbles-best', best)
+     }
+   ```
+
+4. `drawBubble` fonksiyonunun kapanış `}`'sinin altına, `function draw()` satırından önce kılavuzu yaz:
+
+   ```js
+   // The path the shot will take, bouncing off the walls, until it would touch a bubble.
+   function guide() {
+     let x = SHOOTER.x
+     let y = SHOOTER.y
+     let vx = Math.cos(aim) * 4
+     const vy = Math.sin(aim) * 4
+     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+     for (let i = 1; i < 200; i++) {
+       x += vx
+       y += vy
+       if (x < R || x > canvas.width - R) vx = -vx
+       if (touches(x, y)) break
+       if (i % 5 === 0) ctx.fillRect(x - 1.5, y - 1.5, 3, 3)
+     }
+   }
+   ```
+
+5. `draw()`'da nişan çizgisini çizen `if (state === 'playing') { ... }` bloğunun tamamını (yorum ve altı çizim satırıyla,
+   kapanış `}`'si dahil) sil ve yerine tek satır yaz:
+
+   ```js
+     if (state === 'playing') guide()
+   ```
+
+6. `draw()`'da `ctx.fillText('Score ' + score, 10, 21)` satırının altına ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Best ' + best, canvas.width - 10, 21)
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Atıcıdan yukarı noktalı bir yol görmelisin; nişanı yana çevirince yol
+   duvardan sekmeli ve ilk değeceği balonda bitmeli. Sağ üstte `Best` yazmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

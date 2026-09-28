@@ -25,20 +25,55 @@ Cooldowns are everywhere in games: weapons, abilities, dashes, even how often a 
 
 # --explanation-tr--
 
-Boşluk dümdüz yukarı bir mermi atar. Mermiler klasik bir **kısa ömürlü nesne listesidir**: ateş edince yenisini ekle,
-her karede hepsini taşı ve ekrandan çıkanları `filter` ile at.
+**Bu adımda:** Boşluk tuşu ile topun namlusundan yukarı beyaz mermiler atacağız. Mermiler yukarı uçacak, ekrandan
+çıkınca silinecek; tuşa ne kadar hızlı basarsan bas, top en fazla 0,35 saniyede bir ateş edecek.
 
-Bir sınır olmazsa Boşluk'u basılı tutmak (saniyede birçok kez `keydown` tekrarlar) ya da art arda basmak ekranı
-mermiyle doldurur ve bütün zorluğu yok eder. Bu yüzden topun bir **bekleme süresi** (cooldown) olmalı: iki atış arasında
-en kısa süre. Son atışın **ne zaman** olduğunu hatırla ve çok erken yeniden ateş etmeyi reddet:
+**Dizi (array): bir liste.** Ekranda aynı anda birkaç mermi olabilir. Her biri bir nesne (`{ x, y, w, h }`) ve hepsini
+bir **diziye** koyarız. Dizi köşeli parantezle yazılır, elemanlar virgülle ayrılır:
+
+```js
+let bullets = []                        // boş liste
+bullets.push({ x: 238, y: 468, w: 4, h: 12 })   // listenin sonuna bir mermi ekle
+```
+
+`push` "sona ekle" demektir. Liste bir alışveriş listesi gibidir: yazarsın, üstünü çizersin, yeniden yazarsın.
+
+**Hepsini tek tek dolaşmak (`for ... of`).** Her karede her mermiyi yukarı taşımalıyız:
+
+```js
+for (const bullet of bullets) bullet.y -= BULLET_SPEED
+```
+
+"`bullets` listesindeki her eleman için, ona sırayla `bullet` de ve `y`'sini 8 azalt." `y` azalınca mermi
+**yukarı** çıkar (1. adımdaki gibi `y` aşağı doğru büyür).
+
+**Eleme (`filter`).** Ekranın üstünden çıkmış mermileri atmak için:
+
+```js
+bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0)
+```
+
+`filter` her eleman için verdiğin küçük fonksiyonu çalıştırır ve sonucu doğru (`true`) olanlarla **yeni bir liste**
+yapar. Burada kural: "merminin alt kenarı (`y + h`) hâlâ 0'dan büyükse, yani ekrandaysa kalsın". `>` "büyüktür",
+`<` "küçüktür" demektir. Yeni listeyi eski adın üstüne yazarız; bu yüzden `bullets` `const` değil `let`.
+
+**Bekleme süresi (cooldown).** Sınır olmazsa Boşluk'u basılı tutmak (tarayıcı `keydown`'ı saniyede birçok kez tekrar
+eder) ekranı mermiyle doldurur, oyunun bütün zorluğu kaybolur. Çözüm: son atışın **ne zaman** olduğunu hatırla,
+çok erken ise ateş etme:
 
 ```js
 if (now - lastShot < COOLDOWN) return   // hâlâ dolduruluyor
 lastShot = now
 ```
 
-`now`, döngünün `requestAnimationFrame`'den aldığı o anki zamandır. `lastShot`'u `-COOLDOWN`'dan başlatmak ilk atışa
-hemen izin verir.
+- `return` fonksiyonu **hemen bitirir**; altındaki satırlar o sefer çalışmaz.
+- `now` o anki zamandır (milisaniye; 1000 milisaniye = 1 saniye). `requestAnimationFrame`, `loop`'u çağırırken ona
+  zamanı da verir. `function loop(time)` yazınca bu zaman `time` adıyla içeri gelir; buna **parametre** denir.
+- `lastShot`'u `-COOLDOWN` (eksi 350) ile başlatırız ki ilk atışa hemen izin verilsin: `0 - (-350) = 350`, bu da
+  350'den küçük değil.
+
+**`===` eşit mi?** `event.key === ' '` "basılan tuş boşluk mu?" diye sorar. Tek `=` bir değer **koyar**, üç `===`
+iki değeri **karşılaştırır**. Boşluk tuşunun adı, tırnak içinde tek bir boşluktur: `' '`.
 
 Bekleme süreleri oyunların her yerindedir: silahlar, yetenekler, atılmalar, hatta bir menü düğmesine ne sıklıkla
 basılabileceği.
@@ -54,12 +89,76 @@ basılabileceği.
 
 # --task-tr--
 
-1. `BULLET_SPEED = 8`, `COOLDOWN = 350`, `let bullets = []`, `let lastShot = -COOLDOWN` ve `let now = 0` ekle;
-   `loop(time)`'ın başında `now = time` yap.
-2. `shoot()` yaz: `lastShot`'tan beri `COOLDOWN` ms'den az geçtiyse hiçbir şey yapma; değilse `lastShot = now` yap ve
-   `x = ship.x + SHIP_W / 2 - 2`, `y = ship.y - 12` noktasına 4×12 bir mermi ekle. Boşluk'a basılınca çağır.
-3. `update()` içinde mermileri `BULLET_SPEED` kadar yukarı taşı ve yalnızca ekranda kalanları (`y + h > 0`) tut. Onları
-   `'#f8fafc'` ile çiz.
+1. `const SHIP_SPEED = 4` satırının altına iki ayar ekle:
+
+   ```js
+   const BULLET_SPEED = 8
+   const COOLDOWN = 350 // milliseconds between shots
+   ```
+
+2. `let ship = ...` satırının altına şu üç satırı ekle:
+
+   ```js
+   let bullets = []
+   let lastShot = -COOLDOWN
+   let now = 0
+   ```
+
+3. `const keys = {}` satırının altına, bir boş satır bırakıp ateş eden fonksiyonu yaz:
+
+   ```js
+   function shoot() {
+     if (now - lastShot < COOLDOWN) return
+     lastShot = now
+     bullets.push({ x: ship.x + SHIP_W / 2 - 2, y: ship.y - 12, w: 4, h: 12 })
+   }
+   ```
+
+   Yeni mermi 4 piksel eninde, 12 piksel boyunda; namlunun ortasından çıkar.
+
+4. `keydown` bloğuna Boşluk'a basınca `shoot()`'u çağıran satırı ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === ' ') shoot() // ← yeni
+   })
+   ```
+
+5. `update()` fonksiyonunun sonuna, `}` kapanışından önce iki satır ekle:
+
+   ```js
+   function update() {
+     if (keys.ArrowLeft) ship.x -= SHIP_SPEED
+     if (keys.ArrowRight) ship.x += SHIP_SPEED
+     ship.x = Math.max(0, Math.min(canvas.width - SHIP_W, ship.x))
+
+     for (const bullet of bullets) bullet.y -= BULLET_SPEED // ← yeni
+     bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0) // ← yeni
+   }
+   ```
+
+6. `draw()` fonksiyonunun sonuna, `}` kapanışından önce mermileri boyayan iki satırı ekle:
+
+   ```js
+     ctx.fillStyle = '#f8fafc'
+     for (const bullet of bullets) ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h)
+   ```
+
+7. `loop` fonksiyonunu zamanı alacak şekilde değiştir:
+
+   ```js
+   function loop(time) { // ← değişti
+     now = time // ← yeni
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra Boşluk'a bas: namludan beyaz bir mermi yukarı uçmalı.
+   Boşluk'a art arda bassan da mermiler aralıklı çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı. Mermi hiç
+   çıkmıyorsa `event.key === ' '` satırındaki tırnakların arasında **bir boşluk** olduğundan emin ol.
 
 # --tests--
 

@@ -22,18 +22,59 @@ right, as players expect: `Math.round(-angle * 180 / Math.PI)`.
 
 # --explanation-tr--
 
-Bir atışa iki sayı karar verir: namlunun **açısı** ve barutun **gücü**. Oyuncular ikisini de ayarlar ve ekran değerleri söyler;
-böylece neredeyse isabet eden bir atış küçük bir değişiklikle tekrarlanabilir.
+**Bu adımda:** tanklara namlu takacağız ve mavi tankın namlusunu sen yönelteceksin. Sol üstte `Angle 45°  Power 8.0`
+gibi açı ve güç yazacak. Ok tuşlarıyla ya da fareyle/parmakla tanktan bir yeri göstererek nişan alacaksın.
 
-Ok tuşları onları dürter: Sol ve Sağ namluyu çevirir, Yukarı ve Aşağı gücü değiştirir. İkisi de sınırlar içinde tutulur.
+**Bir atış iki sayıyla belirlenir:** namlunun **açısı** (angle) ve barutun **gücü** (power). Oyuncu ikisini de ayarlar
+ve ekran değerleri gösterir; böylece az kalsın isabet eden bir atışı küçük bir değişiklikle tekrarlayabilirsin.
 
-İşaretçiyle tanktan gösterirsin: işaretçiye olan **yön** açıdır, **uzaklık** güçtür. Bir tuzak var: `Math.atan2` `-π`'den `π`'ye açılar
-döndürür ve namlunun **altındaki** her şey 0 ile π arasında pozitif çıkar. Bir tank zemine ateş edemez; bu yüzden altta ve solda bir
-nokta "sola düz" (`-π`), altta ve sağda bir nokta "sağa düz" (`0`) anlamına gelir. Bu özen olmasa tam sola göstermek `π` verirdi, bu
-da `0`'a sınırlanır ve namlu **sağa** dönerdi. Testler tam olarak bunu yakalar.
+**Açı radyanla ölçülür.** Bilgisayar açıları derece yerine **radyan** ile tutar: yarım tur 180° değil `Math.PI`
+(yaklaşık 3.14) radyandır. Bizim oyunda açı sağdan başlar ve **yukarı doğru eksi** olur (çünkü canvas'ta `y` aşağı
+büyür):
 
-Namlu, tankın tepesinden açı boyunca kısa, kalın bir çizgidir. Gösterge açıyı, oyuncuların beklediği gibi sağdan yukarı sayılan
-derece olarak gösterir: `Math.round(-angle * 180 / Math.PI)`.
+- `0` → düz sağa, `-Math.PI / 4` → sağa 45° yukarı, `-Math.PI / 2` → dümdüz yukarı, `-Math.PI` → düz sola.
+
+Mavi tank `-Math.PI / 4` ile sağa 45° bakar; kırmızı tank `-3 * Math.PI / 4` ile sola 45° bakar. Açıyı `-Math.PI` ile
+`0` arasında tutarız: namlu yere ateş edemez.
+
+**Bir açı nasıl çizgi olur?** `Math.cos(açı)` o yöndeki yatay payı, `Math.sin(açı)` dikey payı verir (ikisi de -1 ile 1
+arası). 14 ile çarparsan, 14 piksel uzunluğunda o yöne giden bir çizginin ucunu bulursun:
+
+```js
+ctx.lineTo(t.x + Math.cos(t.angle) * 14, t.y - 8 + Math.sin(t.angle) * 14)
+```
+
+Çizgi çizmek için: `beginPath()` yeni bir şekil başlatır, `moveTo` kalemi başlangıca koyar, `lineTo` oraya çizgi
+çeker, `stroke()` çizgiyi `strokeStyle` rengiyle ve `lineWidth` kalınlığıyla boyar.
+
+**Tuşlar: olaylar (events).** Bir tuşa basılınca tarayıcı bir **olay** yayar; ona "bu olunca şunu yap" diye bir
+fonksiyon veririz:
+
+```js
+document.addEventListener('keydown', (event) => { ... })   // event.key: basılan tuşun adı, örn. 'ArrowLeft'
+```
+
+Sol/sağ açıyı 0.03, yukarı/aşağı gücü 0.25 değiştirir. `if ... else if ... else return` zinciri: ilk doğru koşulun işini
+yapar; hiçbiri değilse `return` ile çıkar. En alttaki `event.preventDefault()` sadece ok tuşlarında çalışır ve tarayıcının
+sayfayı kaydırmasını engeller.
+
+**Göstererek nişan almak.** Fareyle (ya da parmakla) basıp sürüklersin: tanktan göstericiye doğru olan **yön** açı,
+**uzaklık** güç olur. `Math.atan2(dy, dx)` bir farkın (sağa `dx`, aşağı `dy`) yönünü radyan olarak verir;
+`Math.hypot(dx, dy)` uzaklığını. Uzaklığı 12'ye bölüp gücü buluruz.
+
+**Bir tuzak:** `atan2`, namlunun **altındaki** her nokta için 0 ile π arasında **artı** bir açı verir. Tank yere ateş
+edemez; bu yüzden altta ve solda bir nokta "düz sola" (`-Math.PI`), altta ve sağda bir nokta "düz sağa" (`0`) demektir.
+Bu özen olmasa, tam sola göstermek `π` verir, o da sınırlanınca `0` olur ve namlu **sağa** dönerdi. Kontroller tam
+bunu yakalar. Kodu: `angle > 0 ? (angle > Math.PI / 2 ? -Math.PI : 0) : angle` → "artıysa: π/2'den büyükse (soldaysa)
+`-Math.PI`, değilse `0`; artı değilse olduğu gibi".
+
+**Sürükleme.** `pointerdown` (basıldı) sürüklemeyi başlatır, `pointermove` (hareket) sürüklerken nişanı günceller,
+`pointerup` (bırakıldı) bitirir. Basılı olup olmadığını `dragging` (`true`/`false`) değişkeninde tutarız. `!dragging`
+"sürüklemiyorsa" demektir. Dokunulan noktayı canvas piksellerine çevirmek için `getBoundingClientRect()` ile canvas'ın
+sayfadaki yerini ve boyunu alırız (canvas ekranda büyütülmüş olabilir).
+
+**Ekran yazısı:** açıyı dereceye çevirip gösteririz: `Math.round(-angle * 180 / Math.PI)`. `power.toFixed(1)` gücü
+virgülden sonra tek basamakla yazar. `ctx.font` yazı tipini, `ctx.fillText(yazı, x, y)` yazıyı boyar.
 
 # --task--
 
@@ -49,15 +90,109 @@ derece olarak gösterir: `Math.round(-angle * 180 / Math.PI)`.
 
 # --task-tr--
 
-1. `MAX_POWER = 12`, `dragging` (`reset()`'te `false`) ve her tank için `angle` ve `power` ekle: mavi için `-Math.PI / 4` ve `8`,
-   kırmızı için `-3 * Math.PI / 4` ve `8`.
-2. Mavi tank için `aimBy(dAngle, dPower)` yaz: açı `-Math.PI` ile `0`, güç 2 ile `MAX_POWER` arasında tutulur. Sol ve Sağ açıyı `0.03`,
-   Yukarı ve Aşağı gücü `0.25` değiştirir (`preventDefault()`).
-3. `pointAt(event)` yaz: `(t.x, t.y - 8)`'den işaretçiye, açı `atan2`'den (pozitifken yukarıdaki gibi düzeltilmiş) ve güç
-   `uzaklık / 12` (yukarıdaki gibi sınırlı). `pointerdown` sürüklemeyi başlatır ve gösterir; `pointermove` sürüklerken gösterir;
-   document'ın `pointerup`'ı durdurur.
-4. Her namluyu (kalınlık 3, tankın renginde) `(t.x, t.y - 8)`'den açısı boyunca 14 piksel ve `(10, 20)`'ye `Angle 45°  Power 8.0`
-   çiz (`'#0f172a'`, `'bold 14px sans-serif'`).
+1. `const H = canvas.height` satırının altına en yüksek gücü ekle:
+
+   ```js
+   const MAX_POWER = 12
+   ```
+
+2. `let tanks ...` satırının yorumunu güncelle ve altına `dragging`'i ekle:
+
+   ```js
+   let tanks // [blue, red]: { x, y, angle, power, color }
+   let dragging
+   ```
+
+3. `reset()` içinde tank satırlarına açı ve güç ekle, en sona `dragging = false` yaz:
+
+   ```js
+   function reset() {
+     makeGround()
+     tanks = [
+       { x: 70, y: 0, angle: -Math.PI / 4, power: 8, color: '#2563eb' }, // ← değişti
+       { x: W - 70, y: 0, angle: (-3 * Math.PI) / 4, power: 8, color: '#dc2626' }, // ← değişti
+     ]
+     for (const t of tanks) t.y = groundAt(t.x)
+     dragging = false // ← yeni
+   }
+   ```
+
+4. `reset()`'in kapanış `}`'sinden sonra, `function draw()`'un **üstüne** nişan kodunun hepsini yaz:
+
+   ```js
+   function aimBy(dAngle, dPower) {
+     const t = tanks[0]
+     t.angle = Math.max(-Math.PI, Math.min(0, t.angle + dAngle))
+     t.power = Math.max(2, Math.min(MAX_POWER, t.power + dPower))
+   }
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') aimBy(-0.03, 0)
+     else if (event.key === 'ArrowRight') aimBy(0.03, 0)
+     else if (event.key === 'ArrowUp') aimBy(0, 0.25)
+     else if (event.key === 'ArrowDown') aimBy(0, -0.25)
+     else return
+     event.preventDefault()
+   })
+
+   // Point from the tank: the direction is the aim, the distance is the power.
+   function pointAt(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * W) / rect.width
+     const y = ((event.clientY - rect.top) * H) / rect.height
+     const t = tanks[0]
+     // Below the barrel, atan2 gives an angle between 0 and π: aim flat to that side instead.
+     const angle = Math.atan2(y - (t.y - 8), x - t.x)
+     t.angle = angle > 0 ? (angle > Math.PI / 2 ? -Math.PI : 0) : angle
+     t.power = Math.max(2, Math.min(MAX_POWER, Math.hypot(x - t.x, y - (t.y - 8)) / 12))
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     dragging = true
+     pointAt(event)
+   })
+
+   canvas.addEventListener('pointermove', (event) => {
+     if (dragging) pointAt(event)
+   })
+
+   document.addEventListener('pointerup', () => {
+     if (!dragging) return
+     dragging = false
+   })
+   ```
+
+   `aimBy` mavi tankın (`tanks[0]`) açısını ve gücünü verilen miktarlar kadar değiştirir ve sınırlar içinde tutar.
+   `(t.x, t.y - 8)` namlunun dibi, yani tankın üst ortası.
+
+5. `draw()` içinde, tankları çizen döngüye namluyu ekle; döngüden sonra da ekran yazısını ekle:
+
+   ```js
+     for (const t of tanks) {
+       ctx.fillStyle = t.color
+       ctx.fillRect(t.x - 10, t.y - 8, 20, 8)
+       ctx.strokeStyle = t.color // ← yeni (buradan)
+       ctx.lineWidth = 3
+       ctx.beginPath()
+       ctx.moveTo(t.x, t.y - 8)
+       ctx.lineTo(t.x + Math.cos(t.angle) * 14, t.y - 8 + Math.sin(t.angle) * 14)
+       ctx.stroke() // ← (buraya kadar)
+     }
+
+     const now = tanks[0] // ← yeni (buradan)
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 14px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Angle ' + Math.round((-now.angle * 180) / Math.PI) + '°  Power ' + now.power.toFixed(1), 10, 20) // ← (buraya kadar)
+   }
+   ```
+
+   `'°  Power '` içinde derece işaretinden sonra **iki** boşluk var; kontroller yazıyı harfi harfine arar. `°` işaretini
+   klavyede bulamazsan bu satırdan kopyala.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sol/sağ oklar mavi namluyu çevirmeli, yukarı/aşağı güç değerini
+   değiştirmeli; fareyle basıp sürükleyince namlu gösterdiğin yöne dönmeli. Alttaki kontrollerin hepsi yeşil olmalı.
+   "Sola düz" kontrolü kırmızıysa `t.angle = angle > 0 ? ...` satırını harf harf karşılaştır.
 
 # --tests--
 

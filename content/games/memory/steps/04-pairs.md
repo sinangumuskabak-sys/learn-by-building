@@ -31,27 +31,42 @@ answers questions without adding a new variable.
 
 # --explanation-tr--
 
-Şimdi asıl oyun. Oyuncunun bu turda çevirdiği kartları küçük bir dizide tut: `opened`.
+**Bu adımda:** asıl oyunu yapacağız. İki kart açarsın; aynı meyveyse yeşile döner ve açık kalır, farklıysa bir an
+sonra ikisi de kapanır. Üstte `Moves: 1` gibi bir hamle sayacı göreceksin.
 
-- İlk kart: çevir, hatırla.
-- İkinci kart: çevir ve bir **hamle** say. İkisinde de aynı sembol varsa eştirler: `matched` olarak işaretle, açık
-  kalsınlar. Değilse geri kapanmalılar, ama **hemen değil**; yoksa oyuncu ikinci kartı hiç göremez.
+**Kural:** Bu turda açılan kartları küçük bir dizide tutarız: `opened`.
 
-Beklemek bir **zamanlayıcının** işi. `setTimeout(fn, 800)` `fn`'yi şu andan 800 milisaniye sonra bir kez çalıştırır ve
-hemen döner. Sayfanın geri kalanı bu arada çalışmaya devam eder; hiçbir şey "durmaz".
+- Birinci kart: aç, `opened`'a ekle.
+- İkinci kart: aç ve bir **hamle** say. İki meyve aynıysa eştir: ikisini `matched` (eşleşti) yap, açık kalsınlar.
+  Değilse kapanmalılar, ama **hemen değil**; yoksa oyuncu ikinci kartı göremez bile.
+
+**Yeni yapı taşları:**
+
+- `opened.push(card)` → diziye sona bir eleman ekler. `opened.length === 2` → "dizide 2 eleman var mı?".
+- `===` "**eşit mi?**" sorusudur. Tek `=` ise "değer ver" demektir; ikisini karıştırma.
+- `!` "**değil**" demektir: `!card` → "kart yoksa". `||` "**veya**" demektir: biri doğruysa yeter.
+- `if (...) return` → koşul doğruysa fonksiyondan hemen çık, aşağısını çalıştırma. Kuralları en başta elemek için
+  kullanışlıdır: kart yoksa, zaten açıksa ya da iki kart açık duruyorsa hiçbir şey yapma.
+- `moves += 1` → `moves = moves + 1`'in kısası: 1 artır.
+- `const [a, b] = opened` → dizinin ilk iki elemanına `a` ve `b` adını verir.
+- `'Moves: ' + moves` → yazı ile sayıyı `+` ile birleştirir: `'Moves: 3'`.
+- `card.matched ? '#bbf7d0' : '#f8fafc'` → kısa `if`: "eşleştiyse yeşil, değilse beyaz". `?` soru, `:` "yoksa".
+
+**Beklemek: zamanlayıcı.** `setTimeout(fonksiyon, 800)` verdiğin fonksiyonu **800 milisaniye** (0,8 saniye) sonra bir
+kez çalıştırır. Bu arada sayfa donmaz, her şey çalışmaya devam eder:
 
 ```js
 setTimeout(() => {
   a.faceUp = false
   b.faceUp = false
   opened = []
-  draw()   // tahtayı bizim için yeniden çizecek başka bir şey yok
+  draw()   // tahtayı bizim yerimize kimse yeniden çizmez
 }, 800)
 ```
 
-O 800 ms boyunca `opened` hâlâ iki kart tutar. "İki kart açıkken tıklamaları yok say" kuralı için tam olarak bunu
-kullan; yoksa hızlı bir oyuncu üçüncü bir kartı çevirip oyunu karıştırabilir. Zaten var olan durum, çoğu zaman yeni bir
-değişken eklemeden soruları cevaplar.
+Bu 800 ms boyunca `opened` hâlâ iki kart tutar. Tam da bunu "iki kart açıkken tıklamaları yok say" kuralı olarak
+kullanırız; yoksa hızlı bir oyuncu üçüncü kartı açıp oyunu karıştırabilir. Zaten var olan bilgi, çoğu zaman yeni bir
+değişken eklemeden soruyu cevaplar.
 
 # --task--
 
@@ -66,13 +81,100 @@ değişken eklemeden soruları cevaplar.
 
 # --task-tr--
 
-1. `let opened` ve `let moves` ekle; `newGame()` içinde `[]` ve `0` yap.
-2. `function flip(card)` yaz: kart yoksa, zaten açıksa ya da hâlihazırda iki kart `opened` ise hiçbir şey yapma. Değilse
-   kartı aç ve `opened`'a ekle. Bu ikinciyse: bir hamle ekle; sembolleri aynıysa ikisini de `matched` yap ve `opened`'ı
-   boşalt; değilse `800` ms sonra ikisini de kapat, `opened`'ı boşalt ve `draw()` çağır.
-3. Tıklama işleyicisinde `flip(cardAt(x, y))` kullan.
-4. `draw()` içinde: `matched` olan açık kartların arka planı `'#f8fafc'` yerine `'#bbf7d0'` olsun. Üst şeride beyaz
-   `'18px sans-serif'` ile, `(GAP, 22)` noktasına sola hizalı `Moves: 3` (gerçek sayı) yaz.
+1. `let cards` satırının hemen altına iki değişken ekle:
+
+   ```js
+   let opened // the cards turned over this turn (0, 1 or 2)
+   let moves
+   ```
+
+2. `newGame()` fonksiyonunda, `}))` satırından sonra, fonksiyonun kapanış `}`'sinden önce iki satır ekle:
+
+   ```js
+   function newGame() {
+     const deck = shuffle([...SYMBOLS, ...SYMBOLS])
+     cards = deck.map((symbol, index) => ({
+       symbol,
+       col: index % SIZE,
+       row: Math.floor(index / SIZE),
+       faceUp: false,
+       matched: false,
+     }))
+     opened = []   // ← yeni
+     moves = 0     // ← yeni
+   }
+   ```
+
+3. `cardAt` fonksiyonunun kapanış `}`'sinden sonra, tıklama dinleyicisinden önce `flip` fonksiyonunu ekle:
+
+   ```js
+   function flip(card) {
+     if (!card || card.faceUp || opened.length === 2) return
+     card.faceUp = true
+     opened.push(card)
+     if (opened.length < 2) return
+
+     moves += 1
+     const [a, b] = opened
+     if (a.symbol === b.symbol) {
+       a.matched = true
+       b.matched = true
+       opened = []
+     } else {
+       // Give the player time to see the second card before hiding both again.
+       setTimeout(() => {
+         a.faceUp = false
+         b.faceUp = false
+         opened = []
+         draw()
+       }, 800)
+     }
+   }
+   ```
+
+4. Tıklama dinleyicisinde şu iki satırı sil:
+
+   ```js
+   const card = cardAt(x, y)
+   if (card) card.faceUp = true
+   ```
+
+   ve yerine tek satır yaz:
+
+   ```js
+   flip(cardAt(x, y))
+   ```
+
+5. `draw()` fonksiyonunun başını şöyle değiştir: arka planı boyayan satırlardan sonra hamle sayacını çiz,
+   `ctx.textBaseline = 'middle'` satırını sayacın içine taşı ve kartın rengini `matched`'a göre seç:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e1b4b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'white'                  // ← yeni
+     ctx.font = '18px sans-serif'             // ← yeni
+     ctx.textAlign = 'left'                   // ← yeni
+     ctx.textBaseline = 'middle'              // ← yeni (aşağıdan buraya taşındı)
+     ctx.fillText('Moves: ' + moves, GAP, 22) // ← yeni
+
+     ctx.font = '44px sans-serif'
+     ctx.textAlign = 'center'
+     for (const card of cards) {
+       const x = cardX(card)
+       const y = cardY(card)
+       if (card.faceUp) {
+         ctx.fillStyle = card.matched ? '#bbf7d0' : '#f8fafc' // ← değişti
+         ctx.fillRect(x, y, CARD, CARD)
+         ctx.fillText(card.symbol, x + CARD / 2, y + CARD / 2)
+       } else {
+   ```
+
+   Geri kalanı (`else` bloğu ve kapanışlar) aynı kalıyor.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: iki kart aç. Aynıysa yeşile döner, farklıysa bir an sonra
+   kapanırlar; üstteki `Moves:` her iki kartta bir artar. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

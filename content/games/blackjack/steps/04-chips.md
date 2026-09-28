@@ -27,24 +27,44 @@ JavaScript lets `finish` set two things at once with **destructuring**: `[messag
 
 # --explanation-tr--
 
-Artık ortada bir şey var. 100 fişle başlarsın ve her el, **kartlar dağıtılırken** alınan 10'luk bir bahse mal olur. Sonunda
-ödeme geri gelir:
+**Bu adımda:** oyuna fiş (chip) ve bahis gelecek. Sol üstte `Chips 100  Bet 10` yazacak; her el 10 fişe mal olacak,
+kazanınca fişlerin artacak. İlk iki kartla 21 yaparsan (**blackjack**) el hemen biter ve daha fazla kazanırsın.
+
+**Ödeme tablosu.** 100 fişle başlarsın. Her el **kartlar dağıtılırken** 10 fişlik bahis alınır. El bitince geri
+ödeme gelir:
 
 | sonuç | geri ödenen | kâr |
 |---|---|---|
 | kazanç | bahis × 2 | +10 |
 | berabere | bahis | 0 |
 | **blackjack** | bahis × 2,5 | +15 |
-| kayıp | hiçbir şey | −10 |
+| kayıp | hiç | −10 |
 
-**Blackjack**, **ilk iki kartınla** 21'dir: bir as ve on değerinde bir kart. En iyi eldir ve 3'e 2 öder. Taraflardan birinde
-varsa el hemen biter. Karar verilecek bir şey kalmamıştır ve krupiye gizli kartı gösterir. `isBlackjack` iki koşula da
-ihtiyaç duyar: bir as, bir 5 ve bir 5, 21'dir ama blackjack değildir.
+Bahsi baştan alıp sonunda toplam ödemek hesabı basitleştirir: berabere sadece "bahsi geri ver" demektir. Fişin
+bitince sonraki dağıtım yine 100'le başlar. Kodda ondalık için virgül değil **nokta** kullanılır: `2.5`.
 
-Bahsi dağıtırken alıp toplamı geri ödemek hesabı basitleştirir: berabere yalnızca "bahsi geri ver"dir. Fişlerin bittiğinde bir
-sonraki dağıtım yeniden 100 ile başlar.
+**Blackjack nedir?** **İlk iki kartla** 21: bir as ve 10 değerinde bir kart. En iyi eldir. İki koşul birlikte
+gerekir; as + 5 + 5 de 21'dir ama blackjack değildir:
 
-JavaScript, **yapı çözme** ile `finish`'in iki şeyi birden ayarlamasına izin verir: `[message, paid] = ['You win', bet * 2]`.
+```js
+const isBlackjack = (hand) => hand.length === 2 && handValue(hand) === 21
+```
+
+"Elde tam 2 kart var **ve** değeri 21." Taraflardan birinde blackjack varsa el hemen biter; karar verilecek bir şey
+kalmaz ve krupiye kapalı kartını açar (`finish()` evreyi `'done'` yaptığı için kart kendiliğinden açık çizilir).
+
+**İki değişkene birden değer vermek.** `finish()` hem mesajı hem ödemeyi (`paid`) seçer. JavaScript bunu tek satırda
+yapabilir:
+
+```js
+;[message, paid] = ['You win', bet * 2]
+```
+
+Soldaki listenin ilk kutusuna sağdakinin ilk değeri, ikincisine ikincisi girer. Buna **parçalama**
+(destructuring) denir. Kaybedilen ellerde `paid` baştaki `0` değerinde kalır; sadece `message` yazılır.
+
+**Yazıya eklemek.** `message += ' - out of chips!'` mesajın sonuna yazı ekler (`+=` yazılarda "sonuna ekle"
+demektir).
 
 # --task--
 
@@ -59,14 +79,91 @@ JavaScript, **yapı çözme** ile `finish`'in iki şeyi birden ayarlamasına izi
 
 # --task-tr--
 
-1. `START = 100`, `BET = 10`, `bank` (`reset()`'te `START`) ve `bet` ekle.
-2. `deal()`'da: `bank < BET` ise `bank = START` yap; sonra `bet = BET` ve onu `bank`'tan al. Ellerden biri blackjack'se hemen
-   `finish()` et.
-3. `isBlackjack(hand)` yaz: 21 değerinde iki kart.
-4. `finish()`'te önce blackjack'lere bak (`'Both blackjack: push'`, `bet * 2.5` ödeyen `'Blackjack!'`, `'Dealer blackjack'`),
-   sonra önceki kurallar; kazanç `bet * 2`, berabere `bet` öder. Ödemeyi `bank`'a ekle ve `bank < BET` ise mesaja
-   `' - out of chips!'` ekle.
-5. `(20, 28)`'e `Chips 100  Bet 10` çiz.
+1. `const PLAYER_Y = 250` satırının hemen **altına** iki sabit ekle:
+
+   ```js
+   const START = 100 // chips at the start
+   const BET = 10
+   ```
+
+2. `let message` satırının hemen **altına** iki değişken ekle:
+
+   ```js
+   let bank
+   let bet
+   ```
+
+   `bank` elindeki fişler, `bet` masadaki bahis.
+
+3. `handValue` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp blackjack kontrolünü yaz:
+
+   ```js
+   const isBlackjack = (hand) => hand.length === 2 && handValue(hand) === 21
+   ```
+
+4. `deal()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function deal() {
+     if (bank < BET) bank = START // out of chips: start over   ← yeni
+     if (deck.length < 15) newDeck()
+     bet = BET                                                    // ← yeni
+     bank -= bet                                                  // ← yeni
+     player = [nextCard(), nextCard()]
+     dealer = [nextCard(), nextCard()]
+     message = ''
+     phase = 'player'
+     if (isBlackjack(player) || isBlackjack(dealer)) finish()     // ← yeni
+   }
+   ```
+
+   İlk satırdaki `← yeni` notu yorumun içinde; yazmana gerek yok.
+
+5. `finish()` fonksiyonunu tamamen şununla değiştir:
+
+   ```js
+   // Compare the hands and pay: a win returns the bet twice, blackjack two and a half times, a push gives it back.
+   function finish() {
+     phase = 'done'
+     const p = handValue(player)
+     const d = handValue(dealer)
+     let paid = 0
+     if (isBlackjack(player) && isBlackjack(dealer)) [message, paid] = ['Both blackjack: push', bet]
+     else if (isBlackjack(player)) [message, paid] = ['Blackjack!', bet * 2.5]
+     else if (isBlackjack(dealer)) message = 'Dealer blackjack'
+     else if (p > 21) message = 'Bust!'
+     else if (d > 21) [message, paid] = ['Dealer busts, you win', bet * 2]
+     else if (p > d) [message, paid] = ['You win', bet * 2]
+     else if (p < d) message = 'Dealer wins'
+     else [message, paid] = ['Push', bet]
+     bank += paid
+     if (bank < BET) message += ' - out of chips!'
+   }
+   ```
+
+   Blackjack kontrolleri en önce gelir. Sonunda ödeme fişlere eklenir; fiş bir bahse yetmiyorsa mesaja not düşülür.
+
+6. `reset()` fonksiyonunun ilk satırı olarak başlangıç fişlerini ver:
+
+   ```js
+   function reset() {
+     bank = START // ← yeni
+     newDeck()
+     deal()
+   }
+   ```
+
+7. `draw()` fonksiyonunda `ctx.fillText('You ' + ...)` satırının hemen **altına** fiş yazısını ekle:
+
+   ```js
+     ctx.fillText('Chips ' + bank + '  Bet ' + bet, 20, 28)
+   ```
+
+   `'  Bet '`'in başında **iki** boşluk var.
+
+8. **Çalıştır**'a bas. Sol üstte `Chips 90  Bet 10` görmelisin (ilk bahis masada). Oynamak için önce oyuna tıkla;
+   H, S ve N ile birkaç el oyna, fişlerin değişmesini izle. Alttaki kontrollerin hepsi yeşil olmalı. Blackjack
+   testi kırmızıysa `bet * 2.5`'teki noktayı ve `isBlackjack`'teki `hand.length === 2`'yi kontrol et.
 
 # --tests--
 

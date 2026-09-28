@@ -18,15 +18,32 @@ it is never the same layout twice.
 
 # --explanation-tr--
 
-Her kart eşleştiğinde oyun kazanılır: `cards.every((card) => card.matched)`. Senkronu bozulabilecek ayrı bir `won`
-değişkenine gerek yok. Cevap, ne zaman gerekirse kartlardan **türetilebilir**.
+**Bu adımda:** oyunun bir sonu olacak. Son çifti bulunca tahta kararır ve ortada `You found them all!`, kaç hamlede
+bitirdiğin ve `Click to play again` yazar. Tıklayınca kartlar yeniden karışır ve yeni oyun başlar.
 
-Bu akılda tutmaya değer bir kural: **olabildiğince az durum sakla, gerisini türet**. Her fazladan değişken, her doğru
-yerde güncellenmesi gereken bir şey daha ve iki değişkenin birbiriyle çeliştiği bir hata yaratmanın bir yolu daha
-demektir. `won()` gibi küçük bir fonksiyon cevabı her seferinde yeniden hesaplar; böylece asla bayat kalamaz.
+**Kazandık mı?** Bütün kartlar eşleştiyse kazanmışızdır. Dizilerin bunun için hazır bir komutu var:
 
-Oyun kazanılınca sonucu tahtanın üstünde göster ve bir tıklamanın yeni bir oyun başlatmasına izin ver; kartlar yeniden
-karışır, böylece aynı dizilim hiç iki kez gelmez.
+```js
+cards.every((card) => card.matched)
+```
+
+`every` ("her biri") her kart için ok fonksiyonunu çalıştırır; **hepsi** `true` derse sonuç `true`, bir tanesi bile
+`false` derse sonuç `false` olur.
+
+**Saklama, hesapla.** Ayrı bir `won = true` değişkeni tutmak yerine cevabı kartlardan her seferinde yeniden
+hesaplayan küçük bir `won()` fonksiyonu yazarız. Neden? Her fazladan değişken, doğru her yerde güncellenmesi gereken
+bir şey daha demektir; biri unutulursa iki bilgi birbirini tutmaz ve hata çıkar. Hesaplanan cevap ise hiç eskimez.
+İyi bir kural: **olabildiğince az şey sakla, gerisini hesapla**.
+
+**Yarı saydam renk.** `'rgba(0, 0, 0, 0.6)'` rengi kırmızı, yeşil, mavi değerleriyle (0–255) verir; dördüncü sayı
+saydamlıktır (0 görünmez, 1 tam dolu). `0.6` ile siyah bir perde çekeriz, kartlar arkadan hafifçe görünür.
+
+**`if` ve `else` ile iki yol.** Tıklamada artık iki durum var: oyun bittiyse yeni oyun başlat, bitmediyse eskisi gibi
+kart çevir. `if (won()) { ... } else { ... }` tam bunu söyler. `newGame()` kartları yeniden karıştırdığı için her
+oyunun dizilişi farklı olur.
+
+Yazıları ortalamak için `canvas.width / 2` (200) kullanırız; `ctx.textAlign` zaten `'center'` olduğu için yazının
+ortası o noktaya gelir. `'bold 30px sans-serif'` kalın ve 30 piksel yazı demektir.
 
 # --task--
 
@@ -37,10 +54,54 @@ karışır, böylece aynı dizilim hiç iki kez gelmez.
 
 # --task-tr--
 
-1. Her kart eşleşmiş mi, onu döndüren `function won()` yaz.
-2. Tıklama işleyicisinde oyun kazanıldıysa kart çevirmek yerine `newGame()` başlat.
-3. Kazanılınca tahtanın üstüne çiz: canvas'ı kaplayan `'rgba(0, 0, 0, 0.6)'` bir dikdörtgen, sonra beyaz ve ortalı:
-   `You found them all!`, `in 12 moves` (gerçek sayı) ve `Click to play again`.
+1. `cardAt` fonksiyonunun kapanış `}`'sinden sonra, `function flip(card)`'dan önce şunu ekle:
+
+   ```js
+   function won() {
+     return cards.every((card) => card.matched)
+   }
+   ```
+
+2. Tıklama dinleyicisini şöyle değiştir: eski dört satırı `else { }` içine al, üstüne `if (won())` ekle:
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     if (won()) {                // ← yeni
+       newGame()                 // ← yeni
+     } else {                    // ← yeni
+       // The canvas may be displayed at a different size than its own pixels, so scale the click.
+       const rect = canvas.getBoundingClientRect()
+       const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+       const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+       flip(cardAt(x, y))
+     }                           // ← yeni
+     draw()
+   })
+   ```
+
+3. `draw()` fonksiyonunun en sonunda, `for` döngüsünü kapatan `}`'den sonra ve fonksiyonun kapanış `}`'sinden önce
+   bir satır boşluk bırakıp şunu ekle:
+
+   ```js
+     if (won()) {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 30px sans-serif'
+       ctx.fillText('You found them all!', canvas.width / 2, 190)
+       ctx.font = '20px sans-serif'
+       ctx.fillText('in ' + moves + ' moves', canvas.width / 2, 230)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Click to play again', canvas.width / 2, 270)
+     }
+   ```
+
+   Yani `draw()`'un sonu şöyle görünmeli: kartları çizen döngünün `}`'si, sonra bu `if` bloğu, en sonda da
+   fonksiyonu kapatan `}`.
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bütün çiftleri bul. Son çiftte tahta kararmalı ve üç satır
+   yazı çıkmalı; tıklayınca yeni oyun başlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Yazı kontrolü kırmızıysa
+   `'in '` ve `' moves'` içindeki boşlukları kontrol et.
 
 # --tests--
 

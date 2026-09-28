@@ -24,21 +24,43 @@ the gas. That single rule is what makes a racing line worth learning.
 
 # --explanation-tr--
 
-Eski yarış oyunlarının en zekice hilesi şudur: yol aslında kıvrılmıyor. Her parçanın yalnızca bir `curve` sayısı vardır ve çizerken
-her parça bir öncekinden biraz daha fazla yana kaydırılır:
+**Bu adımda:** yol virajlı olacak. İleride yolun sağa ya da sola kıvrıldığını göreceksin ve virajlar arabanı dışarı
+doğru itecek; hızlı giderken direksiyonla karşı koyman gerekecek.
+
+**Yol aslında hiç kıvrılmıyor.** Eski yarış oyunlarının en akıllıca hilesi bu. Her parçanın sadece bir `curve`
+(kıvrım) sayısı var. Çizerken her parçayı bir öncekinden **biraz daha fazla** yana kaydırırız:
 
 ```js
-x += dx          // bu parçanın kayması
-dx += curve      // ve sonraki biraz daha kayar
+x += dx        // bu parçanın kayması
+dx += curve    // bir sonraki biraz daha fazla kaysın
 ```
 
-Büyüyen bir miktarı tekrar tekrar eklemek düzgün bir **parabol** yapar; bu da göze uzaklaşarak kıvrılan bir yol gibi görünür. Düz
-kısımların `curve`'ü 0'dır; yani hiçbir şey değişmez; pozitif sağa, negatif sola kıvrılır. `dx`'i şu anki parçanın viraj değerinin
-bir kesriyle (kameranın içinde ne kadar ilerlediği) başlatmak, kıvrımın bir parçadan diğerine zıplamasını önler.
+Bir örnekle: `curve` 2 ise kaymalar 0, 2, 6, 12, 20... diye gider. Her seferinde artan bir miktarı eklemek düzgün bir
+eğri (parabol) çizer; göze bu, uzaklaşırken kıvrılan bir yol gibi gelir. Düz kısımlarda `curve` 0'dır, hiçbir şey
+değişmez. Artı değer sağa, eksi değer sola kıvırır.
 
-Bir viraj arabayı ayrıca dışarı doğru **çeker**; ne kadar hızlı gidersen o kadar sert (gerçek bir araba gibi hızın karesiyle). Hafif bir
-virajda direksiyon kolayca kazanır; en keskinlerinde en yüksek hızda çekiş direksiyondan güçlüdür ve gazı bırakmak zorunda kalırsın.
-Bu tek kural, bir yarış çizgisini öğrenmeye değer yapan şeydir.
+Kamera bir parçanın içinde ilerlerken kıvrım birden sıçramasın diye `dx`'i sıfırdan değil, o parçanın ne kadarını
+geçtiğimize göre küçük bir değerden başlatırız: `position % SEG` parçanın içinde kaç birim ilerlediğimizdir
+(hatırla, `%` bölümden kalandı), `/ SEG` onu 0 ile 1 arasına getirir.
+
+**Pist kısımlardan kurulur.** `add(60, 2)` "60 parça boyunca sağa 2 kıvrıl" demektir. `buildTrack` içinde
+`add`'i peş peşe çağırarak düzlükleri ve virajları sıralarız. Toplam yine 800 parça.
+
+**Hangi parçanın üstündeyim?** `segmentAt(z)`, pist boyunca `z` uzaklıktaki parçayı verir:
+
+```js
+const segmentAt = (z) => segments[Math.floor(z / SEG) % segments.length]
+```
+
+- `z / SEG` kaçıncı parçada olduğunu, `Math.floor` onu tam sayıya çevirir.
+- `% segments.length` pist bittiyse başa sarar.
+- `segments[5]` listenin 5 numaralı elemanıdır. Dikkat: numaralar (**index**) **0'dan** başlar; ilk eleman `segments[0]`.
+
+Araba kameranın `PLAYER_Z` kadar önünde durduğu için arabanın altındaki parça `segmentAt(position + PLAYER_Z)`'dir.
+
+**Viraj dışarı çeker.** Gerçek bir araba gibi, viraj arabayı dışa doğru iter ve bu itme **hızın karesiyle**
+büyür (`ratio * ratio`): yarı hızda itme dörtte birine düşer. Yumuşak virajlarda direksiyon kolayca kazanır; en keskin
+virajlarda tam hızda itme direksiyondan güçlüdür, gazı bırakman gerekir.
 
 # --task--
 
@@ -50,11 +72,68 @@ Bu tek kural, bir yarış çizgisini öğrenmeye değer yapan şeydir.
 
 # --task-tr--
 
-1. Pisti çözümdeki kısımlardan `add(count, curve)` ile kur.
-2. Pist boyunca `z` uzaklığındaki parça olan `segmentAt(z)`'i ekle. `update()` içinde arabanın altındaki viraj
-   (`segmentAt(position + PLAYER_Z)`) onu çeker: sınırlamadan önce `playerX -= curve × 0.012 × ratio²`.
-3. Çizerken `x = 0` ve şu anki parçanın `dx = -curve × (position % SEG) / SEG`'siyle başla; her parçanın yakın kenarı `x`'te, uzak
-   kenarı `x + dx`'te (eksi kameranın `playerX * ROAD`'u), sonra `x += dx` ve `dx += curve`.
+1. `buildTrack()` içindeki `add(800, 0) // straight for now` satırını sil ve yerine pistin kısımlarını yaz:
+
+   ```js
+     add(80, 0)
+     add(60, 2)
+     add(50, 0)
+     add(80, -3)
+     add(40, 0)
+     add(50, 4)
+     add(30, -1)
+     add(60, -2)
+     add(70, 0)
+     add(90, 3)
+     add(40, 0)
+     add(60, -4)
+     add(90, 0)
+   ```
+
+   Altındaki `trackLength = ...` satırı aynen kalır.
+
+2. `canvas.addEventListener('pointercancel', stopTouch)` satırının altına, `function update()`'in **üstüne** şunu yaz:
+
+   ```js
+   const segmentAt = (z) => segments[Math.floor(z / SEG) % segments.length]
+   ```
+
+3. `update()` içindeki direksiyon kısmına virajın itmesini ekle (yorum da değişti):
+
+   ```js
+     // Steering works better the faster you go; curves push you outwards. // ← değişti
+     const steer = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)
+     playerX += steer * 0.04 * ratio
+     playerX -= segmentAt(position + PLAYER_Z).curve * 0.012 * ratio * ratio // ← yeni
+     playerX = Math.max(-2.5, Math.min(2.5, playerX))
+   ```
+
+   Yeni satır, `playerX`'i sınırlayan `Math.max` satırının **üstünde** olmalı.
+
+4. `draw()` içinde ilk `for` döngüsünün öncesini ve içini şöyle değiştir:
+
+   ```js
+     // Work out where every segment is on screen, from near to far, bending the road a little more at each curve. // ← değişti
+     const base = Math.floor(position / SEG)
+     let x = 0 // ← yeni
+     let dx = -segments[base % segments.length].curve * ((position % SEG) / SEG) // ← yeni
+     const shown = []
+     for (let i = 0; i < DRAW; i++) {
+       const index = (base + i) % segments.length
+       const z = (base + i) * SEG - position
+       const near = project(x - playerX * ROAD, -CAMERA_HEIGHT, z) // ← değişti
+       const far = project(x + dx - playerX * ROAD, -CAMERA_HEIGHT, z + SEG) // ← değişti
+       x += dx // ← yeni
+       dx += segments[index].curve // ← yeni
+       if (z > 0) shown.push({ index, near, far })
+     }
+   ```
+
+   Yakın kenar `x` kadar, uzak kenar `x + dx` kadar yana kayar; sonra bir sonraki parça için `x` ve `dx` büyür.
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve hızlan: ileride yolun kıvrıldığını görmeli, virajda arabanın
+   dışa kaydığını hissetmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Pist kontrolü kırmızıysa `add` satırlarının
+   sayılarını ve eksi işaretlerini tek tek karşılaştır.
 
 # --tests--
 

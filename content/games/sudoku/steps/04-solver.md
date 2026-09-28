@@ -29,25 +29,44 @@ copy one digit from it.
 
 # --explanation-tr--
 
-Bir program her Sudoku'yu çözebilir mi? Evet, programlamanın en kullanışlı fikirlerinden biri olan **geri izlemeyle**:
+**Bu adımda:** bulmacayı bilgisayar kendisi çözecek ve sana ipucu verecek. **H** tuşuna basınca seçili hücreye
+(ya da ilk eksik hücreye) doğru rakam yazılacak; sağ üstte `Hints 1` gibi kaç ipucu aldığın görünecek.
 
-1. Boş bir hücre bul. Yoksa tahta çözülmüştür.
-2. Oraya uyan her rakamı dene. Her biri için onu yaz ve **geri kalanını aynı yolla çöz** (fonksiyon kendisini çağırır).
-3. Geri kalanı çözülemiyorsa rakamı **geri al** ve sonrakini dene. Hiçbir rakam işe yaramazsa çağırana başarısızlık bildir; o
-   da *kendi* rakamını geri alır.
+**Geri izleme (backtracking).** Bir program her Sudoku'yu çözebilir mi? Evet, programlamanın en kullanışlı
+fikirlerinden biriyle:
 
-Tam olarak kurşun kalem ve silgiyle yaptığın şey; yalnızca yorulmadan.
+1. Boş bir hücre bul. Hiç yoksa tahta çözülmüş demektir.
+2. Oraya uyan her rakamı sırayla dene. Her biri için rakamı yaz ve **geri kalanını aynı yöntemle çöz**.
+3. Geri kalanı çözülemiyorsa rakamı **sil** ve sıradakini dene. Hiçbir rakam olmuyorsa "olmadı" diye geri dön; seni
+   çağıran da **kendi** rakamını silip sıradakini dener.
 
-1. adımda iyi bir seçim onu binlerce kat hızlandırır: uyan rakamı **en az** olan boş hücreyi al. Tek seçenekli bir hücreyi
-denemek hiçbir şeye mal olmaz ve hiç seçeneği olmayan bir hücre hemen bir çıkmaz demektir. `bestCell` o hücreyi ve
-seçeneklerini döndürür.
+Tam olarak kurşun kalem ve silgiyle yaptığın şey, sadece hiç yorulmadan.
 
-Çözücümüz ilkinde durmak yerine çözümleri bir `limit`'e kadar **sayar**. `limit = 1` ile tahtayı çözer ve çözümü içinde
-bırakır. `limit = 2` ile adil bir bulmacanın ihtiyaç duyduğu ve bir sonraki adımın kullanacağı "tam olarak bir çözüm var mı?"
-sorusunu cevaplar.
+**Kendini çağıran fonksiyon (özyineleme, recursion).** 2. maddedeki "geri kalanını aynı yöntemle çöz", fonksiyonun
+**kendini** çağırmasıdır: `countSolutions` içinde yine `countSolutions(...)` yazar. Her çağrı bir hücre doldurur ve
+işi daha küçük bir tahtaya devreder. Boş hücre kalmayınca durur, çünkü o zaman kendini çağırmadan `1` döner.
 
-Oyuncunun ızgarası boş kalsın diye bulmacanın bir **kopyasını** çözer ve onu `solution` olarak tutarız. Sonra bir ipucu
-kolaydır: ondan bir rakam kopyala.
+**Akıllı seçim.** 1. adımda doğru hücreyi seçmek işi binlerce kat hızlandırır: **en az** rakamın uyduğu boş hücreyi
+al. Tek seçenekli bir hücreyi denemek bedavadır; hiç seçeneği olmayan hücre ise hemen çıkmaz sokak demektir.
+`bestCell` bu hücreyi ve seçeneklerini döner; boş hücre yoksa `null` (hiçbir şey) döner.
+
+- `if (!found || options.length < found.options.length)` → "henüz bir şey bulmadıysak **veya** bu hücrenin
+  seçenekleri daha azsa, bunu tut". `!found`, `found` `null` iken doğrudur.
+- `{ r, c, options }` kısaltması `{ r: r, c: c, options: options }` demektir. Tersi de var:
+  `const { r, c, options } = cell` nesnenin üç alanını üç ayrı ada çıkarır.
+
+**Saymak ve sınır.** Çözücümüz ilk çözümde durmak yerine çözümleri **sayar**, ama en fazla `limit` kadar.
+`limit = 1` ile tahtayı çözer ve çözümü tahtada bırakır. `limit = 2` ile "tam bir çözüm mü var?" sorusunu cevaplar;
+adil bir bulmaca bunu ister ve sonraki adım onu kullanacak. `function countSolutions(board, limit = 2)` içindeki
+`= 2` **varsayılan değerdir**: çağıran `limit` vermezse 2 olur.
+
+**Kopya üzerinde çözmek.** Oyuncunun ızgarası boş kalsın diye bulmacanın **kopyasını** çözer, `solution` olarak
+saklarız. `row.slice()` bir satırın kopyasını yapar; `board.map(...)` her satırı kopyalayıp yeni bir tahta kurar.
+Kopya olmasaydı ikisi aynı tahta olurdu ve çözüm oyuncunun ızgarasına da yazılırdı.
+
+**İpucu** artık kolay: çözümden bir rakam kopyala. Seçili hücre zaten doğruysa (ya da verilmiş bir rakamsa) ilk
+yanlış/boş hücreyi ararız: `for (let i = 0; i < 81 && !cell; i++)` "81'e kadar, **ve** henüz hücre bulmadığımız
+sürece" döner. `i` sırasından satır `Math.floor(i / 9)`, sütun `i % 9` çıkar.
 
 # --task--
 
@@ -64,14 +83,113 @@ kolaydır: ondan bir rakam kopyala.
 
 # --task-tr--
 
-1. Satırları kopyalanmış yeni bir tahta döndüren `copy(board)`'u yaz.
-2. `bestCell(board)` yaz: uyan rakamı en az olan boş hücre, `{ r, c, options }` olarak; tahta doluysa `null`.
-3. `countSolutions(board, limit = 2)` yaz: boş hücre yoksa `1`; değilse her seçeneği dene, özyinelemeli sayıyı
-   (`limit - count` ile) ekle, sayı `limit`'e ulaşır ulaşmaz döndür (tahtayı dolu bırakarak), değilse hücreyi yeniden `0` yap.
-4. `reset()`'te `solution = copy(grid)` ve `countSolutions(solution, 1)` yap.
-5. `hints` ekle (`reset()`'te `0`) ve `hint()` yaz: seçili hücre zaten doğru değilse onu `solution`'dan doldur, değilse doğru
-   olmayan ilk hücreyi; o hücreyi seç, `hints`'e 1 ekle ve `checkWin()` et. H tuşu onu çağırır.
-6. `canvas.width - LEFT`, `y = 34`'e sağa hizalı `Hints 0` çiz (`'bold 18px sans-serif'`, `'#0f172a'`).
+1. `let given ...` satırının hemen **altına** `solution`'ı, `let won` satırının altına da `hints`'i ekle:
+
+   ```js
+   let solution
+   ```
+
+   ```js
+   let hints
+   ```
+
+2. `canPlace` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp şu üç parçayı yaz:
+
+   ```js
+   // The empty cell with the fewest digits that fit, and those digits.
+   function bestCell(board) {
+     let found = null
+     for (let r = 0; r < 9; r++) {
+       for (let c = 0; c < 9; c++) {
+         if (board[r][c] !== 0) continue
+         const options = []
+         for (let d = 1; d <= 9; d++) if (canPlace(board, r, c, d)) options.push(d)
+         if (!found || options.length < found.options.length) found = { r, c, options }
+       }
+     }
+     return found
+   }
+
+   // Backtracking: fill a cell with each digit that fits and try to solve the rest; undo when stuck.
+   // Counts solutions up to `limit`.
+   function countSolutions(board, limit = 2) {
+     const cell = bestCell(board)
+     if (!cell) return 1 // no empty cell left: solved
+     const { r, c, options } = cell
+     let count = 0
+     for (const d of options) {
+       board[r][c] = d
+       count += countSolutions(board, limit - count)
+       if (count >= limit) return count // keep the board as it is: that is the solution
+       board[r][c] = 0
+     }
+     return count
+   }
+
+   const copy = (board) => board.map((row) => row.slice())
+   ```
+
+   `for (const d of options)` listedeki her seçenek için bir kez döner. `board[r][c] = 0` denemeyi geri alır
+   (silgi).
+
+3. `reset()` fonksiyonunu şöyle yap:
+
+   ```js
+   function reset() {
+     grid = Array.from({ length: 9 }, (_, r) => [...PUZZLE.slice(r * 9, r * 9 + 9)].map(Number))
+     solution = copy(grid)      // ← yeni
+     countSolutions(solution, 1) // ← yeni
+     given = grid.map((row) => row.map((d) => d !== 0))
+     selected = { r: 4, c: 4 }
+     won = false
+     hints = 0                  // ← yeni
+   }
+   ```
+
+4. `enter()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp ipucu fonksiyonunu yaz:
+
+   ```js
+   // A hint fills the selected cell (or the first empty one) from the solution.
+   function hint() {
+     if (won) return
+     let cell = grid[selected.r][selected.c] === solution[selected.r][selected.c] ? null : selected
+     for (let i = 0; i < 81 && !cell; i++) {
+       const r = Math.floor(i / 9)
+       const c = i % 9
+       if (grid[r][c] !== solution[r][c]) cell = { r, c }
+     }
+     if (!cell) return
+     selected = cell
+     grid[cell.r][cell.c] = solution[cell.r][cell.c]
+     hints += 1
+     checkWin()
+   }
+   ```
+
+5. Klavye dinleyicisinde, `enter(0)` ile biten satırın hemen **altına** H tuşunu ekle:
+
+   ```js
+     else if (event.key === '0' || event.key === 'Backspace' || event.key === 'Delete') enter(0)
+     else if (event.key === 'h' || event.key === 'H') hint() // ← yeni
+   })
+   ```
+
+6. `draw()` fonksiyonunda, çizgileri çizen `for` döngüsünün kapanan `}`'si ile `if (won) {` satırının **arasına**
+   ipucu sayacını ekle:
+
+   ```js
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'right'
+     ctx.fillText('Hints ' + hints, canvas.width - LEFT, 34)
+   ```
+
+   `textAlign = 'right'` yazının sağ ucunu ızgaranın sağ kenarına hizalar.
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve H'ye bas: ortadaki hücreye `5` yazılmalı ve sağ üstte
+   `Hints 1` görünmeli. H'ye basmaya devam edersen bulmaca sonunda çözülür. Alttaki kontrollerin hepsi yeşil
+   olmalı. Çözücü testi kırmızıysa `countSolutions` içindeki `board[r][c] = 0` satırının `for`'un **içinde**
+   olduğunu kontrol et.
 
 # --tests--
 

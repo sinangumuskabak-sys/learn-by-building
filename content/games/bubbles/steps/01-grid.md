@@ -23,19 +23,71 @@ An odd row fits one bubble less: shifted right by `R`, a tenth bubble would stic
 
 # --explanation-tr--
 
-Bir balon atıcıda balonlar tavandan asılıdır, bir kutudaki bilyeler kadar sıkı dizilmiş: her iki satırdan biri yarım balon sağa
-kaymıştır; böylece her balon üstündeki ikisinin arasındaki boşluğa oturur. Bu bir **altıgen ızgaradır**, bal peteğiyle aynı desen.
+**Bu adımda:** tavandan sarkan renkli balonları çizeceğiz. Sağda, lacivert bir zeminin üstünde beş sıra renkli balon
+göreceksin; her ikinci sıra yarım balon sağa kaymış, balonlar bal peteği gibi birbirinin arasına oturmuş olacak.
 
-Onu yine düz bir 2 boyutlu dizi olarak saklarız, `grid[r][c]`, ve geometri bir hücreyi konuma çeviren tek bir fonksiyonda yaşar:
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların listesidir.
+Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan yazılar **yorumdur**: bilgisayar atlar,
+sadece insanlar için not.
 
-- **x**: `R + c * 2R`, tek satırlarda `R` daha (kayma);
-- **y**: balonlar iç içe geçtiği için satırlar bir çaptan daha yakındır. Bal peteğinde satır yüksekliği `R * √3`'tür, yani `2R`
-  yerine yaklaşık `1.73 R`.
+**Canvas ve fırça.** Sayfada 400×520 piksellik bir resim alanı (`<canvas id="game">`) var. Onu bulur ve çizim aracını
+(bağlam, **context**) alırız:
 
-O `√3` sihir değildir: bir balon ve üstünde durduğu iki balon, kenarları `2R` olan bir eşkenar üçgen oluşturur ve yüksekliği
-`2R × √3 / 2`'dir. Test, komşu satırlardaki iki balonun tam `2R` uzakta, yani yalnızca değer durumda olduğunu kontrol eder.
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
 
-Tek bir satıra bir balon eksik sığar: `R` kadar sağa kaymış onuncu bir balon canvas'tan taşardı.
+- `const ad = ...` bir şeye kalıcı bir ad verir (**sabit**): kutuya etiket yapıştırmak gibi. `let ad` ise içi sonradan
+  değişebilen bir kutu (**değişken**) açar. Nokta (`.`) "bunun içindeki şu" demektir. Tırnak içi **yazıdır**.
+- `ctx.fillStyle = renk` renk seçer, `ctx.fillRect(x, y, genişlik, yükseklik)` dikdörtgen boyar. Sol üst köşe `(0, 0)`;
+  `x` sağa, `y` **aşağı** büyür. Renkler `'#ef4444'` (kırmızı) gibi kodlarla yazılır.
+
+**Daire çizmek.** Daire için üç komut:
+
+```js
+ctx.beginPath()                      // yeni bir şekle başla
+ctx.arc(x, y, yarıçap, 0, Math.PI * 2) // merkezi (x, y) olan bir çember çiz
+ctx.fill()                           // içini boya
+```
+
+`Math.PI * 2` tam tur demektir (açılar derece değil **radyan** ile ölçülür; tam tur 2π ≈ 6.28).
+
+**Renkler bir listede.** `COLORS` beş renkten oluşan bir **dizidir** (array, sıralı liste). Sıra numarası (**index**)
+**0'dan başlar**: `COLORS[0]` kırmızı, `COLORS[4]` mor. Izgarada rengin kendisini değil numarasını saklarız; `-1` "boş
+hücre" demektir.
+
+**Izgara.** Izgara satırlardan oluşan bir liste, her satır da hücrelerden oluşan bir liste: `grid[r][c]` = `r`
+numaralı satırın `c` numaralı hücresi.
+
+**Bal peteği dizilimi.** Balonlar misket kutusundaki misketler gibi sıkı dizilir: her **tek** numaralı satır yarım balon
+(`R`) sağa kayar ve her balon üstteki iki balonun arasına oturur.
+
+- `r % 2` → `r`'yi 2'ye bölünce kalan: çift satırda 0, tek satırda 1. Tek satırda `(r % 2) * R` = `R` kadar kayarız.
+- Tek satır bir balon **eksik** alır: sağa kaydığı için onuncu balon canvas'tan taşardı.
+  `r % 2 === 0 ? COLS : COLS - 1` → "çift satırsa 10, değilse 9". `===` "eşit mi?" sorar; `a ? b : c` "doğruysa `b`,
+  değilse `c`".
+- Satırlar arası yükseklik bir çap (`2R`) değil, `R * √3` ≈ `1.73 R`'dir; balonlar iç içe geçer. Neden? Bir balon ve
+  altındaki ikisi, kenarı `2R` olan eşkenar bir üçgen oluşturur; o üçgenin yüksekliği `2R × √3 / 2` = `R × √3`.
+  `Math.sqrt(3)` 3'ün kareköküdür.
+
+**Fonksiyonlar.** Fonksiyon bir işe ad verip paketlemektir; önce **tanımlar**, sonra adıyla **çağırırsın**.
+`const cols = (r) => ...` kısa yazımdır: `r` alır, `=>`'nin sağındakini **geri verir**. `cellPos(r, c)` bir hücrenin
+ekrandaki yerini `{ x: ..., y: ... }` **nesnesi** (adlandırılmış değerlerden oluşan kart) olarak verir; nesneyi geri veren
+kısa fonksiyonda nesne parantez içine alınır: `=> ({ ... })`.
+
+`drawBubble(x, y, color, r = R)` → son değer verilmezse `R` kullanılır. Çizerken yarıçaptan 1 çıkarırız ki balonlar arasında
+ince bir boşluk kalsın.
+
+**Döngü (`for`).** `for (let r = 0; r < ROWS; r++) { ... }` → "`r` 0'dan başlasın, `ROWS`'tan küçük olduğu sürece `{ }`
+içini yap, her turdan sonra 1 artsın". İç içe iki döngü bütün hücreleri gezer. `grid.push([])` listeye boş bir satır
+ekler. İlk 5 satır (`r < 5`) rastgele renk alır: `Math.random()` 0–1 arası rastgele sayı, `Math.floor` aşağı yuvarlar;
+ikisi birlikte 0–4 arası bir renk numarası verir. Diğer satırlar `-1` (boş).
+
+`if (grid[r][c] < 0) continue` → "hücre boşsa bu turu atla, çizme".
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der. `loop`
+çizip kendini yeniden sıraya koyar; saniyede yaklaşık 60 kez (60 **kare**).
 
 # --task--
 
@@ -49,13 +101,86 @@ Tek bir satıra bir balon eksik sığar: `R` kadar sağa kaymış onuncu bir bal
 
 # --task-tr--
 
-1. `R = 20`, `COLS = 10`, `ROWS = 14`, `ROW_H = R * Math.sqrt(3)`, `TOP = 30` ve beş `COLORS`
-   (`'#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'`) ekle.
-2. `cols(r)`'yi (çift satırlarda `COLS`, tek satırlarda bir eksik) ve `cellPos(r, c)`'yi anlatıldığı gibi yaz
-   (`y = TOP + R + r * ROW_H`).
-3. `reset()`'te `grid`'i kur: 0'dan 4'e satırlar rastgele renklerle dolu, geri kalanı `-1` (boş).
-4. Çiz: `'#1e1b4b'` doldur, üst şeridi (`TOP` yüksekliğinde) `'#312e81'` ve her balonu bir `drawBubble(x, y, color, r = R)`
-   yardımcısıyla kendi renginde `R - 1` yarıçaplı bir daire olarak.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı al:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırakıp ayarları ekle:
+
+   ```js
+   const R = 20 // bubble radius
+   const COLS = 10 // bubbles in an even row; odd rows have one less and sit half a bubble to the right
+   const ROWS = 14
+   const ROW_H = R * Math.sqrt(3) // rows overlap so the bubbles nest
+   const TOP = 30 // room for the score
+   const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7']
+   ```
+
+3. Altına ızgara değişkenini ve iki yardımcıyı ekle:
+
+   ```js
+   let grid // grid[r][c]: a color index, or -1 for an empty cell
+
+   const cols = (r) => (r % 2 === 0 ? COLS : COLS - 1)
+   const cellPos = (r, c) => ({ x: R + c * 2 * R + (r % 2) * R, y: TOP + R + r * ROW_H })
+   ```
+
+4. Altına ızgarayı kuran `reset()`'i yaz:
+
+   ```js
+   function reset() {
+     grid = []
+     for (let r = 0; r < ROWS; r++) {
+       grid.push([])
+       for (let c = 0; c < cols(r); c++) grid[r].push(r < 5 ? Math.floor(Math.random() * COLORS.length) : -1)
+     }
+   }
+   ```
+
+5. Altına balon çizen yardımcıyı ve `draw()`'u yaz:
+
+   ```js
+   function drawBubble(x, y, color, r = R) {
+     ctx.fillStyle = COLORS[color]
+     ctx.beginPath()
+     ctx.arc(x, y, r - 1, 0, Math.PI * 2)
+     ctx.fill()
+   }
+
+   function draw() {
+     ctx.fillStyle = '#1e1b4b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#312e81'
+     ctx.fillRect(0, 0, canvas.width, TOP)
+
+     for (let r = 0; r < ROWS; r++) {
+       for (let c = 0; c < cols(r); c++) {
+         if (grid[r][c] < 0) continue
+         const p = cellPos(r, c)
+         drawBubble(p.x, p.y, grid[r][c])
+       }
+     }
+   }
+   ```
+
+6. En alta oyun döngüsünü ve başlatan satırları ekle:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Üstte beş sıra renkli balon görmelisin; ikinci ve dördüncü sıra yarım balon
+   sağa kaymış olmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `cellPos` satırındaki parantezleri harf
+   harf karşılaştır.
 
 # --tests--
 

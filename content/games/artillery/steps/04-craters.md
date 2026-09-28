@@ -25,21 +25,40 @@ good shot under an enemy sends it tumbling into its own crater.
 
 # --explanation-tr--
 
-Bir patlama zeminde bir delik açmalı. Bir yükseklik haritasıyla bu şaşırtıcı derecede kolaydır: patlamanın ulaştığı her sütun için
-oradaki yuvarlak deliğin dibi şuradadır:
+**Bu adımda:** patlamalar zeminde yuvarlak çukurlar açacak. Bir tankın altı oyulursa tank aşağı kayıp kendi çukuruna düşecek.
+
+**Yükseklik haritasıyla krater açmak çok kolay.** 1. adımdan hatırla: `ground[x]`, `x` sütununda yüzeyin `y`'siydi.
+Patlamanın ulaştığı her sütun için, yuvarlak deliğin o sütundaki dibini hesaplarız:
 
 ```js
 const bottom = y + Math.sqrt(BLAST * BLAST - (cx - x) ** 2)
 ```
 
-bu bir dairenin alt yarısıdır: ortada `dx = 0` ve delik `BLAST` derinliğindedir; kenarlarda `dx = BLAST` ve derinlik sıfırdır. O dibin
-yüzeyin altında kaldığı yerde zemin artık oradan başlar (`ground[cx] = bottom`). Dairenin zemine ulaşmadığı yerde hiçbir şey değişmez.
+Bu, patlama merkezinde duran bir dairenin **alt yarısıdır**:
 
-Bir yükseklik haritası mağara saklayamaz: yerin derinliklerindeki bir patlama gökyüzüne kadar açılır. Sütun başına bir sayı saklamanın
-bedeli budur ve bu tür oyunlar onu memnuniyetle öder.
+- `cx - x` sütunun patlama merkezine yatay uzaklığı. `** 2` karesini alır (`3 ** 2` → `9`), `Math.sqrt` karekökünü.
+- Tam ortada (`cx - x = 0`) delik `BLAST` kadar, yani 30 piksel derindir.
+- Kenarlarda (`cx - x = 30`) derinlik sıfırdır. Aradakiler yumuşak bir yay çizer.
 
-Artık bir tank boşlukta kalabilir. Her karede zeminin üstündeki bir tank yeniden inene kadar `FALL` piksel düşer; böylece bir düşmanın
-altına yapılan iyi bir atış onu kendi kraterine yuvarlar.
+O dip yüzeyin **altındaysa** (`y` büyük demek aşağı demek), zemin artık orada başlar: `ground[cx] = bottom`. Dairenin
+zemine ulaşmadığı yerlerde hiçbir şey değişmez. Zemini en fazla `H - 2`'ye kadar indiririz ki ekranın dibi hiç delinmesin.
+
+**Yükseklik haritası mağara tutamaz.** Her sütun için tek bir sayı var: "yüzey burada başlar". Toprağın altında bir
+patlama olsa bile delik gökyüzüne kadar açılır. Bu, sütun başına tek sayı saklamanın bedeli; bu tür oyunlar bu bedeli
+seve seve öder.
+
+**Boşlukta kalan tank düşer.** Artık bir tank hiçbir şeyin üstünde durmuyor olabilir. Her karede, zeminin üstünde kalan
+tank `FALL` (2) piksel aşağı iner, zemine ulaşınca durur. Düşmanın altına iyi bir atış onu kendi kraterine yuvarlar.
+
+```js
+if (t.y < groundAt(t.x)) t.y = Math.min(groundAt(t.x), t.y + FALL)   // altında boşluk: düş (ama zemini geçme)
+else t.y = groundAt(t.x)                                            // değilse tam zeminde dur
+```
+
+**Yeni küçük şeyler:**
+
+- `continue` → "bu turu atla, döngünün sıradaki turuna geç". Canvas'ın dışındaki sütunlar için kullanıyoruz.
+- `Math.floor(x - BLAST)` → aşağı yuvarlama; döngü tam sayı sütunlardan başlasın diye.
 
 # --task--
 
@@ -50,9 +69,44 @@ altına yapılan iyi bir atış onu kendi kraterine yuvarlar.
 
 # --task-tr--
 
-1. `explode(x, y)`'de canvas üstünde `x - BLAST`'tan `x + BLAST`'a her `cx` sütunu için dairenin dibini hesapla ve `ground[cx]`'in
-   altındaysa zemini oraya indir (asla `H - 2`'nin altına değil).
-2. `FALL = 2` ekle. `update()`'te zeminin üstündeki bir tank `FALL` kadar iner (zemini geçmeden); değilse tam zeminde kalır.
+1. `const MAX_POWER = 12` satırının altına düşme hızını ekle:
+
+   ```js
+   const FALL = 2 // pixels per frame a tank drops when the ground under it is gone
+   ```
+
+2. `explode()` fonksiyonunu şöyle genişlet (üstüne bir yorum, içine bir döngü):
+
+   ```js
+   // Blow a round hole in the ground.
+   function explode(x, y) {
+     for (let cx = Math.floor(x - BLAST); cx <= x + BLAST; cx++) { // ← yeni (buradan)
+       if (cx < 0 || cx >= W) continue
+       const bottom = y + Math.sqrt(BLAST * BLAST - (cx - x) ** 2)
+       if (bottom > ground[cx]) ground[cx] = Math.min(H - 2, bottom)
+     } // ← (buraya kadar)
+     blast = { x, y }
+   }
+   ```
+
+   Döngü patlamanın solundan sağına her sütunu dolaşır; dairenin dibi yüzeyin altındaysa zemini oraya indirir.
+
+3. `update()` fonksiyonunun **en başına** tankları düşüren döngüyü ekle:
+
+   ```js
+   function update() {
+     for (const t of tanks) { // ← yeni (buradan)
+       if (t.y < groundAt(t.x)) t.y = Math.min(groundAt(t.x), t.y + FALL) // nothing under it: it falls
+       else t.y = groundAt(t.x)
+     } // ← (buraya kadar)
+     if (state === 'boom' && --timer === 0) {
+   ```
+
+   En başta olması önemli: `update`'in geri kalanı `return` ile erken bitebilir, tanklar yine de her karede düşmeli.
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve birkaç atış yap: her patlama tepede yuvarlak bir çukur açmalı.
+   Namluyu dik yukarı çevirip gücü azaltırsan mermi kendi yanına düşer; tankının altı oyulursa aşağı kaymalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. "Yuvarlak" kontrolü kırmızıysa `bottom` satırındaki `** 2` ve parantezleri kontrol et.
 
 # --tests--
 

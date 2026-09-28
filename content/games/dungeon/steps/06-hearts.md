@@ -23,20 +23,53 @@ With no hearts left, the game is over.
 
 # --explanation-tr--
 
-Artık düşmanlar karşılık veriyor. Bir düşmana dokunmak üç **kalbinden** birine mal olur. İki ayrıntı bunu sinir bozucu değil adil
-yapar:
+**Bu adımda:** düşmanlar da sana zarar verecek. Sol üstte üç kırmızı kalp olacak; bir düşmana değince biri griye
+dönecek, sen geri savrulacak ve bir süre yanıp söneceksin. Yerde kırmızı kalpler bulup can toplayabileceksin. Kalbin
+bitince `Game over` yazacak.
 
-- Bir isabetten sonra 60 kare boyunca yeniden yaralanamazsın (**dokunulmazlık**) ve bunu göstermek için yanıp sönersin. O olmasa sana
-  dokunan bir düşman bütün kalplerini üç karede alırdı.
-- Sen ve düşman **birbirinden sekersiniz**: sen 24 piksel uzağa itilirsin (`move()` ile, yani asla bir duvara değil) ve o geri itilir.
-  Yoksa bir düşman üstünde sıkışıp kalabilirdi.
+**Adil olması için iki ayrıntı:**
 
-Kalpler yerde de bulunabilir. Alınan kalpler, odadan çıkıp geri gelsen bile **alınmış kalmalıdır**, çünkü `enter()` bir odayı
-metninden yeniden yükler. Bu yüzden oyun alınan her karoyu oda ve konuma göre `'0,0,11,7'` gibi anahtarlardan oluşan bir `Set`'te
-hatırlar ve `enter()` o karoları zemine çevirir. Bir bölümdeki değişiklikleri bölüm verisinin üstünde hatırlamak, oyunların bir
-dünyayı tutarlı tutma biçimidir.
+- Vurulduktan sonra 60 kare (1 saniye) boyunca tekrar yaralanamazsın (**dokunulmazlık**) ve bunu göstermek için yanıp
+  sönersin. Bu olmasa, sana değen bir düşman üç karede bütün kalplerini alırdı. Bunu `hurt` sayacıyla tutarız: 4. adımdaki
+  `swing` gibi, her karede 1 azalır.
+- Sen ve düşman **birbirinizden sekersiniz**: sen 24 piksel geri itilirsin (`move` ile, 4'er piksellik 6 adımda; böylece
+  asla duvarın içine girmezsin), düşman da geri itilir. Yoksa bir düşman üstünde yapışıp kalabilirdi.
 
-Kalp kalmayınca oyun biter.
+**Sayaçlı döngü.** Bir işi belirli sayıda tekrarlamak için:
+
+```js
+for (let i = 0; i < 6; i++) { ... }
+```
+
+"`i` 0'dan başlasın; 6'dan küçük olduğu sürece `{ }` içini yap; her turdan sonra `i`'yi 1 artır (`i++`)." Yani 6 kez.
+Kalpleri çizerken de aynısını 3 kez yaparız; `i` 0, 1, 2 olur ve her kalp `12 + i * 26` ile bir öncekinin 26 piksel sağına düşer.
+
+**Alınan kalp alınmış kalmalı.** Sorun şu: `enter()` odayı her seferinde haritanın **yazısından** yeniden kurar. Kalbi alıp
+odadan çıkıp geri dönersen kalp yeniden belirirdi. Çözüm: alınan her karoyu hatırlarız. Bunun için bir **Set** (küme)
+kullanırız: aynı şeyi iki kez tutmayan bir torba.
+
+```js
+taken = new Set()          // boş torba
+taken.add('0,0,11,7')      // içine koy
+taken.has('0,0,11,7')      // içinde var mı? → true
+```
+
+Anahtar, oda ve karo numaralarının virgülle birleştirilmiş hâlidir: `oda-sütun, oda-satır, sütun, satır`. Yazılar ve
+sayılar `+` ile yan yana konur: `0 + ',' + 0` → `'0,0'`. `enter()` karoları kurarken torbada olanları zemine çevirir.
+Seviye verisinin üstüne "değişiklikleri" ayrıca kaydetmek, oyunların dünyayı tutarlı tutma yoludur.
+
+**Durum (state):** oyunun hâlini bir yazıyla tutarız: `'playing'` (oynanıyor) ya da `'over'` (bitti). Bitince `update` hiçbir
+şey yapmaz: `if (state !== 'playing') return` (`!==` "eşit değil mi?"; `return` "burada dur"). Boşluk ya da dokunuş `reset()` ile baştan başlatır.
+
+**Yeni küçük şeyler:**
+
+- `%` bölümden kalandır: `7 % 2` → `1`. `Math.floor(hurt / 5) % 2 === 0` her 5 karede bir doğru/yanlış arasında gidip
+  gelir; oyuncuyu sadece doğruyken çizince yanıp söner.
+- `Math.sign(player.x - e.x) || 1` → işaret 0 çıkarsa (tam üst üsteyse) 1 kullan. `||` burada "o değilse şu".
+- `Math.min(3, hearts + 1)` → kalp 3'ü geçmesin.
+- **Yazı çizmek:** `ctx.font = 'bold 28px sans-serif'` yazı tipi, `ctx.textAlign = 'center'` ortalama,
+  `ctx.fillText('Game over', x, y)` yazıyı boyar. `'rgba(12, 10, 9, 0.75)'` dörtte üç koyulukta yarı saydam bir renktir;
+  oyunun üstüne serilince arkası hafifçe görünür.
 
 # --task--
 
@@ -52,15 +85,165 @@ Kalp kalmayınca oyun biter.
 
 # --task-tr--
 
-1. `reset()`'e `hearts` (3), `hurt` (0), `state` (`'playing'`) ve `taken` (yeni bir `Set`) ekle. `update()` yalnızca oynanırken
-   çalışır ve `hurt`'ü geri sayar.
-2. `hurt` 0 iken oyuncuya örtüşen bir düşman: bir kalp eksik, `hurt = 60`, 0 kalpte `'over'`. Oyuncuyu uzun eksen boyunca düşmandan
-   24 piksel uzağa it (4'lük 6 hareket) ve düşmanı öbür yöne kare başına 3 piksel, 10 kare geri it.
-3. Oyuncunun ortasının altındaki karo: bir `h` bir kalp verir (en fazla 3), zemin olur ve `'rx,ry,col,row'` olarak `taken`'a eklenir.
-   `enter()` alınan karoları zemine çevirir.
-4. Bir `h`'yi karosunda `'#e11d48'` 14'e 14 bir kare olarak çiz. `hurt > 0` ve `Math.floor(hurt / 5)` tekken oyuncu çizilmez. Sol
-   üste 20'ye 20 üç kalp çiz (`x = 12 + i * 26`, `y = 14`), kaybedilince `'#44403c'`. Bitince ekranı `'rgba(12, 10, 9, 0.75)'` ile ört
-   ve `Game over` ile `Press Space to play again` göster; Boşluk ya da dokunuş yeniden başlatır.
+1. `let tiles ...` satırının yorumunu güncelle ve altına `taken`'ı ekle; `let swing ...` satırının altına da üç değişken ekle:
+
+   ```js
+   let tiles // the current room, as arrays of characters we can change (hearts are picked up)
+   let taken // what has been picked up or opened in each room, so it stays that way
+   ```
+
+   ```js
+   let swing // frames left of the sword swing
+   let hearts
+   let hurt // frames the player cannot be hurt again
+   let state // 'playing' or 'over'
+   ```
+
+2. `reset()`'in başını şöyle yap:
+
+   ```js
+   function reset() {
+     taken = new Set() // ← yeni
+     hearts = 3 // ← yeni
+     hurt = 0 // ← yeni
+     swing = 0
+     state = 'playing' // ← yeni
+     const start = findIn(ROOMS[0][0], 'P')
+   ```
+
+3. `enter()` içinde yorumu ve `tiles = ...` satırını değiştir:
+
+   ```js
+   // Load a room: its tiles (minus what was already taken), and fresh enemies on its e tiles.
+   function enter(rx, ry) {
+     room = { rx, ry }
+     tiles = ROOMS[ry][rx].map((line, row) =>
+       [...line].map((ch, col) => (taken.has(rx + ',' + ry + ',' + col + ',' + row) ? '.' : ch === 'P' || ch === 'e' ? '.' : ch)),
+     )
+   ```
+
+   Bir karo torbadaysa zemin, değilse eskisi gibi (`P` ve `e` zemin, geri kalanı kendisi) olur. Altındaki düşman kısmı aynen kalır.
+
+4. `keydown` olayındaki savurma satırını değiştir:
+
+   ```js
+     if (event.key === ' ' && !event.repeat) { // ← değişti
+       if (state !== 'playing') reset()
+       else if (swing === 0) swing = 12
+     }
+   ```
+
+5. `pointerdown` olayında `const y = ...` satırının altına, `const dx = x - PAD.x` satırının **üstüne** ekle:
+
+   ```js
+     if (state !== 'playing') {
+       reset()
+       return
+     }
+   ```
+
+6. `update()`'in en başına iki satır ekle:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+     if (hurt > 0) hurt -= 1 // ← yeni
+
+     let dir = padDir
+   ```
+
+7. `update()`'te odadan çıkma bloğunun kapanış `}`'sinden sonra, `if (swing > 0) swing -= 1` satırının **üstüne** kalp toplamayı ekle:
+
+   ```js
+     // Things on the tile under the middle of the player.
+     const col = Math.floor(cx / T)
+     const row = Math.floor(cy / T)
+     const here = tiles[row][col]
+     const id = room.rx + ',' + room.ry + ',' + col + ',' + row
+     if (here === 'h') {
+       hearts = Math.min(3, hearts + 1)
+       tiles[row][col] = '.'
+       taken.add(id)
+     }
+   ```
+
+8. `update()`'teki düşman döngüsünde, kılıç vuruşunu yapan `if (sword && ...) { ... }` bloğunun kapanış `}`'sinden sonra
+   (döngünün `}`'sinden önce) düşmanın sana değmesini ekle:
+
+   ```js
+       if (sword && e.knock === 0 && overlap(sword, box(e))) {
+         e.hp -= 1
+         e.knock = 10
+         e.kx = player.dir[0] * 4
+         e.ky = player.dir[1] * 4
+       }
+       if (e.hp > 0 && hurt === 0 && overlap(box(e), box(player))) { // ← yeni (buradan)
+         hearts -= 1
+         hurt = 60
+         if (hearts === 0) state = 'over'
+         // Both bounce apart, so an enemy cannot stay stuck on top of you.
+         const ax = Math.sign(player.x - e.x) || 1
+         const ay = Math.sign(player.y - e.y)
+         const horizontal = Math.abs(player.x - e.x) >= Math.abs(player.y - e.y)
+         for (let i = 0; i < 6; i++) move(player, horizontal ? ax * 4 : 0, horizontal ? 0 : ay * 4)
+         e.knock = 10
+         e.kx = horizontal ? -ax * 3 : 0
+         e.ky = horizontal ? 0 : -ay * 3
+       } // ← (buraya kadar)
+     }
+     enemies = enemies.filter((e) => e.hp > 0)
+   ```
+
+9. `draw()` içinde üç yer değişiyor. Önce karo döngüsünde, kapıyı çizen `if (ch === 'D') { ... }` bloğunun altına kalbi ekle:
+
+   ```js
+         if (ch === 'h') {
+           ctx.fillStyle = '#e11d48'
+           ctx.fillRect(x + 9, y + 9, 14, 14)
+         }
+   ```
+
+   Sonra oyuncuyu çizen iki satırı yanıp sönen hâliyle değiştir:
+
+   ```js
+     // The player blinks while it cannot be hurt.
+     if (hurt === 0 || Math.floor(hurt / 5) % 2 === 0) {
+       ctx.fillStyle = '#16a34a'
+       ctx.fillRect(player.x, player.y, SIZE, SIZE)
+     }
+   ```
+
+   Son olarak `ctx.restore()` satırının hemen altına kalp göstergesini, `ctx.stroke()` satırının altına (yani `draw`'un
+   son `}`'sinden önce) oyun bitti ekranını ekle:
+
+   ```js
+     ctx.restore()
+
+     for (let i = 0; i < 3; i++) {
+       ctx.fillStyle = i < hearts ? '#e11d48' : '#44403c'
+       ctx.fillRect(12 + i * 26, 14, 20, 20)
+     }
+   ```
+
+   ```js
+     ctx.stroke()
+
+     if (state !== 'playing') {
+       ctx.fillStyle = 'rgba(12, 10, 9, 0.75)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Game over', canvas.width / 2, 190)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, 222)
+     }
+   }
+   ```
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sol üstte üç kalp görmelisin; düşmana değince biri griye dönmeli
+    ve yanıp sönmelisin. İlk odanın sağ altındaki kırmızı kareye yürüyüp can topla. Alttaki kontrollerin hepsi yeşil
+    olmalı. "Alınan kalp" kontrolü kırmızıysa anahtar yazısında virgüllerin ve sıranın (`rx, ry, col, row`) aynı olduğuna bak.
 
 # --tests--
 

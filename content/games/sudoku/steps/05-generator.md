@@ -22,19 +22,47 @@ it. Every order is equally likely, which the tempting `list.sort(() => Math.rand
 
 # --explanation-tr--
 
-Bir bulmaca bir kez oynanır. Çözücüyle iki evrede yenilerini **üretebiliriz**:
+**Bu adımda:** oyun artık tek bir bulmaca değil, her seferinde **yeni** bir bulmaca üretecek. Her **Çalıştır**'da
+ve **N** tuşuna her basışta ızgarada farklı rakamlar göreceksin; 50 hücre boş olacak.
 
-1. **Rastgele dolu bir ızgara.** *Boş* bir tahtayı çöz ama rakamları karıştırılmış bir sırayla dene. Çözücünün kuralları
-   ızgarayı geçerli tutar, karıştırma da her ızgarayı farklı yapar.
-2. **Delik aç.** Hücreleri rastgele sırayla ziyaret et ve her birini boşalt, ama **deliği yalnızca bulmacanın hâlâ tam olarak
-   bir çözümü varsa tut**. `countSolutions(copy(puzzle), 2)` iki tane bulursa oyuncu tahmine kalır, bu yüzden rakam geri
-   gelir. `HOLES` boş hücrede dur.
+**Çözücüyle bulmaca yapmak, iki aşamada:**
 
-2'ye kadar saymanın karşılığını burada alırız: *kaç* çözüm olduğunu bilmemiz hiç gerekmez, yalnızca birden fazla olup
-olmadığını; çözücü de ikinciyi bulduğu an durur.
+1. **Rastgele dolu bir ızgara.** *Boş* bir tahtayı çözdür, ama rakamları karışık sırayla denet. Çözücünün
+   kuralları ızgarayı geçerli tutar, karıştırma da her ızgarayı farklı yapar.
+2. **Delik aç.** Hücreleri rastgele sırayla gez ve her birini boşalt; ama **bulmacanın hâlâ tam bir çözümü varsa**
+   deliği bırak. `countSolutions(copy(puzzle), 2)` iki çözüm bulursa oyuncu tahmine kalırdı; rakam geri konur.
+   `HOLES` (50) hücre boşalınca dur.
 
-Karıştırma **Fisher–Yates** algoritmasıdır: listeyi sondan başa gez ve her öğeyi kendisinde ya da öncesindeki rastgele bir
-öğeyle takas et. Her sıra eşit olasılıklıdır; cazip gelen `list.sort(() => Math.random() - 0.5)` bunu sağlamaz.
+Önceki adımda "2'ye kadar say" demiştik; faydası burada: kaç çözüm olduğunu bilmemiz gerekmez, sadece birden fazla
+olup olmadığını. Çözücü ikinciyi bulduğu an durur.
+
+**Karıştırmak (Fisher–Yates).** Listeyi sondan başa gez, her elemanı kendisinden önceki (ya da kendisi) rastgele
+bir elemanla takas et. Her sıralama eşit olasılıklıdır.
+
+```js
+for (let i = list.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1))   // 0 ile i arası rastgele tam sayı
+  ;[list[i], list[j]] = [list[j], list[i]]         // i. ve j. elemanı takas et
+}
+```
+
+- `i--` her turdan sonra `i`'yi bir azaltır. `Math.random()` 0 ile 1 arası rastgele sayı verir.
+- `[a, b] = [b, a]` iki şeyin yerini tek satırda değiştirir. Baştaki `;` önceki satırla karışmasın diye var.
+- `shuffle` listeyi **yerinde** karıştırır ve kolaylık olsun diye aynı listeyi geri verir (`return list`).
+
+**Üçüncü parametre.** `countSolutions`'a `order = false` ekleriz. `true` verilirse seçenekleri denemeden önce
+karıştırır. Fonksiyon kendini çağırırken bunu da iletmeli, yoksa sadece ilk hücre karışık olurdu.
+
+**Yeni yardımcılar:**
+
+- `Array(9).fill(0)` 9 tane `0`'dan bir liste yapar. `Array.from({ length: 9 }, () => ...)` ile 9 ayrı satır
+  kurarız: boş tahta.
+- `[...Array(81).keys()]` → `[0, 1, 2, … 80]`: her hücrenin sıra numarası. Karıştırınca hücreleri rastgele sırayla
+  gezeriz. Sıra numarasından satır `Math.floor(cell / 9)`, sütun `cell % 9`.
+- `break` döngüyü tamamen bitirir (yeterince delik açıldı).
+- `removed++` bir artırır (`removed += 1` ile aynı).
+- `return { puzzle, full }` iki şeyi bir nesnede birlikte döner; `const { puzzle, full } = makePuzzle()` onları
+  tekrar ayırır.
 
 # --task--
 
@@ -48,13 +76,94 @@ Karıştırma **Fisher–Yates** algoritmasıdır: listeyi sondan başa gez ve h
 
 # --task-tr--
 
-1. `PUZZLE`'ı `HOLES = 50` ile değiştir.
-2. `shuffle(list)` yaz (Fisher–Yates, yerinde, listeyi döndürerek) ve `countSolutions`'a üçüncü bir parametre
-   `order = false` ver: true olduğunda seçenekleri denemeden önce karıştır (özyinelemeli çağrıya da ilet).
-3. `makePuzzle()` yaz: boş bir tahtayı `countSolutions(full, 1, true)` ile doldur, sonra bir kopyanın hücrelerini karışık
-   sırayla boşalt; bir deliği yalnızca bulmacanın hâlâ tam bir çözümü varsa tut, `HOLES` boş olana kadar. `{ puzzle, full }`
-   döndür.
-4. `reset()`, `grid` ve `solution` için `makePuzzle()`'ı kullanır. N tuşu yeni bir bulmaca başlatır.
+1. `// The puzzle, row by row; ...` yorumunu ve altındaki `const PUZZLE = '...'` satırını **sil**. `const TOP = 56`
+   satırının hemen altına şunu ekle:
+
+   ```js
+   const HOLES = 50 // how many cells are emptied
+   ```
+
+2. `countSolutions` fonksiyonunu üçüncü parametreyle şöyle değiştir:
+
+   ```js
+   // Backtracking: fill a cell with each digit that fits and try to solve the rest; undo when stuck.
+   // Counts solutions up to `limit`; `order` shuffles the digits to make random grids.
+   function countSolutions(board, limit = 2, order = false) {   // ← değişti
+     const cell = bestCell(board)
+     if (!cell) return 1 // no empty cell left: solved
+     const { r, c, options } = cell
+     if (order) shuffle(options)                                 // ← yeni
+     let count = 0
+     for (const d of options) {
+       board[r][c] = d
+       count += countSolutions(board, limit - count, order)      // ← değişti
+       if (count >= limit) return count // keep the board as it is: that is the solution
+       board[r][c] = 0
+     }
+     return count
+   }
+   ```
+
+3. `countSolutions`'ın kapanan `}`'sinin altına (`const copy = ...` satırından önce) karıştırma fonksiyonunu yaz:
+
+   ```js
+   function shuffle(list) {
+     for (let i = list.length - 1; i > 0; i--) {
+       const j = Math.floor(Math.random() * (i + 1))
+       ;[list[i], list[j]] = [list[j], list[i]]
+     }
+     return list
+   }
+   ```
+
+4. `const copy = ...` satırının altına bir satır boşluk bırakıp bulmaca üreticiyi yaz:
+
+   ```js
+   // A random full grid, then empty cells one by one, keeping only removals that leave exactly one solution.
+   function makePuzzle() {
+     const full = Array.from({ length: 9 }, () => Array(9).fill(0))
+     countSolutions(full, 1, true)
+     const puzzle = copy(full)
+     let removed = 0
+     for (const cell of shuffle([...Array(81).keys()])) {
+       if (removed === HOLES) break
+       const r = Math.floor(cell / 9)
+       const c = cell % 9
+       const digit = puzzle[r][c]
+       puzzle[r][c] = 0
+       if (countSolutions(copy(puzzle), 2) === 1) removed++
+       else puzzle[r][c] = digit // two solutions: put it back
+     }
+     return { puzzle, full }
+   }
+   ```
+
+5. `reset()` fonksiyonunun ilk üç satırını (`grid = Array.from(...)`, `solution = copy(grid)`,
+   `countSolutions(solution, 1)`) sil, yerine şunları yaz:
+
+   ```js
+   function reset() {
+     const { puzzle, full } = makePuzzle() // ← yeni
+     grid = puzzle                         // ← yeni
+     solution = full                       // ← yeni
+     given = grid.map((row) => row.map((d) => d !== 0))
+     selected = { r: 4, c: 4 }
+     won = false
+     hints = 0
+   }
+   ```
+
+6. Klavye dinleyicisinde `hint()` ile biten satırın hemen **altına** N tuşunu ekle:
+
+   ```js
+     else if (event.key === 'h' || event.key === 'H') hint()
+     else if (event.key === 'n' || event.key === 'N') reset() // ← yeni
+   })
+   ```
+
+7. **Çalıştır**'a bas. Her çalıştırmada farklı bir bulmaca görmelisin. Oynamak için önce oyuna tıkla ve N'ye bas:
+   yeni bir bulmaca gelmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kontroller biraz uzun sürebilir, bu normal.
+   `PUZZLE` hatası görürsen onu kullanan satırı `reset()`'te silmeyi unuttun demektir.
 
 # --tests--
 

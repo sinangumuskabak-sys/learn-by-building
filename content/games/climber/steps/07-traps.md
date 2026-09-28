@@ -22,18 +22,30 @@ difficulty, moving platforms and traps.
 
 # --explanation-tr--
 
-Son platform türü yukarı giden bir yol gibi görünür ama bir **tuzaktır**: üstüne konunca kırılır ve seni sektirmez;
-düşmeye devam edersin. Kırılan platformlar düşüp gözden kaybolur.
+**Bu adımda:** son platform türünü, **tuzağı** ekleyeceğiz. Kahverengi platformlar yukarı çıkış yolu gibi görünür ama
+üstüne inince kırılır, seni sektirmez ve düşmeye devam edersin. Kırılan platform da aşağı düşüp gözden kaybolur.
 
-Önemli tasarım sorusu şu: bir tuzak oyunu imkânsız hâle getirebilir mi? Getirmemeli. Tuzakların birinin yerine geçmek yerine
-iki gerçek platformun tam ortasına eklenen **fazladan** platformlar olmasının nedeni budur. Gerçek platformların zinciri en
-fazla 110 piksellik boşluklarla hâlâ oradadır; yani bölüm her zaman tırmanılabilir. Tuzak yalnızca konmadan önce bakmayan
-oyuncuyu cezalandırır.
+**Tuzak oyunu imkânsız yapmamalı.** Bu yüzden tuzaklar gerçek bir platformun **yerine** konmaz; iki gerçek platformun
+tam **ortasına, fazladan** eklenir. Gerçek platform zinciri yine yerinde, aralarındaki boşluk yine en fazla 110
+piksel. Yani seviye her zaman tırmanılabilir; tuzak yalnızca bakmadan atlayan oyuncuyu cezalandırır. Yeni platform
+`highest` yüksekliğine konduğu için, ondan önceki platform `gap` kadar aşağıdadır; ortası da `highest + gap / 2`'dir.
+Tuzak çıkma olasılığı `0.15 + 0.25 * d`: başta yaklaşık her 7 platformdan biri, yukarıda daha sık.
 
-İniş döngüsünde bir tuzak `continue` ile işlenir: kırık olarak işaretle ve aramaya devam et. Oyuncu aynı yükseklikte gerçek
-bir platformun üstünde olabilir ve o platform onu yine tutmalıdır.
+**Kırık mı? `broken` alanı.** Bir tuzağa inince onun üstüne `p.broken = true` yazarız. Nesnede daha önce olmayan bir
+alana değer vermek o alanı **ekler**. Hiç kırılmamış bir platformda `p.broken` yoktur; olmayan bir alanı okumak
+`undefined` (tanımsız) verir ve `if` bunu "yanlış" sayar. Böylece `if (p.broken) ...` yalnızca kırılmış platformlarda
+çalışır.
 
-Bununla oyun tamamlandı: sekme fiziği, tek yönlü platformlar, bir kamera, adil sonsuz üretim, artan zorluk, hareketli
+**`!` (değil).** `!p.broken` "kırık **değilse**" demektir: doğruyu yanlışa, yanlışı doğruya çevirir. İniş kontrolüne
+bunu ekleyerek kırık platformları atlarız.
+
+**`continue`.** 3. adımda `break`'in döngüyü tamamen bitirdiğini görmüştük. `continue` ise yalnızca **bu turu** bitirir
+ve döngü sıradaki platformla devam eder. Tuzağa inince onu kırık işaretleriz ve `continue` ile aramaya devam ederiz:
+oyuncu aynı yükseklikte gerçek bir platformun da üstünde olabilir, o platform onu yine tutmalı.
+
+Kırık platformlar her karede 5 piksel aşağı iner; bunu platformları kaydırdığımız döngüye tek satır ekleyerek yaparız.
+
+Bununla oyun tamamlandı: sekme fiziği, tek yönlü platformlar, kamera, adil ve sonsuz üretim, artan zorluk, hareketli
 platformlar ve tuzaklar.
 
 # --task--
@@ -47,12 +59,57 @@ platformlar ve tuzaklar.
 
 # --task-tr--
 
-1. `fillPlatforms()` içinde bir platform ekledikten sonra `0.15 + 0.25 * d` olasılıkla rastgele bir `x`'te, boşluğun
-   yarısında (`highest + gap / 2`) bir `'breaking'` platform (`vx: 0`) da ekle.
-2. İnerken: `broken` olan platformları atla. Bir `'breaking'` platforma konmak `p.broken = true` yapar ve sekmeden
-   `continue` eder.
-3. Her karede kırık bir platform 5 piksel düşer.
-4. `COLORS`'a `breaking: '#a16207'` ekle.
+1. `const COLORS = ...` satırına tuzak rengini ekle:
+
+   ```js
+   const COLORS = { normal: '#16a34a', moving: '#2563eb', breaking: '#a16207' } // ← değişti
+   ```
+
+2. `fillPlatforms()` fonksiyonunda `platforms.push(platform)` satırının hemen altına (hâlâ `while`'ın içinde) tuzak
+   ekleyen kısmı yaz:
+
+   ```js
+       platforms.push(platform)
+       // Bazen bir sonraki platformun yarı yolunda bir tuzak: sektirmek yerine kırılır.
+       if (Math.random() < 0.15 + 0.25 * d) {
+         platforms.push({ x: Math.random() * (canvas.width - 60), y: highest + gap / 2, w: 60, h: 12, kind: 'breaking', vx: 0 })
+       }
+     }
+   }
+   ```
+
+   Yorum ve `if` bloğunun tamamı yenidir.
+
+3. `update()` fonksiyonunda platformları kaydıran döngüye kırık platformu düşüren satırı ekle:
+
+   ```js
+     for (const p of platforms) {
+       p.x += p.vx
+       if (p.x < 0 || p.x + p.w > canvas.width) p.vx = -p.vx
+       if (p.broken) p.y += 5 // ← yeni: kırık platform aşağı düşer
+     }
+   ```
+
+4. Yine `update()`'te, iniş döngüsündeki `if (over && ...)` satırını değiştir ve hemen altına tuzak kontrolünü ekle:
+
+   ```js
+       for (const p of platforms) {
+         const over = player.x + player.w - 8 > p.x && player.x + 8 < p.x + p.w
+         if (!p.broken && over && oldBottom <= p.y && bottom >= p.y) { // ← değişti
+           if (p.kind === 'breaking') { // ← yeni
+             p.broken = true // ← yeni
+             continue // ← yeni
+           } // ← yeni
+           player.y = p.y - player.h
+           player.vy = JUMP
+           break
+         }
+       }
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Kahverengi platformlar görünmeli; üstlerine inince kırılıp aşağı
+   düşmeliler ve seni sektirmemeliler. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa tuzağın `y`'sinin
+   `highest + gap / 2` olduğuna ve tuzak kısmının `platforms.push(platform)` satırından **sonra** geldiğine bak.
 
 # --tests--
 

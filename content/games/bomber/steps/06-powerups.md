@@ -22,20 +22,47 @@ they also reach **you**.
 
 # --explanation-tr--
 
-Bazıları bir ödül sakladığında sandıkları patlatmak daha heyecanlı olur. Yaklaşık beş sandıktan biri bir **güçlendirme** saklar:
+**Bu adımda:** bazı kasaların altına **güçlendirme** (power-up) saklayacağız. Kasa yanınca yerinde mavi bir **B** ya da
+turuncu bir **F** karesi belirecek; üstüne yürüyünce alacaksın. Üst satırda `♥♥♥  Bombs 1  Fire 2` göreceksin.
 
-- **B**: aynı anda bir bomba daha (`maxBombs`);
+**İki tür ödül.** Kasa patlatmak, bazıları bir ödül saklayınca daha heyecanlı olur. Kabaca her beş kasadan biri bir
+güçlendirme saklar:
+
+- **B**: aynı anda bir bomba fazla (`maxBombs`);
 - **F**: daha uzun alevler (`power`).
 
-Onları nerede tutarız? İkinci bir ızgara çoğunlukla boş kalırdı. Bir kareden eşyasına bir **`Map`** daha uygundur: yalnızca bir
-şeyi olan kareler yer kaplar. Map anahtarlarının yeniden bulunabilmesi için basit değerler olması gerekir, bu yüzden bir kare bir
-metin olur: `'3,5'`.
+Güçlendirmeler stratejiyi değiştirir: iki bombayla bir düşmanı arada kıstırabilirsin; uzun alevler koridorların
+köşelerine kadar uzanır, ama **sana** da uzanır.
 
-Bir eşya ancak sandığı yandıktan sonra, yani tam kare zemin olduğunda görünür (ve alınabilir). Üstüne yürümek gücü ekler ve onu
-map'ten çıkarır.
+**Nerede tutalım? `Map`.** İkinci bir ızgara çoğunlukla boş kalırdı. Bir kareden eşyasına giden bir **`Map`** (eşleme
+tablosu) daha uygundur: yalnızca bir şeyi olan kareler yer kaplar. Bir sözlük gibi düşün: her **anahtara** bir **değer**
+karşılık gelir.
 
-Güçlendirmeler stratejiyi değiştirir: iki bomba bir düşmanı aralarında kıstırmanı sağlar, uzun alevler koridorların çevresine
-ulaşır; ama **sana** da ulaşır.
+```js
+items = new Map()                 // boş tablo
+items.set('3,5', 'fire')          // '3,5' anahtarına 'fire' yaz
+items.get('3,5')                  // okur: 'fire'  (yoksa undefined)
+items.delete('3,5')               // siler
+```
+
+Anahtarların yeniden bulunabilmesi için basit değerler olması gerekir; bu yüzden bir kare bir yazıya dönüşür: `'3,5'`.
+Bunu `key(r, c)` yapar: `r + ',' + c` sayıyla yazıyı `+` ile yan yana ekler.
+
+**Şans.** 1. adımdaki kasa satırı artık iki iş yapar, bu yüzden `else`'ten sonra süslü parantez açarız. Kasa koyulur,
+sonra `Math.random() < 0.2` (yüzde 20 ihtimal) ile bir ödül saklanır; hangisi olacağını ikinci bir yazı-tura seçer:
+`Math.random() < 0.5 ? 'bomb' : 'fire'`.
+
+**Görünmek ve almak.** Eşya yalnızca kasası yandıktan sonra görünür (ve alınabilir); bu tam olarak kare zemin olduğu
+andır: `grid[r][c] === ' '`. Üstüne yürümek gücü ekler ve eşyayı tablodan siler. `pickUp()` bunu her karede,
+`updatePlayer()`'dan hemen sonra kontrol eder:
+
+```js
+if (!item || grid[t.r][t.c] !== ' ') return
+```
+
+"Eşya yoksa **veya** kare henüz zemin değilse (kasa duruyorsa) hiçbir şey yapma."
+
+Eşya çizilirken harfi karenin ortasına yazmak için `ctx.textAlign = 'center'` ve `x + TILE / 2` kullanılır.
 
 # --task--
 
@@ -49,13 +76,81 @@ ulaşır; ama **sana** da ulaşır.
 
 # --task-tr--
 
-1. `key(r, c)` (`'r,c'` döndüren) ve `makeGrid()`'de yapılan bir `Map` olan `items`'ı ekle: her sandığın `0.2` olasılıkla
-   `'bomb'` ya da `'fire'` (yarı yarıya) saklama şansı vardır.
-2. `updatePlayer()`'dan sonra çağrılan `pickUp()`'ı yaz: oyuncunun karesinde bir eşya varsa ve kare zeminse onu kaldır ve
-   `maxBombs`'a (bomba) ya da `power`'a (ateş) 1 ekle.
-3. Açığa çıkmış bir eşyayı 6 piksel içeride bir kare olarak çiz: bomba için `'#2563eb'`, ateş için `'#ea580c'`; üzerinde beyaz
-   `B` ya da `F` (`'bold 14px sans-serif'`, ortalı, `y + 21`).
-4. Üst satır `♥♥♥  Bombs 1  Fire 2` olur.
+1. `let grid ...` satırının altına ekle:
+
+   ```js
+   let items // 'r,c' -> 'bomb' or 'fire', hidden under crates until they burn
+   ```
+
+2. `const near = ...` satırının **üstüne** ekle:
+
+   ```js
+   const key = (r, c) => r + ',' + c
+   ```
+
+3. `makeGrid()`'i şöyle yap:
+
+   ```js
+   function makeGrid() {
+     grid = []
+     items = new Map() // ← yeni
+     for (let r = 0; r < ROWS; r++) {
+       grid.push([])
+       for (let c = 0; c < COLS; c++) {
+         if (r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1 || (r % 2 === 0 && c % 2 === 0)) grid[r].push('#')
+         else if (near(r, c, [[1, 1], ...ENEMY_STARTS]) || Math.random() > 0.55) grid[r].push(' ')
+         else { // ← değişti
+           grid[r].push('+')
+           if (Math.random() < 0.2) items.set(key(r, c), Math.random() < 0.5 ? 'bomb' : 'fire') // ← yeni
+         } // ← yeni
+       }
+     }
+   }
+   ```
+
+4. `updatePlayer()`'ın kapanış `}`'inin altına ekle:
+
+   ```js
+   function pickUp() {
+     const t = tileOf(player)
+     const item = items.get(key(t.r, t.c))
+     if (!item || grid[t.r][t.c] !== ' ') return
+     items.delete(key(t.r, t.c))
+     if (item === 'bomb') maxBombs += 1
+     else power += 1
+   }
+   ```
+
+5. `update()` içinde `updatePlayer()` satırının hemen altına ekle:
+
+   ```js
+     pickUp()
+   ```
+
+6. `draw()` içinde, kasanın şeridini çizen `if (tile === '+') { ... }` bloğunun kapanışının altına (hâlâ içteki `for`
+   döngüsünün içinde) eşyayı çiz:
+
+   ```js
+         const item = items.get(key(r, c))
+         if (item && tile === ' ') {
+           ctx.fillStyle = item === 'bomb' ? '#2563eb' : '#ea580c'
+           ctx.fillRect(x + 6, y + 6, TILE - 12, TILE - 12)
+           ctx.fillStyle = 'white'
+           ctx.font = 'bold 14px sans-serif'
+           ctx.textAlign = 'center'
+           ctx.fillText(item === 'bomb' ? 'B' : 'F', x + TILE / 2, y + 21)
+         }
+   ```
+
+7. `draw()`'da kalpleri yazan satırı değiştir:
+
+   ```js
+     ctx.fillText('♥'.repeat(lives) + '  Bombs ' + maxBombs + '  Fire ' + power, 8, 22) // ← değişti
+   ```
+
+8. **Çalıştır**'a bas. Üstte `♥♥♥  Bombs 1  Fire 2` yazmalı. Oynamak için önce oyuna tıkla ve kasaları patlat: bazılarının
+   yerinde B ya da F çıkmalı; üstüne yürüyünce kaybolmalı ve üstteki sayı artmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Üst yazı kontrolü kırmızıysa `'  Bombs '` ve `'  Fire '` içindeki **iki** boşluğu kontrol et.
 
 # --tests--
 

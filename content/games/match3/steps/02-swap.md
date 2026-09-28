@@ -28,25 +28,49 @@ unless we saved it first.
 
 # --explanation-tr--
 
-Bir hamle iki tıklama sürer: ilki bir mücevheri **seçer**, ikincisi eşini seçer. İkinci tıklamanın kuralları oyunun nasıl
-hissettirdiğine karar verir:
+**Bu adımda:** mücevherlerin yerini değiştirebileceksin. Bir mücevhere tıklayınca etrafında beyaz bir çerçeve
+çıkacak; sonra hemen yanındaki (sol, sağ, üst ya da alt) bir mücevhere tıklayınca ikisi yer değiştirecek. (Henüz
+eşleşenler silinmiyor.)
 
-- yine aynı mücevher: seçimi **kaldır**;
-- bir **komşu** (hemen solu, sağı, üstü ya da altı): ikisini takas et;
-- başka herhangi bir mücevher: yeni seçim o olur, böylece yanlış bir ilk seçim kolayca düzelir.
+**Bir hamle iki tıklamadır.** İlki bir mücevheri **seçer**, ikincisi eşini. İkinci tıklamanın kuralları oyunun
+hissini belirler:
 
-"Komşu"nun kısa bir testi var. İki hücrenin satırları ve sütunları **toplamda** bir farklıysa komşudurlar; bu *Manhattan
-uzaklığıdır* ve bir çaprazın uzaklığı 2'dir:
+- aynı mücevher yine: seçimi **kaldır**;
+- bir **komşu** (tam solunda, sağında, üstünde ya da altında): ikisini takas et;
+- başka herhangi bir mücevher: o yeni seçim olur, böylece yanlış ilk seçim kolayca düzelir.
+
+**Seçimi saklamak.** Seçili hücreyi `{ r: 3, c: 2 }` gibi bir **nesnede** tutarız (süslü parantez içinde
+`ad: değer` alanları; `selected.r` ile okunur). Hiçbir şey seçili değilken değeri `null` ("hiçbir şey") olur.
+`if (selected)` `null` iken yanlış sayılır.
+
+**Komşu mu?** İki hücre, satır ve sütun farkları **toplamda** bir ise komşudur. Çapraz hücrenin farkı 2'dir:
 
 ```js
 Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1
 ```
 
-İşaretçinin altındaki hücreyi bulmak için canvas piksellerine çevir (canvas gerçek boyutundan küçük çizilmiş olabilir),
-tahtanın köşesini çıkar ve `SIZE`'a böl. Tahtanın dışında hücre yoktur, bu yüzden `cellAt` `null` döndürür.
+`Math.abs` sayının eksi işaretini atar (mutlak değer): `Math.abs(-1)` → `1`. `!==` "eşit değil" demek.
 
-İki dizi öğesini takas etmek geçici bir değişken ister: `board[a.r][a.c] = board[b.r][b.c]`'den sonra, önceden kaydetmediysek
-`a`'nın eski değeri kaybolur.
+**Takas için geçici bir kutu.** İki bardaktaki suyu değiştirmek için üçüncü bir bardak gerekir. `board[a.r][a.c] =
+board[b.r][b.c]` yazdığımız anda `a`'nın eski değeri kaybolur; önce onu `gem` adıyla saklarız:
+
+```js
+const gem = board[a.r][a.c]          // a'yı yedekle
+board[a.r][a.c] = board[b.r][b.c]    // a'ya b'yi koy
+board[b.r][b.c] = gem                // b'ye yedeği koy
+```
+
+**Tıklanan hücreyi bulmak.** Tarayıcı tıklamanın yerini sayfaya göre verir (`event.clientX`, `event.clientY`).
+Canvas ekranda küçültülmüş olabilir; `canvas.getBoundingClientRect()` canvas'ın sayfadaki yerini ve ekrandaki
+boyunu verir, bununla canvas'ın kendi piksellerine çeviririz. Sonra tahtanın köşesini (`LEFT`, `TOP`) çıkarıp
+`SIZE`'a böler, aşağı yuvarlarız: satır ve sütun. Tahtanın dışında hücre yoktur; `cellAt` `null` döner.
+`{ r, c }` kısaltması `{ r: r, c: c }` demektir.
+
+**Tıklamayı dinlemek.** `canvas.addEventListener('pointerdown', (event) => { ... })` "canvas'a fareyle tıklanınca ya
+da parmakla dokununca şu fonksiyonu çalıştır" der. `(event) => { ... }` adsız kısa bir fonksiyondur; tarayıcı
+tıklamanın bilgisini `event` içinde verir. `!cell` "hücre yoksa" (`!` "değil").
+
+**Çerçeve.** `strokeRect` içi boş bir dikdörtgen çizer; rengi `strokeStyle`, kalınlığı `lineWidth`.
 
 # --task--
 
@@ -61,14 +85,71 @@ tahtanın köşesini çıkar ve `SIZE`'a böl. Tahtanın dışında hücre yoktu
 
 # --task-tr--
 
-1. `selected` ekle (`reset()`'te `null`).
-2. İki `{ r, c }` hücresi için `swap(a, b)` ve `trySwap(a, b)` yaz: komşu değillerse `false` döndür, değilse takas et ve
-   `true` döndür.
-3. `cellAt(event)` yaz: işaretçinin altındaki `{ r, c }`, tahtanın dışında `null`.
-4. `pointerdown`'da: bir mücevher seçiliyse ve `trySwap(selected, cell)` işe yararsa `selected`'ı temizle. Değilse seçili
-   mücevhere yeniden tıklamak seçimi kaldırır, başka herhangi bir mücevher `selected` olur.
-5. Seçili mücevherin çevresine beyaz (`'#ffffff'`) bir çerçeve çiz: `lineWidth = 3`, hücresinin 2 piksel içinden `strokeRect`
-   (`SIZE - 4` genişliğinde).
+1. `let board ...` satırının hemen **altına** ekle:
+
+   ```js
+   let selected
+   ```
+
+2. `reset()` fonksiyonuna başta hiçbir şeyin seçili olmadığını yaz:
+
+   ```js
+   function reset() {
+     newBoard()
+     selected = null // ← yeni
+   }
+   ```
+
+3. `reset()`'in kapanan `}`'sinin altına bir satır boşluk bırakıp takas, komşu kontrolü, hücre bulma ve tıklama
+   kodunu yaz:
+
+   ```js
+   function swap(a, b) {
+     const gem = board[a.r][a.c]
+     board[a.r][a.c] = board[b.r][b.c]
+     board[b.r][b.c] = gem
+   }
+
+   function trySwap(a, b) {
+     if (Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return false
+     swap(a, b)
+     return true
+   }
+
+   function cellAt(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width - LEFT
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height - TOP
+     const r = Math.floor(y / SIZE)
+     const c = Math.floor(x / SIZE)
+     return r >= 0 && r < N && c >= 0 && c < N ? { r, c } : null
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const cell = cellAt(event)
+     if (!cell) return
+     if (selected && trySwap(selected, cell)) selected = null
+     else selected = selected && selected.r === cell.r && selected.c === cell.c ? null : cell
+   })
+   ```
+
+   Son iki satır: "seçili bir mücevher varsa **ve** takas olduysa, seçimi temizle. Olmadıysa: aynı mücevhere
+   tıklandıysa seçimi kaldır, değilse tıklanan yeni seçim olsun."
+
+4. `draw()` fonksiyonunun sonunda, dış `for` döngüsünün kapanan `}`'sinden sonra ve fonksiyonun kapanan `}`'sinden
+   önce, çerçeveyi ekle:
+
+   ```js
+     if (selected) {
+       ctx.lineWidth = 3
+       ctx.strokeStyle = '#ffffff'
+       ctx.strokeRect(LEFT + selected.c * SIZE + 2, TOP + selected.r * SIZE + 2, SIZE - 4, SIZE - 4)
+     }
+   ```
+
+5. **Çalıştır**'a bas. Bir mücevhere tıkla: beyaz çerçeve çıkmalı. Yanındakine tıkla: yer değiştirmeli. Uzaktaki
+   birine tıklarsan seçim oraya geçmeli. Alttaki kontrollerin hepsi yeşil olmalı. Tıklama yanlış hücreyi seçiyorsa
+   `cellAt` içindeki `- LEFT` ve `- TOP`'u kontrol et.
 
 # --tests--
 

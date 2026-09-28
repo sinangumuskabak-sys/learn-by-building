@@ -26,23 +26,48 @@ the seams between tiles.
 
 # --explanation-tr--
 
-Pong'da raket, tuşa bastığın anda sabit hızla hareket ediyordu. Bir platform kahramanı **momentumla** daha iyi
-hissettirir: bir yönü basılı tuttukça hız birikir, bırakınca eriyip gider.
+**Bu adımda:** oyuncu sağ ve sol ok tuşlarıyla koşacak. Hızlanarak kalkacak, tuşu bırakınca kayarak duracak ve duvara
+çarpınca tam duvarın dibinde duracak.
+
+**Basılı tuşları hatırlamak.** Tarayıcı bir tuşa basıldığında ve bırakıldığında bize haber verir (**olay**, event).
+Hangi tuşların şu an basılı olduğunu boş bir nesnede (`const keys = {}`) tutarız:
+
+```js
+document.addEventListener('keydown', (event) => {
+  keys[event.key] = true
+})
+```
+
+- `addEventListener('keydown', ...)` → "bir tuşa basıldığında şunu yap". `'keyup'` tuş bırakıldığında olur.
+- `(event) => { ... }` kısa, adsız bir fonksiyondur; `event.key` basılan tuşun adıdır (`'ArrowRight'`, `'ArrowLeft'`).
+- `keys[event.key] = true` → köşeli parantez alanın adını değişkenden alır; sağ oka basıldıysa `keys.ArrowRight = true`.
+
+**Yön.** `(keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)` → `a ? b : c` kısa bir "eğer"dir: `a` doğruysa `b`,
+değilse `c`. Sonuç sağ için `1`, sol için `-1`, hiçbiri (ya da ikisi birden) için `0`.
+
+**Momentum (ivme).** Kahraman, tuşa basar basmaz tam hızla gitmezse daha iyi hissettirir: yön tuşu basılıyken hız
+yavaş yavaş artar, bırakınca yavaş yavaş söner.
 
 ```js
 if (input !== 0) player.vx += input * ACCEL   // hızlan
-else player.vx *= FRICTION                    // bırak: her karede hızın %20'sini kaybet
+else player.vx *= FRICTION                    // bırakınca: her karede hızın %20'sini kaybet
 player.vx = clamp(player.vx, -MAX_SPEED, MAX_SPEED)
 ```
 
-Her karede `0.8` ile çarpmak hızı çabucak küçültür ama asla tam sıfıra indirmez (0.8, 0.64, 0.51, ...); bu yüzden çok
-küçük hızları tam `0`'a yuvarla, yoksa oyuncu piksel kesirleriyle sonsuza kadar kayar. `ACCEL` ve `FRICTION`'ı ayarlamak,
-bir oyunun "kaygan", diğerinin "sıkı" hissettirmesinin büyük bir parçasıdır.
+- `*=` "şununla çarp" demektir. `0.8` ile çarpmak hızı %20 azaltır. `else` "değilse" demektir.
+- `clamp(değer, en az, en çok)` değeri iki sınır arasında tutan küçük bir yardımcı fonksiyon: 4'ten büyükse 4, -4'ten
+  küçükse -4 yapar. `Math.max` ikisinden büyüğünü, `Math.min` küçüğünü verir; ikisi birlikte sınır koyar.
+- Her karede 0.8 ile çarpmak hızı çabucak küçültür ama **asla tam sıfır yapmaz** (0.8, 0.64, 0.51, ...). Bu yüzden
+  çok küçük hızları tam `0`'a çekeriz; yoksa oyuncu piksel kırıntılarıyla sonsuza kadar kayar.
+  `Math.abs(sayı)` sayının eksisiz hâlidir (`-0.03` → `0.03`); böylece iki yönü tek kontrolle yakalarız.
 
-Duvarlar da zeminler gibi çalışır: **önce yatayda** hareket et; bu bir döşemenin içinde biterse onun kenarına geri
-yapıştır. Sonra eskisi gibi dikeyde hareket et. İki ekseni **ayrı ayrı** ele almak döşeme çarpışmalarının anahtar
-hilesidir. İki eksende birden hareket edip sonra bir kesişme bulsaydın, duvara mı zemine mi çarptığını ayırt edemezdin
-ve gövdeler döşemelerin birleşim yerlerine takılırdı.
+`ACCEL` ve `FRICTION` ayarları bir oyunun "yüzen" mi "sıkı" mı hissettirdiğini büyük ölçüde belirler.
+
+**Duvarlar zemin gibi çalışır.** Önce **yatay** hareket edilir; bu bir karenin içinde bittiyse karenin yanına geri
+itilir (sağa gidiyorsan duvarın soluna, sola gidiyorsan sağına). **Sonra** eskisi gibi dikey hareket gelir. İki ekseni
+**ayrı ayrı** ele almak kare çarpışmalarının anahtar hilesidir. İkisini birden hareket ettirip sonra çakışma bulsaydın
+duvara mı zemine mi çarptığını bilemezdin; oyuncu karelerin birleşim yerlerine takılırdı. `moveX` bir şeye çarptıysa
+`true`, çarpmadıysa `false` döndürür (bunu ileride düşmanlar kullanacak).
 
 # --task--
 
@@ -56,14 +81,65 @@ ve gövdeler döşemelerin birleşim yerlerine takılırdı.
 
 # --task-tr--
 
-1. `const ACCEL = 0.5`, `const MAX_SPEED = 4`, `const FRICTION = 0.8`, bir `clamp(value, min, max)` yardımcısı ve
-   `keydown`/`keyup`'ta güncellenen `const keys = {}` ekle.
-2. `function moveX(body)` yaz: `body.x`'e `body.vx` ekle; şimdi katı bir şeyle kesişiyorsa onu döşemenin yanına
-   yapıştır (sağa giderken: `x = Math.floor((x + w - EPS) / TILE) * TILE - w`; sola giderken:
-   `x = Math.floor(x / TILE) * TILE + TILE`), `body.vx = 0` yap ve `true` döndür. Değilse `false` döndür.
-3. `update()` içinde yerçekiminden önce: `ArrowRight` basılıyken `input` `1`, `ArrowLeft` için `-1`, hiçbiri için
-   `0`. İvme ya da sürtünme uygula, `±MAX_SPEED`'e sınırla, `0.05`'in altındaki hızları `0`'a yuvarla, sonra
-   `moveX(player)` çağır.
+1. `const MAX_FALL = 12 ...` satırının hemen altına üç sabit ekle:
+
+   ```js
+   const ACCEL = 0.5
+   const MAX_SPEED = 4
+   const FRICTION = 0.8
+   ```
+
+2. Oyuncuyu oluşturan `LEVEL.forEach(...)` bloğunun kapanış `})` satırının altına bir satır boşluk bırakıp tuş
+   defterini, klavye dinleyicilerini ve `clamp` yardımcısını ekle:
+
+   ```js
+   const keys = {}
+
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+
+   function clamp(value, min, max) {
+     return Math.max(min, Math.min(max, value))
+   }
+   ```
+
+3. `moveY` fonksiyonunun **üstüne** (üstündeki yorum satırının da üstüne) yatay hareket fonksiyonunu yaz:
+
+   ```js
+   // Her seferinde tek eksende hareket et; bir karenin içinde bittiyse karenin kenarına geri it.
+   function moveX(body) {
+     body.x += body.vx
+     if (!overlapsSolid(body)) return false
+     if (body.vx > 0) body.x = Math.floor((body.x + body.w - EPS) / TILE) * TILE - body.w
+     else body.x = Math.floor(body.x / TILE) * TILE + TILE
+     body.vx = 0
+     return true
+   }
+   ```
+
+4. `update()` fonksiyonunun **en başına**, yerçekiminden önce koşmayı ekle. Fonksiyon şöyle olmalı:
+
+   ```js
+   function update() {
+     const input = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0) // ← yeni
+     if (input !== 0) player.vx += input * ACCEL // ← yeni
+     else player.vx *= FRICTION // ← yeni
+     player.vx = clamp(player.vx, -MAX_SPEED, MAX_SPEED) // ← yeni
+     if (Math.abs(player.vx) < 0.05) player.vx = 0 // ← yeni
+     moveX(player) // ← yeni
+
+     player.vy = Math.min(MAX_FALL, player.vy + GRAVITY)
+     moveY(player)
+   }
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra sağ/sol okları basılı tut: oyuncu hızlanarak koşmalı,
+   bırakınca kayarak durmalı, sütuna çarpınca durmalı. Çukura girersen düşersin (şimdilik yeniden başlamak için
+   **Çalıştır**'a bas). Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

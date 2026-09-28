@@ -26,24 +26,42 @@ Tapping anywhere else when the game is over starts a new word.
 
 # --explanation-tr--
 
-Telefonda klavye yok; bu yüzden oyun kendi klavyesini çizer. Gerçek bir klavyenin yapamadığı bir şeyi de yapar: her tuş o harf
-hakkında zaten bildiklerinle boyanır; böylece denenecek hangi harflerin kaldığını bir bakışta görürsün.
+**Bu adımda:** ızgaranın altına ekranda dokunulabilen bir klavye çizeceğiz. Telefonda da oynanabilecek. Üstelik her
+tuş, o harf hakkında bildiğin şeyin rengini alacak (yeşil, sarı, gri); hangi harfleri denemediğini bir bakışta
+göreceksin.
 
-Tuşlar, tıpkı gerçek bir klavye gibi, her satır için bir tane olmak üzere üç metinden gelir. İki özel karakter daha geniş
-çizilen Enter ve Backspace'i temsil eder. Her satır önce genişlikleri toplanarak ortalanır:
+**Tuşlar nereden gelir?** Gerçek klavye gibi üç satır, her satır bir yazı: `'qwertyuiop'`, `'asdfghjkl'`,
+`'>zxcvbnm<'`. İki özel işaret var: `>` **Enter** (üstünde `OK` yazar), `<` **Backspace** (üstünde `DEL` yazar). Bu
+ikisi bir buçuk kat geniştir.
 
-```js
-let x = (canvas.width - total) / 2
-```
+**`keyRects()`: tuş listesi.** Bu fonksiyon satırları bir dikdörtgen listesine çevirir. Her dikdörtgen bir nesnedir:
+`{ key, label, x, y, w, h }` (tuşun anlamı, üstündeki yazı, konum ve boyut). Aynı liste **iki kez** kullanılır: tuşları
+**çizmek** ve dokunuşun hangi tuşa denk geldiğini **bulmak** için. Tek kaynaktan çizip tek kaynaktan bulunca ikisi
+asla birbirini tutmazlık etmez. İçindeki yeni parçalar:
 
-`keyRects()` satırları `key` ve `label`'ı olan dikdörtgenlerden oluşan bir listeye çevirir. Aynı liste iki kez kullanılır:
-tuşları **çizmek** ve bir dokunuşun hangi tuşa düştüğünü bulmak için. Çizimi ve isabet sınamasını tek bir kaynaktan yapmak
-ikisinin asla çelişmemesi demektir.
+- `KEY_ROWS.forEach((row, r) => { ... })` → dizideki her eleman için fonksiyonu çalıştırır; `row` satırın yazısı,
+  `r` sırası (0, 1, 2). `for` döngüsünün bir başka yazılışı.
+- `[...row]` → yazıyı harf harf bir diziye döker: `[...'abc']` → `['a', 'b', 'c']`.
+- `.map((k) => ...)` → her harf için tuşun genişliğini hesaplayıp yeni bir dizi yapar: özel tuşsa `KEY_W * 1.5`,
+  değilse `KEY_W`.
+- `widths.reduce((a, b) => a + b, 0)` → dizideki sayıları toplar (0'dan başla, her sayıyı ekle). Buna tuşlar
+  arasındaki 4'er piksellik boşlukları ekleyince satırın toplam genişliği (`total`) çıkar.
+- `let x = (canvas.width - total) / 2` → satırı ortalamak için soldan bırakılacak boşluk. Her tuştan sonra
+  `x += widths[i] + 4` ile bir sonraki tuşun yerine geçeriz.
+- `{ '>': ['Enter', 'OK'], '<': ['Backspace', 'DEL'] }[k] || [k, k]` → küçük bir sözlük: `k` özel işaretse karşılığını
+  al, değilse (`||`) harfin kendisini iki kez kullan. `const [key, label] = ...` bu iki elemanlı dizinin elemanlarına
+  ad verir.
 
-Renkler için bütün tahminlere bak ve her harf hakkında bilinen en iyi şeyi hatırla. "En iyi"nin bir sırası var; bu yüzden her
-işarete bir derece ver: yeşil (3) sarıyı (2), sarı griyi (1) yener. Bir kez sarı, sonra yeşil olan bir harf yeşildir.
+**Dokunmak.** `'pointerdown'` olayı fareyle tıklamada da parmakla dokunmada da gelir. Dokunulan noktayı canvas
+piksellerine çevirip (canvas ekranda farklı boyda görünebilir, önceki adımlardaki gibi) içinde kaldığı tuşu `find`
+ile buluruz. Bir nokta; sol kenarın sağında, sağ kenarın solunda, üst kenarın altında ve alt kenarın üstündeyse
+dikdörtgenin içindedir. Tuşa dokunduysan `type(hit.key)`; boşluğa dokunduysan ve oyun bittiyse yeni oyun.
 
-Oyun bittiğinde başka herhangi bir yere dokunmak yeni bir kelime başlatır.
+**Harf renkleri: en iyi bilgi kazanır.** Bütün tahminlere bakıp her harf için bildiğimiz **en iyi** şeyi hatırlarız.
+"En iyi"nin bir sırası var, her işarete bir puan veririz: yeşil (3) > sarı (2) > gri (1). Önce sarı, sonra yeşil çıkan
+harf yeşildir. `if (!known[letter] || rank[mark] > rank[known[letter]])` → "bu harfi henüz bilmiyorsak **veya** yeni
+işaret daha iyiyse, yenisini yaz". Hiç denenmemiş harfin değeri `undefined` kalır ve tuş düz gri (`'#71717a'`)
+çizilir.
 
 # --task--
 
@@ -59,15 +77,86 @@ Oyun bittiğinde başka herhangi bir yere dokunmak yeni bir kelime başlatır.
 
 # --task-tr--
 
-1. `KEY_ROWS = ['qwertyuiop', 'asdfghjkl', '>zxcvbnm<']` (`>` Enter, `<` Backspace), `KEY_W = 32`, `KEY_H = 44` ve
-   `KEYS_TOP = 408` ekle.
-2. `keyRects()` yaz: harf tuşları `KEY_W` genişliğinde, Enter ve Backspace bunun bir buçuk katı, tuşlar arasında 4 piksel;
-   her satır ortalı ve satırlar `KEY_H + 6` aralıklı. Her dikdörtgenin `key`'i (`'Enter'`, `'Backspace'` ya da harf),
-   `label`'ı (`'OK'`, `'DEL'` ya da harf), `x`, `y`, `w` ve `h`'si var.
-3. `pointerdown`'da canvas piksellerine çevir ve isabet eden tuşu `type()` et; hiçbirine isabet etmediyse ve oyun bittiyse
-   `reset()`.
-4. Harften en iyi işaretine giden bir nesne döndüren `letterColors()` yaz. Her tuşu harfinin renginde, hiçbir şey
-   bilinmiyorsa `'#71717a'` ile, etiketi beyaz büyük harfle (`'bold 14px sans-serif'`) çiz.
+1. `const COLORS = ...` satırının hemen altına klavye ölçülerini ekle:
+
+   ```js
+   const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', '>zxcvbnm<'] // > is Enter, < is Backspace
+   const KEY_W = 32
+   const KEY_H = 44
+   const KEYS_TOP = 408
+   ```
+
+2. `keydown` dinleyicisinin kapanış `})`'sinden sonra, `function draw()`'dan önce bir satır boşluk bırakıp şu üç
+   parçayı ekle. Önce tuş listesi:
+
+   ```js
+   // The on-screen keyboard: each row is centered.
+   function keyRects() {
+     const rects = []
+     KEY_ROWS.forEach((row, r) => {
+       const widths = [...row].map((k) => (k === '>' || k === '<' ? KEY_W * 1.5 : KEY_W))
+       const total = widths.reduce((a, b) => a + b, 0) + (row.length - 1) * 4
+       let x = (canvas.width - total) / 2
+       ;[...row].forEach((k, i) => {
+         const [key, label] = { '>': ['Enter', 'OK'], '<': ['Backspace', 'DEL'] }[k] || [k, k]
+         rects.push({ key, label, x, y: KEYS_TOP + r * (KEY_H + 6), w: widths[i], h: KEY_H })
+         x += widths[i] + 4
+       })
+     })
+     return rects
+   }
+   ```
+
+   `;[...row]` satırının başındaki `;` önemli: köşeli parantezle başlayan satırın bir öncekine yapışmasını önler.
+
+3. Altına dokunma dinleyicisi:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     const hit = keyRects().find((k) => x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h)
+     if (hit) type(hit.key)
+     else if (state !== 'playing') reset()
+   })
+   ```
+
+4. Altına harf renklerini bulan fonksiyon:
+
+   ```js
+   // The best thing known about each letter so far: green beats yellow beats gray.
+   function letterColors() {
+     const rank = { gray: 1, yellow: 2, green: 3 }
+     const known = {}
+     for (const g of guesses) {
+       ;[...g.word].forEach((letter, i) => {
+         const mark = g.marks[i]
+         if (!known[letter] || rank[mark] > rank[known[letter]]) known[letter] = mark
+       })
+     }
+     return known
+   }
+   ```
+
+5. `draw()` içinde, dış `for` döngüsünü kapatan `}`'den sonra ve `ctx.font = 'bold 16px sans-serif'` satırından
+   **önce** tuşları çizen bloğu ekle:
+
+   ```js
+     const known = letterColors()
+     ctx.font = 'bold 14px sans-serif'
+     for (const k of keyRects()) {
+       ctx.fillStyle = known[k.key] ? COLORS[known[k.key]] : '#71717a'
+       ctx.fillRect(k.x, k.y, k.w, k.h)
+       ctx.fillStyle = 'white'
+       ctx.fillText(k.label.toUpperCase(), k.x + k.w / 2, k.y + k.h / 2)
+     }
+
+   ```
+
+6. **Çalıştır**'a bas. Izgaranın altında üç satırlık bir klavye görmelisin. Oynamak için önce oyuna tıkla: tuşlara
+   tıklayarak yaz, `OK` ile gönder, `DEL` ile sil. Tahminden sonra tuşlar renklenmeli. Alttaki kontrollerin hepsi
+   yeşil olmalı. Tuş konumu kontrolü kırmızıysa `+ 4` boşluklarını ve `KEY_H + 6`'yı kontrol et.
 
 # --tests--
 

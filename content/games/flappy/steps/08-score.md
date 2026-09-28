@@ -25,23 +25,39 @@ already played. Whenever an event should fire once but its condition stays true,
 
 # --explanation-tr--
 
-Bir boru kuşu tamamen geçince bir puan kazanırsın: borunun sağ kenarı kuşun sol kenarının solunda kalır.
+**Bu adımda:** skor ekleyeceğiz. Ekranın üstünde ortada büyük beyaz bir sayı duracak ve kuş her borunun arasından
+geçtiğinde bir artacak.
 
-Tuzak şu: bu koşul, boru ekrandan çıkana kadar **her karede** doğru kalır. Doğru olduğu her seferinde puan eklersen
-tek bir boru 40 puan eder.
+**Ne zaman puan verilir?** Boru kuşu tamamen geçtiğinde, yani borunun sağ kenarı (`pipe.x + PIPE_WIDTH`) kuşun sol
+kenarının (`bird.x - bird.r`) solunda kaldığında.
 
-İstediğin şey, koşulun doğru **olduğu** ana, bir kez tepki vermek. Standart çözüm, nesnenin kendisinde bir bayrak
-tutmaktır:
+**Tuzak.** Bu koşul, boru ekrandan çıkana kadar **her karede** doğru kalır. Koşul her doğru olduğunda puan
+eklersek, tek bir boru 40 puan eder!
+
+Bizim istediğimiz, koşulun doğru **olduğu anda**, bir kez tepki vermek. Bunun alışılmış çözümü, nesnenin üstüne
+bir **bayrak** (flag) koymaktır: "bu boruyu saydım mı?" sorusunun cevabını tutan doğru/yanlış bir alan.
 
 ```js
 if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x - bird.r) {
-  pipe.passed = true   // bunu zaten saydığımızı hatırla
+  pipe.passed = true   // bu boruyu saydığımızı unutma
   score += 1
 }
 ```
 
-"Bu zaten oldu mu?" bayrakları oyun kodunun her yerindedir: açılan başarımlar, zaten açılmış bir kapı, zaten çalmış
-bir ses. Bir olay bir kez tetiklenmeli ama koşulu doğru kalmaya devam ediyorsa, bir bayrak kullan.
+Okuyalım: "Eğer bu boru henüz sayılmadıysa (`!pipe.passed`) **ve** kuşu tamamen geçtiyse: onu sayıldı diye işaretle
+ve skoru bir artır." Bir sonraki karede `pipe.passed` artık `true` olduğu için `!pipe.passed` yanlış olur ve puan
+tekrar verilmez.
+
+Yeni borular `passed: false` ile doğar. `false` "yanlış / hayır" demektir, `true` ise "doğru / evet". Tırnaksız
+yazılırlar, çünkü yazı değil, doğru/yanlış değerleridir.
+
+"Bu zaten oldu mu?" bayrakları oyun kodunda her yerdedir: açılmış bir başarım, bir kez açılan bir kapı, bir kez
+çalan bir ses. Bir şeyin bir kez olması gerekip de koşulu doğru kalmaya devam ediyorsa, bir bayrak kullan.
+
+**Döngüde birden fazla satır.** Şu ana kadar `for (const pipe of pipes) pipe.x -= PIPE_SPEED` tek satırdı. Artık
+her boru için birkaç iş yapacağız, bu yüzden döngünün işini `{ }` içine alıyoruz.
+
+**Sayıyı yazıya çevirmek.** `fillText` bir yazı ister. `String(score)` sayıyı (`7`) yazıya (`'7'`) çevirir.
 
 # --task--
 
@@ -53,11 +69,46 @@ bir ses. Bir olay bir kez tetiklenmeli ama koşulu doğru kalmaya devam ediyorsa
 
 # --task-tr--
 
-1. `let score = 0` ekle ve `addPipe()` içinde yeni borulara `passed: false` ver.
-2. `update()` içinde her boruyu taşırken: `passed` değilse ve sağ kenarı (`pipe.x + PIPE_WIDTH`) kuşun sol
-   kenarından (`bird.x - bird.r`) küçükse, onu `passed` olarak işaretle ve `score`'u 1 artır.
-3. `draw()` içinde skoru üst tarafta ortalanmış beyaz yazıyla göster: `ctx.font = 'bold 40px sans-serif'`,
-   `(canvas.width / 2, 70)` noktasında.
+1. `let frame = 0` satırının altına skoru ekle:
+
+   ```js
+   let score = 0
+   ```
+
+2. `addPipe()` fonksiyonunda `pipes.push(...)` satırını, yeni borular "henüz sayılmadı" diye doğsun diye şöyle
+   değiştir:
+
+   ```js
+     pipes.push({ x: canvas.width, gapY, passed: false })   // ← değişti
+   ```
+
+3. `update()` fonksiyonunda `for (const pipe of pipes) pipe.x -= PIPE_SPEED` satırını sil ve yerine şunu yaz:
+
+   ```js
+     for (const pipe of pipes) {
+       pipe.x -= PIPE_SPEED
+       if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x - bird.r) {
+         pipe.passed = true
+         score += 1
+       }
+     }
+   ```
+
+   Hemen altındaki `pipes = pipes.filter(...)` satırı aynen kalır.
+
+4. `draw()` fonksiyonunda `ctx.textAlign = 'center'` satırının hemen altına (`if (state === 'ready')`'den önce)
+   skoru yazan iki satırı ekle:
+
+   ```js
+     ctx.font = 'bold 40px sans-serif'
+     ctx.fillText(String(score), canvas.width / 2, 70)
+   ```
+
+   Yazı yatayda ortada, yukarıdan 70 piksel aşağıda durur. Rengi bir üst satırdaki `'white'`'tan gelir.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Ekranın üstünde `0` görmelisin. Oynamak için önce oyuna tıkla,
+   Boşluk'la uç; her borudan geçince sayı bir artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa
+   `!pipe.passed`'daki ünlemi ve `<` işaretinin yönünü kontrol et.
 
 # --tests--
 

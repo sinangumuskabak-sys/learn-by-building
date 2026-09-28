@@ -22,19 +22,52 @@ later, and the code says *why* the number is there.
 
 # --explanation-tr--
 
-Yılan pikselden piksele akıcı hareket etmez: bir ızgaranın bir **hücresinden** diğerine atlar. Bu yüzden piksel
-yerine hücre olarak düşün, piksele yalnızca çizerken çevir.
+**Bu adımda:** koyu tahtanın üstüne küçük, yeşil bir kare çizeceğiz. Çalıştırınca sağda, sol üst köşeye yakın
+bir yerde tek bir yeşil kare göreceksin. Bu kare, yılanın başı olacak.
 
-Hücreler 20 piksel olursa 400×400 tahta 20×20'lik bir ızgaradır. `5`. sütun, `5`. satırdaki hücre iki eksende de
-`5 * 20 = 100` pikselden başlar:
+**Izgara (grid) nedir?** Yılan pikselden piksele kayarak gitmez; bir **hücreden** yanındaki hücreye atlar. Tahtayı
+bir satranç tahtası ya da kareli defter gibi düşün: her kare bir hücre. Hücreler 20 piksel olursa 400×400'lük tahta
+yan yana 20 sütun, alt alta 20 satır eder.
+
+Bu yüzden oyunda "yılan şu pikselde" değil, "yılan şu **sütunda** ve şu **satırda**" diye düşüneceğiz. Piksele
+yalnızca çizerken çevireceğiz. Çevirmek kolay: sütun numarasını hücre boyuyla çarparsın.
 
 ```
 piksel x = sütun * CELL
 piksel y = satır * CELL
 ```
 
-Boyutu her yere `20` yazmak yerine adlı bir sabitte (`CELL`) tutmak, onu ileride tek yerden değiştirmeni sağlar ve
-kod sayının *neden* orada olduğunu anlatır.
+Sayma sıfırdan başlar: en soldaki sütun `0`. sütundur. Yani `5`. sütun, soldan `5 * 20 = 100` piksel içeride
+başlar. `*` işareti bilgisayarda **çarpma** demektir.
+
+**Sayıya ad vermek.** Her yere `20` yazmak yerine bu sayıya bir ad veririz:
+
+```js
+const CELL = 20
+```
+
+1. adımda `const` ile `canvas`'a ad vermiştik; burada da aynı şeyi bir **sayıya** yapıyoruz. Artık `CELL`
+yazdığın her yerde bilgisayar `20` anlar. İki faydası var: hücre boyunu ileride değiştirmek istersen tek bir yeri
+değiştirirsin, ve kodu okuyan biri `20`'nin ne olduğunu hemen anlar. Sayılar tırnak **içine yazılmaz**: `20` bir
+sayıdır, `'20'` ise bir yazı olurdu.
+
+**Kareyi çizmek.** 1. adımdaki gibi iki hamle: önce renk, sonra dikdörtgen.
+
+```js
+ctx.fillStyle = 'lime'
+ctx.fillRect(5 * CELL, 5 * CELL, CELL, CELL)
+```
+
+Bunu parça parça okuyalım:
+
+- `'lime'` → açık, parlak yeşil.
+- `5 * CELL` (ilk sayı) → x: 5. sütun, yani 100 piksel.
+- `5 * CELL` (ikinci sayı) → y: 5. satır, yani 100 piksel.
+- `CELL, CELL` → genişlik ve yükseklik: tam bir hücre, 20×20.
+
+**Sıra önemli.** Bilgisayar yukarıdan aşağı çalışır ve her çizim öncekinin **üstüne** boyanır. Kareyi arka
+plandan önce çizersen koyu renk onu örter ve göremezsin. O yüzden kare, arka planı boyayan satırların **altına**
+yazılır.
 
 # --task--
 
@@ -44,9 +77,35 @@ kod sayının *neden* orada olduğunu anlatır.
 
 # --task-tr--
 
-1. Değeri `20` olan bir `CELL` sabiti ekle.
-2. Arka planı boyadıktan sonra `5`. sütun, `5`. satıra tam bir hücre büyüklüğünde bir `'lime'` kare çiz. Konum ve
-   boyut için `CELL` kullan.
+1. `const ctx = canvas.getContext('2d')` satırının altında bir satır boşluk bırak ve şunu yaz:
+
+   ```js
+   const CELL = 20
+   ```
+
+2. En alttaki `ctx.fillRect(0, 0, canvas.width, canvas.height)` satırının **altına** bir satır boşluk bırak ve
+   yeşil kareyi çizen iki satırı ekle:
+
+   ```js
+   ctx.fillStyle = 'lime'
+   ctx.fillRect(5 * CELL, 5 * CELL, CELL, CELL)
+   ```
+
+   Kodunun sonu artık şöyle görünmeli:
+
+   ```js
+   const CELL = 20
+
+   ctx.fillStyle = '#111'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+   ctx.fillStyle = 'lime'
+   ctx.fillRect(5 * CELL, 5 * CELL, CELL, CELL)
+   ```
+
+3. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Koyu tahtanın sol üst tarafında küçük yeşil bir kare görmelisin ve
+   alttaki kontrollerin hepsi yeşil olmalı. "Kare arka planın üstüne çizilmeli" kontrolü kırmızıysa, yeşil kareyi
+   çizen satırlar arka planı boyayan satırların üstünde kalmıştır; onları aşağı taşı.
 
 # --tests--
 

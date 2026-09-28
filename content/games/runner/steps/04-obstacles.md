@@ -25,22 +25,51 @@ The first jump starts the run.
 
 # --explanation-tr--
 
-Flappy oyunundaki gibi koşucu hiç ileri gitmez: engeller ona doğru kayar. Yeni olan, **ne zaman** çıktıkları. Sabit bir
-ritim (her 90 karede bir) tahmin edilebilir ve sıkıcıdır; rastgele aralıklar oyuncuyu tetikte tutar.
+**Bu adımda:** yola yeşil kaktüsler çıkacak. Oyun önce ortada "Press Space to start" yazısıyla bekleyecek; ilk
+zıplamada koşu başlayacak ve kaktüsler sağdan sola doğru kayarak gelecek. (Henüz çarpma yok, içlerinden geçersin.)
 
-Bir **geri sayım** kullan: `nextIn`, bir sonraki engele kadar kalan kare sayısı. Her karede bir çıkar; sıfıra
-ulaşınca bir engel üret ve yeni bir rastgele geri sayım seç:
+**Koşucu aslında koşmuyor.** Koşucu hep aynı `x`'te durur; kaktüsler ona doğru kayar. Ekranda bu, koşucu ileri
+gidiyormuş gibi görünür. Trenden dışarı bakınca ağaçların geriye kaçması gibi.
+
+**Oyunun durumu (state).** Oyun iki hâlden birinde: `'ready'` (hazır, bekliyor) ya da `'running'` (koşuyor). Bunu
+bir yazı olarak `state` adlı değişkende tutarız. `update()` en başta sorar: koşmuyorsak hiçbir şey yapma.
 
 ```js
-nextIn = 50 + Math.floor(Math.random() * 70)   // 50 ile 119 kare arası bir yer
+if (state !== 'running') return
 ```
 
-En küçük değer (`50`) keyfî değil. Karede 6 px'te aralık en az 300 px olur; tam bir zıplama yaklaşık 220 px yol alır.
-Yani inip yeniden zıplamaya hep yer vardır. Rastgele, ama asla haksız değil: yalnızca rastgeleleştirme, aralığı
-tasarla.
+`!==` "eşit değil mi?" demek (`===`'in tersi). `return` burada bir cevap vermeden **fonksiyondan hemen çıkar**;
+altındaki satırlar o kare için çalışmaz.
 
-Oyunun bir de `'ready'` durumuna ihtiyacı var; böylece oyuncu bir şeye basmadan engeller üstüne gelmeye başlamaz.
-İlk zıplama koşuyu başlatır.
+**Dizi (array): bir liste.** Ekranda aynı anda birkaç kaktüs olabilir. Hepsini köşeli parantez `[ ]` içinde bir
+listede tutarız. `let obstacles = []` boş bir listedir.
+
+- `obstacles.push(bir şey)` listenin sonuna ekler.
+- `for (const o of obstacles) { ... }` listedeki **her** eleman için bir kez döner; o sırada elemanın adı `o` olur.
+  Tek komut varsa süslü parantezsiz yazılabilir: `for (const o of obstacles) o.x -= speed` → her kaktüsü `speed`
+  kadar sola kaydır. (`-=` "şu kadar çıkar", `+=`'in tersi.)
+- `obstacles.filter((o) => o.x + o.w > 0)` listeden **yalnızca koşulu doğru olanları** içeren yeni bir liste
+  yapar. Burada: sağ kenarı hâlâ ekranın içinde olanlar. Ekrandan tamamen çıkanlar böylece silinir.
+
+**Ne zaman yeni kaktüs?** Hep aynı aralıkla gelseler sıkıcı olurdu. Bir **geri sayım** kullanırız: `nextIn`, bir
+sonraki kaktüse kaç kare kaldığını tutar. Her kare bir azalır (`nextIn -= 1`), sıfıra inince yeni kaktüs çıkar ve
+yeni bir rastgele sayı seçilir:
+
+```js
+nextIn = 50 + Math.floor(Math.random() * 70)
+```
+
+- `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalıklı sayı verir, ör. `0.37`.
+- `* 70` onu 0 ile 69,99… arasına genişletir. `Math.floor(...)` küsuratı atıp aşağı yuvarlar: 0 ile 69 arası
+  tam sayı.
+- `50 +` ekleyince sonuç **50 ile 119** arası olur.
+
+En az 50 olması bilinçli: saniyede 6 pikselden 50 kare en az 300 piksel boşluk demek, tam bir zıplama yaklaşık 220
+piksel tutar. Yani hep yere inip yeniden zıplayacak yer kalır. Rastgele ama asla haksız değil.
+
+**Yazı yazmak.** `ctx.fillText('yazı', x, y)` canvas'a yazı yazar. `ctx.font` yazı tipini ve boyunu,
+`ctx.textAlign = 'center'` de verdiğin `x`'in yazının **ortası** olmasını ayarlar. `canvas.width / 2` (`/` bölme)
+alanın ortasıdır.
 
 # --task--
 
@@ -55,15 +84,75 @@ Oyunun bir de `'ready'` durumuna ihtiyacı var; böylece oyuncu bir şeye basmad
 
 # --task-tr--
 
-1. `let state = 'ready'`, `let obstacles = []`, `let speed = 6` ve `let nextIn = 60` ekle.
-2. `jump()` içinde zıplamadan önce `state = 'running'` yap.
-3. Bir kaktüs `{ x: canvas.width, y: GROUND - 40, w: 20, h: 40 }` ekleyen ve
-   `nextIn = 50 + Math.floor(Math.random() * 70)` yapan `function spawn()` yaz.
-4. `update()` içinde: `'running'` değilse hiçbir şey yapma. Koşucunun fiziğinden sonra `nextIn`'i geri say ve 0'a
-   ulaşınca `spawn()` çağır; her engeli `speed` kadar sola kaydır; yalnızca hâlâ ekranda olan engelleri tut
-   (`o.x + o.w > 0`).
-5. Engelleri `'#15803d'` dikdörtgenler olarak çiz; `'ready'` iken canvas'ın ortasında `Press Space to start` göster
-   (`'#334155'`, `'16px sans-serif'`).
+1. `let runner = ...` satırının hemen **altına** dört değişken ekle:
+
+   ```js
+   let state = 'ready' // 'ready' or 'running'
+   let obstacles = []
+   let speed = 6
+   let nextIn = 60 // frames until the next obstacle
+   ```
+
+2. `jump()` fonksiyonunda, `if`'ten önce oyunu başlatan satırı ekle:
+
+   ```js
+   function jump() {
+     state = 'running' // ← yeni
+     if (onGround()) runner.vy = JUMP
+   }
+   ```
+
+3. `canvas.addEventListener('pointerup', endJump)` satırının altına bir satır boşluk bırakıp kaktüs üreten
+   fonksiyonu yaz:
+
+   ```js
+   function spawn() {
+     obstacles.push({ x: canvas.width, y: GROUND - 40, w: 20, h: 40 })
+     // At least 50 frames apart, so there is always room to land and jump again.
+     nextIn = 50 + Math.floor(Math.random() * 70)
+   }
+   ```
+
+   Yeni kaktüs sağ kenarda (`x: canvas.width`) ve zeminin üstünde (`GROUND - 40`) doğar.
+
+4. `update()` fonksiyonunu şöyle değiştir: en başa durum kontrolü, en sona geri sayım ve kaktüs hareketi:
+
+   ```js
+   function update() {
+     if (state !== 'running') return // ← yeni
+
+     runner.vy += GRAVITY
+     runner.y += runner.vy
+     if (onGround()) {
+       runner.y = GROUND - runner.h
+       runner.vy = 0
+     }
+
+     nextIn -= 1                                       // ← yeni
+     if (nextIn <= 0) spawn()                          // ← yeni
+     for (const o of obstacles) o.x -= speed           // ← yeni
+     obstacles = obstacles.filter((o) => o.x + o.w > 0) // ← yeni
+   }
+   ```
+
+5. `draw()` fonksiyonunda, koşucuyu çizen `ctx.fillRect(runner.x, ...)` satırının altına, kapanan `}`'den önce
+   şunları ekle:
+
+   ```js
+     ctx.fillStyle = '#15803d'
+     for (const o of obstacles) ctx.fillRect(o.x, o.y, o.w, o.h)
+
+     ctx.fillStyle = '#334155'
+     ctx.font = '16px sans-serif'
+     ctx.textAlign = 'center'
+     if (state === 'ready') ctx.fillText('Press Space to start', canvas.width / 2, canvas.height / 2)
+   ```
+
+   Önce bütün kaktüsler yeşil boyanır; sonra oyun beklerken ortaya başlama yazısı yazılır.
+
+6. **Çalıştır**'a bas. Ortada "Press Space to start" görmelisin. Oynamak için önce oyuna tıkla ve Boşluk'a bas:
+   kaktüsler sağdan gelmeye başlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Yazı testi kırmızıysa yazıyı
+   büyük/küçük harfiyle aynen yazdığından emin ol.
 
 # --tests--
 

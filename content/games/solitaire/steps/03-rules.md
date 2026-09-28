@@ -25,22 +25,38 @@ and every part of the game that moves cards (taps, dragging, the computer finish
 
 # --explanation-tr--
 
-Klondike'de bir kartın nereye gidebileceği için iki kural vardır ve her biri yalnızca karta ve yığına bakan küçük bir fonksiyona sığar.
+**Bu adımda:** oyunun iki kuralını yazacağız: bir kart nereye konabilir? Bu adımda ekranda yeni bir şey görmeyeceksin;
+kurallar sonraki adımlarda kartları taşırken kullanılacak. Alttaki kontroller kurallarını test edecek.
 
-**Tablo** (`canStack`): bir kart, bir değer yüksek, **diğer renkte** açık bir kartın üstüne gider: siyah bir 10'un üstüne kırmızı bir
-9. Boş bir sütuna yalnızca papaz başlayabilir.
+**Sütun kuralı (`canStack`).** Bir kart, **bir büyük** ve **öbür renkte** açık bir kartın üstüne konur: kırmızı 9, siyah
+10'un üstüne. Boş bir sütuna sadece papaz (13) konabilir.
 
-**Temel** (`canFound`): bir kart aynı renkte, bir değer yükseğe gider; boş bir temel yalnızca as alır.
+**Temel kuralı (`canFound`).** Bir kart, **aynı renkteki** (maça, kupa...) **bir küçük** kartın üstüne konur. Boş bir
+temel sadece as (1) kabul eder.
+
+**Parça parça:**
+
+```js
+const under = last(pile)            // yığının en üstteki kartı (altına koyacağımız kart)
+if (!under) return card.rank === 13 // yığın boşsa: kart papaz mı?
+```
+
+Boş bir listenin `last`'ı `undefined`'dır ("yok"). `!under` "alttaki kart yoksa" demektir (`!` "değil"). `return` bir
+sonucu geri verir ve fonksiyonu bitirir: burada sonuç `true` ya da `false`'tur.
 
 ```js
 return under.up && under.rank === card.rank + 1 && isRed(under) !== isRed(card)
 ```
 
-`isRed(under) !== isRed(card)`, "renkler farklı" demenin zarif bir yoludur: iki boolean, tam olarak biri kırmızı diğeri değilken
-eşit değildir.
+Üç şart `&&` ("ve") ile: alttaki kart açık **ve** bir büyük **ve** renkleri farklı. Son kısım zarif bir yazımdır:
+`isRed` `true` ya da `false` verir; ikisi birbirine eşit değilse (`!==`) biri kırmızı öbürü siyahtır.
 
-Yalnızca bir soruyu cevaplayan ve hiçbir şeyi değiştirmeyen böyle fonksiyonlara **saf** denir. Tek başlarına test etmeleri kolaydır
-ve kart hareket ettiren oyunun her parçası (dokunuşlar, sürükleme, oyunun bitirilmesi) onlara güvenebilir.
+Temel kuralında da aynı yapı: aynı takım (`under.suit === card.suit`) **ve** alttaki bir küçük
+(`under.rank === card.rank - 1`).
+
+**Saf fonksiyonlar.** Sadece bir soruya cevap veren ve hiçbir şeyi değiştirmeyen fonksiyonlara **saf** (pure) denir.
+Tek başlarına test etmek kolaydır ve kartları taşıyan her şey (tıklama, sürükleme, oyunu bilgisayarın bitirmesi) onlara
+güvenebilir.
 
 # --task--
 
@@ -51,9 +67,27 @@ ve kart hareket ettiren oyunun her parçası (dokunuşlar, sürükleme, oyunun b
 
 # --task-tr--
 
-1. `canStack(card, pile)` yaz: boş bir yığın yalnızca papaz (13) alır; değilse üst kart açık, bir değer yüksek ve diğer renkte
-   olmalı.
-2. `canFound(card, pile)` yaz: boş bir yığın yalnızca as (1) alır; değilse üst kart aynı renk ve bir değer düşük olmalı.
+1. `cardY` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function flipStock`'un **üstüne**) iki kural
+   fonksiyonunu yaz:
+
+   ```js
+   // Tableau: one lower, the other color; only a king goes into an empty column.
+   function canStack(card, pile) {
+     const under = last(pile)
+     if (!under) return card.rank === 13
+     return under.up && under.rank === card.rank + 1 && isRed(under) !== isRed(card)
+   }
+
+   // Foundation: same suit, one higher, starting from the ace.
+   function canFound(card, pile) {
+     const under = last(pile)
+     if (!under) return card.rank === 1
+     return under.suit === card.suit && under.rank === card.rank - 1
+   }
+   ```
+
+2. **Çalıştır**'a bas. Masa önceki adımdaki gibi görünmeli; alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa
+   `+ 1` ve `- 1`'in yerlerini karıştırmadığına bak: sütunda alttaki **büyük**, temelde alttaki **küçük** olmalı.
 
 # --tests--
 

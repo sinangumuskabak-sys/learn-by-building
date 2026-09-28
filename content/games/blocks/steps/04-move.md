@@ -25,7 +25,11 @@ then redraws, because nothing moves between key presses yet.
 
 # --explanation-tr--
 
-`fits` elindeyken hareket, tekrar tekrar kullanacağın iki adımlı bir kalıba dönüşür: **önce dene, sonra uygula**.
+**Bu adımda:** ok tuşlarıyla parçayı sola, sağa ve aşağı hareket ettireceğiz. Parça duvarlardan ve bloklardan
+geçemeyecek.
+
+**Önce dene, sonra yap.** Elimizde `fits` olduğuna göre hareket, oyun boyunca tekrar tekrar kullanacağın iki adımlı
+bir kalıptır:
 
 ```js
 function tryMove(dx, dy) {
@@ -36,11 +40,35 @@ function tryMove(dx, dy) {
 }
 ```
 
-Asla önce taşıyıp, ters giderse "geri alma". Varsayımsal bir konumda kontrol etmek gerçek durumu her an geçerli tutar;
-`true`/`false` döndürmek de çağırana hamlenin olup olmadığını söyler. Sonraki adımlar bu cevaba dayanıyor.
+Parça parça:
 
-Sol, sağ ve aşağı, farklı bir `(dx, dy)` ile aynı fonksiyondur. Tuş işleyicisi yalnızca tuşları çağrılara eşler, sonra
-yeniden çizer; çünkü henüz tuşlara basılmadığı sürece hiçbir şey hareket etmiyor.
+- `dx` ve `dy` → "kaç sütun sağa, kaç satır aşağı". Sola gitmek `dx = -1`, sağa `dx = 1`, aşağı `dy = 1`.
+- `if (!fits(...)) return false` → **yeni** konumda sığmıyorsa hiçbir şeye dokunmadan "hayır" (`false`) cevabıyla çık.
+  `!` "değil" demektir.
+- `piece.x += dx` → `+=` "üstüne ekle" demektir: `piece.x = piece.x + dx` ile aynı.
+- `return true` → "evet, hareket oldu".
+
+Asla önce taşıyıp, yanlış olursa geri almaya çalışma. Varsayımsal bir konumu kontrol etmek gerçek durumu her an
+geçerli tutar. `true`/`false` cevabı da çağıran yere hareketin olup olmadığını bildirir; sonraki adımlar bu cevaba
+dayanacak.
+
+**Klavyeyi dinlemek (olay, event).** Tarayıcı tuşa basılınca haber verebilir:
+
+```js
+document.addEventListener('keydown', (event) => {
+  ...
+})
+```
+
+"Sayfada bir tuşa basıldığında (`'keydown'`) bu fonksiyonu çalıştır" demektir. Fonksiyon hemen çalışmaz; her tuş
+basışında tarayıcı onu çağırır ve basışın bilgilerini `event` adıyla verir. `event.key` basılan tuşun adıdır:
+`'ArrowLeft'` sol ok, `'ArrowRight'` sağ ok, `'ArrowDown'` aşağı ok.
+
+`if (event.key === 'ArrowLeft') tryMove(-1, 0)` → `===` "eşit mi?" diye karşılaştırır. Sol oksa bir sütun sola
+gitmeyi dene.
+
+Sol, sağ ve aşağı aynı fonksiyondur, yalnız `(dx, dy)` farklı. Sonunda `draw()` ile yeniden çizeriz, çünkü henüz
+ekranı sürekli yenileyen bir döngümüz yok; bir şey değişince elle çizmemiz gerekiyor.
 
 # --task--
 
@@ -49,8 +77,31 @@ yeniden çizer; çünkü henüz tuşlara basılmadığı sürece hiçbir şey ha
 
 # --task-tr--
 
-1. Yukarıdaki gibi `function tryMove(dx, dy)` yaz.
-2. `keydown`'da: `ArrowLeft` `(-1, 0)`'ı, `ArrowRight` `(1, 0)`'ı, `ArrowDown` `(0, 1)`'i denesin. Sonra `draw()`.
+1. `fits` fonksiyonunun kapanış `}`'sinin altına, bir satır boşlukla hareket fonksiyonunu yaz:
+
+   ```js
+   function tryMove(dx, dy) {
+     if (!fits(piece.shape, piece.x + dx, piece.y + dy)) return false
+     piece.x += dx
+     piece.y += dy
+     return true
+   }
+   ```
+
+2. Onun altına, bir satır boşlukla tuşları dinleyen bloğu yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') tryMove(-1, 0)
+     if (event.key === 'ArrowRight') tryMove(1, 0)
+     if (event.key === 'ArrowDown') tryMove(0, 1)
+     draw()
+   })
+   ```
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra ok tuşlarına bas: T parçası sola, sağa ve aşağı gitmeli,
+   duvarı geçmemeli. Alttaki kontrollerin hepsi yeşil olmalı. Tuşlar çalışmıyorsa `'ArrowLeft'` gibi adların büyük
+   harflerini kontrol et.
 
 # --tests--
 

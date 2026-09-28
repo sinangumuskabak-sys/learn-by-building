@@ -22,17 +22,37 @@ ways of ending go through the same code.
 
 # --explanation-tr--
 
-Kelime oyunları **serilerle** yaşar: art arda kaç kelime bulduğun. Üç sayıyı tek bir nesnede tut ve her oyun bittiğinde kaydet:
+**Bu adımda:** oyun istatistik tutacak: kaç oyun oynadın, yüzde kaçını kazandın ve üst üste kaç kelime bildin
+(**seri**, streak). Oynarken mesaj satırında `Played 2  Won 100%  Streak 2` gibi bir yazı göreceksin; sayfayı yenilesen
+bile sayılar kaybolmayacak.
+
+**Üç sayı, bir nesne.** Sayıları tek bir **nesnede** tutarız:
 
 ```js
 { played: 12, won: 10, streak: 4 }
 ```
 
-Bir galibiyet üçüne de ekler; bir yenilgi `played`'e ekler ve `streak`'i 0'a sıfırlar. Kazanma oranı hiç saklanmaz: her zaman
-`won` ve `played`'den hesaplanabilir. Yalnızca hesaplanamayanı saklamak birbiriyle çelişen sayıları önler.
+Kazanınca üçü de 1 artar; kaybedince `played` 1 artar, `streak` 0'a döner. **Kazanma yüzdesi saklanmaz**: her zaman
+`won` ve `played`'den hesaplanabilir. Hesaplanabilen şeyi saklamazsak birbirini tutmayan sayılar da olmaz.
 
-Bir oyunun sonunun artık `state`'i ayarlamaktan fazla işi olduğu için küçük bir fonksiyona, `finish(result)`'a taşınır; böylece
-iki bitiş yolu da aynı koddan geçer.
+**Tarayıcıda kalıcı kayıt: `localStorage`.** Değişkenler sayfa kapanınca silinir. `localStorage` ise tarayıcının
+küçük bir defteridir; sayfayı kapatıp açsan da içindekiler durur. Ama sadece **yazı** saklayabilir:
+
+- `localStorage.setItem('word-stats', yazı)` → deftere `'word-stats'` başlığıyla yaz.
+- `localStorage.getItem('word-stats')` → oku; hiç yazılmamışsa `null` (boş) verir.
+- `JSON.stringify(stats)` → nesneyi yazıya çevirir: `'{"played":2,"won":2,"streak":2}'`.
+- `JSON.parse(yazı)` → yazıyı yeniden nesneye çevirir.
+
+Açılışta `localStorage.getItem('word-stats') || '{"played":0,"won":0,"streak":0}'` → "kayıt varsa onu, yoksa
+(`||`) sıfırlı başlangıç yazısını al", sonra `JSON.parse` ile nesneye çevir.
+
+**`finish(result)`: bitişin tek kapısı.** Oyunun sonunda artık `state`'i değiştirmekten fazlası yapılıyor, bu yüzden
+bu iş küçük bir fonksiyona taşınır. Kazanmak da kaybetmek de aynı fonksiyondan geçer: `finish('won')` ya da
+`finish('lost')`. `stats.played += 1` nesnenin alanını 1 artırır.
+
+**Yüzde hesabı.** `Math.round((100 * stats.won) / stats.played)` → kazanılanı oynanana böl, 100'le çarp, en yakın
+tam sayıya yuvarla (2/3 → 67). Hiç oyun yokken 0'a bölmemek için: `stats.played ? ... : 0` → "oynanan sayısı 0
+değilse hesapla, 0'sa 0 yaz". (Sayılarda `0` "yanlış", diğerleri "doğru" sayılır.)
 
 # --task--
 
@@ -43,10 +63,50 @@ iki bitiş yolu da aynı koddan geçer.
 
 # --task-tr--
 
-1. `localStorage` `'word-stats'`'ten `{"played":0,"won":0,"streak":0}` varsayılanıyla okunan `stats`'ı ekle.
-2. `finish(result)` yaz: durumu ayarla, `played`'e 1 ekle; bir galibiyet `won` ve `streak`'e 1 ekler, bir yenilgi `streak`'i 0
-   yapar; nesneyi kaydet. İki bitiş de onu çağırır.
-3. Oynarken mesaj satırı `Played 12  Won 83%  Streak 4` gösterir (yuvarlanmış kazanma oranı, hiç oyun yokken `0%`).
+1. `let state` satırının hemen altına istatistikleri okuyan satırı ekle:
+
+   ```js
+   let stats = JSON.parse(localStorage.getItem('word-stats') || '{"played":0,"won":0,"streak":0}')
+   ```
+
+   Burada dış tırnaklar tek (`'`), içtekiler çift (`"`); karıştırma.
+
+2. `score` fonksiyonunun kapanış `}`'sinden sonra, `function type(key)`'den önce `finish`'i ekle:
+
+   ```js
+   function finish(result) {
+     state = result
+     stats.played += 1
+     if (result === 'won') {
+       stats.won += 1
+       stats.streak += 1
+     } else {
+       stats.streak = 0
+     }
+     localStorage.setItem('word-stats', JSON.stringify(stats))
+   }
+   ```
+
+3. `type(key)` içinde iki satırı `finish` çağıracak şekilde değiştir:
+
+   ```js
+       if (current === answer) finish('won')                  // ← değişti
+       else if (guesses.length === TRIES) finish('lost')      // ← değişti
+   ```
+
+4. `draw()`'un sonundaki mesaj bölümünde `let message = 'Guess the five-letter word'` satırını sil ve yerine şu iki
+   satırı yaz:
+
+   ```js
+     const rate = stats.played ? Math.round((100 * stats.won) / stats.played) : 0
+     let message = 'Played ' + stats.played + '  Won ' + rate + '%  Streak ' + stats.streak
+   ```
+
+   Dikkat: `'  Won '` ve `'%  Streak '` içinde **iki** boşluk var.
+
+5. **Çalıştır**'a bas. Mesaj satırında `Played 0  Won 0%  Streak 0` görmelisin (daha önce oynadıysan farklı sayılar).
+   Oynamak için önce oyuna tıkla; bir oyun bitirip Enter'a basınca sayılar güncellenmeli. Alttaki kontrollerin hepsi
+   yeşil olmalı. Yazı kontrolü kırmızıysa boşluk sayılarını kontrol et.
 
 # --tests--
 

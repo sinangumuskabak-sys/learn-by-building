@@ -21,17 +21,30 @@ a new one.
 
 # --explanation-tr--
 
-Yasal hamleler bitince oyunun sonu neredeyse bedavadır. Her hamleden sonra sor: sırası olan tarafın **herhangi** bir yasal
-hamlesi var mı?
+**Bu adımda:** oyunun sonunu ekleyeceğiz. Şah çekilince üstte `Check!` yazacak, mat olunca kimin kazandığı, pat olunca
+berabere olduğu yazacak. Son oynanan hamlenin iki karesi sarı yanacak; oyun bitince bir tıklama yeni oyun başlatacak.
 
-- **Yok ve şahı saldırı altında**: bu **mattır** ve öbür taraf kazanır.
-- **Yok ama şahı güvende**: bu **pattır**, beraberlik. (Yeni başlayanlar kazanılmış oyunları sık sık böyle kaçırır.)
-- **Var ve şahı saldırı altında**: bu **şahtır** ve oyun bunu söyler.
+**Yasal hamleler hazır olunca oyun sonu neredeyse bedava.** Her hamleden sonra sor: sırası gelen tarafın **hiç**
+yasal hamlesi var mı?
 
-Satrancın "mat mı?" için zaten var olanın ötesinde özel bir koda ihtiyacı yoktur: `legalMoves()` ve `inCheck()`. Temiz yapı
-taşları büyük kuralları küçük yapar.
+- **Yok ve şahı saldırı altında**: bu **mat**tır (checkmate); diğer taraf kazanır.
+- **Yok ama şahı güvende**: bu **pat**tır (stalemate), beraberlik. (Yeni başlayanlar kazanılmış oyunları sık sık
+  böyle kaçırır.)
+- **Var ve şahı saldırı altında**: bu **şah**tır (check); oyun bunu duyurur.
 
-Son hamle tahtada vurgulanır; böylece az önce ne olduğunu hep görebilirsin ve oyun bittikten sonra bir tıklama yenisini başlatır.
+"Mat mı?" için zaten var olanların dışında özel bir koda gerek yok: `legalMoves()` ve `inCheck()`. Temiz yapı taşları
+büyük kuralları küçültür.
+
+**Yeni parçalar:**
+
+- **`dizi.length`**: dizideki eleman sayısı. `legalMoves().length === 0` "hiç yasal hamle yok" demek.
+- **`state`**: oyunun hâli; `'playing'` (sürüyor), `'checkmate'` (mat) ya da `'stalemate'` (pat). Oyun bitince tahtaya
+  tıklamak hamle yapmaz, oyunu baştan başlatır.
+- **`lastMove`**: son oynanan hamle (`{ from, to }`). Çizerken bir kare seçili kareyse **ya da** (`||`) son hamlenin
+  başladığı ya da bittiği kareyse sarı boyanır.
+- **Mesajı adım adım kurmak:** `let message = ...` ile başlarız (sonra değişeceği için `let`), sonra duruma göre
+  değiştiririz. `'Check! ' + message` başına `Check! ` ekler. Mat olduğunda sıra **kaybedendedir**; bu yüzden sıra
+  beyazdaysa siyah kazanmıştır.
 
 # --task--
 
@@ -44,12 +57,74 @@ Son hamle tahtada vurgulanır; böylece az önce ne olduğunu hep görebilirsin 
 
 # --task-tr--
 
-1. `lastMove` ve `state` ekle (`reset()`'te `null` ve `'playing'`).
-2. `play()`'den sonra sırası olan tarafın yasal hamlesi yoksa, durum şahtaysa `'checkmate'`, değilse `'stalemate'` olur. Oyun
-   bittikten sonra tahtada hiçbir tıklama sayılmaz; bir tıklama o zaman `reset()` çağırır.
-3. Son hamlenin iki karesini seçili kare gibi vurgula.
-4. Sırası olan taraf şahtayken mesaj `Check! ` ile başlar. Mattan sonra `Checkmate: black wins! Click to play again` (ya da
-   white), pattan sonra `Stalemate: a draw. Click to play again` olur.
+1. `let enPassant ...` satırının altına iki değişken ekle, ve `reset()`'in sonuna başlangıç değerlerini yaz:
+
+   ```js
+   let lastMove
+   let state // 'playing', 'checkmate' or 'stalemate'
+   ```
+
+   ```js
+     enPassant = null
+     lastMove = null    // ← yeni
+     state = 'playing'  // ← yeni
+   }
+   ```
+
+2. `play(m)` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function play(m) {
+     makeMove(m)
+     lastMove = m // ← yeni
+     selected = null
+     targets = []
+     if (legalMoves().length === 0) state = inCheck(turn) ? 'checkmate' : 'stalemate' // ← yeni
+   }
+   ```
+
+3. `clickSquare(r, c)` fonksiyonunun en başına bir satır ekle:
+
+   ```js
+   function clickSquare(r, c) {
+     if (state !== 'playing') return // ← yeni
+     const move = targets.find((m) => same(m.to, [r, c]))
+   ```
+
+4. `pointerdown` dinleyicisinin en başına, oyun bittiyse baştan başlatan bloğu ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'playing') { // ← yeni
+       reset()
+       return
+     }
+     const rect = canvas.getBoundingClientRect()
+   ```
+
+5. `draw()`'da seçili kareyi boyayan `if (same(selected, [r, c])) {` satırını şu iki satırla değiştir (altındaki iki
+   boyama satırı ve `}` aynen kalır):
+
+   ```js
+         const highlight = same(selected, [r, c]) || (lastMove && (same(lastMove.from, [r, c]) || same(lastMove.to, [r, c])))
+         if (highlight) {
+   ```
+
+6. `draw()`'un sonunda mesaj satırını (`const message = turn === 'w' ? 'White to move' : 'Black to move'`) şu dört
+   satırla değiştir:
+
+   ```js
+     let message = turn === 'w' ? 'White to move' : 'Black to move'
+     if (state === 'playing' && inCheck(turn)) message = 'Check! ' + message
+     if (state === 'checkmate') message = 'Checkmate: ' + (turn === 'w' ? 'black' : 'white') + ' wins! Click to play again'
+     if (state === 'stalemate') message = 'Stalemate: a draw. Click to play again'
+   ```
+
+   `const` yerine `let` yazmayı unutma; yoksa mesaj değiştirilemez ve hata verir.
+
+7. **Çalıştır**'a bas. Bir hamle oyna: başladığı ve bittiği kare sarı yanmalı. "Aptal matı"nı deneyebilirsin: beyaz
+   f3, siyah e5, beyaz g4, siyah vezir h4; üstte `Checkmate: black wins! Click to play again` yazmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

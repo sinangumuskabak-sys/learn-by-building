@@ -27,24 +27,34 @@ On a hit, flip `vx`. Two details make it robust:
 
 # --explanation-tr--
 
-Top da raketler de dikdörtgen, bu yüzden "değiyorlar mı?" sorusu klasik **AABB** testidir (eksene hizalı sınır
-kutuları). İki kutu, **iki eksende de** kesişiyorsa üst üste biner:
+**Bu adımda:** top raketlere çarpınca geri dönecek. Raketini topun yoluna koyarsan top sekip karşı tarafa gidecek;
+ıskalarsan eskisi gibi dışarı uçacak.
+
+**İki dikdörtgen değiyor mu?** Top da raket de dikdörtgendir. İki dikdörtgenin üst üste binip binmediğini anlamanın
+klasik yolu (adı **AABB** testi): hem yatayda hem dikeyde üst üste binmeleri gerekir. Dört şartın hepsi doğru
+olmalı:
 
 ```js
-ball.x < paddle.x + PADDLE_W &&   // topun sol kenarı raketin sağ kenarının solunda
-ball.x + BALL > paddle.x &&       // topun sağ kenarı raketin sol kenarının sağında
-ball.y < paddle.y + PADDLE_H &&   // aynı fikir, dikeyde
-ball.y + BALL > paddle.y
+ball.x < paddle.x + PADDLE_W &&   // topun sol kenarı, raketin sağ kenarından solda
+ball.x + BALL > paddle.x &&       // topun sağ kenarı, raketin sol kenarından sağda
+ball.y < paddle.y + PADDLE_H &&   // topun üstü, raketin altından yukarıda
+ball.y + BALL > paddle.y          // topun altı, raketin üstünden aşağıda
 ```
 
-Dördünden biri yanlışsa o eksende aralarında boşluk vardır, yani birbirlerine değemezler. Bu tek fonksiyon muhtemelen
-2D oyunlarda en çok yeniden kullanılan kod parçasıdır.
+**"Ve" demek: `&&`.** 4. adımdaki `||` "biri yeterse" idi; `&&` ise "hepsi doğruysa" demektir. Dört şarttan
+biri bile yanlışsa aralarında bir boşluk vardır, yani değmiyorlardır. Bu küçük kontrol 2D oyunlarda belki de en çok
+tekrar kullanılan koddur.
 
-Vuruşta `vx`'i çevir. İki ayrıntı bunu sağlam yapar:
+**Soru soran fonksiyon.** Bunu `touches(paddle)` adlı bir fonksiyona koyarız. `paddle` parametresine hangi raketi
+verirsek onu kontrol eder: `touches(left)` ya da `touches(right)`. Sonucu `return` ile `true` ya da `false` olarak
+geri verir. Uzun ifade birkaç satıra yayıldığı için `return ( ... )` şeklinde parantez içine alınır.
 
-- **Yalnızca top rakete doğru giderken sektir** (sol raket için `vx < 0`). Aksi hâlde sonraki karede hâlâ üst üste
-  binen top raketin *içine* geri döner ve hapsolur.
-- Duvarlardaki aynı nedenle topu **dışarı it**, raketin yüzeyine tam yaslansın.
+**Çarpınca ne olur?** `vx`'in işaretini çeviririz, top ters yöne gider. İki ayrıntı önemli:
+
+- **Sadece top rakete doğru geliyorsa sek.** Sol raket için bu `ball.vx < 0` (sola gidiyor) demektir. Yoksa bir
+  sonraki karede hâlâ raketin içindeki top tekrar döner ve raketin içinde sıkışır.
+- **Topu dışarı it.** Duvarlardaki gibi, topu raketin yüzeyine tam yaslanacak şekilde koyarız: sol raket için
+  `left.x + PADDLE_W` (raketin sağ kenarı), sağ raket için `right.x - BALL`.
 
 # --task--
 
@@ -55,10 +65,42 @@ Vuruşta `vx`'i çevir. İki ayrıntı bunu sağlam yapar:
 
 # --task-tr--
 
-1. Topun kutusu raketin kutusuyla kesiştiğinde `true` döndüren `function touches(paddle)` yaz.
-2. `update()` içinde topu taşıdıktan sonra: sola gidiyorsa (`vx < 0`) ve `left`'e değiyorsa `vx`'i çevir ve
-   `ball.x = left.x + PADDLE_W` yap. Sağa gidiyorsa ve `right`'a değiyorsa `vx`'i çevir ve `ball.x = right.x - BALL`
-   yap.
+1. `clamp` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function update()`'in **üstüne**) şunu
+   yaz:
+
+   ```js
+   function touches(paddle) {
+     return (
+       ball.x < paddle.x + PADDLE_W &&
+       ball.x + BALL > paddle.x &&
+       ball.y < paddle.y + PADDLE_H &&
+       ball.y + BALL > paddle.y
+     )
+   }
+   ```
+
+2. `update()` fonksiyonunun içinde, üst/alt kenar sekmesini yapan `if (ball.y < 0 || ...) { ... }` bloğunun
+   kapanışından sonra, fonksiyonun son `}`'sinden önce raket sekmelerini ekle. Fonksiyonun sonu şöyle olmalı:
+
+   ```js
+     if (ball.y < 0 || ball.y + BALL > canvas.height) {
+       ball.vy = -ball.vy
+       ball.y = clamp(ball.y, 0, canvas.height - BALL)
+     }
+     if (ball.vx < 0 && touches(left)) {                      // ← yeni
+       ball.vx = -ball.vx                                     // ← yeni
+       ball.x = left.x + PADDLE_W                             // ← yeni
+     }                                                        // ← yeni
+     if (ball.vx > 0 && touches(right)) {                     // ← yeni
+       ball.vx = -ball.vx                                     // ← yeni
+       ball.x = right.x - BALL                                // ← yeni
+     }                                                        // ← yeni
+   }
+   ```
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Raketi topun önüne getir (`W`/`S` ya da ↑/↓): top raketten
+   sekmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `touches` içindeki `<` ve `>` işaretlerini
+   yukarıdakiyle karşılaştır.
 
 # --tests--
 

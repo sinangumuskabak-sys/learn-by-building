@@ -24,21 +24,71 @@ move the paddle, using the "held keys" pattern: events record what is held, the 
 
 # --explanation-tr--
 
-Şu an kaçırılan top, oyuncu hazır olmadan ortada uçarak anında yeniden beliriyor. Gerçek Tuğla Kırma, oyuncu fırlatana
-kadar **topu raketin üstünde tutar** ve her ıskalama üç candan birine mal olur.
+**Bu adımda:** servis ve can ekleyeceğiz. Top artık raketin üstünde bekleyecek ve raketle birlikte kayacak;
+tıklayınca ya da Boşluk'a basınca fırlayacak. Sol üstte `Lives: 3` yazacak; topu her kaçırışta bir can gidecek,
+canlar bitince `Game Over` çıkacak. Raketi ok tuşlarıyla da sürebileceksin.
 
-Bu yeni bir durum makinesi:
+**Şu anki sorun.** Kaçırılan top, oyuncu hazır olmadan anında ortada belirip uçmaya devam ediyor. Gerçek Breakout'ta
+top oyuncu fırlatana kadar **raketin üstünde bekler** ve her kaçırış üç candan birini götürür.
+
+**Durum makinesi.** Oyunun o anda hangi aşamada olduğunu tek bir değişkende tutarız: `state` (durum). Her an şu üç
+yazıdan tam olarak biridir:
 
 ```
-'serve'  --tıklama / Boşluk-->  'playing'  --top kaçtı, can var-->  'serve'
-                                           --top kaçtı, can yok-->  'lost'
+'serve' (servis)  --tıkla / Boşluk-->  'playing' (oyunda)  --top düştü, can var-->  'serve'
+                                                           --top düştü, can yok-->  'lost' (kaybetti)
 ```
 
-Servis sırasında topun hızı yoktur; `update()` onu yalnızca raket nereye giderse gitsin raketin üstünde oturtur.
-Fırlatmak ona bir hız verir ve `'playing'`'e geçer.
+Servis sırasında topun hızı sıfırdır; `update()` onu sadece raketin ortasının üstünde tutar, raket nereye giderse.
+Fırlatınca (`launch`) topa hız verilir ve durum `'playing'` olur.
 
-Tek bir `launch()` fonksiyonu hem fareden (`pointerdown`) hem klavyeden (Boşluk) çağrılır. Ok tuşları da "basılı
-tuşlar" kalıbıyla raketi hareket ettirir: olaylar neyin basılı olduğunu kaydeder, döngü raketi her karede taşır.
+**`return` ile erken çıkmak.** Bir fonksiyonda `return`'e gelinince fonksiyonun geri kalanı çalışmaz:
+
+```js
+if (state !== 'serve') return   // servis durumunda değilsek hiçbir şey yapma
+```
+
+`!==` "eşit değil mi?", `===` "eşit mi?" diye sorar. (Tek `=` ise "içine koy" demektir; soru sormaz.)
+
+**Olaylar.** `'pointerdown'` canvas'a tıklandığında (ya da dokunulduğunda), `'keydown'` bir tuşa basıldığında,
+`'keyup'` tuş bırakıldığında olur. `event.key` basılan tuşun adıdır: Boşluk için `' '` (tırnak içinde bir boşluk),
+oklar için `'ArrowLeft'`, `'ArrowRight'`.
+
+**Basılı tuşlar deseni.** Raketi ok tuşlarıyla sürmek için şunu yaparız: olaylar sadece **hangi tuşun basılı**
+olduğunu not eder, döngü de her karede o nota bakıp raketi kaydırır. Tuşa basılı tuttuğun sürece raket akıcı
+biçimde gider.
+
+```js
+const keys = {}                                                    // boş bir not defteri (nesne)
+document.addEventListener('keydown', (event) => { keys[event.key] = true })
+document.addEventListener('keyup', (event) => { keys[event.key] = false })
+```
+
+`keys[event.key] = true` → "`keys` nesnesinde, adı basılan tuş olan alanı `true` (evet) yap". Köşeli parantez,
+alanın adı bir değişkende durduğunda kullanılır. Sol ok basılıyken `keys.ArrowLeft` doğrudur. (`const` ile verilen
+ad başka bir nesneye bağlanamaz ama nesnenin **içi** değiştirilebilir.)
+
+`paddle.x -= 7` → "`paddle.x`'ten 7 çıkar" (`+=`'nin tersi).
+
+**Can kaybı.** `lives -= 1` bir can düşer. Sonra:
+
+```js
+if (lives === 0) state = 'lost'
+else resetBall()
+```
+
+`else` "**değilse**" demektir: can kalmadıysa oyun biter, kaldıysa top servise döner.
+
+**Yazı yazmak.**
+
+```js
+ctx.font = '16px sans-serif'              // yazı tipi ve boyu
+ctx.textAlign = 'left'                    // verilen nokta yazının solu olsun ('center' = ortası)
+ctx.fillText('Lives: ' + lives, 10, 26)   // yazıyı (10, 26) noktasına boya
+```
+
+`'Lives: ' + lives` yazı ile sayıyı birleştirir: `lives` 3 ise `'Lives: 3'` olur. Yazılarda `+` "ucuna ekle"
+demektir.
 
 # --task--
 
@@ -56,17 +106,112 @@ tuşlar" kalıbıyla raketi hareket ettirir: olaylar neyin basılı olduğunu ka
 
 # --task-tr--
 
-1. `let lives = 3` ve `let state` (`'serve'`, `'playing'` ya da `'lost'`) ekle.
-2. `resetBall()`'u `state = 'serve'` yapacak ve topu raketin üstüne koyacak şekilde değiştir:
-   `{ x: paddle.x + PADDLE_W / 2, y: PADDLE_Y - BALL_R, vx: 0, vy: 0 }`.
-3. `function launch()` yaz: servis sırasında `'playing'`'e geçsin ve topa `vx = 3`, `vy = -4` versin. Canvas
-   üzerindeki `pointerdown`'da ve Boşluk'a basıldığında çağır.
-4. Basılı tuşları `keys`'te izle; `update()` içinde `ArrowLeft`/`ArrowRight` basılıyken raketi karede 7 px taşı ve
-   sınırla. Sonra servis sırasında topu raketin ortasında tut ve orada dur; topu yalnızca `'playing'` iken hareket
-   ettir.
-5. Top düşünce bir can düş; can kalmadıysa `state = 'lost'`, kaldıysa `resetBall()`.
-6. Sol üst köşeye `Lives: 3` yaz (beyaz, `16px sans-serif`); servis sırasında `Click or press Space to launch`,
-   kaybedince `Game Over` yaz.
+1. `let bricks` satırının altına canları, durumu ve basılı tuş defterini ekle:
+
+   ```js
+   let lives = 3
+   let state // 'serve', 'playing' or 'lost'
+   const keys = {}
+   ```
+
+2. `resetBall()` fonksiyonunu, topu raketin üstüne koyacak şekilde değiştir ve hemen altına fırlatma fonksiyonunu
+   yaz:
+
+   ```js
+   function resetBall() {
+     state = 'serve'                                                              // ← yeni
+     ball = { x: paddle.x + PADDLE_W / 2, y: PADDLE_Y - BALL_R, vx: 0, vy: 0 }   // ← değişti
+   }
+
+   function launch() {
+     if (state !== 'serve') return
+     state = 'playing'
+     ball.vx = 3
+     ball.vy = -4
+   }
+   ```
+
+   Top raketin ortasında (`paddle.x + PADDLE_W / 2`), raketin hemen üstünde (`PADDLE_Y - BALL_R`), hızsız durur.
+
+3. `canvas.addEventListener('pointermove', ...)` kodunun kapanış `})`'inin hemen altına tıklamayı ve tuşları
+   dinleyen kodu ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', launch)
+
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === ' ') launch()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+4. `update()` fonksiyonunun **en başına**, `ball.x += ball.vx` satırından önce şunları ekle:
+
+   ```js
+   function update() {
+     if (keys.ArrowLeft) paddle.x -= 7                          // ← yeni
+     if (keys.ArrowRight) paddle.x += 7                         // ← yeni
+     paddle.x = clamp(paddle.x, 0, canvas.width - PADDLE_W)     // ← yeni
+
+     if (state === 'serve') {                                   // ← yeni
+       ball.x = paddle.x + PADDLE_W / 2                         // ← yeni
+       return                                                   // ← yeni
+     }                                                          // ← yeni
+     if (state !== 'playing') return                            // ← yeni
+
+     ball.x += ball.vx
+     ball.y += ball.vy
+     ...
+   ```
+
+   Önce raket oklarla kayar ve ekrandan taşmaz. Servisteyken top raketin ortasını izler ve fonksiyon orada biter;
+   oyunda değilsek (kaybettiysek) de biter. Top sadece `'playing'` durumunda hareket eder.
+
+5. `update()` fonksiyonunun en sonundaki `if (ball.y - BALL_R > canvas.height) resetBall()` satırını şununla
+   değiştir:
+
+   ```js
+     if (ball.y - BALL_R > canvas.height) {
+       lives -= 1
+       if (lives === 0) state = 'lost'
+       else resetBall()
+     }
+   ```
+
+6. `draw()` fonksiyonunda topu çizen dört satırı (`ctx.fillStyle = '#f8fafc'` ile başlayan, `ctx.fill()` ile biten)
+   bir `if` içine al ve altına yazıları ekle. Fonksiyonun sonu şöyle olmalı:
+
+   ```js
+     if (state !== 'lost') {                              // ← yeni
+       ctx.fillStyle = '#f8fafc'
+       ctx.beginPath()
+       ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2)
+       ctx.fill()
+     }                                                    // ← yeni
+
+     ctx.fillStyle = 'white'                              // ← yeni
+     ctx.font = '16px sans-serif'                         // ← yeni
+     ctx.textAlign = 'left'                               // ← yeni
+     ctx.fillText('Lives: ' + lives, 10, 26)              // ← yeni
+
+     ctx.textAlign = 'center'                             // ← yeni
+     if (state === 'serve') ctx.fillText('Click or press Space to launch', canvas.width / 2, 260)   // ← yeni
+     if (state === 'lost') {                              // ← yeni
+       ctx.font = 'bold 36px sans-serif'                  // ← yeni
+       ctx.fillText('Game Over', canvas.width / 2, 250)   // ← yeni
+     }                                                    // ← yeni
+   }
+   ```
+
+   Oyun bitince top çizilmez; sol üstte canlar, ortada duruma göre bir mesaj yazar.
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Top raketin üstünde beklemeli ve `Click or press Space to launch`
+   yazmalı. Oynamak için önce oyuna tıkla: top fırlamalı. Topu kaçırınca `Lives:` bir azalmalı ve top rakete
+   dönmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa ekrandaki yazıları (`Lives: `,
+   `Click or press Space to launch`, `Game Over`) harf harf karşılaştır.
 
 # --tests--
 

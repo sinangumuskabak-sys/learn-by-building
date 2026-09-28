@@ -23,20 +23,48 @@ For now there is no check at all: kings can even be captured. The rules that mak
 
 # --explanation-tr--
 
-Her taş türü bir desenle hareket eder ve en basit desenler sabit **sıçramalardır**. Bir at 8 kareye sıçrayabilir, bir şah 8
-kareye adım atabilir; her biri `[satır, sütun]` farkı olarak yazılır:
+**Bu adımda:** atları ve şahları oynatacağız, sırayla. Bir taşa tıklayınca karesi sarı yanacak ve gidebileceği
+karelerde küçük noktalar çıkacak; bir noktaya tıklayınca taş oraya gidecek ve üstteki yazı `White to move`'dan
+`Black to move`'a dönecek.
+
+**Hamle = sabit sıçramalar.** Her taş türü bir desenle gider; en basit desenler sabit **sıçramalardır**. At 8 kareye
+sıçrayabilir, şah 8 kareye adım atabilir. Her birini `[satır farkı, sütun farkı]` şeklinde yazarız:
 
 ```js
 const KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]]
 ```
 
-Her fark için: hedef kare tahtada olmalı ve **aynı** renkte bir taş tutmamalı (oradaki bir rakip taş bir almadır). Hamleleri veri
-olarak tanımlamak, tek bir döngünün iki taşı da işlemesi demektir.
+`[1, 2]` "1 satır aşağı, 2 sütun sağa" demek. Her fark için iki kural var: hedef kare tahtanın **içinde** olmalı ve
+orada **kendi** renginden bir taş olmamalı (rakip taş varsa bu bir yeme hamlesidir). Hamleleri böyle **veri** olarak
+yazınca tek bir döngü iki taşı da halleder.
 
-Hamle listesi her tahta oyununun kalbidir. Oyuncu bir taşı alır (ona tıklar), oyun nereye gidebileceğini gösterir (her hedefte bir
-nokta) ve bir hedefe tıklamak hamleyi oynar. Yalnızca `turn`'ü (sırası) olan taraf oynayabilir.
+**Hamle listesi** her tahta oyununun kalbidir. Oyuncu bir taşı alır (tıklar), oyun gidebileceği yerleri gösterir
+(her hedefte bir nokta), hedefe tıklamak hamleyi oynar. Sadece sırası (`turn`) gelen taraf oynayabilir. Her hamle
+bir nesnedir: `{ from: [r, c], to: [tr, tc] }` (nereden, nereye).
 
-Şimdilik hiç şah çekme yok: şahlar alınabilir bile. Şahları özel yapan kurallar sonra geliyor.
+Şimdilik şah kuralı (şah çekme) hiç yok; şahlar yenebiliyor bile. Şahı özel yapan kurallar sonra gelecek.
+
+**Yeni parçalar:**
+
+- **Kısa fonksiyonlar:** `const inside = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8` bir kare tahtada mı diye
+  `true`/`false` döndürür. `&&` "ve" demektir: dört koşulun hepsi doğru olmalı. `>=` büyük ya da eşit.
+  `other('w')` → `'b'`: diğer renk.
+- **`return`**: fonksiyonun cevabını geri verir ve fonksiyonu orada bitirir.
+- **`dizi.push(x)`**: dizinin sonuna eleman ekler. `moves` boş bir listeyle (`[]`) başlar ve bulunan her hamle
+  eklenir.
+- **`continue`**: döngünün bu turunu atlayıp sonrakine geçer. `if (piece[0] !== color) continue`: "bu kare benim
+  rengimde değilse (`!==` eşit değil) boş geç".
+- **`extra = {}`** ve **`...extra`**: `add` fonksiyonunun isteğe bağlı bir parametresi var; verilmezse boş nesnedir.
+  `...extra` onun alanlarını hamleye kopyalar. İleride özel hamleler için kullanılacak.
+- **`for (const [dr, dc] of ...)`**: listedeki her farkı sırayla `dr`, `dc` diye açar. `kind === 'N' ? KNIGHT : KING`
+  at ise at listesini, değilse şah listesini seçer.
+- **`dizi.find(...)`** koşula uyan ilk elemanı, **`dizi.filter(...)`** uyan hepsini (yeni bir liste olarak) verir.
+- **`null`**: "hiçbir şey". Seçili taş yokken `selected = null`.
+- **Tıklamayı kareye çevirmek:** `pointerdown` fare ya da parmak değince gelir. Tıklanan ekran noktasını canvas
+  pikseline çevirip tahtanın boşluklarını (`LEFT`, `TOP`) çıkarırız; sonra kare boyuna bölüp `Math.floor` ile aşağı
+  yuvarlarız: `Math.floor(130 / 56)` → `2`, yani 3. sütun.
+- **Nokta çizmek:** `ctx.beginPath()`, `ctx.arc(x, y, yarıçap, 0, Math.PI * 2)` (tam daire), `ctx.fill()`.
+  `'rgba(..., 0.4)'` son sayısı saydamlık olan bir renktir.
 
 # --task--
 
@@ -51,14 +79,142 @@ nokta) ve bir hedefe tıklamak hamleyi oynar. Yalnızca `turn`'ü (sırası) ola
 
 # --task-tr--
 
-1. `KNIGHT` ve `KING` farklarını, `turn`'ü (`reset()`'te `'w'`), `selected` ve `targets`'ı (`null` ve `[]`) ekle.
-2. `pseudoMoves(color)` yaz: o rengin her atı ve şahı için, tahtada kalan ve aynı renkte bir taşa düşmeyen her fark için bir
-   hamle `{ from: [r, c], to: [tr, tc] }`.
-3. `play(m)` yaz: taşı taşı, ayrıldığı kareyi boşalt, `turn`'ü değiştir, seçimi temizle.
-4. `clickSquare(r, c)` yaz: `targets`'tan biriyse o hamleyi oyna; değilse sırası olan tarafın bir taşını tutuyorsa onu seç ve
-   `targets`'ı hamleleri yap; değilse seçimi temizle. Tahtadaki bir `pointerdown` onu çağırır.
-5. Seçili kareyi bir `'rgba(250, 204, 21, 0.45)'` katmanıyla, her hedefte 9 yarıçaplı `'rgba(15, 23, 42, 0.4)'` bir nokta ve
-   tepede ortalı `White to move` ya da `Black to move` çiz (`y = 34`, beyaz, `'bold 17px sans-serif'`).
+1. `const START = [...]` satırının altına atın ve şahın sıçramalarını ekle:
+
+   ```js
+   const KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]]
+   const KING = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
+   ```
+
+2. `let board ...` satırının altına üç değişken ekle ve `reset()`'e başlangıç değerlerini yaz:
+
+   ```js
+   let turn // 'w' or 'b'
+   let selected // the square of the piece you picked up, or null
+   let targets // the moves of the selected piece
+
+   function reset() {
+     board = START.map((line) => [...line].map((ch) => (ch === '.' ? '' : (ch === ch.toUpperCase() ? 'w' : 'b') + ch.toUpperCase())))
+     turn = 'w'       // ← yeni
+     selected = null  // ← yeni
+     targets = []     // ← yeni
+   }
+   ```
+
+3. `reset()`'in kapanış `}`'inin altına iki yardımcıyı ve hamle listesini yaz:
+
+   ```js
+   const inside = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8
+   const other = (color) => (color === 'w' ? 'b' : 'w')
+
+   // The moves of the knights and kings. (Check comes later: for now even a king can be taken.)
+   function pseudoMoves(color) {
+     const moves = []
+     const add = (r, c, tr, tc, extra = {}) => moves.push({ from: [r, c], to: [tr, tc], ...extra })
+     for (let r = 0; r < 8; r++) {
+       for (let c = 0; c < 8; c++) {
+         const piece = board[r][c]
+         if (piece[0] !== color) continue
+         const kind = piece[1]
+         if (kind === 'N' || kind === 'K') {
+           for (const [dr, dc] of kind === 'N' ? KNIGHT : KING) {
+             const tr = r + dr
+             const tc = c + dc
+             if (inside(tr, tc) && board[tr][tc][0] !== color) add(r, c, tr, tc)
+           }
+         }
+       }
+     }
+     return moves
+   }
+   ```
+
+   `||` "veya": taş at **ya da** şahsa. Boş karenin `[0]`'ı hiçbir renge eşit olmadığı için boş karelere de gidilir.
+
+4. Altına hamleyi oynayan fonksiyonu yaz:
+
+   ```js
+   function play(m) {
+     const [fr, fc] = m.from
+     const [tr, tc] = m.to
+     const piece = board[fr][fc]
+     board[tr][tc] = piece
+     board[fr][fc] = ''
+     turn = other(turn)
+     selected = null
+     targets = []
+   }
+   ```
+
+5. Altına tıklamayı işleyen kodu yaz:
+
+   ```js
+   const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1]
+
+   function clickSquare(r, c) {
+     const move = targets.find((m) => same(m.to, [r, c]))
+     if (move) {
+       play(move)
+       return
+     }
+     if (board[r][c][0] === turn) {
+       selected = [r, c]
+       targets = pseudoMoves(turn).filter((m) => same(m.from, selected))
+     } else {
+       selected = null
+       targets = []
+     }
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width - LEFT
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height - TOP
+     const r = Math.floor(y / SQ)
+     const c = Math.floor(x / SQ)
+     if (inside(r, c)) clickSquare(r, c)
+   })
+   ```
+
+   `same` iki karenin aynı olup olmadığını söyler. Tıklanan kare bir hedefse hamle oynanır; değilse ve kendi
+   taşınsa seçilir; ikisi de değilse seçim temizlenir.
+
+6. `draw()`'da kareyi boyayan `ctx.fillRect(x, y, SQ, SQ)` satırının hemen altına seçili karenin sarı katmanını ekle:
+
+   ```js
+         ctx.fillRect(x, y, SQ, SQ)
+         if (same(selected, [r, c])) {             // ← yeni
+           ctx.fillStyle = 'rgba(250, 204, 21, 0.45)'
+           ctx.fillRect(x, y, SQ, SQ)
+         }
+         const piece = board[r][c]
+   ```
+
+7. `draw()`'un sonunda, iki `for` döngüsünün kapanış `}`'lerinin altına (fonksiyonun son `}`'inden önce) noktaları ve
+   sıra yazısını ekle:
+
+   ```js
+     // A dot on every square the selected piece can move to.
+     ctx.fillStyle = 'rgba(15, 23, 42, 0.4)'
+     for (const m of targets) {
+       ctx.beginPath()
+       ctx.arc(LEFT + m.to[1] * SQ + SQ / 2, TOP + m.to[0] * SQ + SQ / 2, 9, 0, Math.PI * 2)
+       ctx.fill()
+     }
+
+     const message = turn === 'w' ? 'White to move' : 'Black to move'
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 17px sans-serif'
+     ctx.textAlign = 'center'
+     ctx.textBaseline = 'alphabetic'
+     ctx.fillText(message, canvas.width / 2, 34)
+   ```
+
+   `textBaseline = 'alphabetic'` yazıyı normal satır çizgisine geri koyar (taşlar için `'middle'` yapmıştık).
+
+8. **Çalıştır**'a bas. Üstte `White to move` görünmeli. Oyunda b1'deki beyaz ata (alttan ikinci taş, soldan ikinci)
+   tıkla: iki nokta çıkmalı; birine tıklayınca at gitmeli ve yazı `Black to move` olmalı. Alttaki kontrollerin
+   hepsi yeşil olmalı.
 
 # --tests--
 

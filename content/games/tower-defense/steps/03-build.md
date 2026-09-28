@@ -27,24 +27,67 @@ Tower kinds live in a small table, `TOWERS`, for now with only one kind: `arrow`
 
 # --explanation-tr--
 
-Bir tıklama sana **ekran piksellerinde** bir konum verir ama oyun **canvas piksellerinde** düşünür ve bunlar aynı değildir:
-sayfa canvas'ı ekranına sığacak biçimde ölçekler; monitörde daha büyük, telefonda daha küçük. Bu yüzden önce çevir:
+**Bu adımda:** çimene tıklayarak kule kuracağız. Fare çimenin üstündeyken kare beyazımsı, yolun üstündeyken
+kırmızımsı parlayacak ve etrafında kulenin menzilini gösteren bir daire çıkacak. Kuleler mavi kareler olarak görünecek;
+sol üstte **Gold 120** yazacak ve her kule 50 altın götürecek.
+
+**Ekran pikseli, canvas pikseli.** Tıklama sana konumu **ekran pikseli** olarak verir, oyun ise **canvas pikseli** ile
+düşünür. İkisi aynı değil: sayfa canvas'ı ekrana sığacak şekilde büyütür ya da küçültür (monitörde büyük, telefonda
+küçük). O yüzden önce çeviririz:
 
 ```js
-const rect = canvas.getBoundingClientRect()                 // canvas ekranın neresinde ve ne büyüklükte
-const x = (event.clientX - rect.left) * canvas.width / rect.width
+const rect = canvas.getBoundingClientRect()   // canvas ekranda nerede, ne büyüklükte
+const x = ((event.clientX - rect.left) * canvas.width) / rect.width
 ```
 
-`rect.left`'i çıkarmak konumu canvas'a göre yapar; `canvas.width / rect.width` ile çarpmak ölçeklemeyi geri alır. Sonra
-`Math.floor(x / TILE)` sütundur. Bu adımı unutmak tarayıcı oyunlarındaki en yaygın hatalardan biridir: canvas yeniden
-boyutlandığı an tıklamalar yanlış yere düşer.
+- `event.clientX` farenin ekrandaki yatay konumu. `rect.left`'i çıkarınca konum canvas'ın sol kenarına göre olur.
+- `canvas.width / rect.width` oranıyla çarpmak büyütme/küçültmeyi geri alır (`/` bölme).
+- Sonra `Math.floor(x / TILE)` sütunu verir (`Math.floor` aşağı yuvarlar: 2,7 → 2). Satır için önce üstteki 40
+  piksellik şeridi çıkarırız.
 
-Bir kule yalnızca çimene, haritanın içine, boş bir döşemeye ve ancak parasını ödeyebiliyorsan kurulabilir. Bunların hepsini
-tek bir fonksiyona, `canBuild`'e koymak aynı cevabı iki kez kullanmanı sağlar: bir tıklamayı reddetmek ve farenin altındaki
-**önizlemeyi** beyaz ya da kırmızı boyamak için; yanında kulenin menzilini gösteren bir daireyle. Oyunculara tıklamadan önce
-ne olacağını göstermek, bir oyunun adil hissettirmesinin büyük bir parçasıdır.
+Bu adımı unutmak tarayıcı oyunlarının en yaygın hatalarından biridir: canvas'ın boyu değiştiği an tıklamalar yanlış
+yere düşer.
 
-Kule türleri küçük bir tabloda, `TOWERS`'da yaşar; şimdilik tek türle: `arrow`.
+**Fare olayları.** `canvas.addEventListener('pointerdown', (event) => { ... })` "canvas'a basıldığında bu fonksiyonu
+çalıştır" demektir; tarayıcı fonksiyonu her basışta çağırır ve bilgileri `event` adıyla verir. **Pointer** olayları hem
+fareyle hem dokunmatik ekranla çalışır. `'pointermove'` imleç hareket edince, `'pointerleave'` imleç canvas'tan
+çıkınca gelir.
+
+**Kule türleri tablosu.**
+
+```js
+const TOWERS = {
+  arrow: { cost: 50, range: 2.5, damage: 4, reload: 24, color: '#38bdf8' },
+}
+```
+
+Bu bir **nesne** (object): `{ ad: değer }` çiftlerinden oluşan bir paket. İçinde `arrow` (ok) adında bir kule türü
+var; onun da kendi bilgileri: bedeli, menzili (kare cinsinden), hasarı, yeniden doldurma süresi, rengi. Nesnenin içine
+nokta ile (`kind.cost`) ya da adı bir değişkende duruyorsa köşeli parantezle ulaşırız: `selected` içinde `'arrow'`
+yazısı varken `TOWERS[selected]` → `TOWERS.arrow`. Şimdilik tek tür var; ileride eklenecek.
+
+**Kurulabilir mi? `canBuild(col, row)`.** Kule yalnızca haritanın içine, çimene, boş bir kareye ve paran yetiyorsa
+kurulur:
+
+- `inside` → sütun ve satır sınırların içinde mi? (`&&` "ve", `>=` büyük ya da eşit, `<` küçük)
+- `towers.some((t) => ...)` → `some` "listede bu koşulu sağlayan **en az bir** eleman var mı?" diye sorar: bu karede
+  zaten bir kule var mı?
+- `!road.has(...)` → `!` "değil": yol **değil**. `gold >= ... .cost` → paran yetiyor mu?
+
+Hepsini tek bir fonksiyonda toplamak aynı cevabı iki yerde kullanmamızı sağlar: tıklamayı reddetmek için ve farenin
+altındaki **önizlemeyi** beyaz ya da kırmızı boyamak için. Oyuncuya tıklamadan önce ne olacağını göstermek, oyunun adil
+hissettirmesinin büyük bir parçasıdır.
+
+**Kurmak.** `build` önce `canBuild`'e sorar; olmuyorsa `return` ile çıkar. Oluyorsa bedeli öder (`gold -= ...`,
+"üstünden düş") ve `towers` listesine `{ col, row, kind: selected }` ekler. `{ col, row }` kısa yazımdır;
+`{ col: col, row: row }` ile aynıdır.
+
+**`hover`.** Farenin altındaki kareyi hatırlar; imleç haritanın dışındaysa `null` ("hiçbir şey"). `if (hover)` "bir
+kare varsa" demektir. `koşul ? a : b` **kısa if**'tir: "doğruysa a, değilse b".
+
+**Çerçeve çizmek.** `ctx.strokeStyle` çizgi rengini seçer, `ctx.stroke()` şeklin içini değil **kenarını** çizer.
+Menzil dairesinin yarıçapı `range * TILE` = 2,5 × 40 = 100 piksel. Kuleyi karenin her kenarından 6 piksel içeride
+çizeriz, boyu `TILE - 12`.
 
 # --task--
 
@@ -61,16 +104,122 @@ Kule türleri küçük bir tabloda, `TOWERS`'da yaşar; şimdilik tek türle: `a
 
 # --task-tr--
 
-1. `TOWERS = { arrow: { cost: 50, range: 2.5, damage: 4, reload: 24, color: '#38bdf8' } }` ile `towers`, `gold`,
-   `selected` ve `hover` ekle; `reset()` onları `[]`, `120` ve `'arrow'` yapar.
-2. Canvas piksellerinde ve döşemelerde `{ x, y, col, row }` döndüren `tileAt(event)` yaz (`row` `TOP`'tan sayılır).
-3. `canBuild(col, row)` ve bedeli ödeyip `{ col, row, kind: selected }` ekleyen `build(col, row)` yaz. Canvas'taki bir
-   `pointerdown` o döşemeye kurar.
-4. `pointermove`'da farenin altındaki döşemeyi hatırla (yalnızca `0` ile `ROWS - 1` arası satırlar), `pointerleave`'de
-   unut. Oraya kurabiliyorsan `'rgba(255, 255, 255, 0.25)'`, kuramıyorsan `'rgba(239, 68, 68, 0.35)'` ile çiz ve etrafına
-   kulenin menzili kadar bir daire çiz.
-5. Kuleleri her yandan döşemeden 6 piksel küçük, türlerinin renginde kareler olarak ve sol üste `Gold 120` çiz (beyaz,
-   `'bold 16px sans-serif'`).
+1. `const TOP = 40` satırının sonundaki yorumu değiştir:
+
+   ```js
+   const TOP = 40 // room for gold, lives and the tower buttons
+   ```
+
+2. `const SPEED = 0.03` satırının altına kule tablosunu ekle:
+
+   ```js
+   const TOWERS = {
+     arrow: { cost: 50, range: 2.5, damage: 4, reload: 24, color: '#38bdf8' },
+   }
+   ```
+
+3. Değişken satırlarını şöyle yap (dört yeni satır var):
+
+   ```js
+   let road // keys of the tiles the road covers
+   let enemies
+   let towers // ← yeni
+   let gold // ← yeni
+   let toSpawn // enemies still to come
+   let spawnIn // frames until the next one
+   let selected // the kind of tower to build: only 'arrow' so far // ← yeni
+   let hover = null // the tile under the mouse // ← yeni
+   ```
+
+4. `reset()` fonksiyonunu şöyle yap:
+
+   ```js
+   function reset() {
+     findRoad()
+     enemies = []
+     towers = [] // ← yeni
+     gold = 120 // ← yeni
+     toSpawn = 30
+     spawnIn = 0
+     selected = 'arrow' // ← yeni
+   }
+   ```
+
+5. `pointAt` fonksiyonunun kapanış `}`'sinin altına, `function update()` satırından önce şu parçaları yaz:
+
+   ```js
+   // Mouse and touch positions are in screen pixels; the canvas may be drawn smaller or bigger than its own pixels.
+   function tileAt(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     return { x, y, col: Math.floor(x / TILE), row: Math.floor((y - TOP) / TILE) }
+   }
+
+   function canBuild(col, row) {
+     const inside = col >= 0 && col < COLS && row >= 0 && row < ROWS
+     const taken = towers.some((t) => t.col === col && t.row === row)
+     return inside && !road.has(key(col, row)) && !taken && gold >= TOWERS[selected].cost
+   }
+
+   function build(col, row) {
+     if (!canBuild(col, row)) return
+     const kind = TOWERS[selected]
+     gold -= kind.cost
+     towers.push({ col, row, kind: selected })
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const p = tileAt(event)
+     build(p.col, p.row)
+   })
+   canvas.addEventListener('pointermove', (event) => {
+     const p = tileAt(event)
+     hover = p.row >= 0 && p.row < ROWS ? p : null
+   })
+   canvas.addEventListener('pointerleave', () => {
+     hover = null
+   })
+   ```
+
+6. `draw()` içinde, kareleri çizen iki döngü ile düşmanları çizen `for (const e of enemies)` döngüsünün **arasına**
+   önizlemeyi ve kuleleri ekle:
+
+   ```js
+     if (hover) {
+       ctx.fillStyle = canBuild(hover.col, hover.row) ? 'rgba(255, 255, 255, 0.25)' : 'rgba(239, 68, 68, 0.35)'
+       ctx.fillRect(hover.col * TILE, TOP + hover.row * TILE, TILE, TILE)
+       ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+       ctx.beginPath()
+       ctx.arc((hover.col + 0.5) * TILE, TOP + (hover.row + 0.5) * TILE, TOWERS[selected].range * TILE, 0, Math.PI * 2)
+       ctx.stroke()
+     }
+
+     for (const t of towers) {
+       ctx.fillStyle = TOWERS[t.kind].color
+       ctx.fillRect(t.col * TILE + 6, TOP + t.row * TILE + 6, TILE - 12, TILE - 12)
+     }
+   ```
+
+   `rgba(...)`'nın son sayısı saydamlıktır: 0.25 yani %25 görünür; alttaki çimen seçilmeye devam eder.
+
+7. `draw()`'un en sonuna, düşman döngüsünün kapanış `}`'sinin altına altın yazısını ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Gold ' + gold, 10, 26)
+     ctx.textAlign = 'center'
+   }
+   ```
+
+   `ctx.fillText(yazı, x, y)` canvas'a yazı yazar; `'Gold ' + gold` yazı ile sayıyı birleştirir (`'Gold 120'`).
+   `textAlign = 'left'` yazıyı noktadan sağa doğru yazar; sondaki `'center'` sonraki yazılar için ortalamaya döner.
+
+8. **Çalıştır**'a bas. Fareyi haritada gezdir: çimende beyazımsı, yolda kırmızımsı bir kare ve etrafında bir daire
+   görmelisin. Çimene tıklayınca mavi bir kule çıkmalı ve altın 70'e düşmeli. Alttaki kontrollerin hepsi yeşil
+   olmalı. Kule tıkladığın yerden farklı bir yere çıkıyorsa `tileAt` içindeki çarpma ve bölmeyi kontrol et.
 
 # --tests--
 

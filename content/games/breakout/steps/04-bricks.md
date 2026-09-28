@@ -29,8 +29,37 @@ color comes from a list indexed by the row: `COLORS[brick.row]`.
 
 # --explanation-tr--
 
-Duvar 8 tuğlalık 5 sıradan oluşuyor. 40 konumu elle yazmak yerine onları biri diğerinin içinde iki döngüyle
-**hesapla**. Dış döngü sıraları, her sıra için iç döngü sütunları gezer:
+**Bu adımda:** ekranın üst kısmına rengârenk bir tuğla duvarı dizeceğiz: 5 sıra, her sırada 8 tuğla, her sıra ayrı
+renkte (kırmızı, turuncu, sarı, yeşil, mavi). Top şimdilik tuğlaların içinden geçer; kırmayı sonraki adımda
+ekleyeceğiz.
+
+**Dizi (array): sıralı bir liste.** 40 tuğlayı tek tek ayrı değişkenlerde tutmak yerine hepsini bir **listede**
+tutarız. Liste köşeli parantezle yazılır:
+
+```js
+const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6']
+```
+
+Listedeki her elemanın bir sıra numarası (**index**) vardır ve sayma **0'dan başlar**: `COLORS[0]` kırmızı,
+`COLORS[1]` turuncu, ... `COLORS[4]` mavi. `bricks.push(x)` listenin sonuna `x`'i ekler.
+
+**Döngü: aynı işi tekrar tekrar yapmak.** 40 konumu elle yazmak yerine onları **hesaplarız**. `for` döngüsü bir
+sayacı adım adım artırarak içindeki kodu tekrar tekrar çalıştırır:
+
+```js
+for (let col = 0; col < COLS; col++) {
+  // bu kısım col = 0, 1, 2, ... 7 için birer kez çalışır
+}
+```
+
+Parantezin içinde noktalı virgülle ayrılmış üç parça var:
+
+- `let col = 0` → sayaç 0'dan başlasın.
+- `col < COLS` → sayaç 8'den küçük olduğu sürece devam et.
+- `col++` → her turdan sonra sayacı bir artır (`col += 1` ile aynı).
+
+**İç içe döngü.** Duvar sıralardan, sıralar tuğlalardan oluşur. Dıştaki döngü sıraları gezer; **her sıra için**
+içteki döngü sütunları gezer. Böylece 5 × 8 = 40 kez çalışır:
 
 ```js
 for (let row = 0; row < ROWS; row++) {
@@ -40,15 +69,29 @@ for (let row = 0; row < ROWS; row++) {
 }
 ```
 
-Sağa her adım bir tuğla genişliği artı bir boşluk ekler; aşağı her sıra bir tuğla yüksekliği artı bir boşluk. `{ row }`,
-`{ row: row }`'un kısaltmasıdır.
+Sağa her adım bir tuğla genişliği artı bir boşluk ekler; aşağı her sıra bir tuğla yüksekliği artı bir boşluk.
+Örneğin 2. sütun (`col = 1`): `10 + 1 × (54 + 4)` = 68. `{ row }` kısaltmadır: `{ row: row }` ile aynı ("`row`
+alanına `row` sayacının değerini koy").
 
-`LEFT = 10` nereden geliyor? Sekiz tuğla ve yedi boşluk `8 × 54 + 7 × 4 = 460` piksel tutar; 480'in 20'si iki kenar
-payına kalır: her biri 10, böylece duvar ortalanır. Böyle sayıları bir kez hesaplayıp adlı sabitler olarak yazmak,
-doğru görünene kadar pikselleri itip kakmaktan iyidir.
+**`LEFT = 10` nereden geliyor?** Sekiz tuğla ve yedi boşluk `8 × 54 + 7 × 4 = 460` piksel tutar. 480'den geriye 20
+piksel kalır; iki kenara 10'ar piksel, yani duvar ortalanır. Böyle sayıları bir kez hesaplayıp adlı sabitlere yazmak,
+"güzel görünene kadar pikselleri kaydırmaktan" çok daha iyidir.
 
-Tuğlalar hemen silinmek yerine bir `alive` bayrağı taşır; çizim kodu da ölüleri atlar. Renk, sıraya göre indekslenen
-bir listeden gelir: `COLORS[brick.row]`.
+**Hayatta mı?** Tuğlaları kırılınca hemen silmek yerine üstlerine `alive` (canlı) diye bir doğru/yanlış
+**bayrağı** koyarız (`true` = evet, `false` = hayır). Çizim kodu ölü tuğlaları atlar:
+
+```js
+for (const brick of bricks) {
+  if (!brick.alive) continue
+  ...
+}
+```
+
+- `for (const brick of bricks)` → "listedeki her eleman için, ona sırayla `brick` de".
+- `!` "değil" demektir: `!brick.alive` = "canlı değilse".
+- `continue` → "bu elemanı bırak, döngünün bir sonraki elemanına geç".
+
+Renk, tuğlanın sıra numarasıyla listeden seçilir: `COLORS[brick.row]`.
 
 # --task--
 
@@ -60,11 +103,64 @@ bir listeden gelir: `COLORS[brick.row]`.
 
 # --task-tr--
 
-1. `COLS = 8`, `ROWS = 5`, `BRICK_W = 54`, `BRICK_H = 18`, `GAP = 4`, `TOP = 50`, `LEFT = 10` ve
-   `COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6']` (her sıra için bir) sabitlerini ekle.
-2. `let bricks` ve onu yukarıdaki gibi 40 tuğlayla (sıra sıra, soldan sağa) dolduran `function buildBricks()` ekle.
-   Açılışta çağır.
-3. `draw()` içinde `alive` olan her tuğlayı `COLORS[brick.row]` renginde, `BRICK_W` × `BRICK_H` boyutunda çiz.
+1. `const BALL_R = 7` satırının altına duvarın ayarlarını ekle:
+
+   ```js
+   const COLS = 8
+   const ROWS = 5
+   const BRICK_W = 54
+   const BRICK_H = 18
+   const GAP = 4
+   const TOP = 50
+   const LEFT = 10 // (480 - 8 bricks - 7 gaps) / 2, so the wall is centered
+   const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6']
+   ```
+
+   Sütun ve sıra sayısı, tuğla eni ve boyu, aralarındaki boşluk, duvarın üstten ve soldan uzaklığı, sıra renkleri.
+
+2. `let ball` satırının altına:
+
+   ```js
+   let bricks
+   ```
+
+3. `resetBall()` fonksiyonunun kapanış `}`'inden sonra bir boş satır bırak ve duvarı kuran fonksiyonu yaz:
+
+   ```js
+   function buildBricks() {
+     bricks = []
+     for (let row = 0; row < ROWS; row++) {
+       for (let col = 0; col < COLS; col++) {
+         bricks.push({ x: LEFT + col * (BRICK_W + GAP), y: TOP + row * (BRICK_H + GAP), row, alive: true })
+       }
+     }
+   }
+   ```
+
+   Önce listeyi boşaltır, sonra 40 tuğlayı sıra sıra, soldan sağa ekler.
+
+4. `draw()` fonksiyonunda, arka planı boyayan `ctx.fillRect(0, 0, canvas.width, canvas.height)` satırının altına
+   (raketten **önce**) tuğlaları çizen döngüyü ekle:
+
+   ```js
+     for (const brick of bricks) {
+       if (!brick.alive) continue
+       ctx.fillStyle = COLORS[brick.row]
+       ctx.fillRect(brick.x, brick.y, BRICK_W, BRICK_H)
+     }
+   ```
+
+5. En alttaki `resetBall()` satırının **üstüne** duvarı kuran çağrıyı ekle:
+
+   ```js
+   buildBricks()
+   resetBall()
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Üstte 5 renkli sıradan oluşan, ortalanmış bir tuğla duvarı görmelisin.
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa sayıları ve `push` satırındaki parantezleri kontrol et;
+   iki döngünün sırası önemli: dışta `row`, içte `col`.
 
 # --tests--
 

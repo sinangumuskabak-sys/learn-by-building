@@ -29,25 +29,43 @@ Finally, keep the best score in `localStorage`, like in the other games.
 
 # --explanation-tr--
 
-2048 en güzel telefonda, kaydırarak oynanır. Kaydırma hazır bir olay değil; onu zaten bildiğin iki olaydan kurarsın:
+**Bu adımda:** telefonda parmakla kaydırarak (swipe) oynamayı ve en iyi skoru (`Best`) ekleyeceğiz. Bilgisayarda fareyle
+basılı tutup sürükleyerek de deneyebilirsin. Sağ üstte `Best: ...` yazacak ve sayfayı kapatıp açsan bile hatırlanacak.
 
-1. `pointerdown`: parmağın (ya da farenin) nereye indiğini hatırla.
-2. `pointerup`: ne kadar hareket ettiğini ölç, `dx` ve `dy`.
+**Kaydırma hazır bir olay değil.** Tarayıcıda "kaydırıldı" diye bir olay yok; onu zaten bildiğin gibi iki olaydan
+kurarız:
 
-Sonra ne anlama geldiğine karar ver:
+1. `pointerdown`: parmağın (ya da farenin) ekrana **değdiği** yeri hatırla.
+2. `pointerup`: parmak **kalkınca** ne kadar yol aldığını ölç: yatayda `dx`, dikeyde `dy`.
 
-- Neredeyse hiç kıpırdamadıysa (her iki yönde de 30 pikselden az) bu bir kaydırma değil, **dokunuştur**. Dokunuşları,
-  Boşluk gibi, kazandıktan sonra devam etmek ya da oyun bitince yeniden başlamak için kullan.
-- Değilse `|dx|` ile `|dy|`'nin **büyük** olanı kazanır: çoğunlukla yatay olan sol ya da sağ, çoğunlukla dikey olan
-  yukarı ya da aşağıdır. İşaret yönü verir.
+`event.clientX` ve `event.clientY` dokunuşun ekrandaki konumudur. `dx = bitiş x - başlangıç x`: pozitifse sağa, negatifse
+sola gitmiştir. `dy` pozitifse aşağı, negatifse yukarı.
 
-Burada sayfa pikselleri olduğu gibi yeterli, canvas piksellerine ölçeklemeye gerek yok: kaydırma oyundaki bir noktayla
-değil, parmağın ekranda ne kadar yol aldığıyla ilgili.
+**Ne demek istedi?**
 
-Ham işaretçi olaylarından hareketleri tanımak; iki parmakla yakınlaştırmanın, sürükle-bırakın ve diğer bütün dokunmatik
-etkileşimlerin arkasındaki fikirle aynı.
+- Parmak neredeyse hiç gitmediyse (iki yönde de 30 pikselden az) bu bir **dokunuştur**, kaydırma değil. Dokunuş
+  Boşluk tuşu gibi çalışır: kazandıktan sonra devam ettirir, oyun bitince yeniden başlatır.
+- Değilse `|dx|` ile `|dy|`'den **büyük olan** kazanır: çoğunlukla yataysa sol ya da sağ, çoğunlukla dikeyse yukarı ya
+  da aşağı. İşaret (artı/eksi) yönü verir.
 
-Son olarak, diğer oyunlardaki gibi rekoru `localStorage`'da tut.
+`Math.abs(sayı)` sayının eksisiz hâlidir (`-120` → `120`); yol uzunluğunu yönden bağımsız ölçer. `Math.max(a, b)`
+ikisinden büyüğünü verir. `dx > 0 ? 'right' : 'left'` → `dx` pozitifse sağ, değilse sol.
+
+`swipeStart` başta `null`'dır: **"hiçbir şey"** demek. Parmak kalkınca başlangıç yoksa (`!swipeStart`) hiçbir şey
+yapmayız; ölçtükten sonra da yeniden `null` yaparız ki eski dokunuş bir daha kullanılmasın.
+
+Burada sayfa pikselleri olduğu gibi kullanılır, canvas piksellerine çevrilmez: kaydırmada önemli olan parmağın ekranda
+ne kadar yol aldığıdır, oyunda hangi noktaya dokunduğu değil. Ham dokunma olaylarından hareket tanımak; iki parmakla
+yakınlaştırma, sürükle-bırak gibi bütün dokunmatik etkileşimlerin temelindeki fikirdir.
+
+**Aynı iş için tek fonksiyon: `next()`.** Boşluk, Enter ve dokunuş aynı şeyi yapmalı. Bu kodu iki yere kopyalamak yerine
+`next()` adlı bir fonksiyona taşıyıp iki yerden çağırırız.
+
+**Rekor: `localStorage`.** Tarayıcının küçük bir defteri vardır; sayfa kapansa bile içindekiler kalır.
+`localStorage.setItem('2048-best', best)` "bu ada bu değeri yaz", `localStorage.getItem('2048-best')` "oku" demektir.
+Defter her şeyi yazı olarak saklar; `Number(...)` sayıya çevirir. Hiç kayıt yoksa sonuç sayı olmaz, `|| 0` "o zaman 0
+kullan" demektir. Her başarılı hamleden sonra skor rekoru geçtiyse (`score > best`) yeni rekoru kaydederiz.
+`textAlign = 'right'` ile yazı verilen noktada **biter**; böylece `Best` sağ kenara yaslanır.
 
 # --task--
 
@@ -60,13 +78,85 @@ Son olarak, diğer oyunlardaki gibi rekoru `localStorage`'da tut.
 
 # --task-tr--
 
-1. Boşluk/Enter mantığını `function next()`'e taşı (oyun bittiyse yeni oyun, kazanıldıysa devam) ve tuş işleyicisinden
-   çağır.
-2. Canvas üzerindeki `pointerdown`'da `{ x: event.clientX, y: event.clientY }`'yi hatırla. `pointerup`'ta `dx` ve
-   `dy`'yi hesapla: iki yönde de 30 pikselin altındaysa `next()` çağır; değilse büyük olanın yönünde hareket et. Sonra
-   `draw()`.
-3. `let best = Number(localStorage.getItem('2048-best')) || 0` ekle; her başarılı hamleden sonra daha yüksek bir skoru
-   yeni rekor olarak kaydet. `Best: 40`'ı `(canvas.width - GAP, TOP / 2)` noktasına sağa hizalı çiz.
+1. `let keepPlaying ...` satırının hemen altına rekoru hafızadan okuyan satırı ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('2048-best')) || 0
+   ```
+
+2. `move()` fonksiyonunda `addTile()` satırının hemen altına rekoru kaydeden kısmı ekle:
+
+   ```js
+     addTile()
+     if (score > best) { // ← yeni
+       best = score // ← yeni
+       localStorage.setItem('2048-best', best) // ← yeni
+     } // ← yeni
+     if (!keepPlaying && board.some((row) => row.includes(2048))) state = 'won'
+   ```
+
+3. `const directions = ...` satırının altındaki klavye dinleyicisini şu iki parçayla değiştir: önce `next()` fonksiyonu,
+   sonra kısalan dinleyici:
+
+   ```js
+   // Boşluk, Enter ya da dokunuş: oyun bittiyse yeniden başla, kazandıysan devam et.
+   function next() {
+     if (state === 'over') newGame()
+     else if (state === 'won') {
+       state = 'playing'
+       keepPlaying = true
+     }
+   }
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' || event.key === 'Enter') next() // ← değişti
+     const direction = directions[event.key]
+     if (direction) {
+       event.preventDefault()
+       move(direction)
+     }
+     draw()
+   })
+   ```
+
+4. Dinleyicinin kapanış `})` satırının altına bir satır boşluk bırakıp kaydırmayı tanıyan kodu yaz:
+
+   ```js
+   // Kaydırma: parmağın kalktığı yerin, değdiği yere göre konumu.
+   let swipeStart = null
+   canvas.addEventListener('pointerdown', (event) => {
+     swipeStart = { x: event.clientX, y: event.clientY }
+   })
+   canvas.addEventListener('pointerup', (event) => {
+     if (!swipeStart) return
+     const dx = event.clientX - swipeStart.x
+     const dy = event.clientY - swipeStart.y
+     swipeStart = null
+     if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) next() // kaydırma için çok kısa: dokunuş
+     else if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left')
+     else move(dy > 0 ? 'down' : 'up')
+     draw()
+   })
+   ```
+
+5. `draw()` fonksiyonunda skoru yazan `ctx.fillText('Score: ' ...)` satırının hemen altına rekoru yazan iki satırı ekle:
+
+   ```js
+     ctx.fillText('Score: ' + score, GAP, TOP / 2)
+     ctx.textAlign = 'right' // ← yeni
+     ctx.fillText('Best: ' + best, canvas.width - GAP, TOP / 2) // ← yeni
+   ```
+
+6. Yine `draw()`'da, bitiş örtüsündeki ikinci `ctx.fillText` satırının yazılarını dokunuşu da anlatacak şekilde değiştir:
+
+   ```js
+       ctx.fillText(state === 'won' ? 'Space or tap to keep going' : 'Space or tap to try again', canvas.width / 2, TOP + 220) // ← değişti
+   ```
+
+7. **Çalıştır**'a bas. Tahtanın üstünde fareyle basılı tutup sürükle (telefonda parmağınla kaydır): karolar o yöne
+   kaymalı. Sağ üstte `Best:` görünmeli ve skor onu geçince birlikte artmalı. Alttaki kontrollerin hepsi yeşil olmalı.
+   Kırmızı kalırsa `'2048-best'` adının iki yerde de aynı yazıldığına ve `dx`/`dy` satırlarında çıkarmanın sırasına
+   (bitiş eksi başlangıç) bak.
 
 # --tests--
 

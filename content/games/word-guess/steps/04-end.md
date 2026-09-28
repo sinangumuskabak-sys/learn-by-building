@@ -24,11 +24,26 @@ over.
 
 # --explanation-tr--
 
-Cevapla eşleşen bir tahmin kazandırır. Eşleşmeyen altı tahmin kaybettirir ve cevap açıklanır: hiç öğrenememek sinir bozucu
-olurdu.
+**Bu adımda:** oyunun bir sonu olacak. Kelimeyi bilirsen kazanırsın; altı tahminde bilemezsen kaybedersin ve gizli
+kelime gösterilir (hiç öğrenememek sinir bozucu olurdu). Izgaranın altında bir mesaj satırı durumu anlatacak ve
+oyun bitince **Enter** yeni kelime başlatacak.
 
-Oyun bittiğinde artık harf yazılmamalı ama bir tuş hâlâ anlam taşır: Enter yeni bir kelime başlatır. Bu kontrolü `type()`'ın
-başına koymak her tuşun anlamını tek bir yerde tutar:
+**Durumu bir yazıyla tutmak.** Oyunun hangi aşamada olduğunu `state` (durum) adlı bir değişkende tutarız. Üç değeri
+olabilir: `'playing'` (oynanıyor), `'won'` (kazandın), `'lost'` (kaybettin). `reset()` her yeni oyunda onu
+`'playing'` yapar.
+
+**Kazandın mı, kaybettin mi?** Tahmin eklendikten hemen sonra bakarız:
+
+```js
+if (current === answer) state = 'won'
+else if (guesses.length === TRIES) state = 'lost'
+```
+
+Tahmin cevapla aynıysa kazandın; değilse ve bu altıncı tahminse kaybettin. Artık `state` altı tahminden sonra
+yazmayı zaten durdurduğu için, Enter kuralındaki `guesses.length < TRIES` şartına gerek kalmıyor; onu siliyoruz.
+
+**Oyun bitince tuşlar.** Harfler artık yazılmamalı, ama Enter bir anlam taşımaya devam etmeli: yeni kelime. Bu
+kontrolü `type()`'ın **en başına** koyarız; böylece her tuşun anlamı tek bir yerde durur:
 
 ```js
 if (state !== 'playing') {
@@ -37,7 +52,19 @@ if (state !== 'playing') {
 }
 ```
 
-Izgaranın altındaki bir mesaj satırı oyuncuya ne olduğunu söyler: oynarken bir davet, bittiğinde sonuç.
+`!==` "eşit değil" demektir: "oyun sürmüyorsa: Enter'sa yeniden başlat; hangi tuş olursa olsun `return` ile çık,
+aşağıdaki harf yazma kodlarına hiç inme".
+
+**Mesajı seçmek.** Önce varsayılan mesajı bir **değişkene** koyarız (`let`, çünkü değişebilir), sonra duruma göre
+üstüne yazarız:
+
+```js
+let message = 'Guess the five-letter word'
+if (state === 'won') message = 'You got it! Enter for a new word'
+```
+
+Kaybedince mesaj parçalardan `+` ile birleştirilir: `'It was ' + answer.toUpperCase() + '. Enter for a new word'`.
+`toUpperCase()` kelimeyi büyük harfe çevirir: `'crane'` → `'CRANE'`. Tırnak içindeki boşluklara dikkat.
 
 # --task--
 
@@ -49,11 +76,56 @@ Izgaranın altındaki bir mesaj satırı oyuncuya ne olduğunu söyler: oynarken
 
 # --task-tr--
 
-1. `state` ekle (`reset()`'te `'playing'`). Bir tahmin eklendikten sonra: cevapsa durum `'won'` olur; değilse altıncı tahminden
-   sonra `'lost'`.
-2. `type()`'ın başında, oyun bittiyse Enter `reset()` çağırır, diğer her tuş yok sayılır.
-3. `y = 393`'te ortalı bir mesaj çiz (beyaz, `'bold 16px sans-serif'`): oynarken `Guess the five-letter word`, kazanınca
-   `You got it! Enter for a new word`, kaybedince `It was CRANE. Enter for a new word` (cevap büyük harfle).
+1. `let current` satırının hemen altına ekle:
+
+   ```js
+   let state // 'playing', 'won' or 'lost'
+   ```
+
+2. `reset()` fonksiyonunda `current = ''` satırının altına ekle:
+
+   ```js
+     state = 'playing'
+   ```
+
+3. `type(key)` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function type(key) {
+     if (state !== 'playing') {        // ← yeni
+       if (key === 'Enter') reset()    // ← yeni
+       return                          // ← yeni
+     }                                 // ← yeni
+     if (key === 'Backspace') current = current.slice(0, -1)
+     else if (/^[a-z]$/.test(key) && current.length < 5) current += key
+     else if (key === 'Enter' && current.length === 5) {  // ← değişti (&& guesses.length < TRIES silindi)
+       guesses.push({ word: current, marks: score(current, answer) })
+       if (current === answer) state = 'won'                // ← yeni
+       else if (guesses.length === TRIES) state = 'lost'    // ← yeni
+       current = ''
+     }
+   }
+   ```
+
+   `current = ''` satırı durum kontrollerinden **sonra** kalmalı; yoksa `current === answer` hiç doğru olmaz.
+
+4. `draw()` fonksiyonunun sonunda, dış `for` döngüsünü kapatan `}`'den sonra ve fonksiyonun kapanış `}`'sinden önce
+   bir satır boşluk bırakıp mesajı ekle:
+
+   ```js
+     ctx.font = 'bold 16px sans-serif'
+     ctx.fillStyle = 'white'
+     let message = 'Guess the five-letter word'
+     if (state === 'won') message = 'You got it! Enter for a new word'
+     if (state === 'lost') message = 'It was ' + answer.toUpperCase() + '. Enter for a new word'
+     ctx.fillText(message, canvas.width / 2, 393)
+   ```
+
+   `ctx.textAlign` zaten `'center'` olduğu için mesaj canvas'ın ortasına gelir.
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Izgaranın altında `Guess the five-letter word` yazmalı.
+   Kazanınca ya da altı tahmini bitirince mesaj değişmeli, Enter yeni oyun başlatmalı. Alttaki kontrollerin hepsi
+   yeşil olmalı. Mesaj kontrolü kırmızıysa yazıları nokta, ünlem ve boşluklarıyla birlikte harf harf karşılaştır.
 
 # --tests--
 

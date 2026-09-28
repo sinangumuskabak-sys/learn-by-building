@@ -23,20 +23,40 @@ that answer your questions directly (a Set for walls, a lookup for boxes) keeps 
 
 # --explanation-tr--
 
-Bütün oyun tek bir kuraldır: **bir kutuyu itebilirsin, ama yalnızca bir tane ve asla bir duvara doğru değil.** Adım
-attığın döşemede bir kutu varsa aynı yönde bir döşeme daha öteye bak:
+**Bu adımda:** kutuları iteceğiz. Oyuncuyu bir kutuya doğru yürütünce kutu bir kare ilerleyecek. Kutuyu hedefin üstüne
+ittiğinde yeşile döndüğünü göreceksin.
+
+**Oyunun bütün kuralı tek cümle:** bir kutuyu itebilirsin, ama **yalnızca bir tane** ve **asla duvara doğru** değil.
+Gideceğin karede kutu varsa, aynı yönde **bir kare daha** ötesine bakarsın:
 
 ```
-@ $ .     →     . @ $      kutu öteki boş döşemeye geçer
-@ $ #     →     engelli    kutunun arkasında bir duvar var
-@ $ $     →     engelli    arkasında başka bir kutu var: iki kutuya gücün yetmez
+@ $ .     →     . @ $      kutunun arkası boş: kutu ilerler, sen de
+@ $ #     →     olmaz      kutunun arkasında duvar var
+@ $ $     →     olmaz      arkasında başka kutu var: iki kutuyu itecek kadar güçlü değilsin
 ```
 
-Ve asla **çekemezsin**. Sokoban'ı bir bulmaca yapan bu asimetridir: bir kutuyu köşeye it, sonsuza kadar sıkışır. Her
-hamlenin sonuçları vardır; oyuncular ileriyi düşünmek zorundadır.
+Ve kutuyu asla **çekemezsin**. Sokoban'ı bulmaca yapan budur: bir kutuyu köşeye itersen sonsuza dek orada kalır. Her
+hamlenin sonucu olduğu için önceden düşünmen gerekir.
 
-Kuralın kodda ne kadar kısa olduğuna dikkat et: öteki döşemede iki arama (`walls.has`, `boxAt`). Sorularını doğrudan
-cevaplayan veri yapıları seçmek (duvarlar için bir küme, kutular için bir arama) oyun mantığını okunur tutar.
+**Kodda nasıl?** `move()` içinde, gideceğin karedeki kutuyu `boxAt` ile alırız:
+
+```js
+const box = boxAt(x, y)
+if (box) { ... }
+```
+
+`boxAt` kutu yoksa `undefined` verir; `if (box)` yalnızca kutu **varsa** `{ }` içine girer. İçeride kutunun
+gideceği kareyi hesaplarız: `bx = x + dx`, `by = y + dy` (oyuncunun gideceği karenin bir ötesi). Sonra:
+
+- `walls.has(key(bx, by)) || boxAt(bx, by)` → "orada duvar var **ya da** (`||`) başka kutu var mı?" Varsa `return`:
+  hiçbir şey olmaz, oyuncu da yerinde kalır.
+- Yoksa kutunun konumunu değiştiririz: `box.x = bx`, `box.y = by`. `box` listedeki kutunun kendisi olduğu için bu
+  değişiklik `boxes` listesinde de görünür.
+
+`if`'ten sonra oyuncu her durumda yeni kareye geçer (`player = { x, y }`): ya kutu yoktu, ya da kutu az önce yol açtı.
+
+Kural kodda ne kadar kısa, fark ettin mi? İki soru: `walls.has` ve `boxAt`. Sorularına doğrudan cevap veren veri
+yapıları seçmek (duvarlar için `Set`, kutular için arama) oyun kodunu okunur tutar.
 
 # --task--
 
@@ -46,9 +66,30 @@ then move the player.
 
 # --task-tr--
 
-`move()` içinde "kutu oyuncuyu engeller"i itmeyle değiştir: hedef döşemede bir kutu varsa onun ötesindeki döşemeye bak
-(`x + dx`, `y + dy`). O döşeme duvarsa ya da başka bir kutu varsa hiçbir şey yapma. Değilse kutuyu oraya taşı, sonra
-oyuncuyu taşı.
+1. `move()` fonksiyonunda `if (boxAt(x, y)) return // pushing comes in the next step` satırını sil ve yerine itme kodunu
+   yaz. Fonksiyon şöyle olmalı:
+
+   ```js
+   function move(dx, dy) {
+     const x = player.x + dx
+     const y = player.y + dy
+     if (walls.has(key(x, y))) return
+     const box = boxAt(x, y)                                                           // ← yeni
+     if (box) {                                                                        // ← yeni
+       const bx = x + dx                                                               // ← yeni
+       const by = y + dy                                                               // ← yeni
+       if (walls.has(key(bx, by)) || boxAt(bx, by)) return // a box cannot push into a wall or another box
+       box.x = bx                                                                      // ← yeni
+       box.y = by                                                                      // ← yeni
+     }                                                                                 // ← yeni
+     player = { x, y }
+   }
+   ```
+
+   (Ortadaki uzun `if (walls.has(...` satırı da yeni; sonundaki yorumla birlikte yaz.)
+
+2. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra sağ oka bas: kutu hedefe gitmeli ve yeşile dönmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. "İki kutu" kontrolü kırmızıysa `|| boxAt(bx, by)` kısmını unutmuş olabilirsin.
 
 # --tests--
 

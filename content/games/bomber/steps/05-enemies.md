@@ -21,18 +21,49 @@ than 0.6 of a tile apart. When the last enemy is gone, you win.
 
 # --explanation-tr--
 
-Üç düşman diğer köşelerde başlar. Tam oyuncu gibi hareket ederler (kareden kareye, bir hedef ve `moveTo` ile), yalnızca daha
-yavaş, ve yollarını kendileri seçerler.
+**Bu adımda:** öbür üç köşeye kırmızı düşmanlar gelecek. Koridorlarda kendi başlarına dolaşacaklar; alevde ölecekler,
+sana değerlerse bir can gidecek. Hepsini yok edince ortada `All enemies gone!` (bütün düşmanlar gitti) yazacak.
 
-Her karede tamamen rastgele bir seçim aptalca görünür: düşman yerinde ileri geri titrer. Klasik çözüm şudur: her karede
-gidebileceği yolları listele, **geri dönmeyi dışarıda bırak** ve kalanlardan birini rastgele seç. Yalnızca çıkmaz sokakta, geri
-dönmek tek seçenek olduğunda döner. Bu, düşmanların gidecek bir yerleri varmış gibi koridorlarda dolaşmasını sağlar.
+**Oyuncu gibi yürüyen düşman.** Düşmanlar tam oyuncu gibi hareket eder: kareden kareye, bir hedef ve 2. adımdaki
+`moveTo` ile; yalnızca daha yavaştır (`ENEMY_SPEED = 0.05`) ve yollarını kendileri seçer. Her biri bir nesnedir:
+`{ x, y, target: null, dir: [0, 0] }`. `dir` son gittiği yöndür.
 
-`walkable` bombalara hayır dediği için düşmanlar bombaların da çevresinden dolaşır ve bir bomba birini koridorda kapana
-kıstırabilir. Bu oyunda gerçek bir taktiktir.
+Başlangıç köşelerinden düşman listesi kurarken `map`'e gelen her köşeyi `([r, c])` ile açarız; `x` sütun, `y` satır
+olduğu için `{ x: c, y: r, ... }` yazarız.
 
-Düşmanlar alevde ölür ve birine dokunmak bir cana mal olur. "Dokunmak" karelerle değil gerçek konumlar arasında ölçülür: bir
-karenin 0,6'sından daha yakın. Son düşman da gidince kazanırsın.
+**Yol seçmek.** Her karede tamamen rastgele seçim aptalca görünür: düşman yerinde ileri geri titrer. Klasik çözüm: her
+karede gidebileceği yolları listele, **geri dönmeyi dışarıda bırak** ve kalanlardan birini rastgele seç. Yalnızca çıkmaz
+sokakta, geri dönmek tek seçenekken geri döner. Böylece düşmanlar gidecek bir yerleri varmış gibi koridor boyunca yürür.
+
+```js
+const options = Object.values(DIRS).filter(([dr, dc]) => walkable(e.y + dr, e.x + dc))
+```
+
+Dört yönden yürünebilir olanlar (3. adımdaki `Object.values(DIRS)`). Hiç yoksa (`options.length === 0`) düşman durur.
+
+```js
+const forward = options.filter(([dr, dc]) => dr !== -e.dir[0] || dc !== -e.dir[1])
+```
+
+Bir yönün **tersi**, iki sayısının eksilisidir: sağın `[0, 1]` tersi sol `[0, -1]`. `-e.dir[0]` "son yönün satır
+farkının eksilisi" demektir. Bu satır "son yönün tersi olmayan yönler"i tutar (iki sayıdan biri farklıysa ters değildir;
+`||` "veya").
+
+```js
+const pick = forward.length ? forward : options
+```
+
+`if` ya da `? :` içinde bir sayı doğru/yanlış gibi okunur: `0` yanlış, diğerleri doğru. Yani "ileri yol varsa onlardan,
+yoksa (çıkmaz sokak) hepsinden seç". Sonra `Math.floor(Math.random() * pick.length)` ile rastgele bir sıra numarası
+alırız (`Math.random()` 0 ile 1 arası rastgele sayı, `Math.floor` aşağı yuvarlar).
+
+**Bombalar tuzaktır.** `walkable` bombalara hayır dediği için düşmanlar bombaların da etrafından dolaşır ve bir bomba
+birini koridorda kapana kıstırabilir. Bu oyunda gerçek bir taktiktir.
+
+**Ölmek ve dokunmak.** Düşmanlar alevde ölür: `enemies.filter((e) => !inFlames(e))` alevde olmayanları tutar. Birine
+dokunmak can kaybettirir. "Dokunmak" kareler arasında değil, gerçek konumlar arasında ölçülür: `Math.hypot(dx, dy)` iki
+nokta arasındaki dümdüz uzaklıktır (Pisagor); 0.6 kareden yakınsa dokunmuşsundur. Son düşman gidince kazanırsın:
+`state = 'won'`.
 
 # --task--
 
@@ -46,13 +77,78 @@ karenin 0,6'sından daha yakın. Son düşman da gidince kazanırsın.
 
 # --task-tr--
 
-1. `ENEMY_SPEED = 0.05` ve `enemies` ekle: `reset()`'te `ENEMY_STARTS`'ın her biri için bir `{ x, y, target: null, dir: [0, 0] }`.
-2. `updateEnemy(e)` yaz: hedef yokken yürünebilir yönleri listele; hiç yoksa dur. Değilse `e.dir`'in tersi olmayanlar arasından
-   (bu hiç bırakmıyorsa hepsinin arasından) rastgele birini seç, `e.dir`'de sakla ve sonraki kareyi hedef yap. Sonra
-   `moveTo(e, ENEMY_SPEED)`.
-3. `update()`'te: her düşmanı güncelle, alevdeki düşmanları kaldır, oyuncuyu alevde olduğu gibi bir düşmana dokununca da
-   (`0.6`'dan az uzaklık) yarala ve düşman kalmayınca `state = 'won'` yap.
-4. Her düşmanı 12 yarıçaplı `'#e11d48'` bir daire olarak çiz. Kazanınca son mesaj `All enemies gone!` der.
+1. `const SPEED = 0.1 ...` satırının altına ekle:
+
+   ```js
+   const ENEMY_SPEED = 0.05
+   ```
+
+2. `let player ...` satırının altına `let enemies` ekle ve `state` satırının yorumunu güncelle:
+
+   ```js
+   let enemies
+   ```
+
+   ```js
+   let state // 'playing', 'won' or 'lost'
+   ```
+
+3. `reset()` içinde `player = { x: 1, y: 1, target: null }` satırının altına ekle:
+
+   ```js
+     enemies = ENEMY_STARTS.map(([r, c]) => ({ x: c, y: r, target: null, dir: [0, 0] }))
+   ```
+
+4. `inFlames`'in altına, `hurt()`'ün üstüne düşmanın yürüyüşünü ekle:
+
+   ```js
+   // Enemies wander: at each tile they pick a way they can go, and only turn back at a dead end.
+   function updateEnemy(e) {
+     if (!e.target) {
+       const options = Object.values(DIRS).filter(([dr, dc]) => walkable(e.y + dr, e.x + dc))
+       if (options.length === 0) return
+       const forward = options.filter(([dr, dc]) => dr !== -e.dir[0] || dc !== -e.dir[1])
+       const pick = forward.length ? forward : options
+       e.dir = pick[Math.floor(Math.random() * pick.length)]
+       e.target = { r: e.y + e.dir[0], c: e.x + e.dir[1] }
+     }
+     moveTo(e, ENEMY_SPEED)
+   }
+   ```
+
+5. `update()`'i şöyle yap:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return
+     updatePlayer()
+     for (const e of enemies) updateEnemy(e) // ← yeni
+     for (const b of bombs) b.fuse -= 1
+     for (const bomb of bombs.filter((b) => b.fuse <= 0)) explode(bomb)
+     for (const f of flames) f.time -= 1
+     flames = flames.filter((f) => f.time > 0)
+     enemies = enemies.filter((e) => !inFlames(e)) // ← yeni
+     if (safe > 0) safe -= 1
+     else if (inFlames(player) || enemies.some((e) => Math.hypot(e.x - player.x, e.y - player.y) < 0.6)) hurt() // ← değişti
+     if (state === 'playing' && enemies.length === 0) state = 'won' // ← yeni
+   }
+   ```
+
+6. `draw()` içinde oyuncuyu çizen satırın **üstüne** düşmanları çiz:
+
+   ```js
+     for (const e of enemies) drawCircle(e, '#e11d48', 12)
+   ```
+
+7. Aynı fonksiyonda `Game over` yazan satırı değiştir:
+
+   ```js
+       ctx.fillText(state === 'won' ? 'All enemies gone!' : 'Game over', canvas.width / 2, 190) // ← değişti
+   ```
+
+8. **Çalıştır**'a bas. Öbür üç köşede kırmızı toplar belirip koridorlarda dolaşmalı. Oynamak için önce oyuna tıkla. Bir
+   düşmanı alevle yakınca kaybolmalı; birine değersen bir kalp gitmeli. Hepsi gidince `All enemies gone!` çıkmalı.
+   Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

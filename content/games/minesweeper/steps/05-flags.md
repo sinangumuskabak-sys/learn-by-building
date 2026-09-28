@@ -20,17 +20,41 @@ the grid each time it is drawn, so it can never be out of date.
 
 # --explanation-tr--
 
-Oyuncular altında mayın olduğundan emin oldukları hücreleri farenin sağ tuşuyla bir **bayrakla** işaretler. Sağ
-tıklama bir `contextmenu` olayı üretir ve tarayıcı varsayılan olarak menüsünü açar. İşleyicide
-`event.preventDefault()` çağırmak bunu durdurur; böylece sağ tuş tamamen oyunun olur.
+**Bu adımda:** sağ tıklamayla bayrak koyup kaldırmayı ekleyeceğiz. Bayraklı hücrede 🚩 görünecek, sol üstte de
+`💣 10` gibi kalan mayın sayısını gösteren bir sayaç çıkacak.
 
-Bayrak hücresini korur: bayraklı bir hücre tıklamayla açılamaz ve taşma dolgusu onun etrafından dolanır. Oyunun
-hissi üzerinde büyük etkisi olan küçük bir güvenlik özelliği. Yoksa sona yakın tek bir yanlış tıklama uzun bir oyunu
-mahvederdi.
+**Bayrak ne işe yarar?** Oyuncular altında mayın olduğundan emin oldukları hücreyi bayrakla işaretler. Bayrak hücreyi
+**korur**: bayraklı hücre tıklamayla açılmaz, taşma dolgusu da onun etrafından dolaşır. Uzun bir oyunun sonunda tek
+bir yanlış tıklama her şeyi mahvetmesin diye küçük ama önemli bir güvenlik.
 
-Tepedeki sayaç `MINES - flags`'i gösterir: bütün bayraklar doğruysa kaç mayın kaldığını. Oyuncu fazla bayrak koyarsa
-eksiye bile düşebilir; bu da kendi başına yararlı bir ipucudur. Sayı hiçbir yerde saklanmaz: her çizildiğinde ızgaradan
-hesaplanır, bu yüzden asla güncelliğini yitiremez.
+**Sağ tıklama olayı.** Sağ tıklayınca tarayıcı `'contextmenu'` olayını gönderir ve normalde kendi menüsünü açar.
+Olayı dinleyen fonksiyonda `event.preventDefault()` çağırırsak tarayıcının bu **varsayılan davranışı** durur; sağ
+tuş artık yalnız oyunundur.
+
+**Aç/kapa (toggle):**
+
+```js
+cell.flagged = !cell.flagged
+```
+
+`!` "tersi" demektir: `!true` → `false`, `!false` → `true`. Bu satır bayrak varsa kaldırır, yoksa koyar. Açık
+hücreye ya da kaybedilmiş oyunda bayrak konmaz; fonksiyon başta `return` ile çıkar.
+
+**Bayraklı hücreyi atlamak.** `reveal`'ın ilk satırı ve dolgudaki `continue` satırı artık iki koşula bakar:
+`start.revealed || start.flagged` → "açıksa **veya** bayraklıysa". (`||` "veya" demektir.)
+
+**Sayaç.** Üstte `MINES - flags` gösterilir: bütün bayraklar doğruysa kalan mayın sayısı. Oyuncu fazla bayrak koyarsa
+eksiye bile düşebilir; bu da işe yarar bir ipucudur. Bu sayı bir yerde saklanmaz, her çizimde tahtadan yeniden sayılır:
+
+```js
+const flags = grid.flat().filter((cell) => cell.flagged).length
+```
+
+"Bütün hücrelerden bayraklı olanları süz, kaç tane olduğuna bak." Böylece sayı hiçbir zaman eskimez.
+
+`'💣 ' + (MINES - flags)` → `+` yazıların arasında **birleştirme** yapar: `'💣 '` ile `7` yan yana gelince
+`'💣 7'` olur. Parantez, çıkarmanın önce yapılması için gerekli. `ctx.textAlign = 'left'` yazının verilen noktadan
+**sağa doğru** yazılmasını sağlar (sol üst köşeye yaslanır).
 
 # --task--
 
@@ -41,11 +65,69 @@ hesaplanır, bu yüzden asla güncelliğini yitiremez.
 
 # --task-tr--
 
-1. Her hücreye `flagged: false` ver. Kapalı hücrelerde (kaybedilmediyse) `flagged`'i tersine çeviren
-   `toggleFlag(cell)` yaz.
-2. `contextmenu`'da `event.preventDefault()` çağır ve işaretçinin altındaki hücrenin bayrağını değiştir.
-3. `reveal()` ve taşma dolgusu bayraklı hücreleri atlamalı.
-4. Bayraklı kapalı hücrelere `🚩`, sol üste de beyaz `'bold 18px monospace'` ile `💣 7` (mayınlar eksi bayraklar) çiz.
+1. `newGame()` içindeki hücreyi üreten satırın sonuna `flagged: false` ekle:
+
+   ```js
+       Array.from({ length: SIZE }, (_, col) => ({ row, col, mine: false, count: 0, revealed: false, flagged: false })), // ← değişti
+   ```
+
+2. `reveal(start)` fonksiyonunda iki satırı değiştir. En üstteki:
+
+   ```js
+     if (start.revealed || start.flagged) return // ← değişti
+   ```
+
+   ve `while` döngüsünün içindeki:
+
+   ```js
+       if (cell.revealed || cell.flagged) continue // ← değişti
+   ```
+
+3. `reveal` fonksiyonunun kapanış `}`'sinin altına, `function lose()` satırından önce şunu yaz:
+
+   ```js
+   function toggleFlag(cell) {
+     if (cell.revealed || state === 'lost') return
+     cell.flagged = !cell.flagged
+   }
+   ```
+
+4. `canvas.addEventListener('click', ...)` bloğunun bittiği `})` satırının altına, bir satır boşlukla sağ tıklamayı
+   dinleyen bloğu ekle:
+
+   ```js
+   canvas.addEventListener('contextmenu', (event) => {
+     event.preventDefault() // no browser menu: right click places a flag
+     const cell = cellAt(event)
+     if (cell) toggleFlag(cell)
+   })
+   ```
+
+5. `draw()` içinde kapalı hücreyi boyayan `else` kısmına bayrak satırını ekle:
+
+   ```js
+       } else {
+         ctx.fillStyle = '#94a3b8'
+         ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+         if (cell.flagged) ctx.fillText('🚩', x + CELL / 2, y + CELL / 2 + 1) // ← yeni
+       }
+   ```
+
+6. Yine `draw()` içinde, hücre döngüsünün bittiği yerden `if (state === 'lost')` satırına kadar olan kısım şöyle olmalı:
+
+   ```js
+     const flags = grid.flat().filter((cell) => cell.flagged).length // ← yeni
+     ctx.fillStyle = 'white' // ← yeni
+     ctx.font = 'bold 18px monospace'
+     ctx.textAlign = 'left' // ← yeni
+     ctx.fillText('💣 ' + (MINES - flags), 10, TOP / 2) // ← yeni
+
+     if (state === 'lost') {
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla; sonra bir hücreye **sağ** tıkla. 🚩 görünmeli ve sol üstteki
+   sayaç `💣 9` olmalı; aynı hücreye bir daha sağ tıklayınca bayrak kalkmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Menü açılıyorsa `preventDefault` yazımını kontrol et.
 
 # --tests--
 

@@ -27,23 +27,54 @@ end.
 
 # --explanation-tr--
 
-Oyuncu ızgarada hareket eder ama zıplamamalı, **kaymalı**. Bu yüzden döşemesi (`col`, `row`) ve yönü `dir` dışında bir de
-`progress`'i vardır: şu anki adımın kaç karesi geçti. Bir döşemeyi geçmek `PLAYER_FRAMES = 8` kare sürer ve oyuncu yolun bir
-kısmında çizilir:
+**Bu adımda:** oyuncuyu oklarla yürüteceğiz. Oyuncu kareden kareye zıplamayacak, **kayarak** gidecek; köşeden biraz
+önce bastığın dönüş tam köşede olacak, duvara gelince duracak. Ortadaki satırın iki ucu açık bir **tünel**: soldan
+çıkarsan sağdan girersin.
+
+**Yön nasıl tutulur?** Bir yönü iki sayılık küçük bir diziyle tutarız: `[dx, dy]`. `[1, 0]` sağa (sütun +1), `[-1, 0]`
+sola, `[0, -1]` yukarı (satır −1, çünkü `y` aşağı doğru büyür), `[0, 1]` aşağı. `STOP = [0, 0]` durmak demek.
+`dir[0]` birinci sayı, `dir[1]` ikinci sayıdır. Hangi ok tuşunun hangi yön olduğunu bir **nesnede** tutarız:
+
+```js
+const DIRECTIONS = { ArrowUp: [0, -1], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowRight: [1, 0] }
+DIRECTIONS['ArrowUp']   // [0, -1]
+```
+
+Köşeli parantezle, adı bir değişkende olan bilgiye ulaşırız: `DIRECTIONS[event.key]`. Ok tuşu değilse sonuç
+`undefined` (yok) olur ve `if (dir)` tutmaz.
+
+**Kayarak yürümek.** Oyuncunun karesi (`col`, `row`) ve yönü (`dir`) yanında bir de `progress`'i var: şu anki adımın
+kaçıncı karesindeyiz (kare = ekranın bir kez çizilmesi). Bir kareyi geçmek `PLAYER_FRAMES = 8` kare sürer; oyuncu yolun
+o kadarında çizilir:
 
 ```js
 x = col + dir[0] * progress / frames
 ```
 
-`progress` `frames`'e ulaşınca oyuncu **varır**: `col`/`row` bir döşeme ilerler ve `progress` yeniden `0`'dan başlar.
+Örnek: `col` 9, sola gidiyor (`dir[0]` = −1), `progress` 4 → `x = 9 - 4/8 = 8.5`, iki karenin tam ortası. `progress`
+8'e ulaşınca oyuncu **varır**: `col`/`row` bir kare ilerler, `progress` yeniden 0 olur.
 
-Yönlere yalnızca **döşemenin ortasında** (`progress === 0`) karar verilir. Her şeyi koridorlarla hizalı tutan budur. Ok tuşu
-yönü doğrudan değiştirmez; oyuncunun gitmek istediği yön olan `want`'ı ayarlar. Bir sonraki döşeme ortasında: `want` açıksa
-dön; değilse mümkünse devam et ya da duvarda dur. `want` hatırlandığı için "yukarı"ya bir köşeden biraz **önce** basabilirsin
-ve dönüş tam köşede olur. Buna girdi tamponlama denir ve labirent oyunlarının neden hızlı tepki veriyormuş gibi
-hissettirdiğinin büyük bir parçasıdır.
+**Yön yalnız karenin ortasında seçilir** (`progress === 0`). Her şeyin koridorlarla hizalı kalmasını bu sağlar. Ok
+tuşu yönü doğrudan değiştirmez; `want`'ı (oyuncunun **istediği** yönü) ayarlar. Bir sonraki kare ortasında: istenen
+yön açıksa dönülür; değilse mümkünse düz devam edilir, duvar varsa durulur. `want` hatırlandığı için "yukarı"ya köşeden
+biraz **önce** basabilirsin; dönüş tam köşede olur. Buna girdi tamponlama (input buffering) denir ve labirent oyunlarını
+akıcı hissettiren şeylerin büyük kısmıdır.
 
-9. satırın uçları açık: bir **tünel**. Sütunu `(col + COLS) % COLS` ile sarmak sol ucun sağ uca çıkmasını sağlar.
+**Tünel.** 9. satırın uçları açık. `(col + COLS) % COLS` sütunu sarar: `%` bölümden kalanı verir. `-1` → `(−1 + 19) %
+19` = 18 (en sağ), `19` → `38 % 19` = 0 (en sol). Önce `COLS` eklememizin sebebi, JavaScript'te eksi sayının kalanının
+eksi çıkmasıdır.
+
+**Yeni araçlar:**
+
+- `return ch === '#' || ch === '-'` → `||` "veya": duvar **ya da** hayalet evi ise `true`. `return` sonucu geri verir.
+- `!isWall(...)` → `!` "değil": duvar değilse.
+- `a[0] === b[0] && a[1] === b[1]` → `&&` "ve": iki sayı da eşitse aynı yön. Dizileri doğrudan `===` ile
+  karşılaştıramayız, bu yüzden `same` fonksiyonunu yazarız.
+- `advance(e, choose)` → ikinci parametre bir **fonksiyon**: "kare ortasında yönü şununla seç". Böylece aynı `advance`
+  sonra hayaletler için de kullanılabilir. `e` "hareket eden şey" (oyuncu ya da hayalet).
+- `document.addEventListener('keydown', (event) => { ... })` → "bir tuşa basılınca şu işi yap"; `event.key` tuşun adı.
+  `event.preventDefault()` tarayıcının oklarla sayfayı kaydırmasını engeller.
+- `else if` → "değilse, şu mu?".
 
 # --task--
 
@@ -59,15 +90,110 @@ hissettirdiğinin büyük bir parçasıdır.
 
 # --task-tr--
 
-1. `DIRECTIONS` (ok tuşundan `[dx, dy]`'ye; sıra yukarı, sol, aşağı, sağ), `STOP = [0, 0]` ve `PLAYER_FRAMES = 8` ekle.
-   Oyuncu `dir: STOP`, `want: STOP`, `progress: 0` ve `frames: PLAYER_FRAMES` alır.
-2. `wrap(col)`, `isWall(col, row)` (sarılmış sütunla bir `#` ya da `-`), `canGo(e, dir)` ve yönleri karşılaştırmak için
-   `same(a, b)` yaz.
-3. `position(e)` (yukarıya bak) ve `advance(e, choose)` yaz: `progress === 0` iken `choose(e)` çağır; yön `STOP` değilse
-   `progress`'e 1 ekle ve `e.frames`'e ulaşınca onu `0` yap, `col`'u (sarılmış) ve `row`'u bir adım taşı.
-4. `choosePlayer(p)` yaz: `want` `STOP` değilse ve açıksa ona dön; değilse şu anki yön kapalıysa dur. Bir ok tuşunda
-   `preventDefault()` yap ve `player.want`'ı ayarla. Her karede `advance(player, choosePlayer)` yap ve oyuncuyu
-   `position`'ında çiz.
+1. `const COLS = MAZE[0].length` satırının altındaki `// Checked in this order...` yorumunun hemen altına yön
+   ayarlarını ekle:
+
+   ```js
+   const DIRECTIONS = { ArrowUp: [0, -1], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowRight: [1, 0] }
+   const STOP = [0, 0]
+   const PLAYER_FRAMES = 8 // frames the player needs to cross one tile
+   ```
+
+2. `const key = ...` satırının hemen altına dört yardımcı ekle:
+
+   ```js
+   const wrap = (col) => (col + COLS) % COLS
+
+   function isWall(col, row) {
+     const ch = MAZE[row][wrap(col)]
+     return ch === '#' || ch === '-'
+   }
+
+   function canGo(e, dir) {
+     return !isWall(e.col + dir[0], e.row + dir[1])
+   }
+
+   const same = (a, b) => a[0] === b[0] && a[1] === b[1]
+   ```
+
+   `canGo` → "bu yönde bir sonraki kare duvar değil mi?".
+
+3. `placeActors` içindeki `player = ...` satırına yeni bilgileri ekle:
+
+   ```js
+     player = { col: MAZE[row].indexOf('P'), row, dir: STOP, want: STOP, progress: 0, frames: PLAYER_FRAMES } // ← değişti
+   ```
+
+4. `reset` fonksiyonunun kapanış `}`'inden sonra, `function draw()`'dan önce hareket kodunu yaz:
+
+   ```js
+   // Where an actor is drawn: its tile plus how far it has come towards the next one.
+   function position(e) {
+     return { x: e.col + (e.dir[0] * e.progress) / e.frames, y: e.row + (e.dir[1] * e.progress) / e.frames }
+   }
+
+   // One frame of movement. Directions are only chosen at the center of a tile, by `choose`.
+   function advance(e, choose) {
+     if (e.progress === 0) choose(e)
+     if (same(e.dir, STOP)) return
+     e.progress += 1
+     if (e.progress < e.frames) return
+     e.progress = 0
+     e.col = wrap(e.col + e.dir[0])
+     e.row += e.dir[1]
+   }
+
+   function choosePlayer(p) {
+     // The wanted direction is remembered, so a turn pressed early happens at the next corner.
+     if (!same(p.want, STOP) && canGo(p, p.want)) p.dir = p.want
+     else if (!canGo(p, p.dir)) p.dir = STOP
+   }
+
+   function steer(dir) {
+     player.want = dir
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const dir = DIRECTIONS[event.key]
+     if (dir) {
+       event.preventDefault()
+       steer(dir)
+     }
+   })
+
+   function update() {
+     advance(player, choosePlayer)
+   }
+   ```
+
+   `+=` "üstüne ekle" demektir. `advance`'te `progress` henüz `frames`'e ulaşmadıysa `return` ile çıkılır; ulaştıysa
+   oyuncu bir kare ilerler.
+
+5. `draw()`'un sonunda oyuncuyu çizen satırları, oyuncuyu `position`'daki (kayan) yerine çizecek şekilde değiştir:
+
+   ```js
+     const p = position(player)                                           // ← yeni
+     ctx.fillStyle = '#facc15'
+     ctx.beginPath()
+     ctx.arc(p.x * TILE + TILE / 2, TOP + p.y * TILE + TILE / 2, 10, 0, Math.PI * 2) // ← değişti
+     ctx.fill()
+   }
+   ```
+
+6. `loop` fonksiyonunda `draw()`'dan önce `update()` çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve oklarla oyuncuyu yürüt: kayarak ilerlemeli, köşeden önce
+   bastığın dönüş köşede olmalı, duvarda durmalı; 9. satırdaki tünelden geçince öbür yandan çıkmalı (yemler henüz
+   yenmez). Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `DIRECTIONS` içindeki eksi işaretlerine ve
+   `position`'daki parantezlere bak.
 
 # --tests--
 

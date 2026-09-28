@@ -20,8 +20,23 @@ statistics a game wants to remember: one object, one `JSON.stringify`, one `JSON
 
 # --explanation-tr--
 
-Tek bir Dört Bağla oyunu kısadır; bu yüzden eğlence **seride**dir: oyun üstüne oyun, sen bilgisayara karşı. İki tarafın
-galibiyetlerini tek bir nesnede tut ve her galibiyetten sonra kaydet:
+**Bu adımda:** skor tutacağız. Tahtanın altında, ör. `You 2 - 1 Computer` (Sen 2 - 1 Bilgisayar) yazacak. Biri
+kazandıkça sayı artacak ve sayfayı yenilesen de kalacak.
+
+**Seri önemli.** Tek bir Dört Bağla oyunu kısa sürer; eğlence **seride**: oyun oyun sen bilgisayara karşı. İki
+tarafın galibiyetlerini tek bir **nesnede** tutarız: `{ 1: 0, 2: 0 }` → oyuncu 1'in (senin) ve oyuncu 2'nin
+(bilgisayarın) galibiyet sayısı. `wins[who] += 1` → köşeli parantezle kazananın sayısını 1 artırırız.
+
+**Sayfa yenilense de kalan bilgi: `localStorage`.** Değişkenler sayfa kapanınca silinir. Tarayıcının her site için
+tuttuğu küçük bir defter vardır: `localStorage`. Bir **ad** ile yazarsın, aynı adla okursun. Ama defter sadece
+**yazı** saklar. Bir nesneyi saklamak için onu yazıya çeviririz; buna **JSON** denir:
+
+```js
+JSON.stringify({ 1: 2, 2: 1 })   // nesne → yazı: '{"1":2,"2":1}'
+JSON.parse('{"1":2,"2":1}')      // yazı → nesne: { 1: 2, 2: 1 }
+```
+
+Hepsi birlikte:
 
 ```js
 let wins = JSON.parse(localStorage.getItem('connect4-wins') || '{"1":0,"2":0}')
@@ -29,8 +44,18 @@ wins[who] += 1
 localStorage.setItem('connect4-wins', JSON.stringify(wins))
 ```
 
-Bir **nesneyi** JSON olarak saklamak ilgili sayıları tek bir anahtar altında bir arada tutar. Aynı kalıp bir oyunun hatırlamak
-istediği her ayar ya da istatistik için çalışır: bir nesne, bir `JSON.stringify`, makul bir varsayılanla bir `JSON.parse`.
+Bunu parça parça okuyalım:
+
+- `localStorage.getItem('connect4-wins')` → defterdeki kaydı oku. Hiç kayıt yoksa boş (`null`) gelir.
+- `|| '{"1":0,"2":0}'` → `||` "yoksa şunu kullan": ilk oyunda sıfır skorlu bir başlangıç yazısı.
+- `JSON.parse(...)` → yazıyı nesneye çevir.
+- `localStorage.setItem(ad, yazı)` → deftere yaz; `JSON.stringify` nesneyi önce yazıya çevirir.
+
+Birbiriyle ilgili sayıları tek bir ad altında bir nesne olarak saklamak, bir oyunun hatırlamak istediği her türlü
+ayar ve istatistik için işe yarar: bir nesne, bir `JSON.stringify`, makul bir varsayılanla bir `JSON.parse`.
+
+**Skor yazısı.** `'You ' + wins[1] + ' - ' + wins[2] + ' Computer'` → `+` yazıları ve sayıları yan yana
+yapıştırır: `'You 2 - 1 Computer'`. Boşlukları tırnakların içine koymayı unutma.
 
 # --task--
 
@@ -40,9 +65,43 @@ istediği her ayar ya da istatistik için çalışır: bir nesne, bir `JSON.stri
 
 # --task-tr--
 
-1. Yukarıdaki gibi `localStorage` `'connect4-wins'`'ten okunan `wins`'i ekle.
-2. Biri kazandığında onun sayısına 1 ekle ve bütün nesneyi kaydet.
-3. `You 2 - 1 Computer`'ı canvas'ın altında ortalı çiz (`y = canvas.height - 12`).
+1. `let thinking ...` satırının altına galibiyetleri ekle:
+
+   ```js
+   let wins = JSON.parse(localStorage.getItem('connect4-wins') || '{"1":0,"2":0}')
+   ```
+
+   Tırnaklara dikkat: dışta tek tırnak `'`, içte çift tırnak `"`.
+
+2. `land()` fonksiyonunda kazanma bölümüne iki satır ekle:
+
+   ```js
+     if (four) {
+       winner = who
+       line = four
+       wins[who] += 1 // ← yeni
+       localStorage.setItem('connect4-wins', JSON.stringify(wins)) // ← yeni
+     } else if (board[0].every((cell) => cell !== 0)) {
+   ```
+
+3. `draw()` fonksiyonunun sonunda, `ctx.textAlign = 'center'` satırının hemen altına (mesaj satırlarından önce)
+   skoru tahtanın altına yazan satırı ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'center'
+     ctx.fillText('You ' + wins[1] + ' - ' + wins[2] + ' Computer', canvas.width / 2, canvas.height - 12) // ← yeni
+     let message = turn === 1 ? 'Your turn' : 'Computer...'
+   ```
+
+   `canvas.height - 12` → canvas'ın alt kenarından 12 piksel yukarısı.
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Altta `You 0 - 0 Computer` görünmeli; bir oyun kazanınca
+   (ya da kaybedince) ilgili sayı artmalı ve sayfayı yenilesen de kalmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Skor yazısı kontrolü kırmızıysa boşlukları kontrol et: `You 1 - 0 Computer`.
+
+Tebrikler, Dört Bağla oyunun bitti!
 
 # --tests--
 

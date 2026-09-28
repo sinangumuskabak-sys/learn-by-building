@@ -24,20 +24,43 @@ The answer is picked at random from a word list, and Enter submits a full guess,
 
 # --explanation-tr--
 
-Bir tahmini puanlamak kolay görünür: harf doğru yerdeyse yeşil, kelimenin başka bir yerindeyse sarı, kelimede hiç yoksa gri.
-Peki ya **tekrarlanan harfler**? Cevap `crane` ise ve `eerie` tahmin edersen yalnızca son `e` doğrudur. Öbür ikisi gri olmalıdır,
-çünkü kelimede yalnızca bir `e` var ve o zaten hesaba katıldı.
+**Bu adımda:** oyun gizli bir kelime seçecek. 5 harf yazıp **Enter**'a basınca tahminin o satıra yerleşir ve her
+kutu renklenir: **yeşil** harf doğru yerde, **sarı** harf kelimede var ama başka yerde, **gri** harf kelimede yok.
+Sonraki tahmin bir alt satıra yazılır.
 
-Kural şu: cevabın her harfi yalnızca bir kez "kullanılabilir". İki tur bunu doğru yapar:
+**Gizli kelimeyi seçmek.** Kelimeler bir **dizide** (array) durur: köşeli parantez içinde, virgülle ayrılmış liste.
+`WORDS[0]` ilk kelime (sayma 0'dan başlar), `WORDS.length` kelime sayısıdır. Rastgele seçmek için:
 
-1. Bütün yeşilleri işaretle. Cevabın bir yeşille eşleşmeyen her harfi, hâlâ kullanılabilir harflerin sayımına girer:
-   `{ r: 1, a: 1, n: 1 }`.
-2. Tahminin diğer her harfi için, o harf hâlâ kullanılabilirse onu sarı işaretle ve sayısından bir düş; değilse gri kalır.
+```js
+WORDS[Math.floor(Math.random() * WORDS.length)]
+```
 
-Yeşiller önce gelmeli. Yoksa erken bir sarı, sonraki bir yeşilin ihtiyaç duyduğu harfi harcayabilirdi. Bir nesneyle saymak
-(`left[letter] = (left[letter] || 0) + 1`) küçük bir **sıklık tablosudur**; tekrar tekrar kullanacağın bir araç.
+`Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir; kelime sayısıyla çarpıp
+`Math.floor` ile aşağı yuvarlayınca 0 ile son sıra arasında rastgele bir **tam sayı** çıkar.
 
-Cevap bir kelime listesinden rastgele seçilir ve Enter dolu bir tahmini gönderir; tahmin satırını renklerle doldurur.
+**Nesne (object).** Birkaç bilgiyi adlarıyla bir arada tutar: `{ word: 'caper', marks: [...] }`. İçindeki bilgiye
+**alan** denir, nokta ile okunur: `guess.word`. `COLORS = { green: '#16a34a', ... }` da bir nesne; `COLORS['green']`
+ya da `COLORS[ad]` diye köşeli parantezle de okunabilir. Her tahmini böyle bir nesne olarak `guesses` dizisine
+`push` ile ekleriz (`push` = sona ekle).
+
+**Puanlamanın zor yanı: tekrar eden harfler.** Cevap `crane`, tahmin `eerie` olsun. Sadece sondaki `e` doğru; öteki
+iki `e` **gri** olmalı, çünkü kelimede tek `e` var ve o zaten kullanıldı. Kural: cevaptaki her harf **bir kez**
+kullanılabilir. İki turla doğru sonuç çıkar:
+
+1. Önce bütün yeşilleri işaretle. Yeşille eşleşmeyen cevap harflerini say: `{ r: 1, a: 1, n: 1 }` gibi. Buna
+   **sıklık tablosu** denir.
+2. Sonra yeşil olmayan her tahmin harfine bak: tabloda hâlâ varsa sarı yap ve sayısından 1 düş; yoksa gri kalsın.
+
+Yeşiller önce gelmeli; yoksa öndeki bir sarı, arkadaki yeşilin ihtiyaç duyduğu harfi harcayabilir.
+
+**Yeni parçalar:**
+
+- `Array(5).fill('gray')` → 5 elemanlı, hepsi `'gray'` olan bir dizi.
+- `left[word[i]] = (left[word[i]] || 0) + 1` → bu harfin sayısını 1 artır. Harf tabloda henüz yoksa değeri
+  `undefined`'dır; `|| 0` "yoksa 0 kabul et" demektir.
+- `!==` "**eşit değil mi?**", `-= 1` "1 azalt" demektir.
+- `guess ? guess.word : row === guesses.length ? current : ''` → iç içe kısa `if`: "bu satırda bitmiş tahmin varsa
+  onun kelimesi; yoksa bu satır sıradaki satırsa yazılmakta olan kelime; o da değilse boş".
 
 # --task--
 
@@ -51,13 +74,106 @@ Cevap bir kelime listesinden rastgele seçilir ve Enter dolu bir tahmini gönder
 
 # --task-tr--
 
-1. Çözümdeki `WORDS` listesini, `COLORS = { green: '#16a34a', yellow: '#ca8a04', gray: '#3f3f46' }`'i, `answer`'ı
-   (`reset()`'te rastgele bir kelime) ve her biri `{ word, marks }` olan `guesses`'ı (`[]`) ekle.
-2. Yukarıdaki iki turla 5 işaret döndüren `score(guess, word)` yaz.
-3. 5 harf yazılıyken (ve şimdiye kadar 6'dan az tahmin varken) Enter puanlanmış tahmini ekler ve `current`'ı temizler. Enter
-   artık `keydown`'ın işlediği tuşlardan biridir.
-4. Bitmiş her tahmini işaretlerinin renginde dolu döşemeler ve beyaz harflerle çiz; yazılanlar son tahminden sonraki satıra
-   gider.
+1. `const ctx = canvas.getContext('2d')` satırından sonraki boş satırın altına, `const TRIES = 6`'nın **üstüne**
+   kelime listesini ekle (kopyalayıp yapıştırabilirsin):
+
+   ```js
+   const WORDS = ['apple', 'beach', 'brain', 'bread', 'brick', 'chair', 'chess', 'clock', 'cloud', 'crane', 'dance', 'dream',
+     'drink', 'eagle', 'earth', 'flame', 'fruit', 'ghost', 'glass', 'grape', 'green', 'heart', 'horse', 'house', 'juice',
+     'knife', 'laugh', 'lemon', 'light', 'magic', 'money', 'mouse', 'music', 'night', 'ocean', 'paint', 'party', 'piano',
+     'pilot', 'plane', 'plant', 'pride', 'queen', 'radio', 'river', 'robot', 'sheep', 'shirt', 'smile', 'snake', 'space',
+     'spoon', 'storm', 'sugar', 'table', 'tiger', 'toast', 'train', 'water', 'whale', 'world', 'zebra']
+   ```
+
+2. `const TOP = 12` satırının hemen altına renkleri ekle:
+
+   ```js
+   const COLORS = { green: '#16a34a', yellow: '#ca8a04', gray: '#3f3f46' }
+   ```
+
+3. `let current` satırının **üstüne** iki değişken ekle:
+
+   ```js
+   let answer
+   let guesses // the finished guesses, each { word, marks }
+   ```
+
+4. `reset()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function reset() {
+     answer = WORDS[Math.floor(Math.random() * WORDS.length)]  // ← yeni
+     guesses = []                                              // ← yeni
+     current = ''
+   }
+   ```
+
+5. `reset()`'in kapanış `}`'sinden sonra, `function type(key)`'den önce puanlama fonksiyonunu ekle:
+
+   ```js
+   // Mark each letter: green in the right place, yellow somewhere else in the word, gray not (or not that many times).
+   function score(guess, word) {
+     const marks = Array(5).fill('gray')
+     const left = {} // letters of the word not matched by a green
+     for (let i = 0; i < 5; i++) {
+       if (guess[i] === word[i]) marks[i] = 'green'
+       else left[word[i]] = (left[word[i]] || 0) + 1
+     }
+     for (let i = 0; i < 5; i++) {
+       if (marks[i] !== 'green' && left[guess[i]] > 0) {
+         marks[i] = 'yellow'
+         left[guess[i]] -= 1
+       }
+     }
+     return marks
+   }
+   ```
+
+6. `type(key)` fonksiyonuna Enter kuralını ekle:
+
+   ```js
+   function type(key) {
+     if (key === 'Backspace') current = current.slice(0, -1)
+     else if (/^[a-z]$/.test(key) && current.length < 5) current += key
+     else if (key === 'Enter' && current.length === 5 && guesses.length < TRIES) {  // ← yeni
+       guesses.push({ word: current, marks: score(current, answer) })               // ← yeni
+       current = ''                                                                 // ← yeni
+     }                                                                              // ← yeni
+   }
+   ```
+
+7. `keydown` dinleyicisinde `if (key === 'Backspace' || ...` satırının başına Enter'ı ekle:
+
+   ```js
+     if (key === 'Enter' || key === 'Backspace' || /^[a-z]$/.test(key)) {  // ← değişti
+   ```
+
+8. `draw()` içinde, `for (let row = 0; ...` döngüsünün içini şöyle değiştir (yorum satırı ve eski `letters` satırı
+   gidiyor, çerçeve çizimi `else` içine giriyor):
+
+   ```js
+     for (let row = 0; row < TRIES; row++) {
+       const guess = guesses[row]                                            // ← yeni
+       const letters = guess ? guess.word : row === guesses.length ? current : ''  // ← değişti
+       for (let i = 0; i < 5; i++) {
+         const x = LEFT + i * (SIZE + GAP)
+         const y = TOP + row * (SIZE + GAP)
+         if (guess) {                                   // ← yeni
+           ctx.fillStyle = COLORS[guess.marks[i]]       // ← yeni
+           ctx.fillRect(x, y, SIZE, SIZE)               // ← yeni
+         } else {                                       // ← yeni
+           ctx.strokeStyle = letters[i] ? '#a1a1aa' : '#3f3f46'
+           ctx.lineWidth = 2
+           ctx.strokeRect(x + 1, y + 1, SIZE - 2, SIZE - 2)
+         }                                              // ← yeni
+         if (letters[i]) {
+   ```
+
+   `if (letters[i]) {` ile başlayan harf çizme bloğu ve altı aynı kalıyor.
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, 5 harfli bir kelime yaz ve **Enter**'a bas: satır renklenmeli,
+   yazmaya alt satırda devam etmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Tekrar eden harf kontrolü kırmızıysa
+   `score` içinde yeşillerin **ilk** döngüde işaretlendiğinden emin ol.
 
 # --tests--
 

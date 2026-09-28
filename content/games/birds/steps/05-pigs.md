@@ -24,21 +24,42 @@ about to go.
 
 # --explanation-tr--
 
-Artık bir şeyler **kırılabilir**. Her cisim malzemesinden can puanı (`hp`) alır: domuzlar kırılgandır (25), tahta ortadır (60),
-taş dayanıklıdır (160) ve kuş hiç kırılmaz.
+**Bu adımda:** işler **kırılabilecek**. Sahneye iki yeşil domuz gelecek: biri kulenin kirişinin üstünde, biri yerde.
+Sert çarpan her şey hasar alacak; zayıflayan bloklarda koyu bir çatlak belirecek, canı biten şey yok olup puan
+getirecek. Sol üstte `Score 0` yazacak.
 
-Bir çarpma ne kadar sertti? `collide` bunu zaten bilir: `closing`, iki kutunun birbirine doğru ne kadar hızlı gittiğidir. Bir
-bloğun başka birinin üstüne oturması gibi nazik bir dokunuş hiçbir şey yapmamalı; bu yüzden yalnızca 2'nin **üstündeki** hız sayılır:
+**Her gövdenin canı (`hp`) var.** Can, malzemeden gelir: domuzlar kırılgan (25), tahta orta (60), taş dayanıklı (160),
+kuş ise hiç kırılmaz (`Infinity`, yani "sonsuz"). Bir gövde yaratılırken canı malzemesinin canıyla başlar:
+`hp: MATERIALS[kind].hp`.
+
+**Çarpma ne kadar sertti?** `collide` bunu zaten biliyor: 4. adımdaki `closing`, iki kutunun birbirine doğru ne hızla
+geldiğiydi. Nazik bir dokunuş (bir bloğun ötekinin üstüne oturması gibi) hiçbir şey yapmamalı; bu yüzden sadece 2'nin
+**üstündeki** hız sayılır:
 
 ```js
 if (speed > 2) b.hp -= (speed - 2) * 25
 ```
 
-O tek eşik oyunun hissinin büyük kısmını verir. Kuledeki duran bloklar hiç zarar görmez. Tam hızdaki bir kuş tahtayı parçalar.
-Bir domuzun üstüne düşen tahta onu ezer. Zemine inmek de sayılır; bu yüzden kuleden düşürülen bir domuz düşüşten kırılabilir.
+Örnek: 4 hızla çarpan bir tahta `(4 - 2) × 25 = 50` can kaybeder, 60'tan 10'a düşer. 1.5 hızla dokunan hiç kaybetmez.
 
-0 ya da altında hp'si olan her şey kaldırılır ve puan getirir: bir domuz 500, bir blok 100. Bir blok zayıfladıkça koyu bir çatlak
-gitmek üzere olduğunu gösterir.
+Bu tek eşik oyunun hissinin büyük kısmını verir. Kulede duran bloklar asla zarar görmez. Tam hızla gelen kuş tahtayı
+parçalar. Bir domuzun üstüne düşen tahta onu ezer. Yere düşmek de sayılır: düşüş hızı (`vy`) ile hasar verilir; kuleden
+düşen domuz düşüşten kırılabilir.
+
+**Kırılan gider ve puan getirir.** `step()` zaten ekrandan çıkanları listeden atıyordu (`filter`). Şimdi canı 0 ya da
+altında olanları da atar. Giden domuz 500, giden blok 100 puan eder (`b.kind === 'pig' ? 500 : 100`). Kuş giderse puan
+yok, sadece `bird` unutulur.
+
+**Çatlak.** Canı yarısının altına düşen bloğun ortasına 2 piksel enli, yarı saydam siyah bir çizgi çizeriz: yakında
+kırılacağını gösterir.
+
+**Yeni küçük şeyler:**
+
+- `const pigs = () => bodies.filter((b) => b.kind === 'pig')` → listedeki domuzları veren küçük bir fonksiyon. İleride
+  "domuz kaldı mı?" diye sormak için kullanılacak.
+- `if (b.vy > 0) damage(b, b.vy)` → sadece aşağı doğru düşerken yere çarpmak hasar verir.
+- `ctx.font`, `ctx.textAlign` ve `ctx.fillText('Score ' + score, 10, 22)` → yazı tipi, hizalama ve yazıyı boyamak.
+  `'Score ' + score` yazı ile sayıyı yan yana koyar.
 
 # --task--
 
@@ -53,14 +74,111 @@ gitmek üzere olduğunu gösterir.
 
 # --task-tr--
 
-1. `MATERIALS`'ın her birine bir `hp` ver (`wood` 60, `stone` 160, `bird` `Infinity`) ve `pig` ekle (`'#65a30d'`, yoğunluk 1,
-   hp 25). `body` malzemesinin `hp`'siyle başlar. `pigs()` ekle ve `LEVEL`'a iki domuz koy (çözüme bak).
-2. `damage(b, speed)`'i yukarıdaki gibi yaz. `collide` iki cisme de `closing` ile hasar verir; zemine inmek bir cisme düşüş
-   `vy`'siyle hasar verir.
-3. `step()`, kenarların dışındakilerle birlikte `hp <= 0` olan cisimleri de kaldırır; kaldırılan her domuz `score`'a 500, her
-   blok 100 ekler (`reset()`'te `score` `0`).
-4. Domuzları kuş gibi daire olarak çiz; hp'sinin yarısının altındaki bloklara `'rgba(0, 0, 0, 0.35)'` bir çatlak çiz (2 geniş,
-   tam yükseklik, ortada); `(10, 22)`'ye `Score 0` çiz (`'#0f172a'`, `'bold 16px sans-serif'`).
+1. `MATERIALS`'ı ve `LEVEL`'ı şöyle değiştir (her malzemeye `hp`, yeni `pig`; seviyede taş yerine iki domuz):
+
+   ```js
+   const MATERIALS = {
+     wood: { color: '#b45309', density: 1, hp: 60 },
+     stone: { color: '#64748b', density: 2.5, hp: 160 },
+     pig: { color: '#65a30d', density: 1, hp: 25 },
+     bird: { color: '#dc2626', density: 4, hp: Infinity },
+   }
+   // The level: [kind, x, y, width, height], x and y the top left corner.
+   const LEVEL = [
+     ['wood', 380, 230, 12, 60], ['wood', 440, 230, 12, 60], ['wood', 370, 218, 94, 12], ['pig', 406, 196, 22, 22],
+     ['pig', 480, 268, 22, 22],
+   ]
+   ```
+
+2. `let bodies ...` satırının yorumunu güncelle ve `let dragging` satırının altına puanı ekle:
+
+   ```js
+   let bodies // { kind, x, y, w, h, vx, vy, hp }
+   ```
+
+   ```js
+   let dragging
+   let score // ← yeni
+   ```
+
+3. `const body = ...` satırına canı ekle ve `const mass = ...` satırının altına `pigs`'i ekle:
+
+   ```js
+   const body = (kind, x, y, w, h) => ({ kind, x, y, w, h, vx: 0, vy: 0, hp: MATERIALS[kind].hp }) // ← değişti
+   const mass = (b) => (b.w * b.h * MATERIALS[b.kind].density) / 400
+   const pigs = () => bodies.filter((b) => b.kind === 'pig') // ← yeni
+   ```
+
+4. `reset()` içinde `state = 'aiming'` satırının altına ekle:
+
+   ```js
+     score = 0
+   ```
+
+5. `collide()`'ın en sonuna (son `b.vy -= f * nx * ib` satırının altına) iki satır ekle ve fonksiyonun hemen altına
+   `damage`'ı yaz:
+
+   ```js
+     b.vy -= f * nx * ib
+     damage(a, closing) // ← yeni
+     damage(b, closing) // ← yeni
+   }
+
+   // Hits harder than a gentle landing hurt; things fall apart at 0 hp.
+   function damage(b, speed) {
+     if (speed > 2) b.hp -= (speed - 2) * 25
+   }
+   ```
+
+6. `step()`'te iki değişiklik: yere inerken hasar ver, ve listeden atma kısmını kırılanları da atacak şekilde değiştir:
+
+   ```js
+       if (b.y + b.h > GROUND) {
+         if (b.vy > 0) damage(b, b.vy) // ← yeni
+         b.y = GROUND - b.h
+   ```
+
+   ```js
+     // Broken or fallen off the world: gone. Every pig and block that goes scores. // ← değişti
+     bodies = bodies.filter((b) => {
+       if (b.hp > 0 && b.x < canvas.width + 50 && b.x + b.w > -50) return true // ← değişti
+       if (b === bird) bird = null
+       else score += b.kind === 'pig' ? 500 : 100 // ← yeni
+       return false
+     })
+   ```
+
+7. `draw()`'un sonundaki gövde döngüsünü şöyle yap ve altına puan yazısını ekle:
+
+   ```js
+     for (const b of bodies) {
+       const m = MATERIALS[b.kind]
+       ctx.fillStyle = m.color
+       if (b.kind === 'pig' || b.kind === 'bird') { // ← değişti
+         ctx.beginPath()
+         ctx.arc(b.x + b.w / 2, b.y + b.h / 2, b.w / 2, 0, Math.PI * 2)
+         ctx.fill()
+       } else {
+         ctx.fillRect(b.x, b.y, b.w, b.h)
+         // Cracks show how hurt a block is. // ← yeni (buradan)
+         if (b.hp < m.hp / 2) {
+           ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
+           ctx.fillRect(b.x + b.w / 2 - 1, b.y, 2, b.h)
+         } // ← (buraya kadar)
+       }
+     }
+
+     ctx.fillStyle = '#0f172a' // ← yeni (buradan)
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score ' + score, 10, 22) // ← (buraya kadar)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Kulenin tepesinde ve yerde birer yeşil domuz görmelisin; sol üstte `Score 0` yazmalı ve hiçbir
+   şey kendi kendine kırılmamalı. Oynamak için önce oyuna tıkla ve kuşu domuzlara fırlat: vurulan domuz kaybolmalı,
+   puan artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kule kendi kendine puan getiriyorsa `damage`'daki `speed > 2`
+   eşiğini kontrol et.
 
 # --tests--
 

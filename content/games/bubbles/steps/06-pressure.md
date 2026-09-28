@@ -18,15 +18,43 @@ When the game ends, shooting stops, and Space or a tap starts again.
 
 # --explanation-tr--
 
-Baskı olmadan sonsuza dek atış yapabilirdin. Bu yüzden her `DROP_EVERY` atışta **tavan** bir satır **iner** ve bütün balonları sana
-doğru iter. Herhangi bir balon **tehlike çizgisinin** altına düşerse oyun kaybedilir. Önce bütün balonları temizlersen bir ödülle
-kazanırsın.
+**Bu adımda:** oyuna baskı ekleyeceğiz. Her 8 atışta bir **tavan bir satır aşağı inecek** ve bütün balonları sana doğru
+itecek. Altta kırmızımsı bir **tehlike çizgisi** göreceksin: bir balon onun altına inerse kaybedersin
+(`The bubbles reached you`). Bütün balonları temizlersen kazanırsın (`Board cleared!`) ve 1000 puan ödül alırsın.
 
-Zekice olan kısım, tavanın ne kadar az koda ihtiyaç duyduğu. Izgara hiç değişmez; yalnızca `cellPos` her `y`'ye `drop * ROW_H`
-ekler. Diğer her fonksiyon (`touches`, `snap`, çizim) `cellPos`'tan geçtiği için bütün tahta birlikte hareket eder. Tavanın
-kendisi aşağı doğru büyüyen katı bir blok olarak çizilir; böylece geldiğini görebilirsin.
+**Tavanı indirmenin akıllı yolu.** `drop`, tavanın kaç satır indiğini sayar. Izgaranın kendisi hiç değişmez; yalnızca
+`cellPos` her `y`'ye `drop * ROW_H` ekler. `touches`, `snap` ve çizim, hücrenin yerini hep `cellPos`'tan sorduğu için bütün
+tahta birlikte aşağı kayar. Tek bir satırı değiştirip her şeyi hareket ettirmek: işleri tek bir yere toplamanın ödülü.
+Tavanın kendisi aşağı doğru uzayan dolu bir blok olarak çizilir (`TOP + drop * ROW_H` yüksekliğinde), böylece geldiğini
+görürsün. `touches`'taki tavan kontrolü de aynı miktarı ekler.
 
-Oyun bittiğinde atış durur ve Boşluk ya da bir dokunuş yeniden başlatır.
+**Oyunun durumu (`state`).** `state` bir yazıyla oyunun hâlini tutar: `'playing'` (oynanıyor), `'won'` (kazandın),
+`'lost'` (kaybettin). `!==` "eşit değil mi?" diye sorar.
+
+**Her atıştan sonra (`attach`):**
+
+- `shots += 1`; `shots % DROP_EVERY === 0` (8'e bölümünden kalan 0, yani 8., 16., 24. atış) ise `drop += 1`.
+- Kazandın mı, kaybettin mi? Önce ızgarayı düz bir listeye çeviririz:
+
+  ```js
+  const cells = grid.flatMap((row, r2) => row.map((color2, c2) => ({ r: r2, c: c2, color: color2 })))
+  ```
+
+  `map` her hücreyi `{ r, c, color }` kartına çevirir; `flatMap` satır satır çıkan listeleri tek bir uzun listede birleştirir.
+- `cells.every((cell) => cell.color < 0)` → "**her** hücre boş mu?" Evetse kazandın, `score += 1000`.
+- `else if (cells.some(...))` → değilse, "**en az bir** dolu balonun alt kenarı (`y + R`) tehlike çizgisinin altında mı?"
+  `some` biri bile uyarsa `true` verir. Evetse kaybettin.
+
+**Oyun bitince.** `shoot` yalnızca oynarken çalışır: `if (state !== 'playing' || shot) return`. Boşluk tuşu oynarken ateş
+eder, oyun bitmişse yeniden başlatır:
+
+```js
+state === 'playing' ? shoot() : reset()
+```
+
+`a ? b : c` burada bir değer seçmek için değil, iki işten birini yapmak için kullanılıyor: "oynuyorsa `shoot()`, değilse
+`reset()`". Ekrana dokunma (`pointerdown`) da oyun bitmişse `reset()` yapar; oynarken eskisi gibi nişan alır. Nişan çizgisi
+yalnızca oynarken çizilir, bitince ortada yarı saydam bir panelde sonuç yazar.
 
 # --task--
 
@@ -42,15 +70,126 @@ Oyun bittiğinde atış durur ve Boşluk ya da bir dokunuş yeniden başlatır.
 
 # --task-tr--
 
-1. `DANGER = 440`, `DROP_EVERY = 8` ve `shots`, `drop` ve `state` ekle (`reset()`'te `0`, `0` ve `'playing'`). `cellPos` ve
-   `touches`'taki tavan `drop * ROW_H` ekler.
-2. `attach` `shots`'ı sayar; her `DROP_EVERY` atışta `drop` 1 büyür. Sonra: boş tahta `'won'`'dır (+1000); alt kenarı `DANGER`'ın
-   altında olan bir balon `'lost'`'tur.
-3. `shoot` yalnızca oynarken çalışır. Oyun bittiğinde Boşluk ve bir dokunuş (`pointerdown`) yeniden başlatır.
-4. `TOP + drop * ROW_H` yüksekliğinde tavan bloğunu, tehlike çizgisini (`'rgba(239, 68, 68, 0.5)'`, `DANGER`'da 2 yüksekliğinde) ve
-   nişan çizgisini yalnızca oynarken çiz. Sonda: `(40, 200)`'de `canvas.width - 80`'e 90 `'rgba(15, 23, 42, 0.85)'` bir panel ile
-   `Board cleared!` ya da `The bubbles reached you` (`'bold 24px sans-serif'`, `y = 238`) ve `Space or tap to play again`
-   (`'16px sans-serif'`, `y = 268`).
+1. `const SPEED = 12` satırının altına iki sabit ekle:
+
+   ```js
+   const DANGER = 440 // a bubble below this line ends the game
+   const DROP_EVERY = 8 // shots between the ceiling coming down
+   ```
+
+2. `let score` satırının altına üç değişken ekle:
+
+   ```js
+   let shots
+   let drop // how many rows the ceiling has come down
+   let state // 'playing', 'won' or 'lost'
+   ```
+
+3. `cellPos` satırını şöyle değiştir (`y` kısmına `drop * ROW_H +` eklendi):
+
+   ```js
+   const cellPos = (r, c) => ({ x: R + c * 2 * R + (r % 2) * R, y: TOP + drop * ROW_H + R + r * ROW_H })
+   ```
+
+4. `reset()`'te `score = 0` satırının altına ekle:
+
+   ```js
+     shots = 0
+     drop = 0
+     state = 'playing'
+   ```
+
+5. `shoot()`'un ilk satırını değiştir:
+
+   ```js
+     if (state !== 'playing' || shot) return // ← değişti
+   ```
+
+6. `touches()`'un ilk satırını değiştir:
+
+   ```js
+     if (y - R <= TOP + drop * ROW_H) return true // ← değişti
+   ```
+
+7. `attach()`'te `grid[r][c] = color` satırının altına `shots += 1` ekle ve fonksiyonun sonuna (büyük `if`'in kapanışından
+   sonra, son `}`'den önce) şunları yaz:
+
+   ```js
+   function attach(r, c, color) {
+     grid[r][c] = color
+     shots += 1 // ← yeni
+     ...
+       remove(loose, 20)
+     }
+     if (shots % DROP_EVERY === 0) drop += 1                                                  // ← yeni
+     const cells = grid.flatMap((row, r2) => row.map((color2, c2) => ({ r: r2, c: c2, color: color2 })))
+     if (cells.every((cell) => cell.color < 0)) {                                             // ← yeni
+       state = 'won'
+       score += 1000
+     } else if (cells.some((cell) => cell.color >= 0 && cellPos(cell.r, cell.c).y + R > DANGER)) state = 'lost'
+   }
+   ```
+
+   (`...` yazma; arada kalan kod aynen kalır. `const cells` ve `} else if` satırları da yeni.)
+
+8. `keydown` dinleyicisinde Boşluk satırını değiştir:
+
+   ```js
+     else if (event.key === ' ') state === 'playing' ? shoot() : reset() // ← değişti
+   ```
+
+9. `canvas.addEventListener('pointerdown', pointAt)` satırını sil, yerine şunu yaz:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'playing') return reset()
+     pointAt(event)
+   })
+   ```
+
+10. `draw()`'un başında tavan ve tehlike çizgisi:
+
+    ```js
+      ctx.fillStyle = '#1e1b4b'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      // The ceiling comes down as a solid block.
+      ctx.fillStyle = '#312e81'
+      ctx.fillRect(0, 0, canvas.width, TOP + drop * ROW_H) // ← değişti
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.5)'             // ← yeni
+      ctx.fillRect(0, DANGER, canvas.width, 2)             // ← yeni
+    ```
+
+11. `draw()`'da nişan çizgisini çizen altı satırı bir `if`'in içine al:
+
+    ```js
+      if (state === 'playing') {
+        // The aim: a short line from the shooter.
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(SHOOTER.x, SHOOTER.y)
+        ctx.lineTo(SHOOTER.x + Math.cos(aim) * 80, SHOOTER.y + Math.sin(aim) * 80)
+        ctx.stroke()
+      }
+    ```
+
+12. `draw()`'un en sonuna, `ctx.fillText('Score ' + score, 10, 21)` satırının altına sonuç panelini ekle:
+
+    ```js
+      if (state !== 'playing') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+        ctx.fillRect(40, 200, canvas.width - 80, 90)
+        ctx.fillStyle = 'white'
+        ctx.textAlign = 'center'
+        ctx.font = 'bold 24px sans-serif'
+        ctx.fillText(state === 'won' ? 'Board cleared!' : 'The bubbles reached you', canvas.width / 2, 238)
+        ctx.font = '16px sans-serif'
+        ctx.fillText('Space or tap to play again', canvas.width / 2, 268)
+      }
+    ```
+
+13. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Altta kırmızı ince bir çizgi görmelisin; 8 atış yap: tavan ve
+    balonlar bir satır inmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

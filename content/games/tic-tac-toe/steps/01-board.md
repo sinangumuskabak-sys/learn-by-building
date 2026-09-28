@@ -20,18 +20,99 @@ repetition is a hint to use a loop instead of copy-pasting four nearly identical
 
 # --explanation-tr--
 
-Tahta 300×300 piksel: 100 piksellik hücrelerden üç sütun ve üç satır. Izgara yalnızca dört çizgiden oluşur: iki dikey,
-iki yatay; her biri `100` ve `200`'deki bir hücre sınırında durur.
+**Bu adımda:** XOX (tic-tac-toe) oyununun tahtasını çizeceğiz. Çalıştırınca sağda koyu lacivert bir kare ve onu
+dokuz eşit kutuya bölen dört gri çizgi göreceksin.
 
-İnce bir dikdörtgen çizilmesi en kolay çizgidir. 4 piksellik bir çizgiyi `x = 100`'e ortalamak için onu 2 piksel önce
-başlat:
+Daha önce hiç kod yazmadıysan sorun değil: her şeyi baştan anlatacağız. Acele etme, her parçayı oku.
 
-```js
-ctx.fillRect(100 - 2, 0, 4, canvas.height)   // x = 100'deki dikey çizgi
+**Ekranda ne var?** Solda **kod paneli** var; içinde `game.js` adlı dosya açık. Kodu buraya yazarsın. Sağ üstte
+**Oyun** alanı, kodunun ne yaptığını gösterir. Sağ altta **Kontroller** var: yazdığın kodun istenen şeyi yapıp
+yapmadığını kontrol eden maddeler. Hepsi yeşil olunca adım tamamdır. Takılırsan **Çözümü göster** düğmesi
+doğru kodu gösterir, **Bu adımı baştan başla** ise kodu adımın başındaki hâline döndürür. Telefonda bu alanlar
+**Görev**, **Kod** ve **Oyun** sekmeleridir.
+
+**Kod nedir?** `game.js` dosyası, bilgisayara verdiğin talimatların listesidir. Bilgisayar onları **yukarıdan
+aşağıya, satır satır** okur ve sırayla yapar. Kodu yazdıktan sonra **Çalıştır** düğmesine basınca (ya da
+`Ctrl + Enter`) bilgisayar talimatları uygular. `//` ile başlayan satırlar **yorumdur**: bilgisayar onları atlar,
+sadece insanlar için not. Kod panelindeki ilk üç satır böyle yorumlardır.
+
+**Canvas (tuval) nedir?** Sayfada 300×300 piksellik boş bir resim alanı var. (Piksel, ekrandaki en küçük
+noktadır.) Adı `canvas`, kimliği (id) `game`:
+
+```html
+<canvas id="game" width="300" height="300"></canvas>
 ```
 
-İki dikey çizgi de aynı kalıbı izler: `i = 1` ve `i = 2` için `i * CELL`; yatay olanlar da öyle. Bu tekrar, birbirine
-çok benzeyen dört satırı kopyalamak yerine bir döngü kullanmanın ipucudur.
+Oyundaki her şeyi (tahtayı, X'leri, O'ları) bu alanın üstüne **boyayarak** göstereceğiz. Kâğıda resim yapmak
+gibi: önce kâğıdı bulursun, sonra eline fırçayı alırsın.
+
+**1. Kâğıdı bul.**
+
+```js
+const canvas = document.getElementById('game')
+```
+
+Bunu parça parça okuyalım:
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir. Bir
+  kutuya etiket yapıştırmak gibi: sonra hep o etiketle çağırırsın. `=` işareti "sağdakini soldaki ada ver"
+  demektir.
+- `document` → sayfanın kendisi.
+- `.getElementById('game')` → "kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut" demektir.
+  Parantez `( )` komuta bilgi verir. Tırnak içindeki `'game'` bir **yazıdır** (metin); tırnaksız yazılsaydı
+  bilgisayar onu bir ad sanardı.
+
+**2. Fırçayı al.** Canvas'a doğrudan çizilmez; önce onun çizim aracını (bağlam, **context**) alırız:
+
+```js
+const ctx = canvas.getContext('2d')
+```
+
+`ctx` artık senin fırçan. Onunla iki şey yaparsın: **renk seçmek** ve **dikdörtgen boyamak**.
+
+```js
+ctx.fillStyle = 'orange'      // fırçaya turuncu boya sür
+ctx.fillRect(10, 20, 50, 30)  // bir dikdörtgen boya: x, y, genişlik, yükseklik
+```
+
+**Konum nasıl verilir?** Canvas'ın **sol üst köşesi** `(0, 0)` noktasıdır. `x` sağa gittikçe, `y` ise **aşağı**
+indikçe büyür (okuldaki grafiğin tersine). Yukarıdaki örnek: soldan 10, yukarıdan 20 piksel içeride, 50 piksel
+eninde ve 30 piksel boyunda bir dikdörtgen. `canvas.width` ve `canvas.height` canvas'ın eni ve boyudur (300).
+
+**Renkler** `'orange'` gibi İngilizce adlarla ya da `'#1e1e2e'` gibi kodlarla yazılır. `#`'tan sonraki harf ve
+rakamlar rengin kırmızı, yeşil ve mavi miktarını söyler; `'#1e1e2e'` koyu bir lacivert, `'#585b70'` bir gridir.
+Kodları ezberlemen gerekmez, verileni aynen yaz.
+
+**Sayıya ad vermek.** Tahta 3×3 hücre ve her hücre 100 piksel. Bu sayıya bir ad veririz: `const CELL = 100`.
+Sayılar tırnaksız yazılır. Artık `CELL` yazdığın her yerde bilgisayar `100` anlar.
+
+**Çizgileri çizmek.** Izgara sadece dört çizgidir: ikisi dikey, ikisi yatay; hepsi hücre sınırlarında, `100` ve
+`200` pikselde. Çizgi çizmenin en kolay yolu **ince bir dikdörtgendir**. 4 piksel kalınlığındaki bir çizginin
+tam `x = 100`'ün üstünde ortalanması için 2 piksel önce başlarız:
+
+```js
+ctx.fillRect(100 - 2, 0, 4, canvas.height)   // x = 100'de dikey çizgi
+```
+
+`-` çıkarma, `*` çarpma demektir. İki dikey çizgi aynı kalıbı izler: `1 * CELL` ve `2 * CELL`. Yatay çizgiler de
+öyle. Neredeyse aynı dört satırı kopyalamak yerine **döngü (loop)** kullanırız: "şunu birkaç kez tekrarla".
+
+```js
+for (let i = 1; i < 3; i++) {
+  // buradaki satırlar önce i = 1, sonra i = 2 için çalışır
+}
+```
+
+Bunu parça parça okuyalım:
+
+- `for ( ... ) { ... }` → "süslü parantezin içini tekrarla". `{` ile `}` arasındaki satırlar tekrarlanan kısımdır;
+  okunaklı olsun diye iki boşlukla içeri yazılır.
+- `let i = 1` → `i` adında bir sayaç, 1'den başlar. `let` de `const` gibi ad verir, ama değeri sonradan
+  değişebilir. Buna **değişken** denir.
+- `i < 3` → "`i` 3'ten küçük olduğu sürece devam et". `<` küçüktür demektir.
+- `i++` → her turdan sonra `i`'yi 1 artır.
+
+Yani döngü iki tur döner: `i = 1` ve `i = 2`. Her turda bir dikey, bir yatay çizgi çizer: toplam dört çizgi.
 
 # --task--
 
@@ -43,11 +124,45 @@ ctx.fillRect(100 - 2, 0, 4, canvas.height)   // x = 100'deki dikey çizgi
 
 # --task-tr--
 
-1. Canvas'ı `canvas`'ta, 2D bağlamını `ctx`'te tut ve `const CELL = 100` ekle.
-2. Canvas'ın tamamını `'#1e1e2e'` ile doldur.
-3. `'#585b70'` ile, 4 piksel kalınlığında ve `CELL` ile `2 * CELL`'e ortalanmış dört ızgara çizgisini çiz: `i` 1'den
-   2'ye kadar, dikey bir `(i * CELL - 2, 0, 4, canvas.height)` ve yatay bir `(0, i * CELL - 2, canvas.width, 4)`
-   dikdörtgeni.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve kâğıdı ve fırçayı alan iki
+   satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve hücre boyunu yaz:
+
+   ```js
+   const CELL = 100
+   ```
+
+3. Bir satır boşluk bırak, sonra bütün tahtayı koyu lacivert boyayan iki satırı ekle:
+
+   ```js
+   ctx.fillStyle = '#1e1e2e'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+   ```
+
+   `(0, 0)` köşesinden başlayıp bütün alanı kaplayan bir dikdörtgen boyuyoruz.
+
+4. Bir satır boşluk bırak, sonra rengi griye çevir ve dört çizgiyi çizen döngüyü yaz:
+
+   ```js
+   ctx.fillStyle = '#585b70'
+   for (let i = 1; i < 3; i++) {
+     ctx.fillRect(i * CELL - 2, 0, 4, canvas.height)
+     ctx.fillRect(0, i * CELL - 2, canvas.width, 4)
+   }
+   ```
+
+   Döngünün içindeki ilk satır dikey çizgiyi (4 piksel en, tahta boyu), ikincisi yatay çizgiyi (tahta eni, 4
+   piksel boy) çizer.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda koyu bir kare ve onu 9 kutuya bölen gri çizgiler görmelisin.
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı bir kontrol kalırsa yazdığını yukarıdakilerle harf harf
+   karşılaştır: büyük/küçük harf, nokta, virgül, tırnak ve parantezler önemlidir.
 
 # --tests--
 

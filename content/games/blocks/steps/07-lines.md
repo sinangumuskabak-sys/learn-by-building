@@ -25,22 +25,49 @@ difficulty curve, like the ones in the other games, driven by how well the playe
 
 # --explanation-tr--
 
-Dolu bir satır kaybolur ve üstündeki her şey aşağı düşer. Kulağa blokları dikkatle taşımayı gerektiriyor gibi gelir,
-ama satırlardan oluşan bir tahtayla bu iki dizi işlemidir:
+**Bu adımda:** dolan satırlar silinecek ve üstündekiler aşağı inecek. Sağdaki yan panelde **Score** (puan),
+**Lines** (silinen satır) ve **Level** (seviye) yazacak; seviye arttıkça parçalar hızlanacak.
+
+**Satır silmek.** Dolu bir satır kaybolur ve üstündeki her şey aşağı düşer. Blokları tek tek taşımak gerekiyormuş gibi
+görünür, ama kuyu satırlardan oluşan bir liste olduğu için iş iki liste işlemidir:
 
 ```js
 const kept = board.filter((row) => row.some((cell) => cell === 0))   // hâlâ boşluğu olan satırları tut
 const cleared = ROWS - kept.length                                     // kaç tanesi doluydu
-board = [...Array.from({ length: cleared }, emptyRow), ...kept]        // tepeye yeni boş satırlar
+board = [...Array.from({ length: cleared }, emptyRow), ...kept]        // yeni boş satırlar en üste
 ```
 
-Dolu satırları süzüp atmak, üstlerindeki her şeyin kendiliğinden "düşmesini" sağlar; çünkü kalan satırlar sıralarını
-korur ve yeni boş satırlar tepeye gider. Verin için doğru biçimi seçmek (satırlardan bir liste) zahmetli bir sorunu iki
-satıra indirdi.
+Parça parça:
 
-Puanlama birden fazla satırı aynı anda silmeyi ödüllendirir: 1'den 4'e kadar satır için 100, 300, 500 ya da 800 puan,
-çarpı **seviye**. Her 10 satır yeni bir seviyedir ve her seviye parçaları 70 ms daha hızlı düşürür (asla 100 ms'den
-hızlı değil). Bu, diğer oyunlardakiler gibi, oyuncunun ne kadar iyi gittiğiyle yönlenen bir zorluk eğrisi.
+- `row.some((cell) => cell === 0)` → `some` "listede bu koşulu sağlayan **en az bir** eleman var mı?" diye sorar.
+  Yani "bu satırda en az bir boş hücre var mı?"
+- `board.filter(...)` → `filter` listeden yalnız koşulu sağlayanları tutan yeni bir liste yapar. Sonuç: dolu
+  **olmayan** satırlar, eski sıralarıyla.
+- `ROWS - kept.length` → 20'den kalan satır sayısını çıkarınca silinen (dolu) satır sayısı çıkar.
+- `[...a, ...b]` → `...` (yayma) bir listenin elemanlarını buraya dök demektir. Önce `cleared` kadar yeni boş satır,
+  arkasından tutulan satırlar: toplam yine 20 satır.
+
+Dolu satırları çıkarınca üsttekiler kendiliğinden "düşer", çünkü kalan satırlar sıralarını korur ve yeni boş
+satırlar tepeye gelir. Verin için doğru şekli (satırlardan bir liste) seçmek, zor bir problemi iki satıra indirdi.
+Hiç satır dolmadıysa `if (cleared === 0) return` ile hemen çıkarız.
+
+**Puan.** Aynı anda çok satır silmek ödüllendirilir: 1, 2, 3, 4 satır için 100, 300, 500, 800 puan, **seviye** ile
+çarpılır. `POINTS[cleared]` bu listeden doğru puanı alır (0 satır = 0 puan). `score += ...` "puanın üstüne ekle"
+demektir. Aşağı oka basarak parçayı elle bir satır indirmek de 1 puan getirir: `if (tryMove(0, 1)) score += 1` →
+hareket gerçekten olduysa (`tryMove` `true` döndürdüyse).
+
+**Seviye ve hız.** Her 10 satır yeni bir seviyedir: `Math.floor(lines / 10) + 1` (0–9 satır → 1, 10–19 → 2...).
+Her seviye parçaları 70 ms daha hızlı düşürür:
+
+```js
+Math.max(100, 800 - (level() - 1) * 70)
+```
+
+`Math.max(a, b)` iki sayıdan **büyüğünü** verir. Hesap 100'ün altına düşse bile sonuç 100 olur; parçalar 100 ms'den
+hızlı düşmez. Oyuncu iyi oynadıkça zorlaşan bir zorluk eğrisi.
+
+**Yan panel.** Kuyu 240 piksel; panel onun 20 piksel sağından başlar: `COLS * CELL + 20`. `String(score)` sayıyı
+yazıya çevirir, çünkü `fillText` yazı ister. `ctx.textAlign = 'left'` yazıyı verilen noktadan sağa doğru yazar.
 
 # --task--
 
@@ -55,13 +82,103 @@ hızlı değil). Bu, diğer oyunlardakiler gibi, oyuncunun ne kadar iyi gittiği
 
 # --task-tr--
 
-1. `let score` ve `let lines` (`newGame()` içinde `0`'a sıfırla), `const POINTS = [0, 100, 300, 500, 800]`,
-   `level()` = `Math.floor(lines / 10) + 1` ekle; `dropInterval()`'ı `Math.max(100, 800 - (level() - 1) * 70)` yap.
-2. `clearLines()`'ı yukarıdaki gibi yaz; satır silindiyse `score`'a `POINTS[cleared] * level()`, `lines`'a `cleared`
-   ekle. `lock()` içinde yeni parçadan önce çağır.
-3. Aşağı'ya basmak (başarılı bir elle yumuşak düşüş) 1 puan kazandırır.
-4. Yan paneli `x = COLS * CELL + 20`'de çiz: `y` 180, 240, 300'de beyaz `'bold 16px sans-serif'` ile `Score`, `Lines`,
-   `Level` etiketleri, değerleri de her birinin 22 piksel altında.
+1. `SHAPES` listesinin kapanış `]`'sinin altına puan tablosunu ekle:
+
+   ```js
+   const POINTS = [0, 100, 300, 500, 800] // for clearing 0, 1, 2, 3 or 4 lines at once
+   ```
+
+2. `let state // 'playing' or 'over'` satırının üstüne, `let piece` satırının altına iki değişken ekle:
+
+   ```js
+   let board
+   let piece
+   let score // ← yeni
+   let lines // ← yeni
+   let state // 'playing' or 'over'
+   let lastDrop = 0
+   ```
+
+3. `newGame()` içinde `state = 'playing'` satırının altına sıfırlamaları ekle:
+
+   ```js
+   function newGame() {
+     board = Array.from({ length: ROWS }, emptyRow)
+     state = 'playing'
+     score = 0 // ← yeni
+     lines = 0 // ← yeni
+     spawn()
+   }
+   ```
+
+4. `function dropInterval()` fonksiyonunu sil ve yerine şu üç fonksiyonu yaz:
+
+   ```js
+   function level() {
+     return Math.floor(lines / 10) + 1
+   }
+
+   function dropInterval() {
+     return Math.max(100, 800 - (level() - 1) * 70)
+   }
+
+   function clearLines() {
+     const kept = board.filter((row) => row.some((cell) => cell === 0))
+     const cleared = ROWS - kept.length
+     if (cleared === 0) return
+     board = [...Array.from({ length: cleared }, emptyRow), ...kept]
+     score += POINTS[cleared] * level()
+     lines += cleared
+   }
+   ```
+
+5. `lock()` fonksiyonunda `spawn()` satırının üstüne `clearLines()` ekle:
+
+   ```js
+   function lock() {
+     piece.shape.forEach((cells, r) => {
+       cells.forEach((value, c) => {
+         if (value) board[piece.y + r][piece.x + c] = value
+       })
+     })
+     clearLines() // ← yeni
+     spawn()
+   }
+   ```
+
+6. `keydown` bloğundaki `if (event.key === 'ArrowDown') tryMove(0, 1)` satırını sil ve yerine şunu yaz:
+
+   ```js
+     if (event.key === 'ArrowDown') {
+       if (tryMove(0, 1)) score += 1
+     }
+   ```
+
+7. `draw()` içinde, `drawShape(...)` satırını saran `if (state === 'playing') { ... }` bloğunun altına ve
+   `if (state === 'over')` satırının üstüne yan paneli çizen satırları ekle:
+
+   ```js
+     if (state === 'playing') {
+       drawShape(piece.shape, piece.x, piece.y)
+     }
+
+     const panel = COLS * CELL + 20 // ← yeni
+     ctx.fillStyle = 'white' // ← yeni
+     ctx.font = 'bold 16px sans-serif' // ← yeni
+     ctx.textAlign = 'left' // ← yeni
+     ctx.fillText('Score', panel, 180) // ← yeni
+     ctx.fillText(String(score), panel, 202) // ← yeni
+     ctx.fillText('Lines', panel, 240) // ← yeni
+     ctx.fillText(String(lines), panel, 262) // ← yeni
+     ctx.fillText('Level', panel, 300) // ← yeni
+     ctx.fillText(String(level()), panel, 322) // ← yeni
+
+     if (state === 'over') {
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ panelde Score, Lines, Level görünmeli. Bir satırı
+   tamamen doldurunca satır kaybolmalı ve puan artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Satır silinmiyorsa
+   `lock()` içindeki `clearLines()` çağrısına bak.
 
 # --tests--
 

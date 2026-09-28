@@ -25,22 +25,39 @@ yes.
 
 # --explanation-tr--
 
-Bu oyundaki her kural (hareket, döndürme, düşme, yere oturma, kaybetme) tek bir soruya dayanır: **bu şekil bu konuma
-sığar mı?** Onu bir kez, bir fonksiyonda cevapla; gerisi kolaylaşır.
+**Bu adımda:** "bu şekil şu konuma sığar mı?" sorusunu cevaplayan bir fonksiyon yazacağız. Ekranda bir şey
+değişmeyecek; doğru çalıştığını alttaki kontroller söyleyecek. Ama oyunun bütün kuralları bu fonksiyona dayanacak.
 
-`(x, y)`'deki bir şekil, dolu hücrelerinin her biri şöyle bir yere düşüyorsa sığar:
+**Neden bu kadar önemli?** Sağa-sola gitmek, döndürmek, düşmek, yere oturmak, kaybetmek... Hepsi aynı soruya
+iner: **bu şekil bu konuma sığar mı?** Bunu bir kez, bir fonksiyonda cevaplarsak gerisi kolaylaşır.
 
-- yatayda kuyunun içinde (`0 ≤ col < COLS`),
-- zeminin altında değil (`row < ROWS`),
-- ve tahtada zaten dolu değil.
+`(x, y)` konumundaki bir şeklin **her dolu hücresi** şu yere düşüyorsa şekil sığar:
 
-Bir özel durum: tepenin **üstündeki** satırlara (`row < 0`) izin verilir. Az önce belirmiş ya da tepeye yakın
-döndürülmüş bir parça bir anlığına kuyunun üstüne taşabilir ve bu bir çarpışma sayılmamalı. Bu yüzden hücreye tahtada
-yalnızca `row >= 0` iken bak.
+- kuyunun yanlarının içinde (`0 ≤ sütun < COLS`),
+- zeminin altında değil (`satır < ROWS`),
+- ve kuyuda zaten dolu olmayan bir yer.
 
-`fits`'in `piece`'i okumak yerine şekli ve konumu **parametre** olarak aldığına dikkat et. Böylece taşınmış ya da
-döndürülmüş bir şekil hakkında hiçbir şeyi değiştirmeden **önce** "ya şöyle olsaydı?" diye sorabilir, değişikliği
-yalnızca cevap evetse uygularsın.
+**Özel durum:** kuyunun **üstündeki** satırlara (`satır < 0`) izin verilir. Yeni çıkan ya da tepede döndürülen bir
+parça bir an kuyunun üstüne taşabilir; bu çarpışma sayılmamalı. Bu yüzden kuyuya yalnızca `row >= 0` ise bakarız.
+(Ayrıca `board[-1]` diye bir satır yok; bakmaya çalışsak program hata verirdi.)
+
+**Fonksiyonun cevabı: `true` / `false`.** `true` "evet", `false` "hayır" demektir (mantıksal değer, boolean).
+`return false` fonksiyonu **hemen bitirir** ve "hayır" cevabını verir; tek bir hücre bile sığmıyorsa geri kalanına
+bakmaya gerek yok. Bütün hücreler kontrolden geçerse en sondaki `return true` çalışır.
+
+Kodu parça parça okuyalım:
+
+- İki `for` döngüsü matrisin her satırını (`r`) ve her sütununu (`c`) gezer. `shape.length` matrisin satır sayısı,
+  `shape[r].length` o satırın uzunluğu. `r++` sayacı 1 artırır.
+- `if (!shape[r][c]) continue` → `!` "değil" demektir. "Hücre boşsa (0 ise) atla, sonrakine geç." `continue`
+  döngünün bu turunu bırakır. Matrisin boş hücreleri hiçbir şeye çarpmaz.
+- `const col = x + c` ve `const row = y + r` → bu hücrenin kuyudaki yeri.
+- `col < 0 || col >= COLS || row >= ROWS` → `||` "veya" demektir. Sol duvarın solunda **veya** sağ duvarın ötesinde
+  **veya** zeminin altındaysa sığmaz. (`<` küçük, `>=` büyük ya da eşit.)
+- `row >= 0 && board[row][col]` → `&&` "ve" demektir. Kuyunun içindeyse **ve** o yer doluysa sığmaz.
+
+**Neden `piece`'i doğrudan okumuyor?** `fits` şekli ve konumu **girdi** (parametre) olarak alır. Böylece bir şeyi
+değiştirmeden önce "ya sağa gitseydi?", "ya döndürseydik?" diye sorabilir, cevap "evet" ise değişikliği yaparız.
 
 # --task--
 
@@ -50,9 +67,25 @@ count as empty).
 
 # --task-tr--
 
-`shape`'in sıfır olmayan her hücresi, sol üstü `x` sütunu ve `y` satırında olacak şekilde yerleştirildiğinde kuyunun
-yanlarının içinde, zemininin üstünde ve tahtada boş bir hücrede (tepenin üstündeki satırlar boş sayılır) ise `true`
-döndüren `function fits(shape, x, y)` yaz.
+1. `let piece = ...` satırının altına, bir satır boşlukla `fits` fonksiyonunu yaz:
+
+   ```js
+   function fits(shape, x, y) {
+     for (let r = 0; r < shape.length; r++) {
+       for (let c = 0; c < shape[r].length; c++) {
+         if (!shape[r][c]) continue
+         const col = x + c
+         const row = y + r
+         if (col < 0 || col >= COLS || row >= ROWS) return false
+         if (row >= 0 && board[row][col]) return false
+       }
+     }
+     return true
+   }
+   ```
+
+2. **Çalıştır**'a bas. Oyun alanı aynı görünecek; alttaki kontrollerin hepsi yeşil olmalı. "above the top" kontrolü
+   kırmızıysa ikinci `if`'teki `row >= 0 &&` kısmını unutmuşsundur.
 
 # --tests--
 

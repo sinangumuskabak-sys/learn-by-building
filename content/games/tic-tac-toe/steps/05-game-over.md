@@ -27,24 +27,60 @@ now they snap together. That is what good structure buys you.
 
 # --explanation-tr--
 
-Kurallar artık var ama oyun onları görmezden geliyor: biri kazandıktan sonra da tıklamaya devam edebiliyorsun. Turun
-sonucunu durum olarak sakla:
+**Bu adımda:** tur, biri kazanınca ya da tahta dolunca bitecek. Tahta kararacak, kazanan üçlü sarımsı bir ışıkla
+parlayacak ve ortada `X wins!` (X kazandı), `O wins!` ya da `It's a draw` (berabere) yazacak. Bir kez daha
+tıklayınca yeni tur başlayacak.
+
+**Sonucu durum olarak tut.** Kurallar artık var ama oyun onları dinlemiyor: biri kazandıktan sonra da tıklamaya
+devam edebiliyorsun. Turun sonucunu bir değişkende tutarız:
 
 ```js
-let result = null   // oyun sürerken null, sonra 'X', 'O' ya da 'draw'
+let result   // oynarken null, sonra 'X', 'O' ya da 'draw'
 ```
 
-ve her hamleden hemen sonra kontrol et: `result = outcome(board)`. Bir kez ayarlandığında:
+ve her hamleden hemen sonra kontrol ederiz: `result = outcome(board)`. Sonuç bir kez belli olunca:
 
 - `play()` yeni hamleleri reddeder,
 - `draw()` kimin kazandığını gösterir,
-- bir sonraki tıklama yeni bir tur başlatır.
+- bir sonraki tıklama yeni tur başlatır.
 
-Kazanan çizgiyi vurgulamak küçük ama büyük fark yaratan bir dokunuştur: oyuncu oyunun *neden* bittiğini anında görür.
-Üstelik bedava, çünkü `winningLine()` hangi üç hücreyi boyayacağını zaten söylüyor.
+**Yeni tur: `reset()`.** Yeni tur, her durum bilgisini başlangıç hâline döndürmek demek. Bunları tek bir
+fonksiyonda toplarız; ilk tur da aynı yoldan başlar. Artık dosyanın üstünde değişkenler sadece **tanıtılır**
+(`let board`, değersiz), değerlerini `reset()` verir.
 
-Bu adımın ne kadar az kod gerektirdiğine dikkat et. Önceki her adım net bir parça kurdu (tahta, `play`, `outcome`) ve
-şimdi hepsi yerine oturuyor. İyi yapının kazandırdığı şey budur.
+**`||` (veya).** `if (result || board[index] !== '') return false` → "sonuç belliyse **veya** kutu doluysa, hamle
+yok". `result` `null` iken yanlış, `'X'` gibi bir değer taşırken doğru sayılır.
+
+**`else` (değilse).**
+
+```js
+if (result) {
+  reset()      // tur bittiyse yeni tur
+} else {
+  // bitmediyse normal hamle
+}
+```
+
+**Yarı saydam renk.** `'rgba(0, 0, 0, 0.55)'` → ilk üç sayı kırmızı, yeşil, mavi miktarı (0–255; üçü de 0 ise
+siyah), sonuncusu **saydamlık** (0 tamamen saydam, 1 tamamen dolu). %55 dolu siyahı tahtanın üstüne boyamak onu
+karartır ama altındaki X ve O'lar hâlâ görünür. `'rgba(250, 204, 21, 0.25)'` ise hafif saydam bir sarıdır.
+
+**Kazanan çizgiyi parlatmak** küçük ama etkili bir dokunuş: oyuncu oyunun *neden* bittiğini hemen görür. Üstelik
+bedava, çünkü `winningLine()` hangi üç kutuyu boyayacağını zaten söylüyor. Her kutunun sol üst köşesi 2. adımdaki
+formülle bulunur:
+
+```js
+for (const index of line) ctx.fillRect((index % 3) * CELL, Math.floor(index / 3) * CELL, CELL, CELL)
+```
+
+`for (const index of line)` → "çizgideki her numara için, ona `index` de ve şunu yap". Yapılacak iş tek satırsa
+süslü parantez gerekmez.
+
+**Yazıları birleştirmek.** `result + ' wins!'` → `+` iki yazıyı yapıştırır: `'X' + ' wins!'` → `'X wins!'`.
+`"It's a draw"` çift tırnakla yazılır, çünkü içinde tek tırnak (`'`) var.
+
+Bu adımın ne kadar az kod istediğine dikkat et. Önceki her adım net bir parça kurdu (tahta, `play`, `outcome`);
+şimdi hepsi yerine oturuyor. İyi düzenin kazandırdığı şey bu.
 
 # --task--
 
@@ -58,13 +94,85 @@ Bu adımın ne kadar az kod gerektirdiğine dikkat et. Önceki her adım net bir
 
 # --task-tr--
 
-1. `let result = null` ve tahtayı boşaltıp `player = 'X'` ve `result = null` yapan bir `function reset()` ekle. İlk
-   turu onunla kur (`let` tanımları değerlerini kaybeder).
-2. `play()` içinde `result` ayarlıysa da hamleleri reddet. Bir işaret koyduktan sonra `result = outcome(board)` yap.
-3. Tıklama işleyicisinde: tur bittiyse oynamak yerine `reset()` çağır.
-4. `draw()` içinde, `result` ayarlıysa: tahtanın tamamını `'rgba(0, 0, 0, 0.55)'` ile karart, sonra (varsa) kazanan
-   çizginin hücrelerini üstüne `'rgba(250, 204, 21, 0.25)'` ile doldur ve tahtanın ortasına `X wins!`, `O wins!` ya da
-   `It's a draw`, altına da `Click to play again` yaz.
+1. `let board = [...]` ve `let player = 'X'` satırlarını şu üç satırla değiştir:
+
+   ```js
+   let board
+   let player
+   let result // null while playing, then 'X', 'O' or 'draw'
+   ```
+
+2. Bunların altına bir boş satır bırak ve yeni tur fonksiyonunu yaz (`function winningLine`'dan önce):
+
+   ```js
+   function reset() {
+     board = ['', '', '', '', '', '', '', '', '']
+     player = 'X'
+     result = null
+   }
+   ```
+
+3. `play()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function play(index) {
+     if (result || board[index] !== '') return false // ← değişti
+     board[index] = player
+     player = player === 'X' ? 'O' : 'X'
+     result = outcome(board) // ← yeni
+     return true
+   }
+   ```
+
+4. Tıklama dinleyicisini şöyle değiştir (hesaplama `else` içine girdi; `index` değişkeni yerine hesap doğrudan
+   `play(...)`'in içine yazıldı):
+
+   ```js
+   canvas.addEventListener('click', (event) => {
+     if (result) { // ← yeni
+       reset() // ← yeni
+     } else { // ← yeni
+       // The canvas may be displayed at a different size than its 300×300 pixels, so scale the click.
+       const rect = canvas.getBoundingClientRect()
+       const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+       const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+       play(Math.floor(y / CELL) * 3 + Math.floor(x / CELL)) // ← değişti
+     } // ← yeni
+     draw()
+   })
+   ```
+
+5. `draw()` fonksiyonunda, `board.forEach(...)` bloğunun kapanan `})` işaretinden sonra, fonksiyonun son `}`
+   işaretinden **önce** şunu ekle:
+
+   ```js
+     if (result) {
+       // Dim the board, then light up the winning line on top so it stands out.
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       const line = winningLine(board)
+       if (line) {
+         ctx.fillStyle = 'rgba(250, 204, 21, 0.25)'
+         for (const index of line) ctx.fillRect((index % 3) * CELL, Math.floor(index / 3) * CELL, CELL, CELL)
+       }
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText(result === 'draw' ? "It's a draw" : result + ' wins!', canvas.width / 2, 140)
+       ctx.font = '14px sans-serif'
+       ctx.fillText('Click to play again', canvas.width / 2, 172)
+     }
+   ```
+
+6. Dosyanın en altındaki `draw()` satırının **üstüne** ilk turu hazırlayan çağrıyı ekle:
+
+   ```js
+   reset()
+   draw()
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için kutulara tıkla. Üçü yan yana gelince tahta kararmalı, kazanan üçlü parlamalı
+   ve `X wins!` yazmalı; bir kez daha tıklayınca tahta boşalmalı. Alttaki kontrollerin hepsi yeşil olmalı. Ekran
+   boşsa ve hata varsa en alttaki `reset()` çağrısını unutmuş olabilirsin.
 
 # --tests--
 

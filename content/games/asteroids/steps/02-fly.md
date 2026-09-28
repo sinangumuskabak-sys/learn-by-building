@@ -26,23 +26,56 @@ Two small rules keep it playable:
 
 # --explanation-tr--
 
-Sol ve sağ, `angle`'ı değiştirerek gemiyi döndürür. Yukarı **itkidir**: hızı ayarlamaz; aynı `cos`/`sin` yön vektörünü
-kullanarak geminin baktığı yöne biraz hız **ekler**:
+**Bu adımda:** gemiyi oklarla uçuracağız. Sol/sağ ok gemiyi döndürecek, yukarı ok ileri itecek. Çalıştırıp oyuna
+tıklayınca gemi, bıraktığında bile kaymaya devam eden uzay gemisi gibi hareket edecek.
+
+**Basılı tuşları hatırlamak.** Klavyede bir tuşa basınca sayfa bir **olay** (event) bildirir: `keydown` (basıldı),
+bırakınca `keyup` (bırakıldı). `document.addEventListener('keydown', ...)` "tuşa basıldığında şunu yap" demektir;
+kapıya zil takmak gibi, zil çalınca verdiğin iş yapılır.
+
+```js
+const keys = {}
+document.addEventListener('keydown', (event) => {
+  keys[event.key] = true
+})
+```
+
+- `{}` boş bir nesnedir; basılı tuşları içine yazacağız.
+- `(event) => { ... }` kısa yoldan yazılmış bir fonksiyondur (ok fonksiyonu, arrow function). Tuşa basılınca
+  çalışır; `event` o olayın bilgisidir.
+- `event.key` basılan tuşun adıdır, örneğin `'ArrowLeft'` (sol ok), `'ArrowUp'` (yukarı ok).
+- `keys[event.key] = true` → nesnenin içine o adla bir bilgi yaz: "bu tuş basılı". Köşeli parantez `[ ]` adı
+  bir değişkenden alırken kullanılır; `keys['ArrowUp']` ile `keys.ArrowUp` aynı şeydir.
+- `true` "doğru/evet", `false` "yanlış/hayır" demektir. `keyup` olunca aynı tuşa `false` yazarız.
+
+**`if` (eğer).** `if (koşul) iş` → koşul doğruysa işi yap, değilse atla. `if (keys.ArrowLeft) ...` "sol ok basılıysa".
+Birden çok satır yapılacaksa satırlar `{ }` içine alınır.
+
+**Kısa işlemler.** `a += 5` "a'ya 5 ekle", `a -= 5` "a'dan 5 çıkar", `a *= 0.99` "a'yı 0.99 ile çarp" demektir.
+
+**Dönüş ve itki.** Sol/sağ ok `ship.angle`'ı her karede `TURN` kadar değiştirir. Yukarı ok ise hızı **ayarlamaz**,
+geminin baktığı yöne biraz hız **ekler**. 1. adımdaki `cos`/`sin` yön hesabının aynısı:
 
 ```js
 ship.vx += Math.cos(ship.angle) * THRUST
 ship.vy += Math.sin(ship.angle) * THRUST
 ```
 
-Asteroids'e ünlü hissini veren budur: gemi gittiği yöne kaymaya devam eder ve arkasını dönmek onu durdurmaz. Fren yapmak
-için dönüp öbür yöne itmen gerekir. Bu, doğrudan Newton'dan gelen **eylemsizliktir**.
+Asteroids'in ünlü hissi buradan gelir: gemi gittiği yöne kaymayı sürdürür, arkanı dönmek onu durdurmaz. Fren yapmak
+için dönüp ters yöne itmen gerekir. Buna **eylemsizlik** denir (Newton'un kuralı).
 
-İki küçük kural onu oynanabilir tutar:
+İki küçük kural oyunu oynanabilir tutar:
 
-- **Sürtünme**: hızı her karede `0.99` ile çarp; kendi hâline bırakılan gemi yavaşça durur.
-- **Hız sınırı**: hız, hız vektörünün uzunluğudur, `Math.hypot(vx, vy)`. En büyük değeri aşarsa **iki** bileşeni de
-  aynı oranla küçült. Bu yönü korur, yalnızca vektörü kısaltır. `vx` ve `vy`'yi ayrı ayrı sınırlamak geminin çaprazda
-  daha hızlı uçmasına izin verirdi.
+- **Sürtünme:** her karede iki hızı da `0.99` ile çarparız; kendi hâline bırakılan gemi yavaş yavaş durur.
+- **Hız sınırı:** geminin toplam hızı, hız okunun uzunluğudur: `Math.hypot(vx, vy)` (Pisagor ile hesaplar). Bu
+  `MAX_SPEED`'ten büyükse (`>` "büyüktür") **iki** hızı da aynı oranla (`MAX_SPEED / speed`) küçültürüz. Böylece yön
+  aynı kalır, sadece hız kısalır. İkisini ayrı ayrı sınırlasaydık gemi çapraz giderken daha hızlı uçardı.
+
+Son olarak gemi hızı kadar yer değiştirir: `ship.x += ship.vx`.
+
+**Oyun döngüsü.** Hareket için ekranın saniyede onlarca kez yeniden çizilmesi gerekir. `requestAnimationFrame(loop)`
+tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der (saniyede yaklaşık 60 kez). `loop` her seferinde
+önce durumu günceller (`update`), sonra çizer (`draw`), sonra kendini tekrar ister. Her tura **kare** (frame) denir.
 
 # --task--
 
@@ -54,11 +87,75 @@ için dönüp öbür yöne itmen gerekir. Bu, doğrudan Newton'dan gelen **eylem
 
 # --task-tr--
 
-1. `TURN = 0.07`, `THRUST = 0.12`, `FRICTION = 0.99`, `MAX_SPEED = 6` ve basılı tuşlar için bir `keys` nesnesi ekle.
-2. `update()` yaz: `ArrowLeft`/`ArrowRight` `ship.angle`'ı `TURN` kadar değiştirsin; `ArrowUp` yukarıdaki gibi itki
-   eklesin. Sonra iki hız bileşenine de sürtünme uygula, hızı iki bileşeni ölçekleyerek `MAX_SPEED`'te sınırla ve gemiyi
-   hızı kadar taşı.
-3. `update()` ve `draw()`'u bir `requestAnimationFrame` döngüsünde çalıştır.
+1. `const SHIP_R = 14` satırının hemen altına ayar sabitlerini ekle:
+
+   ```js
+   const TURN = 0.07 // radians per frame
+   const THRUST = 0.12
+   const FRICTION = 0.99
+   const MAX_SPEED = 6
+   ```
+
+2. `let ship` satırının hemen altına basılı tuşları tutacak nesneyi ekle:
+
+   ```js
+   const keys = {}
+   ```
+
+3. `resetShip` fonksiyonunun kapanış `}`'inden sonra, bir satır boşluk bırakıp tuş olaylarını dinleyen satırları yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+4. Onun altına, `function drawShip()`'ten **önce**, her karede gemiyi hareket ettiren fonksiyonu yaz:
+
+   ```js
+   function update() {
+     if (keys.ArrowLeft) ship.angle -= TURN
+     if (keys.ArrowRight) ship.angle += TURN
+     if (keys.ArrowUp) {
+       ship.vx += Math.cos(ship.angle) * THRUST
+       ship.vy += Math.sin(ship.angle) * THRUST
+     }
+     ship.vx *= FRICTION
+     ship.vy *= FRICTION
+     const speed = Math.hypot(ship.vx, ship.vy)
+     if (speed > MAX_SPEED) {
+       ship.vx *= MAX_SPEED / speed
+       ship.vy *= MAX_SPEED / speed
+     }
+     ship.x += ship.vx
+     ship.y += ship.vy
+   }
+   ```
+
+5. `draw` fonksiyonunun kapanış `}`'inden sonra oyun döngüsünü ekle:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+6. En alttaki iki satırı değiştir. `draw()` satırını sil, yerine döngüyü başlatan satırı yaz:
+
+   ```js
+   resetShip()
+   requestAnimationFrame(loop) // ← değişti (eskiden draw())
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra oklarla gemiyi döndür ve yukarı okla it. Gemi baktığı
+   yöne kaymalı, bırakınca yavaşça durmalı (şimdilik ekrandan çıkıp kaybolabilir, sonraki adımda düzelteceğiz).
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa tuş adlarının büyük harflerine bak: `ArrowLeft`,
+   `ArrowUp`.
 
 # --tests--
 

@@ -31,28 +31,46 @@ could stick together, bouncing back and forth every frame.
 
 # --explanation-tr--
 
-Oyunun kalbi burası. Merkezleri arasındaki uzaklık `2R`'den az olduğunda iki top değer. O zaman ne olur?
+**Bu adımda:** toplar birbirine çarpacak. Açılış vuruşunda beyaz top üçgene çarpınca toplar masaya dağılacak.
 
-Bir merkezden diğerine çizgiyi çiz ve yönüne `n` de (**normal**). Her hızı `n` **boyunca** bir parça ve onun **karşısında** bir
-parça olarak böl. Aynı kütlede iki top arasındaki, enerji kaybı olmayan bir çarpışmada iki top basitçe **`n` boyunca olan
-parçaları takas eder**, `n`'nin karşısındaki parçalar olduğu gibi kalır.
+Bu, oyunun kalbi. İki top, merkezleri arasındaki uzaklık `2R`'den (bir çaptan) **küçükse** birbirine değer. Peki sonra
+ne olur?
+
+**Çarpışma çizgisi.** Bir topun merkezinden ötekine bir çizgi düşün. Bu çizginin yönüne `n` diyelim (**normal**).
+Onu iki sayıyla tutarız: `nx` (sağa ne kadar) ve `ny` (aşağı ne kadar). Farkları (`dx`, `dy`) uzaklığa (`dist`)
+bölersek uzunluğu tam 1 olan bir yön elde ederiz; buna **birim** yön denir.
+
+Her topun hızını iki parçaya ayırabiliriz: bu çizgi **boyunca** giden parça ve çizgiye **dik** giden parça. Aynı
+ağırlıkta iki top, enerji kaybetmeden çarpışınca **çizgi boyunca olan parçalarını değiş tokuş eder**; dik parçalar
+aynen kalır.
 
 ```js
-const along = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny // n boyunca ne kadar hızlı yaklaşıyorlar
+const along = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny // n boyunca ne hızla yaklaşıyorlar
 a.vx -= along * nx
 a.vy -= along * ny
 b.vx += along * nx
 b.vy += along * ny
 ```
 
-Bundan her bilardocunun bildiği iki ünlü gerçek çıkar:
+`along`, iki topun çizgi boyunca birbirine **ne hızla yaklaştığıdır**. Bu miktar `a`'dan çıkarılır, `b`'ye eklenir.
 
-- **tam karşıdan** vuruşta isteka topu olduğu yerde durur, diğer top bütün süratini alır;
-- **sıyırarak** vuruşta iki top birbirine tam **90 derece** açıyla ayrılır.
+Buradan her bilardocunun bildiği iki ünlü sonuç çıkar:
 
-İki pratik ayrıntı. Kareler arasında toplar zaten biraz üst üste binmiş olabilir; bu yüzden önce onları `n` boyunca yalnızca
-değene kadar iteriz. Ve `along` pozitif değilse zaten ayrılıyorlardır, hiçbir şey yapmayız; yoksa iki top birbirine yapışıp her
-karede ileri geri sekebilirdi.
+- **Tam karşıdan** vurursan beyaz top olduğu yerde durur, öteki top bütün hızını alır.
+- **Sıyırarak** vurursan iki top birbirine tam **90 derece** açıyla ayrılır.
+
+**İki pratik ayrıntı:**
+
+1. Kareler arasında toplar birazcık iç içe geçmiş olabilir. Önce onları çizgi boyunca, sadece değecek kadar
+   ayırırız: iç içelik miktarının (`overlap`) yarısı kadar biri geri, öteki ileri.
+2. `along` sıfır ya da eksiyse (`<=` "küçük ya da eşit") toplar zaten birbirinden uzaklaşıyordur; hiçbir şey yapmayız.
+   Yoksa iki top birbirine yapışıp her karede ileri geri sekebilirdi.
+
+`dist === 0` (tam üst üste) durumunda da çıkarız, çünkü sıfıra bölmek anlamsız bir sonuç verir. `||` "veya" demektir.
+
+**Her ikiliyi bir kez denemek.** 11 top varsa her topu diğer hepsiyle denemeliyiz. İç içe iki döngü kullanırız: dış
+döngü `i`, iç döngü `j = i + 1`'den başlar. Böylece (0,1), (0,2) ... (1,2) ... her ikili **bir kez** denenir ve bir
+top kendisiyle denenmez. `balls.length` listedeki top sayısıdır.
 
 # --task--
 
@@ -63,10 +81,45 @@ karede ileri geri sekebilirdi.
 
 # --task-tr--
 
-1. `collide(a, b)` yaz: merkezler `2R` ya da daha fazla uzaksa (ya da tam üst üsteyse) hiçbir şey yapma. Değilse `a`'dan `b`'ye
-   birim normal `(nx, ny)`'yi hesapla, her topu onun boyunca örtüşmenin yarısı kadar ayır ve yaklaşıyorlarsa (`along > 0`)
-   yukarıdaki gibi normal boyunca `along`'u değiş tokuş et.
-2. `step()`'in sonunda her top çifti için `collide`'ı çağır (`j`, `i + 1`'den başlar; böylece her çift bir kez).
+1. `shoot` fonksiyonunun kapanış `}`'inden sonra, `function step()`'ten önce çarpışma fonksiyonunu yaz:
+
+   ```js
+   // Two balls of the same mass that touch swap the parts of their velocities that point along the line between them.
+   function collide(a, b) {
+     const dx = b.x - a.x
+     const dy = b.y - a.y
+     const dist = Math.hypot(dx, dy)
+     if (dist >= R * 2 || dist === 0) return
+     const nx = dx / dist
+     const ny = dy / dist
+     // Push them apart so they only just touch.
+     const overlap = (R * 2 - dist) / 2
+     a.x -= nx * overlap
+     a.y -= ny * overlap
+     b.x += nx * overlap
+     b.y += ny * overlap
+     const along = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny
+     if (along <= 0) return // already moving apart
+     a.vx -= along * nx
+     a.vy -= along * ny
+     b.vx += along * nx
+     b.vy += along * ny
+   }
+   ```
+
+2. `step()` fonksiyonunun sonunda, `for (const b of balls)` döngüsünün kapanış `}`'inden sonra ve fonksiyonun kapanış
+   `}`'inden önce her ikiliyi çarpıştıran satırı ekle:
+
+   ```js
+       if (b.y > BOTTOM - R) [b.y, b.vy] = [BOTTOM - R, -b.vy * BOUNCE]
+     }
+     for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) collide(balls[i], balls[j]) // ← yeni
+   }
+   ```
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve nişanı değiştirmeden boşlukla vur: beyaz top üçgene çarpmalı ve
+   toplar masaya dağılmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `-=` ile `+=`'ların yerlerine
+   bak: `a`'dan çıkarılır, `b`'ye eklenir.
 
 # --tests--
 

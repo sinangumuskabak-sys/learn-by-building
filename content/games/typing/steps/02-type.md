@@ -26,22 +26,49 @@ two pieces join seamlessly.
 
 # --explanation-tr--
 
-Hangi kelimeyi yazıyorsun? Hiç söylemezsin; oyun bunu bulur. Yazdığın ilk harf onunla başlayan bir kelimeye **kilitlenir** ve
-ondan sonra her harf o kelimenin sıradaki harfi olmalıdır.
+**Bu adımda:** kelimeleri klavyeyle yazıp yok edeceksin. Bir harfe bastığında o harfle başlayan kelimeye kilitlenilecek;
+yazdığın kısım **sarı**, kalanı **beyaz** görünecek. Kelimenin tamamını yazınca kelime kaybolacak.
 
-Aynı harfle başlayan birkaç kelime varsa en alttaki en acil olandır; bu yüzden oyun `y`'si en büyük kelimeyi seçer. Eşleşen
-kelimeleri büyükten küçüğe `y`'ye göre sıralamak onu 0. sıraya koyar:
+**Oyun hangi kelimeyi yazdığını nereden bilir?** Sen söylemezsin, oyun anlar. Yazdığın ilk harf, o harfle başlayan bir
+kelimeye **kilitlenir** (lock on). Ondan sonra her harf o kelimenin sıradaki harfi olmalıdır. Aynı harfle başlayan birkaç
+kelime varsa **en alttaki** seçilir, çünkü yere en yakın, en acil olan odur.
+
+İki yeni değişken:
+
+- `target` → şu an yazılan kelime (kartın kendisi). Hiçbiri yoksa `null`, yani "hiçbir şey".
+- `typed` → o kelimenin kaç harfi yazıldı.
+
+**Aday kelimeleri bulmak:**
 
 ```js
 const options = words.filter((w) => w.text[0] === key).sort((a, b) => b.y - a.y)
 ```
 
-`target` yazılan kelime, `typed` de harflerinden kaçının bittiğidir. Yanlış bir harf yok sayılır. `typed` kelimenin uzunluğuna
-ulaştığında kelime silinir ve `target` yeniden `null` olur. Hedef ekrandan düşerse kilit de bırakılır.
+- `w.text[0]` → yazının ilk harfi. Yazılar da diziler gibi 0'dan sayılır: `'cat'[1]` → `'a'`.
+- `===` "eşit mi?" diye sorar (tek `=` değer koyar). `!==` "eşit değil mi?" demektir.
+- `filter` yalnızca ilk harfi basılan tuşa eşit olanları tutar.
+- `sort((a, b) => b.y - a.y)` listeyi `y`'si **büyükten küçüğe** sıralar. `y` aşağı doğru büyüdüğü için en alttaki kelime
+  en başa, `options[0]`'a gelir.
 
-Yazılan kısım sarı çizilir. "Bir kelimenin yarısını boya" diye bir komut yoktur; bu yüzden iki parça çizeriz: yazılan kısmı
-`x`'e, geri kalanı da beyazla, **tam olarak ilk parçanın bittiği yerden**, `x + measureText(done).width`'ten başlayarak.
-Eş aralıklı bir yazı tipiyle iki parça kusursuzca birleşir.
+**`type(key)` adım adım:**
+
+- `if (!target)` → `!` "değil" demektir: "hedef yoksa". O zaman aday ara; hiç yoksa (`options.length === 0`) `return` ile
+  fonksiyondan hemen çık.
+- `if (target.text[typed] !== key) return` → basılan harf sıradaki harf değilse yok say.
+- Doğruysa `typed` 1 artar. `typed` kelimenin uzunluğuna ulaşınca kelimeyi listeden çıkarır, `target`'ı `null` yaparız.
+
+Hedef kelime yere düşerse kilit de bırakılır; bunu `update()`'e ekleyeceğiz. `&&` "**ve**" demektir:
+`target && target.y > GROUND` → "hedef var **ve** yerin altına geçti".
+
+**Tuşları dinlemek (olay, event).** Tarayıcı bir tuşa basıldığında `keydown` olayı yayar;
+`document.addEventListener('keydown', (event) => { ... })` "her tuşta `{ }` içini çalıştır" demektir. `event.key` basılan
+tuştur; `.toLowerCase()` büyük harfi küçüğe çevirir. `key.length === 1 && key >= 'a' && key <= 'z'` yalnızca tek bir harfi
+kabul eder (`'Shift'` gibi tuş adları uzundur). `event.preventDefault()` tarayıcının o tuşla kendi yapacağı işi engeller.
+
+**Yarım kelimeyi boyamak.** "Kelimenin yarısını sarı yap" diye bir komut yok. Bu yüzden iki parça çizeriz:
+`w.text.slice(0, typed)` yazılan kısım (`'cat'.slice(0, 2)` → `'ca'`), `w.text.slice(done.length)` kalan kısım (`'t'`).
+İkinci parça, birincinin **tam bittiği yerden** başlar: `w.x + ctx.measureText(done).width`.
+`koşul ? a : b` "koşul doğruysa `a`, değilse `b`" demektir.
 
 # --task--
 
@@ -55,12 +82,81 @@ Eş aralıklı bir yazı tipiyle iki parça kusursuzca birleşir.
 
 # --task-tr--
 
-1. `target` ve `typed` ekle (`reset()`'te `null` ve `0`).
-2. `type(key)` yaz: hedef yokken `key` ile başlayan en alttaki kelimeye `typed = 0` ile kilitlen (yoksa hiçbir şey yapma).
-   Sonra `key` hedefin sıradaki harfiyse `typed`'a 1 ekle; bütün kelime yazılınca onu sil ve `target = null` yap.
-3. `keydown`'da `a`'dan `z`'ye tuşlar (küçük ya da büyük) için `preventDefault()` ile `type`'ı çağır.
-4. `update()`'te `target` `GROUND`'un altına düşerse temizle.
-5. Hedefin yazılan kısmını `'#facc15'` ile, gerisini hemen ardından `'#ffffff'` ile çiz; diğer kelimeler `'#cbd5e1'` kalır.
+1. `let words // { text, x, y }` satırının hemen altına iki değişken ekle:
+
+   ```js
+   let target // the word being typed, or null
+   let typed // how many letters of the target are typed
+   ```
+
+2. `reset()` fonksiyonunda onlara başlangıç değeri ver:
+
+   ```js
+   function reset() {
+     words = []
+     target = null // ← yeni
+     typed = 0     // ← yeni
+     spawnTimer = 0
+   }
+   ```
+
+3. `reset()`'in kapanış `}`'sinin altına bir satır boşluk bırakıp `type`'ı yaz:
+
+   ```js
+   function type(key) {
+     if (!target) {
+       // Lock on to the lowest word starting with this letter: it is the most urgent.
+       const options = words.filter((w) => w.text[0] === key).sort((a, b) => b.y - a.y)
+       if (options.length === 0) return
+       target = options[0]
+       typed = 0
+     }
+     if (target.text[typed] !== key) return
+     typed += 1
+     if (typed === target.text.length) {
+       words = words.filter((w) => w !== target)
+       target = null
+     }
+   }
+   ```
+
+4. `update()` içinde, `for (const w of words) w.y += SPEED` satırının hemen altına ekle:
+
+   ```js
+     if (target && target.y > GROUND) target = null
+   ```
+
+5. `update()`'in kapanış `}`'sinin altına tuş dinleyicisini yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     const key = event.key.toLowerCase()
+     if (key.length === 1 && key >= 'a' && key <= 'z') {
+       event.preventDefault()
+       type(key)
+     }
+   })
+   ```
+
+6. `draw()`'un sonundaki iki satırı (`ctx.fillStyle = '#cbd5e1'` ve `for (const w of words) ctx.fillText(...)`) sil ve
+   yerine iki parçalı çizimi yaz. `draw()`'un sonu şöyle olmalı:
+
+   ```js
+     ctx.font = FONT
+     ctx.textAlign = 'left'
+     for (const w of words) {                                                        // ← değişti
+       // The typed part in yellow, the rest in white right after it.
+       const done = w === target ? w.text.slice(0, typed) : ''                       // ← yeni
+       ctx.fillStyle = '#facc15'                                                     // ← yeni
+       ctx.fillText(done, w.x, w.y)                                                  // ← yeni
+       ctx.fillStyle = w === target ? '#ffffff' : '#cbd5e1'                          // ← yeni
+       ctx.fillText(w.text.slice(done.length), w.x + ctx.measureText(done).width, w.y) // ← yeni
+     }                                                                               // ← yeni
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra düşen bir kelimeyi yaz: yazdığın harfler sarı olmalı, kelime
+   bitince kaybolmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

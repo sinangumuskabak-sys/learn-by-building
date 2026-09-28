@@ -22,19 +22,43 @@ aiming. Keys and fire only work while aiming.
 
 # --explanation-tr--
 
-Boşluk ateş eder. Mermi **namlunun ucundan** başlar (tankın içinden değil; orada kendi zeminine çarpardı) ve açı boyunca, güç kadar
-büyük bir hıza sahiptir.
+**Bu adımda:** Boşluk'a basınca mavi tank ateş edecek. Küçük siyah bir mermi kavis çizerek uçacak, yere değdiği yerde
+turuncu bir ateş topu büyüyecek. Sonra tekrar nişan alabileceksin.
 
-Uçuşu atılan her şeyin fiziğidir: her karede yerçekimi `vy`'ye biraz ekler, sonra mermi hızı kadar hareket eder. Uçuşun bir karesini
-kendi fonksiyonuna, `fly(s)`'e koyarız; bir mermiyi hareket ettirir ve neye çarptığını söyler: `'ground'`, `'away'` (ekranı yandan
-terk etti) ya da hiçbir şey. Ayrı tutmanın karşılığı sonra gelir: bilgisayar atışları **hayal etmek** için tam olarak aynı fonksiyonu
-kullanır.
+**Mermi namlunun ucundan çıkar.** Tankın içinden değil; yoksa kendi durduğu zemine çarpardı. Başlangıç hızı açı
+yönündedir ve büyüklüğü güç kadardır. 2. adımda namluyu çizerken kullandığımız `cos` ve `sin` burada da işe yarar:
 
-Mermi, `y`'si `x`'indeki yüzeyin altına geçtiğinde zemine çarpar; yükseklik haritası bunu tek adımda cevaplar:
-`s.y >= groundAt(s.x)`.
+```js
+vx: Math.cos(t.angle) * t.power,   // yatay hız
+vy: Math.sin(t.angle) * t.power,   // dikey hız (eksi = yukarı)
+```
 
-Oyunun artık **durumları** var: `'aiming'`, sonra `'flying'`, sonra patlama 20 kare görünürken `'boom'`, sonra yeniden nişan. Tuşlar
-ve ateş yalnızca nişan alırken çalışır.
+**Uçuşun fiziği.** Atılan her şey gibi: her karede yerçekimi `vy`'ye biraz ekler (mermiyi aşağı çeker), sonra mermi
+hızı kadar ilerler. `vx` hiç değişmez; `vy` önce eksi (yukarı çıkar), gitgide küçülür, sonra artı olur (aşağı iner).
+İşte bu, kavisli yolu verir.
+
+**Bir karelik uçuş ayrı bir fonksiyonda: `fly(s)`.** Mermiyi bir kare ilerletir ve neye çarptığını söyler:
+`'ground'` (zemine), `'away'` (ekranın yanından çıktı) ya da `null` (hiçbir şey, "uçmaya devam"). Bunu ayrı tutmak
+ileride çok işe yarayacak: bilgisayar rakip, atışlarını **hayal ederken** tam bu fonksiyonu kullanacak.
+
+**Zemine değdi mi?** 1. adımdaki yükseklik haritası bunu tek adımda cevaplar: merminin `y`'si, o `x`'teki yüzeyin
+`y`'sinden büyük ya da eşitse (yani yüzeyin altına indiyse) çarpmıştır: `s.y >= groundAt(s.x)`.
+
+**Oyunun durumları (state).** Oyunun şu an ne yaptığını bir yazıyla tutarız:
+
+1. `'aiming'` → nişan alınıyor; tuşlar ve ateş sadece bu durumda çalışır,
+2. `'flying'` → mermi uçuyor,
+3. `'boom'` → patlama 20 kare boyunca gösteriliyor, sonra tekrar `'aiming'`.
+
+`if (state !== 'aiming') return` → "nişan almıyorsak hiçbir şey yapma" (`!==` "eşit değil"; `return` "burada dur").
+
+**Yeni küçük şeyler:**
+
+- `--timer === 0` → önce `timer`'dan 1 çıkar, **sonra** 0 oldu mu diye bak. Yani sayaç her karede azalır, 0 olduğu an patlama biter.
+- `!hit` → "`hit` bir şey değilse" (`null` "hiçbir şey" demektir).
+- `ctx.arc(x, y, yarıçap, 0, Math.PI * 2)` → tam bir daire yolu; `ctx.fill()` içini boyar.
+- Ateş topunun yarıçapı `BLAST * (1 - timer / 40)`: `timer` 20'den 0'a inerken yarıçap 15'ten 30'a büyür.
+- `update()` artık her karede `loop` içinde, çizimden önce çağrılır: önce hareket, sonra çizim.
 
 # --task--
 
@@ -50,16 +74,147 @@ ve ateş yalnızca nişan alırken çalışır.
 
 # --task-tr--
 
-1. `GRAVITY = 0.15`, `BLAST = 30` ve `shell`, `blast`, `timer` ve `state` ekle (`reset()`'te `null`, `null` ve `'aiming'`).
-2. `fire()` yaz: nişan alırken, mavi namlunun ucunda (`t.x + cos × 14`, `t.y - 8 + sin × 14`) `cos × power`, `sin × power` hızlı bir
-   mermi ve `state = 'flying'`. Boşluk ateş eder, işaretçiyi bırakmak da.
-3. `fly(s)` yaz: `vy`'ye `GRAVITY` ekle, hareket ettir ve kenarların dışında `'away'`, yüzeyde ya da altında `'ground'`, değilse `null`
-   döndür.
-4. Şimdilik yalnızca `blast = { x, y }` yapan `explode(x, y)`'yi yaz. `update()`'te: uçarken mermiyi `fly` et; bir şeye çarpınca
-   (gitmediyse) `explode` et, `shell`'i temizle, `'boom'` ve `timer = 20` yap. `'boom'`'da sayacı azalt ve `0`'da `blast`'ı temizle ve
-   `'aiming'`'e dön.
-5. Nişan yalnızca nişan alırken çalışır. Mermiyi (3 yarıçaplı `'#0f172a'` bir daire) ve patlamayı, `BLAST * (1 - timer / 40)`
-   yarıçaplı turuncu (`'rgba(249, 115, 22, 0.8)'`) bir daireyi çiz.
+1. `const H = canvas.height` satırının altına iki sabit ekle:
+
+   ```js
+   const GRAVITY = 0.15
+   const BLAST = 30 // explosion radius
+   ```
+
+2. `let tanks ...` satırının altına (`let dragging`'in üstüne) dört değişken ekle:
+
+   ```js
+   let shell // { x, y, vx, vy } or null
+   let blast // { x, y } while an explosion shows
+   let timer // frames left to watch the explosion
+   let state // 'aiming', 'flying' or 'boom'
+   ```
+
+3. `reset()` içinde `for (const t of tanks) ...` satırının altına (`dragging = false`'un üstüne) ekle:
+
+   ```js
+     shell = null
+     blast = null
+     state = 'aiming'
+   ```
+
+4. `reset()`'in kapanış `}`'sinden sonra, `function aimBy`'ın **üstüne** dört fonksiyon yaz:
+
+   ```js
+   function fire() {
+     if (state !== 'aiming') return
+     const t = tanks[0]
+     // The shell leaves from the end of the barrel.
+     shell = {
+       x: t.x + Math.cos(t.angle) * 14,
+       y: t.y - 8 + Math.sin(t.angle) * 14,
+       vx: Math.cos(t.angle) * t.power,
+       vy: Math.sin(t.angle) * t.power,
+     }
+     state = 'flying'
+   }
+
+   // One frame of flight: gravity pulls down. Returns what it hit, or null.
+   function fly(s) {
+     s.vy += GRAVITY
+     s.x += s.vx
+     s.y += s.vy
+     if (s.x < 0 || s.x >= W) return 'away'
+     if (s.y >= groundAt(s.x)) return 'ground'
+     return null
+   }
+
+   function explode(x, y) {
+     blast = { x, y }
+   }
+
+   function update() {
+     if (state === 'boom' && --timer === 0) {
+       blast = null
+       state = 'aiming'
+     }
+     if (state !== 'flying') return
+     const hit = fly(shell)
+     if (!hit) return
+     if (hit !== 'away') explode(shell.x, shell.y)
+     shell = null
+     state = 'boom'
+     timer = 20
+   }
+   ```
+
+   `explode` şimdilik sadece patlamanın yerini hatırlıyor; sonraki adımda krater açacak. `update`: patlama sürüyorsa
+   sayacı azaltır; mermi uçuyorsa onu bir kare uçurur ve bir şeye çarptıysa (ekrandan çıkmadıysa) patlatır.
+
+5. `aimBy()`'ın en başına ekle:
+
+   ```js
+   function aimBy(dAngle, dPower) {
+     if (state !== 'aiming') return // ← yeni
+   ```
+
+6. `keydown` olayında, `ArrowDown` satırı ile `else return` satırının **arasına** Boşluk'u ekle:
+
+   ```js
+     else if (event.key === 'ArrowDown') aimBy(0, -0.25)
+     else if (event.key === ' ') fire() // ← yeni
+     else return
+   ```
+
+   `' '` Boşluk tuşunun adıdır.
+
+7. `pointerdown` olayının en başına ve `pointerup` olayının sonuna birer satır ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'aiming') return // ← yeni
+     dragging = true
+     pointAt(event)
+   })
+   ```
+
+   ```js
+   document.addEventListener('pointerup', () => {
+     if (!dragging) return
+     dragging = false
+     fire() // ← yeni
+   })
+   ```
+
+   Böylece fareyle sürükleyip bırakınca ateş edilir.
+
+8. `draw()` içinde tankları çizen döngünün kapanış `}`'sinden sonra, `const now = tanks[0]` satırının **üstüne** mermiyi
+   ve patlamayı ekle:
+
+   ```js
+     if (shell) {
+       ctx.fillStyle = '#0f172a'
+       ctx.beginPath()
+       ctx.arc(shell.x, shell.y, 3, 0, Math.PI * 2)
+       ctx.fill()
+     }
+     if (blast) {
+       // The fireball grows as the timer runs down.
+       ctx.fillStyle = 'rgba(249, 115, 22, 0.8)'
+       ctx.beginPath()
+       ctx.arc(blast.x, blast.y, BLAST * (1 - timer / 40), 0, Math.PI * 2)
+       ctx.fill()
+     }
+   ```
+
+9. `loop()` içinde `draw()`'un **üstüne** `update()` ekle:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve Boşluk'a bas: mermi kavis çizip yere düşmeli ve turuncu bir
+    ateş topu görünmeli; bir süre sonra tekrar nişan alabilmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Mermi hiç
+    kıpırdamıyorsa `update()`'i `loop`'a eklediğini kontrol et.
 
 # --tests--
 

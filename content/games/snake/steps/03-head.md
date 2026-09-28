@@ -26,23 +26,52 @@ each time: background first, then everything on top.
 
 # --explanation-tr--
 
-Kare sabit bir yere boyanıyor. Hareket etmesi için konumunun değişebilen bir **veride** yaşaması ve çizim kodunun
-her boyamada o veriyi okuması gerekir.
+**Bu adımda:** ekranda değişen bir şey görmeyeceksin; kare yine aynı yerde duracak. Ama kodu, karenin
+**hareket edebileceği** bir düzene sokacağız. Bu, oyun yazmanın en önemli fikri.
 
-Bu ayrım oyun programlamanın en önemli fikridir:
+**Durum ve çizim.** Şu an karenin yeri koda sabit yazılı: `5 * CELL`. Onu hareket ettirmek için yerini
+**değişebilen bir bilgide** tutmalı, çizerken de her seferinde o bilgiye bakmalıyız. Böylece iki ayrı parça olur:
 
-- **Durum (state)**: oyunda şu an doğru olan her şey (yılan nerede, skor kaç...). Düz değişkenler ve nesneler.
-- **Çizim**: durumu okuyup boyayan bir fonksiyon. Hiçbir şeye karar vermez, yalnızca gösterir.
+- **Durum (state):** oyunda şu an ne doğru? Yılan nerede, skor kaç... Bunları değişkenlerde tutarız.
+- **Çizim:** duruma bakıp ekrana boyayan kod. Hiçbir şeye karar vermez, sadece gösterir.
 
-Bir nesne, tek bir konumu anlatan iki sayıyı bir arada tutar:
+Bir tiyatro gibi düşün: durum senaryodur, çizim ise sahne. Senaryo değişince sahne ona göre yeniden kurulur.
+
+**Değişken: `let`.** `const` ile verdiğin ad hep aynı şeyi gösterir. `let` ile verdiğin adın değeri ise sonradan
+değiştirilebilir. Buna **değişken** denir. Yılanın başı hareket edeceği için `let` kullanırız.
+
+**Nesne (object).** Başın yeri iki sayıdan oluşur: sütun ve satır. İkisini tek pakette tutmak için **nesne**
+kullanırız:
 
 ```js
-let head = { x: 5, y: 5 }   // sütun ve satır
-head.x                      // 5
+let head = { x: 5, y: 5 }
+head.x   // 5
+head.y   // 5
 ```
 
-Baş ileride değişeceği için `let` kullanıyoruz. `draw()` fonksiyonu her seferinde resmin **tamamını** yeniden
-boyar: önce arka plan, sonra üstündeki her şey.
+- Süslü parantez `{ }` bir nesne açar ve kapatır.
+- İçinde `ad: değer` çiftleri vardır, virgülle ayrılır. Her çifte **alan** denir. Burada `x` sütunu, `y` satırı
+  tutuyor.
+- Bir alanı okumak için nokta kullanırsın: `head.x` "head'in x'i" demektir.
+
+**Fonksiyon (function).** Birlikte çalışan birkaç satıra bir ad verip onları tek komutla çalıştırmanın yolu. Bir
+yemek tarifi gibi: tarifi bir kez yazarsın, istediğin kadar pişirirsin.
+
+```js
+function draw() {
+  // buraya yazılan satırlar draw'ın içindedir
+}
+
+draw()
+```
+
+- `function draw() { ... }` → fonksiyonu **tanımlar**: "draw deyince şunları yap". Bu satır tek başına hiçbir
+  şey çizmez, sadece tarifi yazar.
+- `{` ile `}` arasındaki satırlar fonksiyonun **gövdesidir**. Okunaklı olsun diye iki boşlukla içeri yazılır.
+- `draw()` → fonksiyonu **çağırır**: tarifi şimdi uygula. Sondaki `()` "çalıştır" demektir.
+
+`draw()` her çağrıldığında resmin **tamamını** yeniden boyar: önce arka plan (eski kareyi siler), sonra kare.
+Kare artık sabit `5` yerine `head.x` ve `head.y`'nin gösterdiği yere çizilir.
 
 # --task--
 
@@ -53,10 +82,62 @@ boyar: önce arka plan, sonra üstündeki her şey.
 
 # --task-tr--
 
-1. `CELL`'den sonra `let head = { x: 5, y: 5 }` ekle.
-2. İki boyama kısmını (arka plan ve lime kare) `draw` adlı bir fonksiyonun içine taşı. Kare sabit `5` yerine
-   `head.x` ve `head.y` kullanmalı.
-3. En sonda `draw()` fonksiyonunu bir kez çağır.
+1. `const CELL = 20` satırının hemen altına şunu yaz:
+
+   ```js
+   let head = { x: 5, y: 5 }
+   ```
+
+2. Şimdi alttaki iki boyama kısmını (arka plan ve yeşil kare) bir fonksiyonun içine alacağız. Aşağıdaki dört
+   satırı siliyorsun:
+
+   ```js
+   ctx.fillStyle = '#111'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+   ctx.fillStyle = 'lime'
+   ctx.fillRect(5 * CELL, 5 * CELL, CELL, CELL)
+   ```
+
+   ve yerlerine şunu yazıyorsun:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#111'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'lime'
+     ctx.fillRect(head.x * CELL, head.y * CELL, CELL, CELL) // ← değişti
+   }
+   ```
+
+   Dikkat: son satırda `5` yerine artık `head.x` ve `head.y` var.
+
+3. Fonksiyonun kapanan `}` işaretinin altına bir satır boşluk bırak ve fonksiyonu çağır:
+
+   ```js
+   draw()
+   ```
+
+   `const CELL = 20` satırından sonrası artık tam olarak şöyle olmalı:
+
+   ```js
+   const CELL = 20
+   let head = { x: 5, y: 5 }
+
+   function draw() {
+     ctx.fillStyle = '#111'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'lime'
+     ctx.fillRect(head.x * CELL, head.y * CELL, CELL, CELL)
+   }
+
+   draw()
+   ```
+
+4. **Çalıştır**'a bas. Ekran bir öncekiyle aynı görünmeli (yeşil kare yerinde) ve alttaki kontrollerin hepsi
+   yeşil olmalı. Ekran boş kalırsa büyük ihtimalle en alttaki `draw()` çağrısını unuttun.
 
 # --tests--
 

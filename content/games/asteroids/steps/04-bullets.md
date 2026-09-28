@@ -25,23 +25,43 @@ Space fires once per press: ignore `keydown` events with `event.repeat`, so hold
 
 # --explanation-tr--
 
-Mermiler geminin **burnundan**, çizdiğin noktanın aynısından çıkar: geminin baktığı yönde `SHIP_R` piksel ötede. Hızları
-yön vektörü çarpı mermi hızı, **artı geminin kendi hızıdır**:
+**Bu adımda:** boşluk tuşuyla ateş edeceğiz. Her basışta geminin burnundan küçük beyaz bir kare mermi çıkacak, bir süre
+uçup kaybolacak.
+
+**Birçok mermi: dizi (array).** Aynı anda ekranda birçok mermi olabilir. Birçok şeyi sırayla tutmak için **dizi**
+kullanırız: köşeli parantez `[ ]` içinde virgülle ayrılmış bir liste.
+
+```js
+let bullets = []            // boş liste
+bullets.push({ x: 5, y: 9 }) // sonuna bir mermi ekle
+bullets.length               // kaç tane var: 1
+```
+
+Her mermi bir nesnedir: konumu (`x`, `y`), hızı (`vx`, `vy`) ve ömrü (`life`).
+
+**Mermi nereden, ne hızla çıkar?** Burundan: geminin baktığı yönde `SHIP_R` piksel ötede (1. adımdaki hesap). Hızı yön
+çarpı `BULLET_SPEED`, **artı geminin kendi hızı**:
 
 ```js
 vx: ship.vx + Math.cos(ship.angle) * BULLET_SPEED
 ```
 
-Neden geminin hızını ekliyoruz? Çünkü hareket böyle işler: hareket eden bir arabadan ileri atılan bir top, yerinde duran
-birinin attığından daha hızlı gider. Bu olmadan, hızla uçarken atılan mermiler burundan sürünerek çıkıyor ya da geminin
-gerisinde kalıyor gibi görünürdü.
+Neden geminin hızını ekliyoruz? Giden bir arabadan ileri atılan top, yerde duran birinin attığından daha hızlı gider.
+Bunu eklemeseydik hızlı uçarken attığın mermi burundan sürünerek çıkar, hatta geride kalırdı.
 
-Mermiler de her şey gibi ekranın çevresinde dolaşır; bu yüzden ekrandan çıkınca öylece kaldırılamazlar. Bunun yerine her
-merminin karelerle ölçülen, geri sayan bir **ömrü** vardır ve 0'da kaybolur. Düşeceği bir kenarı olmayan her şeyi
-sınırlamanın doğal yolu bir geri sayımdır.
+**Ömür sayacı.** Mermiler de ekranın kenarından dolaşır, yani "ekrandan çıkınca sil" diyemeyiz. Onun yerine her
+mermiye kare sayısıyla bir **ömür** veririz; her karede 1 azalır, 0 olunca mermi silinir.
 
-Boşluk her basışta bir kez ateş eder: `event.repeat` olan `keydown` olaylarını yok say, böylece tuşu basılı tutmak onu
-makineli tüfeğe çevirmez.
+**Yeni araçlar:**
+
+- `for (const bullet of bullets) { ... }` → **döngü**: "listedeki her mermi için, sırayla, ona `bullet` de ve
+  süslü parantezdeki işi yap".
+- `bullets.filter((bullet) => bullet.life > 0)` → listeden yalnız koşulu tutanları alıp **yeni bir liste** yapar.
+  Ömrü bitenler böylece dışarıda kalır. Bu yüzden `bullets` `const` değil `let`: yerine yeni liste koyacağız.
+- `===` → "eşit mi?" diye sorar (tek `=` ise bir şeye değer koymaktır, karıştırma). `' '` boşluk tuşunun adıdır.
+- `!` → "değil" demektir. `&&` → "ve": iki koşul da doğru olmalı.
+- `event.repeat` → tuş basılı tutulunca bilgisayar olayı tekrar tekrar gönderir; bu tekrarlarda `true` olur.
+  `!event.repeat` diyerek sadece ilk basışta ateş ederiz, makineli tüfek olmaz.
 
 # --task--
 
@@ -53,11 +73,85 @@ makineli tüfeğe çevirmez.
 
 # --task-tr--
 
-1. `BULLET_SPEED = 7`, `BULLET_LIFE = 55` ve `let bullets = []` ekle.
-2. Geminin burnunda, `ship.v + yön * BULLET_SPEED` hızlı ve `life: BULLET_LIFE` ömürlü bir mermi ekleyen `shoot()` yaz.
-   Tekrar olmayan bir Boşluk `keydown`'ında çağır.
-3. `update()` içinde her mermiyi taşı ve dolaştır, `life`'ından 1 çıkar ve yalnızca `life > 0` olanları tut.
-4. Her mermiyi ortalanmış beyaz 3×3 bir kare olarak çiz.
+1. `const MAX_SPEED = 6` satırının hemen altına mermi ayarlarını ekle:
+
+   ```js
+   const BULLET_SPEED = 7
+   const BULLET_LIFE = 55 // frames
+   ```
+
+2. `let ship` satırının hemen altına mermi listesinin adını ekle:
+
+   ```js
+   let bullets
+   ```
+
+3. `resetShip` fonksiyonunun kapanış `}`'inden sonra, bir satır boşluk bırakıp ateş eden fonksiyonu yaz:
+
+   ```js
+   function shoot() {
+     const dx = Math.cos(ship.angle)
+     const dy = Math.sin(ship.angle)
+     bullets.push({
+       x: ship.x + dx * SHIP_R,
+       y: ship.y + dy * SHIP_R,
+       vx: ship.vx + dx * BULLET_SPEED,
+       vy: ship.vy + dy * BULLET_SPEED,
+       life: BULLET_LIFE,
+     })
+   }
+   ```
+
+   `dx`, `dy` baktığı yönün iki parçası; aynı hesabı iki kez yazmamak için bir kere hesaplıyoruz.
+
+4. `keydown` dinleyicisine bir satır ekle. Şöyle görünmeli:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === ' ' && !event.repeat) shoot() // ← yeni
+   })
+   ```
+
+5. `update()` fonksiyonunun sonunda, `ship.y = wrap(...)` satırından sonra ve kapanış `}`'inden önce mermileri
+   hareket ettiren ve ömrü bitenleri silen satırları ekle:
+
+   ```js
+     ship.y = wrap(ship.y + ship.vy, canvas.height)
+
+     for (const bullet of bullets) {                     // ← yeni
+       bullet.x = wrap(bullet.x + bullet.vx, canvas.width)
+       bullet.y = wrap(bullet.y + bullet.vy, canvas.height)
+       bullet.life -= 1
+     }
+
+     bullets = bullets.filter((bullet) => bullet.life > 0) // ← yeni
+   }
+   ```
+
+6. `draw()` fonksiyonunda `drawShip()` satırından sonra, kapanış `}`'inden önce mermileri çizen iki satırı ekle:
+
+   ```js
+     drawShip()
+
+     ctx.fillStyle = 'white'                                                          // ← yeni
+     for (const bullet of bullets) ctx.fillRect(bullet.x - 1.5, bullet.y - 1.5, 3, 3) // ← yeni
+   }
+   ```
+
+   Kare 3×3 piksel; merminin tam ortada olması için sol üst köşesini 1.5 piksel sola ve yukarı kaydırıyoruz.
+
+7. En alttaki başlangıç satırlarının en üstüne boş listeyi koy:
+
+   ```js
+   bullets = [] // ← yeni
+   resetShip()
+   requestAnimationFrame(loop)
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve boşluk tuşuna bas: burundan küçük beyaz kareler çıkmalı,
+   bir süre uçup kaybolmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `' '` içinde gerçekten bir
+   boşluk olduğuna ve `===`'in üç eşittir olduğuna bak.
 
 # --tests--
 

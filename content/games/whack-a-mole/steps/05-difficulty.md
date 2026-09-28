@@ -30,28 +30,41 @@ The best score is kept in `localStorage`, as in the other games, and shown on th
 
 # --explanation-tr--
 
-İyi bir tur kolay başlar ve telaşlı biter. Köstebek Vurmaca'nın ne kadar zor olduğunu iki sayı belirler: bir
-köstebeğin ne kadar yukarıda kaldığı ve ne sıklıkla yenisinin çıktığı. Sabitler yerine onları **ilerlemenin
-fonksiyonları** yap.
+**Bu adımda:** tur kolay başlayıp çılgınca bitecek: köstebekler turun sonuna doğru daha kısa süre kalacak ve daha sık
+çıkacak. Ayrıca en iyi skorun (rekorun) saklanacak ve başlangıç ile bitiş ekranında `Best: 20` gibi görünecek.
 
-Önce ilerlemeyi `0` (tur az önce başladı) ile `1` (tur bitti) arasında bir sayı olarak ölç:
+**Zorluğu ne belirler?** İki sayı: köstebeğin yukarıda kalma süresi (şu an sabit 1000 ms) ve yeni köstebeğe kadar
+geçen süre (şu an sabit 700 ms). Bunları sabit yerine **ilerlemeye bağlı** birer fonksiyon yaparız.
 
-```js
-const progress = 1 - (endsAt - now) / ROUND
-```
-
-Sonra her ayarı kolay ve zor değeri arasında **ara değerle**:
+**İlerleme: 0'dan 1'e.** Önce turun ne kadarının geçtiğini 0 (tur yeni başladı) ile 1 (tur bitti) arasında bir
+sayıyla ölçeriz:
 
 ```js
-upTime = 1000 - 500 * progress   // başta 1000 ms → sonda 500 ms
-gap    = 700  - 350 * progress   // başta  700 ms → sonda 350 ms
+1 - (endsAt - now) / ROUND
 ```
 
-Buna doğrusal ara değerleme denir, genelde **lerp**: `başlangıç + (bitiş - başlangıç) * t`. Pong'daki normalleştirilmiş
-raket konumuyla aynı fikir, ters yönde kullanılmış: `0…1` arası bir değeri gerçek bir ayara geri çevir. Tasarımcılar
-oyunları her lerp'in iki ucunu ayarlayarak ince ayarlar.
+Kalan süreyi turun tamamına bölersek "kalan oran" çıkar (başta 1, sonda 0); 1'den çıkarınca "geçen oran" olur.
+Sayı yanlışlıkla 0'ın altına ya da 1'in üstüne kaçmasın diye sınırlarız: `Math.max(0, ...)` iki sayıdan büyüğünü
+seçer (0'ın altına inmez), `Math.min(1, ...)` küçüğünü seçer (1'i geçmez).
 
-Rekor, diğer oyunlardaki gibi `localStorage`'da tutulur ve hazır ile oyun sonu ekranlarında gösterilir.
+**Arasını bulmak (interpolasyon).** Her ayarı kolay ve zor değeri arasında ilerlemeye göre kaydırırız:
+
+```js
+1000 - 500 * progress()   // başta 1000 ms → sonda 500 ms
+700  - 350 * progress()   // başta 700 ms  → sonda 350 ms
+```
+
+Bunun genel adı **doğrusal interpolasyon**, kısaca **lerp**: `başlangıç + (bitiş - başlangıç) * t`. Oyun tasarımcıları
+oyunu bu iki uçla oynayarak ayarlar.
+
+**Rekoru saklamak: `localStorage`.** Değişkenler sayfa kapanınca silinir. `localStorage` tarayıcının küçük bir
+defteridir; sayfayı yenilesen de içindekiler durur. Ama sadece **yazı** saklar:
+
+- `localStorage.setItem('mole-best', best)` → `'mole-best'` başlığıyla yaz.
+- `localStorage.getItem('mole-best')` → oku; hiç yazılmamışsa `null` (boş) verir.
+- `Number(...)` yazıyı sayıya çevirir. `|| 0` "sonuç boşsa ya da sayı değilse 0 kullan" demektir.
+
+Tur bittiğinde `if (score > best)` → skor rekordan büyükse (`>`) rekoru güncelle ve kaydet.
 
 # --task--
 
@@ -64,12 +77,78 @@ Rekor, diğer oyunlardaki gibi `localStorage`'da tutulur ve hazır ile oyun sonu
 
 # --task-tr--
 
-1. `0…1` aralığıyla sınırlanmış `1 - (endsAt - now) / ROUND` döndüren `function progress()` yaz.
-2. `1000 - 500 * progress()` döndüren `function upTime()` ve `700 - 350 * progress()` döndüren `function popGap()`
-   yaz; sabit `1000` ve `700` yerine onları kullan.
-3. `let best = Number(localStorage.getItem('mole-best')) || 0` ekle. Tur daha yüksek bir skorla bitince onu
-   `'mole-best'` altında kaydet.
-4. Hazır ve oyun sonu ekranlarında diğer yazıların altına `Best: 20` çiz.
+1. `let endsAt = 0` satırının hemen altına ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('mole-best')) || 0
+   ```
+
+2. `isUp` fonksiyonunun kapanış `}`'sinden sonra bir satır boşluk bırakıp üç fonksiyon ekle:
+
+   ```js
+   // 0 when the round starts, 1 when it ends.
+   function progress() {
+     return Math.min(1, Math.max(0, 1 - (endsAt - now) / ROUND))
+   }
+
+   // Linear interpolation from the easy value to the hard value as the round goes on.
+   function upTime() {
+     return 1000 - 500 * progress()
+   }
+
+   function popGap() {
+     return 700 - 350 * progress()
+   }
+   ```
+
+3. `update()` içinde, tur bittiğinde çalışan bloğa rekor kaydını ekle:
+
+   ```js
+     if (now >= endsAt) {
+       state = 'over'
+       for (const hole of holes) hole.upUntil = 0
+       if (score > best) {                        // ← yeni
+         best = score                             // ← yeni
+         localStorage.setItem('mole-best', best)  // ← yeni
+       }                                          // ← yeni
+       return
+     }
+   ```
+
+4. `update()`'in devamında iki sabit sayıyı fonksiyonlarla değiştir:
+
+   ```js
+         hole.upUntil = now + upTime()   // ← değişti (1000 yerine)
+       }
+       nextPop = now + popGap()          // ← değişti (700 yerine)
+   ```
+
+5. `draw()`'un sonunda `if (state === 'ready') ...` satırını ve `if (state === 'over') { ... }` bloğunu şöyle değiştir:
+
+   ```js
+     if (state === 'ready') {                                                  // ← değişti
+       ctx.fillText('Click to start', canvas.width / 2, canvas.height / 2)
+       ctx.font = '16px sans-serif'                                            // ← yeni
+       ctx.fillText('Best: ' + best, canvas.width / 2, canvas.height / 2 + 28) // ← yeni
+     }                                                                         // ← yeni
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+       ctx.fillRect(0, 150, canvas.width, 150)                    // ← değişti (130 → 150)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 30px sans-serif'
+       ctx.fillText("Time's up!", canvas.width / 2, 190)
+       ctx.font = '20px sans-serif'
+       ctx.fillText('Score: ' + score, canvas.width / 2, 225)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Best: ' + best, canvas.width / 2, 252)       // ← yeni
+       ctx.fillText('Click to play again', canvas.width / 2, 282) // ← değişti (260 → 282)
+     }
+   ```
+
+   Şerit bir satır daha sığsın diye biraz uzadı, son yazı da aşağı kaydı.
+
+6. **Çalıştır**'a bas. `Click to start`'ın altında `Best: 0` görmelisin. Oynamak için önce oyuna tıkla: turun sonuna
+   doğru köstebekler hızlanmalı; tur bitince rekorun görünmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

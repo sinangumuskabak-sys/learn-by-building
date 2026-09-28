@@ -21,18 +21,62 @@ The ship is two rectangles: a wide base and a small barrel on top, centered. Sim
 
 # --explanation-tr--
 
-Oyuncu, ekranın altında sağa sola kayan bir topu yönetir. Bunu daha önce yaptın (Pong'un raketleri, Tuğla Kırma'nın
-klavye kontrolleri): **basılı** tuşların kaydını tut ve bir tuş basılıyken döngü gemiyi her karede birkaç piksel
-taşısın.
+**Bu adımda:** ekranın altına sağa sola kayan bir top (oyuncunun gemisi) koyacağız. Çalıştırınca sağda koyu lacivert
+bir alan ve altında turkuaz bir top göreceksin; ok tuşlarıyla onu kaydırabileceksin.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan satırlar **yorumdur**:
+bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) ve fırça.** Sayfada 480 piksel eninde, 520 piksel boyunda boş bir resim alanı var: `canvas`.
+Oyundaki her şeyi onun üstüne boyayacağız. Önce kâğıdı buluruz, sonra fırçayı (çizim bağlamı, **context**) alırız:
 
 ```js
-if (keys.ArrowLeft) ship.x -= SHIP_SPEED
-if (keys.ArrowRight) ship.x += SHIP_SPEED
-ship.x = Math.max(0, Math.min(canvas.width - SHIP_W, ship.x))   // ekranda kal
+const canvas = document.getElementById('game')   // kimliği 'game' olan canvas'ı bul
+const ctx = canvas.getContext('2d')              // onun 2D fırçasını al
 ```
 
-Gemi iki dikdörtgenden oluşur: geniş bir taban ve üstünde ortalanmış küçük bir namlu. Basit şekiller, ama birlikte bir
-bakışta "top" olarak okunurlar. Oyunlar 1970'lerden beri böyle çizilir.
+- `const canvas =` → "bundan sonra buna `canvas` diyeceğim". `const` ile verilen ada **sabit** denir: bir kutuya
+  yapıştırılan, hiç değişmeyen bir etiket.
+- Nokta (`.`) "bunun içindeki şu şey" demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+
+Fırçayla iki şey yaparız: renk seçmek (`ctx.fillStyle = '#22d3ee'`) ve dikdörtgen boyamak
+(`ctx.fillRect(x, y, genişlik, yükseklik)`). **Konum:** sol üst köşe `(0, 0)`'dır; `x` sağa, `y` **aşağı** doğru
+büyür. Renkler `'#22d3ee'` (turkuaz) gibi kodlarla yazılır.
+
+**Sayılara ad vermek.** `const SHIP_W = 36` "geminin eni 36" demektir. Sayıyı her yere tek tek yazmak yerine ona ad
+veririz; sonra değiştirmek istersen tek yeri değiştirirsin. Büyük harfli adlar "ayar" olduğunu belli eder.
+
+**Nesne (object).** Bir şeyin birkaç bilgisini tek pakette tutar:
+
+```js
+let ship = { x: 222, y: 480, w: 36, h: 16 }
+```
+
+Süslü parantez `{ }` paketi açar ve kapatır; içinde `ad: değer` çiftleri virgülle ayrılır. `ship.x` ile içindeki `x`'i
+okursun. `let` de `const` gibi ad verir, ama `let` ile verilenin değeri **sonradan değişebilir** (değişken).
+
+**Fonksiyon (function).** Bir iş listesine ad vermektir: `function update() { ... }` yazınca iş listesi hazırlanır
+ama **çalışmaz**; `update()` yazdığında (çağırdığında) çalışır. Süslü parantezin içi fonksiyonun gövdesidir.
+
+**Klavye olayları.** Bir tuşa basılınca tarayıcı bir **olay** (event) yayar. `document.addEventListener('keydown', ...)`
+"tuşa basıldığında şunu yap" demektir. `(event) => { ... }` kısa yoldan yazılmış bir fonksiyondur (ok, `=>`, "şunu
+yap" diye okunur); `event.key` basılan tuşun adıdır, örneğin `'ArrowLeft'` (sol ok). Hangi tuşların **basılı**
+olduğunu `keys` adlı bir nesnede tutarız: basılınca `true` (doğru), bırakılınca `false` (yanlış). `keys[event.key]`
+köşeli parantezle "adı `event.key` olan alan" demektir.
+
+**`if` (eğer).** `if (keys.ArrowLeft) ship.x -= SHIP_SPEED` → "sol ok basılıysa geminin `x`'inden 4 çıkar". `-=`
+"şu kadar azalt", `+=` "şu kadar artır" demektir.
+
+**Ekranda tutmak.** `Math.max(a, b)` ikisinin büyüğünü, `Math.min(a, b)` küçüğünü verir. Birlikte bir sayıyı iki
+sınır arasına sıkıştırırlar: gemi `0`'ın soluna ve `canvas.width - SHIP_W`'nin sağına geçemez.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der.
+`loop` her seferinde önce `update()` (hesapla), sonra `draw()` (boya) yapar ve kendini yeniden sıraya koyar. Böylece
+saniyede yaklaşık 60 kez (60 **kare**) tekrar eder; bu bir çizgi film gibi hareket yanılsaması verir.
+
+Gemi iki dikdörtgenden oluşur: geniş bir taban ve üstünde ortalanmış küçük bir namlu. Basit şekiller, ama birlikte
+bir bakışta "top" diye okunur. Oyunlar 1970'lerden beri böyle çizilir.
 
 # --task--
 
@@ -45,12 +89,83 @@ bakışta "top" olarak okunurlar. Oyunlar 1970'lerden beri böyle çizilir.
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut. `SHIP_Y = 480`, `SHIP_W = 36`, `SHIP_H = 16`, `SHIP_SPEED = 4` ve
-   `let ship = { x: canvas.width / 2 - SHIP_W / 2, y: SHIP_Y, w: SHIP_W, h: SHIP_H }` ekle.
-2. Basılı tuşları `const keys = {}`'de tut. `update()` içinde gemiyi `ArrowLeft`/`ArrowRight` ile karede `SHIP_SPEED`
-   piksel taşı ve ekrana sınırla.
-3. `draw()`: canvas'ı `'#020617'` ile doldur, gemiyi `'#22d3ee'` ile, üstünde ortalanmış 6×6 bir namluyla birlikte çiz
-   (`ship.x + SHIP_W / 2 - 3`, `ship.y - 6`). `update()` ve `draw()`'u bir `requestAnimationFrame` döngüsünde çalıştır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir boş satır bırak ve geminin ayarlarını ekle:
+
+   ```js
+   const SHIP_Y = 480
+   const SHIP_W = 36
+   const SHIP_H = 16
+   const SHIP_SPEED = 4
+   ```
+
+3. Bir boş satır bırak; gemiyi ve basılı tuşları tutan satırları ekle:
+
+   ```js
+   let ship = { x: canvas.width / 2 - SHIP_W / 2, y: SHIP_Y, w: SHIP_W, h: SHIP_H }
+   const keys = {}
+   ```
+
+   `canvas.width / 2 - SHIP_W / 2` gemiyi yatayda ortalar: alanın ortasından geminin yarı eni kadar sola. `/` bölme
+   işaretidir. `{}` şimdilik boş bir nesnedir.
+
+4. Altına tuşları dinleyen iki bloğu yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+5. Altına hareketi hesaplayan `update` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     if (keys.ArrowLeft) ship.x -= SHIP_SPEED
+     if (keys.ArrowRight) ship.x += SHIP_SPEED
+     ship.x = Math.max(0, Math.min(canvas.width - SHIP_W, ship.x))
+   }
+   ```
+
+6. Altına boyayan `draw` fonksiyonunu yaz. Önce bütün alanı koyu renge boyar, sonra topun tabanını ve namlusunu:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#020617'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#22d3ee'
+     ctx.fillRect(ship.x, ship.y, ship.w, ship.h)
+     ctx.fillRect(ship.x + SHIP_W / 2 - 3, ship.y - 6, 6, 6)
+   }
+   ```
+
+   Son satır 6×6'lık namludur: geminin ortasından 3 piksel sola, gövdenin 6 piksel üstüne.
+
+7. En alta oyun döngüsünü ekle ve onu başlat:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+8. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Altta ortada turkuaz bir top görmelisin. Oynamak için önce oyuna tıkla,
+   sonra sol/sağ ok tuşlarını basılı tut: top kaymalı ve kenarda durmalı. Alttaki kontrollerin hepsi yeşil olmalı.
+   Kırmızı kalırsa büyük/küçük harfleri kontrol et: `ArrowLeft` ve `ArrowRight` tam böyle yazılır.
 
 # --tests--
 

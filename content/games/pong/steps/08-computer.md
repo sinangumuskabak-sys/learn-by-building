@@ -27,24 +27,46 @@ Keep two-player mode too: the `2` key toggles between the computer and a second 
 
 # --explanation-tr--
 
-Kendinle oynamak bir süre sonra sıkar. Bilgisayar rakip "yapay zekâ" gibi görünür ama iyi bir Pong rakibi üç
-satırdır: **raketi topa doğru götür**.
+**Bu adımda:** sağ raketi bilgisayar oynayacak. Top ona doğru gelince raket topu karşılamaya kayacak. `2` tuşuna
+basınca iki kişilik moda geçilecek (sağ raket yine ok tuşlarıyla). Sahanın altında gri küçük bir ipucu yazısı
+göreceksin.
+
+**Bilgisayar rakip nasıl düşünür?** "Yapay zekâ" kulağa zor gelir ama iyi bir Pong rakibi üç satırdır:
+**raketi topa doğru kaydır.**
 
 ```js
-const target = ball.y + BALL / 2 - PADDLE_H / 2   // topu ortalamak için raketin üst kenarı nerede olmalı
+const target = ball.y + BALL / 2 - PADDLE_H / 2
 right.y += clamp(target - right.y, -AI_SPEED, AI_SPEED)
 ```
 
-`target - right.y`, raketin olmak istediği yere ne kadar uzak olduğudur. Bunu `±AI_SPEED` ile sınırlamak oraya ne
-kadar hızlı gidebileceğini kısıtlar. Bu sınır zorluğun **ta kendisidir**:
+Parça parça:
 
-- anında hareket eden bir bilgisayar hiç ıskalamaz, bu da eğlenceli değildir;
-- oyuncunun `6`'sından yavaş olan `AI_SPEED = 4` ile hızlı ve dik bir top onu yenebilir.
+- `target` (hedef) → topu raketin tam ortasına almak için raketin üst kenarının olması gereken yer: topun ortası
+  eksi raketin yarı boyu.
+- `target - right.y` → raketin hedefe uzaklığı. Artıysa aşağı, eksiyse yukarı gitmesi gerekir.
+- `clamp(..., -AI_SPEED, AI_SPEED)` → 3. adımdaki `clamp` ile bu adımı en fazla 4 piksele sınırla. Hedef 2 piksel
+  uzaktaysa 2 gider (hedefi aşmaz), 50 piksel uzaktaysa yine sadece 4 gider.
 
-Oyun yapay zekâsı nadiren akıllı olmakla ilgilidir. Asıl mesele **ilginç bir biçimde yenilebilir** olmaktır. İkinci
-bir dokunuş onu daha insansı hissettirir: topu yalnızca top kendisine doğru gelirken kovalar, yoksa bekler.
+**Zorluk bu sınırdır.** Anında ışınlanan bir rakip hiç kaçırmaz, bu da sıkıcıdır. `AI_SPEED = 4`, oyuncunun `6`'sından
+yavaştır; hızlı ve dik bir top onu geçebilir. Oyun yapay zekâsı akıllı olmakla değil, **ilginç bir şekilde
+yenilebilir olmakla** ilgilidir. Daha insanca görünsün diye bilgisayar topu sadece top ona doğru gelirken
+(`ball.vx > 0`) kovalar.
 
-İki oyunculu modu da koru: `2` tuşu bilgisayar ile ok tuşlarını kullanan ikinci bir insan arasında geçiş yapsın.
+**Açma/kapama düğmesi: `!`.** `twoPlayers` (iki oyuncu) `true` ya da `false` tutan bir değişkendir. `!` "tersi"
+demektir: `!true` → `false`. `twoPlayers = !twoPlayers` her çalıştığında değeri çevirir, lamba düğmesi gibi.
+
+```js
+if (event.key === '2') twoPlayers = !twoPlayers
+```
+
+`===` 6. adımda gördüğün "eşit mi" sorusu. Tuş adı yazı olduğu için `'2'` tırnak içinde.
+
+**Kim oynuyor?** `update()` içinde: iki oyuncu modundaysa ok tuşlarına bak; **değilse ve** top sağa gidiyorsa
+bilgisayar oynasın. Bu, 7. adımdaki `if ... else if` yapısıdır. `const target` gibi bir süslü parantez bloğunun
+içinde açılan sabit sadece o blokta yaşar.
+
+**İpucu yazısı.** 7. adımdaki `? :` ile hangi mesajın gösterileceğini seçeriz. `'#888'` orta gri renktir.
+`ctx.textAlign` skor yazısından beri zaten `'center'`, o yüzden yazı ortalanır.
 
 # --task--
 
@@ -57,13 +79,62 @@ bir dokunuş onu daha insansı hissettirir: topu yalnızca top kendisine doğru 
 
 # --task-tr--
 
-1. `const AI_SPEED = 4` ve `let twoPlayers = false` ekle. `keydown` işleyicisinde `'2'`'ye basmak `twoPlayers`'ı
-   tersine çevirmeli.
-2. `update()` içinde: `right`'ı ok tuşlarıyla yalnızca `twoPlayers` doğruysa hareket ettir. Değilse, top sağa
-   giderken (`ball.vx > 0`) `right.y`'yi `ball.y + BALL / 2 - PADDLE_H / 2`'ye doğru karede en çok `AI_SPEED` kadar
-   taşı.
-3. Alt ortaya küçük bir ipucu çiz, örneğin `'14px sans-serif'` ve `'#888'` renginde:
-   `W/S to move · press 2 for two players` (iki oyunculu modda `Two players · press 2 to play the computer`).
+1. `const PADDLE_SPEED = 6` satırının hemen altına bilgisayarın hızını ekle:
+
+   ```js
+   const AI_SPEED = 4 // slower than the player, so the computer can be beaten
+   ```
+
+2. `let ball = ...` satırının altına (`const keys = {}` satırının üstüne) şunu ekle:
+
+   ```js
+   let twoPlayers = false
+   ```
+
+3. `keydown` dinleyicisinin içine, `keys[event.key] = true` satırının altına bir satır ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === '2') twoPlayers = !twoPlayers     // ← yeni
+   })
+   ```
+
+4. `update()` içinde ok tuşlarına bakan iki satırı (`if (keys.ArrowUp) ...` ve `if (keys.ArrowDown) ...`) sil ve
+   yerine şu bloğu yaz. `update()`'in başı şöyle olmalı:
+
+   ```js
+   function update() {
+     if (keys.w) left.y -= PADDLE_SPEED
+     if (keys.s) left.y += PADDLE_SPEED
+     if (twoPlayers) {                                          // ← yeni
+       if (keys.ArrowUp) right.y -= PADDLE_SPEED
+       if (keys.ArrowDown) right.y += PADDLE_SPEED
+     } else if (ball.vx > 0) {                                  // ← yeni
+       const target = ball.y + BALL / 2 - PADDLE_H / 2         // ← yeni
+       right.y += clamp(target - right.y, -AI_SPEED, AI_SPEED)  // ← yeni
+     }                                                          // ← yeni
+     left.y = clamp(left.y, 0, canvas.height - PADDLE_H)
+   ```
+
+   Geri kalanı aynen kalır.
+
+5. `draw()` içinde, sağ skoru yazan `ctx.fillText(String(right.score), ...)` satırından sonra, fonksiyonun son
+   `}`'sinden önce bir boş satır bırak ve ipucunu ekle:
+
+   ```js
+     ctx.fillStyle = '#888'
+     ctx.font = '14px sans-serif'
+     const hint = twoPlayers ? 'Two players · press 2 to play the computer' : 'W/S to move · press 2 for two players'
+     ctx.fillText(hint, canvas.width / 2, canvas.height - 12)
+   }
+   ```
+
+   Ortadaki nokta (`·`) klavyede zorsa **Çözümü göster** ile kopyalayabilirsin; kontrol sadece `press 2`
+   kelimelerine bakar.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ raket topu kendiliğinden karşılamalı. `2`'ye basınca alttaki
+   yazı değişmeli ve sağ raket ok tuşlarıyla oynanmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

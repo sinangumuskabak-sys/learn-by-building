@@ -23,20 +23,37 @@ Walking diagonally into a wall now blocks only the part going into the wall, and
 
 # --explanation-tr--
 
-Oyuncu bir nokta ama bir nokta bir duvara o kadar yaklaşabilir ki kamera duvarın içinde kalır. Bu yüzden oyuncuya küçük
-bir gövde ver: her yönde `RADIUS = 0.2` döşeme uzanan bir kare. O karenin dört köşesinden biri bir duvar döşemesinin içindeyse
-bir konum **engellidir**.
+**Bu adımda:** duvarları sağlam yapacağız. Artık duvara yürüyünce hemen önünde duracaksın; duvara çapraz yürürsen
+de durmayıp duvar boyunca **kayacaksın**.
 
-Bunu kullanmanın saf yolu "yeni konum engelliyse hareket etme"dir. Bu kuralla bir duvara açılı yürümeyi dene: olduğun yerde
-çakılı kalırsın ve bu berbat hissettirir. Her oyunun kullandığı hile iki yönü **ayrı ayrı** denemektir:
+**Oyuncuya küçük bir gövde.** Oyuncu bir nokta, ama nokta duvara o kadar yaklaşabilir ki kamera duvarın içine girer.
+Bu yüzden oyuncuyu her yöne `RADIUS = 0.2` kare uzanan küçük bir kare gibi düşünürüz. Bu karenin **dört
+köşesinden** biri duvar karesinin içindeyse o konum **kapalıdır** (blocked).
+
+**Noktanın hangi karede olduğu.** `Math.floor` bir sayının küsuratını atar (aşağı yuvarlar): `Math.floor(4.9)` →
+`4`. Böylece `(4.9, 1.5)` noktası `MAP[1][4]` karesindedir. Önce satır (`y`), sonra sütun (`x`) yazılır; çünkü
+`MAP[satır]` bir satır yazısı, onun `[sütun]`'u bir harftir.
+
+**Kaymak için iki yönü ayrı dene.** Saf yol "yeni konum kapalıysa hiç kıpırdama"dır. Bu kuralla duvara çapraz
+yürürsen olduğun yerde çakılırsın, çok kötü hissettirir. Her oyunun kullandığı hile, iki yönü **ayrı ayrı**
+denemektir:
 
 ```js
-if (!blocked(player.x + dx, player.y)) player.x += dx   // boşsa yana
-if (!blocked(player.x, player.y + dy)) player.y += dy   // sonra boşsa aşağı
+if (!blocked(player.x + dx, player.y)) player.x += dx   // yana, boşsa
+if (!blocked(player.x, player.y + dy)) player.y += dy   // sonra aşağı, boşsa
 ```
 
-Bir duvara çapraz yürümek artık yalnızca duvara giden parçayı engeller; öbür parça seni hareket ettirmeye devam eder: duvar
-boyunca **kayarsın**. Aynı fikir duvarları olan neredeyse her oyunda, 2B ya da 3B, çalışır.
+`!` "değil" demektir: `!blocked(...)` "kapalı değilse". Duvara çapraz yürürken sadece duvara giden parça durur,
+diğer parça seni ilerletmeye devam eder: duvar boyunca **kayarsın**. Bu fikir duvarı olan neredeyse her oyunda,
+2D ya da 3D, işe yarar.
+
+**Yeni parçalar:**
+
+- **`return`**: fonksiyonun geriye cevap vermesi. `tileAt` bir harf döndürür; `blocked` `true` ya da `false`
+  döndürür. `return` çalışınca fonksiyon orada biter.
+- **Köşe listesi döngüsü:** `for (const [cx, cy] of [[-RADIUS, -RADIUS], ...])` dört köşe kaymasının her biri için
+  içeriyi çalıştırır; her çifti `cx, cy` diye açar. Bir köşe zemin (`'.'`) değilse hemen `true` döner; döngü hiç
+  `true` dönmeden biterse `false` döner.
 
 # --task--
 
@@ -46,9 +63,41 @@ boyunca **kayarsın**. Aynı fikir duvarları olan neredeyse her oyunda, 2B ya d
 
 # --task-tr--
 
-1. `RADIUS = 0.2`, `tileAt(x, y)` (o noktadaki harita karakteri) ve `blocked(x, y)` ekle: `(x ± RADIUS, y ± RADIUS)`
-   köşelerinden biri zemin değilse true.
-2. `move(dx, dy)`'yi yana ve aşağı ayrı ayrı, her biri yalnızca o konum engelli değilse hareket edecek biçimde değiştir.
+1. `const TURN = 0.04 ...` satırının altına gövde boyunu ekle:
+
+   ```js
+   const RADIUS = 0.2 // how close the player can get to a wall
+   ```
+
+2. `reset()` fonksiyonunun kapanış `}`'inin altına iki yardımcı fonksiyon yaz:
+
+   ```js
+   function tileAt(x, y) {
+     return MAP[Math.floor(y)][Math.floor(x)]
+   }
+
+   // Is any corner of the player's little square inside a wall?
+   function blocked(x, y) {
+     for (const [cx, cy] of [[-RADIUS, -RADIUS], [RADIUS, -RADIUS], [-RADIUS, RADIUS], [RADIUS, RADIUS]]) {
+       if (tileAt(x + cx, y + cy) !== '.') return true
+     }
+     return false
+   }
+   ```
+
+3. `move(dx, dy)` fonksiyonunu (üstündeki `// For now nothing stops the player.` yorumuyla birlikte) şöyle değiştir:
+
+   ```js
+   // Moving each axis on its own lets the player slide along a wall instead of sticking to it.
+   function move(dx, dy) {
+     if (!blocked(player.x + dx, player.y)) player.x += dx // ← değişti
+     if (!blocked(player.x, player.y + dy)) player.y += dy // ← değişti
+   }
+   ```
+
+4. **Çalıştır**'a bas. Oyuna tıklayıp Yukarı ok ile sağdaki duvara yürü: duvarın hemen önünde durmalısın. Duvara
+   çapraz yürüyünce boyunca kaymalısın. Alttaki kontrollerin hepsi yeşil olmalı. Duvarın içinden hâlâ geçiyorsan
+   `!` işaretlerini ve `Math.floor(y)`'nin önce yazıldığını kontrol et.
 
 # --tests--
 

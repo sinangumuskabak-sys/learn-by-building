@@ -29,25 +29,43 @@ the start of a maze is calm and it gets busier.
 
 # --explanation-tr--
 
-Hepsi oyuncuyu kovalayan dört hayalet birbirini sıra hâlinde izlerdi. Oyunu ilginç kılan, her hayaletin **farklı bir
-hedefle aynı beyni** kullanmasıdır:
+**Bu adımda:** dört hayalet olacak ve her birinin kendine özgü bir kişiliği olacak. Kırmızı hemen çıkar; pembe, turuncu
+ve camgöbeği evde bekleyip birer birer çıkar. Arada bir hepsi köşelerine dağılır, sonra yine kovalamaya başlar.
 
-- **kırmızı** oyuncuyu hedefler: doğrudan bir kovalayıcı.
-- **pembe** oyuncunun 4 döşeme **önünü** hedefler: yolunu kesmeye çalışır.
-- **turuncu** 8 döşemeden uzaktayken kovalar ama yaklaşınca köşesine gider: utangaçtır; bu da onu öngörülemez yapar.
-- **camgöbeği** oyuncunun 2 döşeme önündeki noktayı alır ve kırmızıdan o noktaya giden oku ikiye katlar. Kırmızıyla birlikte
-  öbür taraftan yaklaşır.
+**Aynı beyin, farklı hedef.** Hepsi oyuncuyu kovalasaydı arka arkaya dizilip tek sıra halinde gelirlerdi. Oyunu ilginç
+yapan şey, hepsinin **aynı beyni farklı bir hedefle** kullanmasıdır. Sadece `target(g)`'yi değiştiririz:
 
-Her 27 saniyede bir hayaletler iki **mod** arasında da geçiş yapar: her birinin kendi köşesine gittiği 7 saniyelik
-**dağılma** ve 20 saniyelik **kovalama**. Dağılma oyuncuya nefes aldırır ve hayaletlerin kümelenmek yerine yayılmasını
-sağlar. Tekrarlayan bir takvim için tek bir `clock` sayacı ve `%` yeter:
+- **kırmızı** (red) oyuncuyu hedefler: doğrudan kovalar.
+- **pembe** (pink) oyuncunun **4 kare önünü** hedefler: önünü kesmeye çalışır. Oyuncunun yönünü 4 ile çarpıp konumuna
+  ekleriz: `player.col + player.dir[0] * 4`.
+- **turuncu** (orange) 8 kareden uzaktayken kovalar, yaklaşınca kendi köşesine kaçar: utangaçtır, bu yüzden ne yapacağı
+  kestirilemez. Uzaklığın karesini 64 (8 × 8) ile karşılaştırırız.
+- **camgöbeği** (cyan) oyuncunun 2 kare önündeki noktayı alır ve kırmızıdan o noktaya giden oku **iki katına** uzatır.
+  Kırmızıyla birlikte oyuncuyu öbür taraftan kıstırır. Hesap: `2 * nokta - kırmızı`.
+
+**Dağılma ve kovalama.** Her 27 saniyede hayaletler iki **mod** arasında geçiş yapar: 7 saniye **dağılma** (scatter),
+her biri kendi köşesine gider; sonra 20 saniye **kovalama** (chase). Dağılma oyuncuya nefes aldırır ve hayaletlerin
+kümelenmesini önler. Tekrarlayan bir takvim için tek bir sayaç (`clock`, her karede 1 artar) ve `%` yeter:
 
 ```js
 clock % CYCLE < SCATTER ? 'scatter' : 'chase'
 ```
 
-Son olarak hayaletler artık hep birden başlamaz. Evde beklerler (`waiting` kare) ve birer birer çıkarlar; böylece bir
-labirentin başı sakin geçer ve giderek kalabalıklaşır.
+Saniyede yaklaşık 60 kare çizildiği için 7 saniye = 420 kare (`SCATTER`), 27 saniye = 1620 kare (`CYCLE`). `%` bölümden
+kalanı verir: `clock` 1620'ye gelince kalan yeniden 0'dan başlar, takvim tekrarlanır.
+
+**Evden birer birer.** Hayaletler artık aynı anda başlamaz. Evde beklerler (`waiting` kare sayar) ve teker teker çıkarlar;
+labirentin başı sakin geçer, sonra kalabalıklaşır. Bekleme sayacı 0'a inince `release(g)` hayaleti evin üstündeki
+çıkış karesine koyar.
+
+**Yeni araçlar:**
+
+- `GHOSTS.map((g, i) => ...)` → `map`'in ikinci parametresi `i`, öğenin sıra numarasıdır (0, 1, 2, 3). `8 + (i % 3)`
+  hayaletleri evin içinde 8, 9, 10, 8. sütunlara dağıtır.
+- `Object.assign(g, { col: ..., row: ... })` → `g` nesnesinin bu bilgilerini tek seferde değiştirir, diğerlerine
+  dokunmaz.
+- `continue` → döngüde "bu hayaleti burada bırak, sıradakine geç". Bekleyen hayalet yürümez.
+- `ghosts[0]` → listedeki ilk hayalet, yani kırmızı.
 
 # --task--
 
@@ -61,13 +79,91 @@ labirentin başı sakin geçer ve giderek kalabalıklaşır.
 
 # --task-tr--
 
-1. `GHOSTS`'u çözümdeki dört hayaletle değiştir (her birinin bir `corner`'ı ve bir `delay`'i var); `SCATTER = 420` ve
-   `CYCLE = 1620` ekle.
-2. `placeActors()` içinde hayaletler evde başlar (`col: 8 + (i % 3)`, `row: 9`, `dir: STOP`), `waiting: g.delay` ile;
-   bir hayaleti sola dönük olarak `EXIT`'e koyan `release(g)` yaz ve bekleyecek bir şeyi olmayanları hemen çıkar. `clock`'u
-   `0`'a sıfırla.
-3. Her karede `clock`'a 1 ekle. Bekleyen bir hayalet hareket etmek yerine geri sayar ve `0`'a ulaşınca çıkar.
-4. `mode()` yaz ve `target(g)` içinde: dağılmada hayaletin köşesi; kovalamada yukarıda anlatılan hedefler.
+1. `const GHOSTS = [{ name: 'red', color: '#ef4444' }]` satırını dört hayaletli listeyle değiştir ve altına iki süre
+   ekle:
+
+   ```js
+   const GHOSTS = [
+     { name: 'red', color: '#ef4444', corner: { col: 18, row: 0 }, delay: 0 },
+     { name: 'pink', color: '#f9a8d4', corner: { col: 0, row: 0 }, delay: 120 },
+     { name: 'orange', color: '#fb923c', corner: { col: 0, row: 20 }, delay: 300 },
+     { name: 'cyan', color: '#22d3ee', corner: { col: 18, row: 20 }, delay: 480 },
+   ]
+   const SCATTER = 420 // frames of scatter at the start of every 27-second cycle
+   const CYCLE = 1620
+   ```
+
+   `corner` dağılırken gideceği köşe, `delay` evde kaç kare bekleyeceği.
+
+2. `let level` satırının hemen altına sayacı ekle:
+
+   ```js
+   let clock // frames played on this life, for the scatter / chase cycle
+   ```
+
+3. `placeActors` içindeki `ghosts = ...` satırını değiştir, altına iki satır ekle; fonksiyonun kapanışından sonra da
+   `release`'i yaz:
+
+   ```js
+     ghosts = GHOSTS.map((g, i) => ({ ...g, col: 8 + (i % 3), row: 9, dir: STOP, progress: 0, frames: 10, waiting: g.delay })) // ← değişti
+     for (const g of ghosts) if (g.waiting === 0) release(g) // ← yeni
+     clock = 0                                               // ← yeni
+   }
+
+   // Out of the house: the ghost starts on the tile above it, heading left.
+   function release(g) {
+     Object.assign(g, { col: EXIT.col, row: EXIT.row, dir: [-1, 0], progress: 0 })
+   }
+   ```
+
+4. `function target(g)`'den hemen önce mod fonksiyonunu yaz ve `target`'ı şu hâle getir:
+
+   ```js
+   function mode() {
+     return clock % CYCLE < SCATTER ? 'scatter' : 'chase'
+   }
+
+   function target(g) {
+     if (mode() === 'scatter') return g.corner                                                          // ← yeni
+     if (g.name === 'pink') return { col: player.col + player.dir[0] * 4, row: player.row + player.dir[1] * 4 } // ← yeni
+     if (g.name === 'orange') {                                                                          // ← yeni
+       const far = (g.col - player.col) ** 2 + (g.row - player.row) ** 2 > 64
+       return far ? player : g.corner
+     }
+     if (g.name === 'cyan') {                                                                            // ← yeni
+       // Double the arrow from the red ghost to two tiles ahead of the player: it cuts the player off from the other side.
+       const red = ghosts[0]
+       return { col: 2 * (player.col + player.dir[0] * 2) - red.col, row: 2 * (player.row + player.dir[1] * 2) - red.row }
+     }
+     return player
+   }
+   ```
+
+5. `update` fonksiyonunu şu hâle getir: saat her karede ilerlesin, bekleyen hayalet saysın ve sırası gelince çıksın:
+
+   ```js
+   function update() {
+     clock += 1 // ← yeni
+
+     const startLevel = level
+     advance(player, choosePlayer)
+     if (level !== startLevel) return
+
+     for (const g of ghosts) {    // ← değişti
+       if (g.waiting > 0) {
+         g.waiting -= 1
+         if (g.waiting === 0) release(g)
+         continue
+       }
+       advance(g, chooseGhost)
+     }
+   }
+   ```
+
+6. **Çalıştır**'a bas. Kırmızı hayalet hemen çıkmalı, diğer üçü evde beklemeli ve 2, 5, 8 saniye sonra teker teker
+   çıkmalı. İlk 7 saniye köşelerine gittiklerini, sonra seni kovaladıklarını görmelisin. Alttaki kontrollerin hepsi
+   yeşil olmalı. Kırmızı kalırsa camgöbeği satırındaki parantezlere ve `GHOSTS` sırasına (red, pink, orange, cyan)
+   bak.
 
 # --tests--
 

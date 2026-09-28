@@ -21,18 +21,33 @@ multiplier as well as the note. Tension comes from one small formula.
 
 # --explanation-tr--
 
-Ritim oyunları **serileri** ödüllendirir. Kombo art arda vuruşları sayar ve bir ıskada sıfıra döner. Art arda her on vuruş puan
-**çarpanını** bir artırır, dörde kadar:
+**Bu adımda:** puan ve **kombo** ekleyeceğiz. Sol üstte `Score 1200` gibi bir puan, sağ üstte `Combo 4  x1` gibi art
+arda vuruş sayısı ve puan çarpanı göreceksin. Iskalayınca kombo sıfırlanacak.
+
+**Seri ödülü.** Ritim oyunları art arda başarıyı ödüllendirir. **Kombo** (`combo`), hiç ıskalamadan üst üste kaç vuruş
+yaptığını sayar; bir ıskada sıfıra döner. Kombodaki her on vuruş puan **çarpanını** bir artırır, en fazla dörde kadar:
 
 ```js
 const multiplier = () => Math.min(4, 1 + Math.floor(combo / 10))
 ```
 
-`Math.floor(combo / 10)`, komboda kaç tam on olduğudur; `Math.min` onu sınırlar. Bir kusursuz 300, bir iyi 100 değerindedir; ikisi de o
-anki çarpanla çarpılır.
+Parça parça:
 
-Bu oyunun hissini değiştirir: uzun bir serinin sonlarında her nota dört kat önemlidir ve tek bir ıska notanın yanında çarpana da mal
-olur. Gerilim tek bir küçük formülden gelir.
+- `() => ...` → parametresi olmayan tek satırlık bir fonksiyon (ok fonksiyonu); `=>`'dan sonraki değeri geri verir.
+  `multiplier()` diye çağrılır.
+- `combo / 10` → komboyu 10'a böl: 27 → 2.7.
+- `Math.floor(...)` → küsuratı at: 2.7 → 2. Yani komboda kaç tam onluk var.
+- `1 + ...` → çarpan 1'den başlar: 0–9 kombo ×1, 10–19 ×2, 20–29 ×3...
+- `Math.min(4, ...)` → iki sayıdan küçüğü: çarpan asla 4'ü geçmez.
+
+**Puan.** Perfect 300, Good 100 değerindedir; ikisi de o anki çarpanla çarpılır. Önce kombo artar, sonra puan
+hesaplanır; yani onuncu vuruş zaten ×2 sayılır.
+
+Bu küçük formül oyunun hissini değiştirir: uzun bir serinin sonunda her nota dört kat önemlidir ve tek bir ıska hem
+notayı hem çarpanı kaybettirir. Heyecan bir satırdan doğar.
+
+**Sağa yaslı yazı.** `ctx.textAlign = 'right'` verilen `x`'in yazının **sağ ucu** olmasını sağlar; böylece kombo yazısı
+ne kadar uzarsa uzasın sağ kenardan 12 piksel içeride biter.
 
 # --task--
 
@@ -43,10 +58,68 @@ olur. Gerilim tek bir küçük formülden gelir.
 
 # --task-tr--
 
-1. `score` ve `combo` (`reset()`'te `0`) ve `multiplier()` ekle.
-2. Bir vuruş `combo`'ya 1 ekler ve kombo büyüdükten sonra hesaplanan `multiplier()` ile çarpılmış 300 (kusursuz) ya da 100 (iyi) puan
-   getirir. Bir ıska `combo = 0` yapar.
-3. `(12, 24)`'e `Score 1200` ve `(canvas.width - 12, 24)`'e sağa hizalı `Combo 4  x1` çiz.
+1. `let frame` satırının altına iki değişken ekle:
+
+   ```js
+   let score
+   let combo
+   ```
+
+2. `reset()` içinde, `frame = 0` satırının altına ikisini sıfırla:
+
+   ```js
+     frame = 0
+     score = 0                 // ← yeni
+     combo = 0                 // ← yeni
+   ```
+
+3. `const noteY = ...` satırından sonra bir boş satır bırak ve (`function judge`'ın **üstüne**) çarpanı yaz:
+
+   ```js
+   const multiplier = () => Math.min(4, 1 + Math.floor(combo / 10))
+   ```
+
+4. `press()`'in sonunda komboyu artır ve puanı ekle:
+
+   ```js
+     closest.hit = true
+     combo += 1                                   // ← yeni
+     if (off <= PERFECT) {
+       judged.perfect += 1
+       score += 300 * multiplier()                // ← yeni
+       judge('Perfect', '#fde047')
+     } else {
+       judged.good += 1
+       score += 100 * multiplier()                // ← yeni
+       judge('Good', '#86efac')
+     }
+   }
+   ```
+
+5. `update()` içinde ıskayı sayan bloğa komboyu sıfırlayan satırı ekle:
+
+   ```js
+       if (!n.hit && frame - n.time > GOOD) {
+         n.hit = true
+         judged.miss += 1
+         combo = 0                                // ← yeni
+         judge('Miss', '#f87171')
+       }
+   ```
+
+6. `draw()`'un son satırını (`ctx.fillText(judged.perfect + ' perfect  ' ...)`) sil ve yerine üç satır yaz:
+
+   ```js
+     ctx.fillText('Score ' + score, 12, 24)                                          // ← değişti
+     ctx.textAlign = 'right'                                                         // ← yeni
+     ctx.fillText('Combo ' + combo + '  x' + multiplier(), canvas.width - 12, 24)    // ← yeni
+   }
+   ```
+
+   `'  x'`'in başında **iki** boşluk var: `Combo 4  x1`.
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Vurdukça puan ve kombo artmalı; bir notayı kaçırınca kombo 0'a
+   inmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

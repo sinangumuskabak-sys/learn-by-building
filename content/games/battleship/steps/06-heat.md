@@ -21,19 +21,48 @@ computer is using against you, drawn over your own sea: the brighter the orange,
 
 # --explanation-tr--
 
-Avla ve hedefle hâlâ **rastgele** avlanır. Bilgisayar bir şeye isabet etmeden önce bir geminin nerede olmasının *daha olası* olduğunu
-bilebilir mi?
+**Bu adımda:** bilgisayar gemilerinin **nerede olma ihtimalinin yüksek** olduğunu sayarak bulacak. H tuşuna basınca
+küçük denizinin üstünde turuncu bir **ısı haritası** göreceksin: turuncu ne kadar parlaksa, bilgisayar orada gemi
+olduğuna o kadar inanıyor.
 
-Evet, sayarak. Hâlâ yüzen her gemi için denizdeki **her olası konumu** dene: her başlangıç karesi, yatay ve dikey. İmkânsız konumları
-at (denizin dışı, bir ıskanın üstü, batmış bir geminin üstü). Kalan her konum, karelerinin her birine 1 ekler. Sonuç bir
-**ısı haritasıdır**: bir karedeki sayı, bir geminin onu kaç şekilde kaplayabileceğidir.
+**Saymak, tahmin etmekten iyidir.** Av ve hedef hâlâ **rastgele** avlanıyor. Bilgisayar daha hiçbir şeyi vurmadan bir
+geminin nerede olmasının *daha olası* olduğunu bilebilir mi? Evet, sayarak. Hâlâ yüzen her gemi için denizdeki **her
+olası yerleşimi** dene: her başlangıç karesi, yatay ve dikey. İmkânsız olanları at (denizden taşan, bir ıskanın ya da
+batmış bir geminin üstüne gelen). Kalan her yerleşim, kapladığı her kareye 1 ekler. Sonuç bir **ısı haritasıdır**: bir
+karedeki sayı, bir geminin o kareyi kaç farklı şekilde kaplayabileceğidir.
 
-Boş bir denizde bile düz değildir: bir köşeden çok ortadan geçen konum vardır, bu yüzden orta daha sıcaktır. Bir ıskadan sonra
-çevresindeki kareler soğur, çünkü oraya daha az gemi sığar. Bir isabetten (henüz batmamış bir gemiye) geçen konumlar ise en olası
-olanlardır, bu yüzden 50 kat fazla sayılır. Bilgisayar yalnızca en sıcak kareye ateş eder.
+Boş denizde bile düz değildir: ortadan köşeden daha çok yerleşim geçer, bu yüzden orta daha sıcaktır. Bir ıskadan sonra
+çevresi soğur, çünkü oraya daha az gemi sığar. Batmamış bir gemideki isabetten geçen yerleşimler ise en olası olanlardır,
+bu yüzden 50 kat fazla sayılır: `1 + hits * 50`. Bilgisayar sadece en sıcak kareye ateş eder. En güçlü Amiral Battı
+programları böyle oynar; ortalama yaklaşık 44 atışa iner.
 
-En güçlü Amiral Battı programları böyle oynar ve bu, ortalamayı yaklaşık 44 atışa indirir. Bilgisayarın sana karşı kullandığı
-haritayı kendi denizinin üstünde görmek için H'ye bas: turuncu ne kadar parlaksa o kadar olası.
+**Yeni araçlar:**
+
+- **Küme (`Set`).** Tekrarsız bir torba. `set.has(x)` "x torbada var mı?" diye çok hızlı cevap verir. Batmış gemilerin
+  karelerini buraya koyarız. Bir kareyi tek sayıyla anarız: `r * N + c` (örneğin `(2, 5)` → 25); her kare için farklı
+  bir sayı çıkar.
+- **`flat` ve `flatMap`.** `[[1, 2], [3]].flat()` → `[1, 2, 3]`: liste içindeki listeleri tek listeye düzler.
+  `flatMap` önce `map` yapar, sonra düzler. `heat.flat()` 10×10 tabloyu 100 sayılık tek listeye çevirir.
+- **Isıyı sıfırlamak.** Zaten ateş edilmiş karelerin ısısını en sonda 0 yaparız; oraya bir daha ateş edilmesin.
+
+**En sıcak kareyi seçmek.** Bütün kareleri dolaşırız; şimdiye kadarkinden daha sıcak bir kare görünce onu tutarız.
+`let bestCell = null` "henüz seçilen yok" demektir; `!bestCell ||` ilk kareyi kesinlikle almamızı sağlar. Eşitlikte
+ilk bulunan kalır, çünkü `>` eşitlerde yanlıştır. Artık `pickSquare` ve `untried` gerekmez; siliyoruz.
+
+**H ile aç-kapa.** `showHeat = !showHeat` → `!` değeri tersine çevirir: `true` ise `false`, `false` ise `true` olur.
+`else if` bir `if`'e ikinci bir koşul ekler: "Enter değilse, H mi?". `'h' || 'H'` küçük ve büyük harfin ikisini de kabul
+eder.
+
+**Renk yazısını hesaplamak.** Isı rengi `rgba(249, 115, 22, a)`: turuncu ve saydamlık `a` (0 saydam, 1 opak). Sıcaklık
+arttıkça `a` 0.15'ten 1'e çıkar. Yazıya bir hesabın sonucunu koymak için ters tırnak (`` ` ``) kullanılır:
+
+```js
+`rgba(249, 115, 22, ${sayi})`
+```
+
+Ters tırnaklı yazıda `${ ... }` içine yazılan hesaplanıp yazıya yerleştirilir (**şablon yazı**, template literal).
+`.toFixed(2)` sayıyı virgülden sonra 2 haneye yuvarlar: `0.4666` → `'0.47'`. `Math.max(1, ...heat.flat())` en yüksek
+ısıyı bulur (en az 1, sıfıra bölmemek için). `drawSea` altıncı parametre olarak bir ısı haritası ya da `null` alır.
 
 # --task--
 
@@ -48,13 +77,113 @@ haritayı kendi denizinin üstünde görmek için H'ye bas: turuncu ne kadar par
 
 # --task-tr--
 
-1. `heatMap()`'i yaz: `grid(0)`'dan başla; `myFleet`'in batmamış her gemisi için her `(r, c)` başlangıcı ve iki yön için, denizin dışındaki
-   ya da bir ıskanın veya batmış bir geminin karesinin üstündeki konumları atla; değilse karelerinin her birine `1 + hits * 50` ekle;
-   burada `hits` onlardan kaçının zaten isabet olduğudur. Sonunda zaten ateş edilmiş her kareyi 0 yap.
-2. `computerShoots()` artık ısısı en yüksek kareye ateş eder (eşitlikte bulunan ilkine). `pickSquare` ve `untried` artık gerekmez.
-3. `showHeat` ekle (`reset()`'te `false`), H ile açılıp kapanır. `drawSea` altıncı bir parametre alır, bir ısı haritası ya da `null`:
-   ısısı olan bir kare `rgba(249, 115, 22, a)` ile doldurulur; `a = 0.15 + 0.85 × ısı / (en yüksek ısı)` (iki ondalık). Senin denizin
-   `showHeat` iken `heatMap()` ile çizilir ve yanında `H: their heat map` gösterilir.
+1. `let shots ...` satırının altına ekle:
+
+   ```js
+   let showHeat
+   ```
+
+   `reset()`'in sonuna, `shots = 0` satırının altına `showHeat = false` ekle.
+
+2. `untried`, `pickSquare` ve `computerShoots`'u (üstlerindeki yorumlarla birlikte) sil. Yerlerine şu iki fonksiyonu
+   yaz (`update()` fonksiyonunun üstünde kalacaklar):
+
+   ```js
+   // How many ways could the ships still afloat lie on the sea, given what the computer knows?
+   // Every placement that avoids misses and sunk ships adds 1 to each of its squares; placements through a hit that
+   // is not sunk yet are far more likely, so they count much more. The most counted square is the best shot.
+   function heatMap() {
+     const heat = grid(0)
+     const sunkCells = new Set(myFleet.filter(sunk).flatMap((s) => s.cells.map(([r, c]) => r * N + c)))
+     const afloat = myFleet.filter((s) => !sunk(s)).map((s) => s.cells.length)
+     for (const length of afloat) {
+       for (let r = 0; r < N; r++) {
+         for (let c = 0; c < N; c++) {
+           for (const down of [false, true]) {
+             const cells = shipCells(r, c, length, down)
+             if (cells.some(([cr, cc]) => cr >= N || cc >= N)) continue
+             if (cells.some(([cr, cc]) => theirShots[cr][cc] === 'miss' || sunkCells.has(cr * N + cc))) continue
+             const hits = cells.filter(([cr, cc]) => theirShots[cr][cc] === 'hit').length
+             for (const [cr, cc] of cells) heat[cr][cc] += 1 + hits * 50
+           }
+         }
+       }
+     }
+     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (theirShots[r][c]) heat[r][c] = 0
+     return heat
+   }
+
+   function computerShoots() {
+     const heat = heatMap()
+     let bestCell = null
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         if (!bestCell || heat[r][c] > heat[bestCell.r][bestCell.c]) bestCell = { r, c }
+       }
+     }
+     const result = fire(myFleet, theirShots, bestCell.r, bestCell.c)
+     message = result === 'sunk' ? 'They sank your ship!' : 'Your turn: pick a square'
+     if (myFleet.every(sunk)) {
+       state = 'lost'
+       message = 'They sank your fleet'
+       return
+     }
+     turn = 'you'
+   }
+   ```
+
+   `heatMap` içindeki dört döngü: kalan her gemi uzunluğu, her satır, her sütun ve iki yön (`[false, true]`: yatay,
+   dikey) için bir yerleşim dener.
+
+3. Enter'ı dinleyen `keydown` bloğuna H için bir satır ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'Enter' && state !== 'playing') reset()
+     else if (event.key === 'h' || event.key === 'H') showHeat = !showHeat // ← yeni
+     else return
+     event.preventDefault()
+   })
+   ```
+
+4. `drawSea`'nın ilk satırını değiştir, altına `max`'ı ekle; kare rengini seçen satırların altına da ısı rengini ekle:
+
+   ```js
+   function drawSea(origin, size, shotsGrid, fleet, showShips, heat) { // ← değişti
+     const max = heat ? Math.max(1, ...heat.flat()) : 1 // ← yeni
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         const x = origin.x + c * size
+         const y = origin.y + r * size
+         ctx.fillStyle = '#1e3a8a'
+         if (showShips && shipAt(fleet, r, c)) ctx.fillStyle = '#64748b'
+         // The heat map: brighter where the computer thinks a ship is more likely.
+         if (heat && heat[r][c] > 0) ctx.fillStyle = `rgba(249, 115, 22, ${(0.15 + (0.85 * heat[r][c]) / max).toFixed(2)})` // ← yeni
+         ctx.fillRect(x + 1, y + 1, size - 2, size - 2)
+   ```
+
+   Fonksiyonun geri kalanı aynı kalır.
+
+5. `draw()` içinde iki `drawSea` çağrısına altıncı değeri ekle:
+
+   ```js
+     drawSea(SEA, BIG, myShots, enemyFleet, false, null) // ← değişti
+   ```
+
+   ```js
+     drawSea(HOME, SMALL, theirShots, myFleet, true, showHeat ? heatMap() : null) // ← değişti
+   ```
+
+6. `draw()`'un son satırını iki satırla değiştir (ipucu yazısı eklenir, "again" yazısı bir satır aşağı iner):
+
+   ```js
+     ctx.fillText('H: their heat map', x, HOME.y + 60) // ← yeni
+     if (state !== 'playing') ctx.fillText('Tap or Enter: again', x, HOME.y + 82) // ← değişti
+   ```
+
+7. **Çalıştır**'a bas. Küçük denizin sağında `H: their heat map` yazmalı. Oynamak için önce oyuna tıkla, sonra H'ye
+   bas: küçük denizin turuncu tonlarla boyanmalı, ortası köşelerden parlak olmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Renk hiç görünmüyorsa renk satırında düz tırnak yerine **ters tırnak** (`` ` ``) kullandığından emin ol.
 
 # --tests--
 

@@ -34,32 +34,43 @@ graph search. Swap the stack for a queue and you have breadth-first search, used
 
 # --explanation-tr--
 
-Gerçek Mayın Tarlası'nda bir `0`'a tıkla, bütün bir alan açılır. `0`, "çevremde mayın yok" demektir; yani bütün
-komşularını açmak güvenlidir, ve **onlardan** biri `0` ise onun komşuları da güvenlidir, ve böyle devam eder. Bu
-yayılmaya **taşma dolgusu** (flood fill) denir; bir çizim programındaki boya kovasıyla aynı algoritmadır.
+**Bu adımda:** boş bir hücreye (sayısı 0 olana) tıklayınca koca bir alanın birden açılmasını sağlayacağız. İlk
+tıklamada tahtanın büyük bir parçası açılacak ve açılan alanın kenarında sayılar dizilecek.
 
-İlk akla gelen fikir özyinelemedir: `reveal` her komşu için kendini çağırır. Küçük bir tahtada çalışır, ama her çağrı
-çağrı yığınında bekler ve büyük boş bir tahtada binlerce iç içe çağrı yığını taşırabilir. Sağlam sürüm, hâlâ ziyaret
-edilecek hücrelerin **kendi** listesini tutar, bir *yığın*:
+**Neden?** `0` "çevremde hiç mayın yok" demektir; yani bütün komşuları açmak güvenlidir. O komşulardan biri de `0`
+ise onun komşuları da güvenlidir, böyle yayılır gider. Bu yayılmaya **taşma dolgusu** (flood fill) denir; resim
+programlarındaki boya kovası aynı şeyi yapar.
+
+**Yapılacaklar listesi (yığın, stack).** Açılacak hücreleri bir listede biriktiririz. Masadaki kâğıt yığını gibi
+düşün: en üste kâğıt koyarsın (`push`), en üsttekini alırsın (`pop`). Liste boşalana kadar şunu tekrarlarız: bir
+hücre al, aç, sıfırsa komşularını listeye ekle.
 
 ```js
 const stack = [start]
 while (stack.length > 0) {
   const cell = stack.pop()
-  if (cell.revealed) continue           // zaten yapıldı (iki kez eklenmiş olabilir)
-  cell.revealed = true
-  if (cell.count === 0) {
-    for (const next of neighbors(cell)) if (!next.revealed && !next.mine) stack.push(next)
-  }
+  ...
 }
 ```
 
-Yalnızca `0` hücreler yayılır; sayılı hücreler açılır ama dolguyu durdurur. Tahtanın sayılardan bir "kıyı şeridine"
-kadar açılmasının nedeni tam da budur.
+Bunu parça parça okuyalım:
 
-"Ziyaret edilecek şeylerin bir listesi ve birini alıp işleyen, yenilerini ekleyen bir döngü" kalıbı, çizge aramanın
-kalbidir. Yığını bir kuyrukla değiştir, haritalarda ve labirentlerde yol bulmada kullanılan genişlik öncelikli aramayı
-elde edersin.
+- `const stack = [start]` → liste tıklanan hücreyle başlar.
+- `while (koşul) { ... }` → **while döngüsü**: koşul doğru olduğu sürece içini tekrar tekrar çalıştırır.
+  `stack.length > 0` "listede hâlâ hücre var" demektir (`>` büyüktür).
+- `stack.pop()` → listenin **son** elemanını çıkarır ve verir.
+- `if (cell.revealed) continue` → bu hücre zaten açıldıysa (listeye iki kez eklenmiş olabilir) atla, sonrakine geç.
+- `cell.revealed = true` → hücreyi aç.
+- `if (cell.count === 0)` → yalnız **0** hücreleri yayılır. Sayılı hücre açılır ama yayılmayı durdurur; açılan alanın
+  kenarında sayıların dizilmesinin sebebi budur.
+- İçteki `for` döngüsü komşuları gezer; kapalı (`!next.revealed`) ve mayınsız (`!next.mine`) olanları listeye ekler.
+
+**Neden fonksiyonun kendini çağırması değil?** İlk akla gelen, `reveal`'ın her komşu için kendini yeniden çağırmasıdır.
+Küçük tahtada çalışır, ama her çağrı bir öncekinin bitmesini bekler; çok büyük boş bir tahtada binlerce iç içe
+bekleyen çağrı tarayıcının sınırını aşıp hataya yol açabilir. Kendi listemizi tutmak bu sorunu yaşamaz.
+
+"Gezilecekler listesi + birini alıp işleyen ve yenilerini ekleyen döngü" kalıbı, haritalarda ve labirentlerde yol
+bulmanın da temelidir.
 
 # --task--
 
@@ -68,8 +79,38 @@ area around it, stopping at numbered cells and never opening a mine.
 
 # --task-tr--
 
-`reveal()` içinde "hücreyi açık işaretle"yi yukarıdaki yığın tabanlı taşma dolgusuyla değiştir; böylece bir `0`'ı açmak
-çevresindeki alanı da açsın, sayılı hücrelerde dursun ve asla bir mayını açmasın.
+1. `reveal(start)` fonksiyonunda en alttaki `start.revealed = true` satırını sil ve yerine taşma dolgusunu yaz.
+   Fonksiyon şöyle olmalı:
+
+   ```js
+   function reveal(start) {
+     if (start.revealed) return
+     if (state === 'ready') {
+       placeMines(start)
+       state = 'playing'
+     }
+     if (start.mine) {
+       lose()
+       return
+     }
+     // Flood fill with our own stack: open the cell, and keep opening around every empty (0) cell. // ← yeni
+     const stack = [start] // ← yeni
+     while (stack.length > 0) { // ← yeni
+       const cell = stack.pop() // ← yeni
+       if (cell.revealed) continue // ← yeni
+       cell.revealed = true // ← yeni
+       if (cell.count === 0) { // ← yeni
+         for (const next of neighbors(cell)) { // ← yeni
+           if (!next.revealed && !next.mine) stack.push(next) // ← yeni
+         } // ← yeni
+       } // ← yeni
+     } // ← yeni
+   }
+   ```
+
+2. **Çalıştır**'a bas ve bir hücreye tıkla. İlk tıklama her zaman bir `0`'dır, bu yüzden geniş bir alan açılmalı ve
+   kenarında sayılar görünmeli. Alttaki kontrollerin hepsi yeşil olmalı. Tarayıcı donarsa `continue` satırını
+   unutmuş olabilirsin.
 
 # --tests--
 

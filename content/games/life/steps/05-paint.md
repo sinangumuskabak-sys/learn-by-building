@@ -28,26 +28,47 @@ Two more keys: C clears the world (and stops it), R throws in a new random soup.
 
 # --explanation-tr--
 
-Rastgele çorba eğlenceli ama asıl oyun kendi desenlerini çizip ne yaptıklarını izlemektir. Bir tıklama bir hücreyi tersine
-çevirmeli, **sürüklemek** de bir hücre çizgisi boyamalı.
+**Bu adımda:** kendi desenlerini çizebileceksin. Bir hücreye tıklamak onu canlandıracak (ya da silecek), basılı tutup
+sürüklemek bir çizgi boyayacak. **C** dünyayı temizleyecek, **R** yeniden rastgele dolduracak.
 
-Sürüklemenin olaylar arasında bir şey hatırlaması gerekir: işaretçi basılı mı ve ne boyuyoruz? Tek değişken ikisini birden
-yapar. İşaretçi yukarıdayken `painting` `null`'dır. `pointerdown`'da basılan hücrenin **tersi** olur: ölü bir hücreye basmak
-canlı boyar, canlı bir hücreye basmak siler. Sonra her `pointermove`, işaretçinin altındaki hücreye `painting`'i yazar ve
-`pointerup` onu yeniden `null` yapar.
+**Fare ve parmak olayları.** Tarayıcı, fare ya da dokunmatik için üç olay (event) yayar: `pointerdown` (bastın),
+`pointermove` (hareket ettirdin), `pointerup` (bıraktın). 2. adımda `keydown` için yaptığımız gibi
+`addEventListener` ile dinleriz.
+
+**Tıklanan yer canvas'ın neresi?** Olay bize yeri **sayfaya göre** verir: `event.clientX`, `event.clientY`. Canvas
+sayfada başka bir yerde durur ve ekrana sığsın diye büyütülmüş ya da küçültülmüş olabilir. `toCanvas(event)` bunu
+düzeltir:
+
+- `canvas.getBoundingClientRect()` canvas'ın sayfadaki kutusunu verir: `left` (sol kenarı), `top` (üst kenarı), `width`,
+  `height` (ekrandaki boyu).
+- `event.clientX - rect.left` → canvas'ın sol kenarından kaç piksel içeride.
+- `* canvas.width / rect.width` → ekrandaki pikseli canvas'ın kendi pikseline çevirir (canvas iki kat büyük gösteriliyorsa
+  yarıya indirir).
+- Sonuç `{ x: ..., y: ... }` biçiminde bir nesnedir (4. adımdaki gibi anahtar–değer).
+
+**Hangi hücre?** `cellAt(point)` noktayı hücreye çevirir. `Math.floor` sayıyı aşağı yuvarlar: `Math.floor(3.9)` = 3.
+`x = 85` ise `85 / 8` = 10.6, aşağı yuvarlayınca sütun 10. Satır için önce üstteki `TOP` boşluğunu çıkarırız.
+
+- Parantezdeki `{ x, y }` → "gelen nesnenin `x`'ini ve `y`'sini al, bu adlarla kullan".
+- `{ r, c }` kısa yazımdır, `{ r: r, c: c }` demektir.
+- Nokta ızgaranın dışındaysa `null` döneriz. `null` "hiçbir şey" demektir.
+
+**Sürüklerken ne boyuyoruz?** `painting` değişkeni iki işi birden yapar:
+
+- `null` ise parmak kalkık, hiçbir şey boyanmıyor.
+- Basınca, basılan hücrenin **tersi** olur: ölü hücreye bastıysan `1` (canlı boya), canlıya bastıysan `0` (silgi).
 
 ```js
 painting = grid[cell.r][cell.c] ? 0 : 1
 ```
 
-Neden işaretçinin geçtiği her hücreyi tersine çevirmek yerine başta bir kez karar veriyoruz? Çünkü yavaş bir sürükleme aynı
-hücre üzerinde birkaç hareket olayı üretir ve tersine çevirmek onu açık, kapalı, açık... yapardı. Tek bir değer boyamak
-kararlıdır.
+Sonra her `pointermove`'da parmağın altındaki hücreye bu değer yazılır; bırakınca yine `null` olur. Neden her hücreyi
+çevirmiyoruz? Yavaş sürüklerken aynı hücrede birkaç hareket olayı gelir; çevirseydik aç–kapa–aç yapardı.
 
-`pointerup`'ı canvas'ta değil **document**'ta dinle: oyuncu canvas'ın dışında bırakırsa canvas bunu hiç duymaz ve oyun boyamaya
-devam ederdi.
+`pointerup`'ı canvas'ta değil **document**'te (bütün sayfada) dinleriz: oyuncu parmağını canvas'ın dışında kaldırırsa
+canvas bunu duymaz ve boyamaya devam ederdi.
 
-İki tuş daha: C dünyayı temizler (ve durdurur), R yeni bir rastgele çorba atar.
+`painting === null` → "`painting` hiçbir şey mi?". `!==` ise "eşit değil mi?" diye sorar.
 
 # --task--
 
@@ -61,12 +82,79 @@ devam ederdi.
 
 # --task-tr--
 
-1. `toCanvas(event)` (canvas piksellerinde işaretçi) ve `cellAt(point)` (altındaki `{ r, c }`, ızgaranın dışında `null`) yaz.
-2. `painting = null` ekle. Bir hücre üzerinde `pointerdown`'da `painting`'i o hücrenin tersi yap ve hücreye yaz.
-   `pointermove`'da, `painting` `null` değilken, onu işaretçinin altındaki hücreye yaz. Document'ın `pointerup`'ında
-   `painting = null` yap.
-3. `clear()` yaz: boş bir ızgara, `generation = 0`, `playing = false`.
-4. `press('Random')` `randomize()`'ı, `press('Clear')` `clear()`'ı çağırır; R ve C tuşları onlara basar.
+1. `let frames` satırının altına ekle:
+
+   ```js
+   let painting = null // while the pointer is down: the value being painted, 1 or 0
+   ```
+
+2. `randomize()` fonksiyonunun kapanış `}`'sinin altına temizleyen fonksiyonu ekle:
+
+   ```js
+   function clear() {
+     grid = emptyGrid()
+     generation = 0
+     playing = false
+   }
+   ```
+
+3. `press()` fonksiyonuna iki düğme daha ekle. Fonksiyon şöyle olmalı:
+
+   ```js
+   function press(button) {
+     if (button === 'Play') playing = !playing
+     else if (button === 'Step') {
+       playing = false
+       step()
+     } else if (button === 'Random') randomize() // ← yeni
+     else if (button === 'Clear') clear()        // ← yeni
+   }
+   ```
+
+4. `keydown` dinleyicisindeki tabloya R ve C'yi ekle:
+
+   ```js
+     const keys = { ' ': 'Play', n: 'Step', r: 'Random', c: 'Clear' } // ← değişti
+   ```
+
+5. `keydown` dinleyicisinin kapanışı olan `})` satırının altına şunları yaz:
+
+   ```js
+   function toCanvas(event) {
+     const rect = canvas.getBoundingClientRect()
+     return {
+       x: ((event.clientX - rect.left) * canvas.width) / rect.width,
+       y: ((event.clientY - rect.top) * canvas.height) / rect.height,
+     }
+   }
+
+   function cellAt({ x, y }) {
+     const r = Math.floor((y - TOP) / CELL)
+     const c = Math.floor(x / CELL)
+     return r >= 0 && r < ROWS && c >= 0 && c < COLS ? { r, c } : null
+   }
+
+   // Pressing on a dead cell paints live cells as you drag; pressing on a live one erases.
+   canvas.addEventListener('pointerdown', (event) => {
+     const cell = cellAt(toCanvas(event))
+     if (!cell) return
+     painting = grid[cell.r][cell.c] ? 0 : 1
+     grid[cell.r][cell.c] = painting
+   })
+
+   canvas.addEventListener('pointermove', (event) => {
+     if (painting === null) return
+     const cell = cellAt(toCanvas(event))
+     if (cell) grid[cell.r][cell.c] = painting
+   })
+
+   document.addEventListener('pointerup', () => {
+     painting = null
+   })
+   ```
+
+6. **Çalıştır**'a bas. Önce oyuna tıkla ve **C**'ye bas: ızgara boşalmalı. Sonra basılı tutup sürükleyerek bir şekil çiz,
+   **Boşluk** ile çalıştır. **R** yeniden rastgele doldurmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

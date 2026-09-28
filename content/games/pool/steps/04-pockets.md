@@ -22,19 +22,38 @@ its spot. If another ball sits there, it moves left until it has room. When only
 
 # --explanation-tr--
 
-Altı cep: dört köşe ve uzun kenarların ortasında iki. Bir top, merkezi bir cebin merkezine `POCKET_R` kadar yaklaştığında düşer.
+**Bu adımda:** masaya altı cep ekleyeceğiz. Cebe giren top masadan kaybolacak; üstte kaç top kaldığı yazacak. Beyaz top
+cebe girerse bir vuruş cezası alacaksın ve beyaz top yerine dönecek. Hepsini sokunca `Table cleared in ... shots!`
+yazacak.
 
-Bunun bantlarla nasıl işlediğine dikkat et. Köşedeki bir top iki bant tarafından `(LEFT + R, TOP + R)`'ye geri itilir; bu da
-köşeye yaklaşık 13 piksel, `POCKET_R`'den az, yani düşer. Orta ceplerde onu yalnızca bir bant durdurur, cepten `R` uzakta; bu
-yüzden top yana doğru yaklaşık 12 piksel içinde gelmelidir. Orta cepler tıpkı gerçek bir masadaki gibi **daha dardır** ve bunun
-için hiç özel bir kural yazmamız gerekmedi.
+**Cepler.** Dört köşe ve uzun kenarların ortasında iki cep. Her cebi `[x, y]` şeklinde iki sayılık küçük bir diziyle
+tutarız; hepsi `POCKETS` listesinde. Bir topun merkezi bir cebin merkezine `POCKET_R` (15) pikselden yakınsa top düşer.
 
-Aynı dizi üzerinde **dönerken** öğe silmek bilinen bir hatadır: döngü silinen her öğeden sonrakini atlar. Bu yüzden onun yerine
-`filter` ile, cebe girmeyen topları tutan yeni bir dizi kurarız.
+**Bantlarla güzel bir uyum.** Köşedeki bir top iki bant tarafından `(LEFT + R, TOP + R)` noktasına itilir; bu köşeye
+yaklaşık 13 piksel, yani 15'ten az: top düşer. Orta ceplerde ise topu tek bir bant durdurur, cepten `R` uzakta; bu
+yüzden top yan yana en çok 12 piksel kadar kaymışken gelmeli. Yani orta cepler gerçek masadaki gibi **daha dar** olur
+ve bunun için ayrı bir kural yazmamız gerekmedi.
 
-İsteka topunu cebe sokmak bir **faul**dür (scratch): fazladan bir vuruşa mal olur ve her şey durunca isteka topu kendi
-noktasına geri gelir. Orada başka bir top varsa, yer bulana kadar sola kayar. Yalnızca isteka topu kaldığında masa
-temizlenmiştir.
+**Yeni araçlar:**
+
+- `POCKETS.some(([px, py]) => ...)` → `some` listede koşulu tutan **en az bir** öğe varsa `true` verir. `[px, py]`
+  yazımı her cebin iki sayısını ayrı adlara açar: `px` birinci, `py` ikinci sayı. `for (const [px, py] of POCKETS)`
+  da aynı şekilde çalışır.
+- `balls.filter((b) => { ... })` → yalnız `true` döndüren topları tutan **yeni** bir liste yapar. Aynı listenin
+  üzerinde dönerken ondan öğe silmek, silinenden sonraki öğenin atlanmasına yol açan klasik bir hatadır; `filter`
+  eski listeye dokunmaz.
+- `balls.includes(cue)` → "listede beyaz top var mı?".
+- `while (koşul) iş` → koşul doğru olduğu **sürece** işi tekrar tekrar yap. Beyaz topun yerinde başka top varsa, yer
+  bulana kadar `R` piksel sola kaydırırız.
+- `balls.unshift(cue)` → listenin **başına** ekler (`push` sonuna ekliyordu). Beyaz top hep ilk sırada dursun.
+- `koşul ? A : B` → kısa "eğer": koşul doğruysa A, değilse B. `balls.length === 1 ? 'won' : 'aiming'` → sadece bir
+  top (beyaz) kaldıysa kazandın.
+
+**Faul (scratch).** Beyaz top cebe girerse bir vuruş cezası eklenir (`shots += 1`). Her şey durunca beyaz top yerine
+geri konur (`respot`).
+
+**Yazı.** `'Shots ' + shots + '  Left ' + (...)` → `+` yazıları yan yana ekler. `Left`'ten önce **iki** boşluk
+var: sonuç `Shots 3  Left 7` gibi. Kalan topları `balls.filter((b) => !b.cue).length` sayar: beyaz olmayanların sayısı.
 
 # --task--
 
@@ -50,16 +69,92 @@ temizlenmiştir.
 
 # --task-tr--
 
-1. `POCKETS`'ı (dört köşe ve `(240, TOP)`, `(240, BOTTOM)`) ve `POCKET_R = 15`'i ekle. Her cebi `'#020617'` bir daire olarak
-   çiz.
-2. `pocketed(b)` yaz: topun merkezi herhangi bir cebe `POCKET_R` kadar yakınsa true. `step()`'in sonunda yalnızca cebe girmeyen
-   topları tut; cebe giren isteka topu `shots`'a 1 ekler.
-3. `respot()` yaz: `CUE_START`'ta yeni bir isteka topu, bir topla örtüştüğü sürece `R` kadar sola kaydırılmış, `balls`'un başına
-   konmuş.
-4. Her şey durduğunda: isteka topu yoksa `respot()`; yalnızca isteka topu kaldıysa `'won'`, değilse `'aiming'`. `'won'`'da
-   Boşluk yeniden başlatır.
-5. `Shots 3  Left 7` çiz ve `'won'` iken `Table cleared in 12 shots!` mesajını `y = 170`'te ortalı, `'bold 22px sans-serif'` ile
-   çiz.
+1. `const COLORS = ...` satırının hemen altına cepleri ekle:
+
+   ```js
+   const POCKETS = [
+     [LEFT, TOP], [240, TOP], [RIGHT, TOP],
+     [LEFT, BOTTOM], [240, BOTTOM], [RIGHT, BOTTOM],
+   ]
+   const POCKET_R = 15
+   ```
+
+2. `let state` satırının yorumunu yeni durumu da anlatacak şekilde güncelle (isteğe bağlı):
+
+   ```js
+   let state // 'aiming', 'rolling' or 'won'
+   ```
+
+3. `collide` fonksiyonunun kapanış `}`'inden sonra, `function step()`'ten önce cep sorusunu yaz:
+
+   ```js
+   function pocketed(b) {
+     return POCKETS.some(([px, py]) => Math.hypot(b.x - px, b.y - py) < POCKET_R)
+   }
+   ```
+
+4. `step()`'in sonunda, çarpışma satırından sonra ve kapanış `}`'inden önce cebe girenleri çıkaran satırları ekle;
+   `step`'in kapanışından sonra da `respot` fonksiyonunu yaz:
+
+   ```js
+     for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) collide(balls[i], balls[j])
+     balls = balls.filter((b) => {                // ← yeni
+       if (!pocketed(b)) return true
+       if (b.cue) shots += 1 // a scratch costs a shot
+       return false
+     })
+   }
+
+   // The cue ball comes back on its spot, or as close to it as there is room.
+   function respot() {
+     cue = ball(CUE_START.x, CUE_START.y, '#f8fafc', 0)
+     while (balls.some((b) => Math.hypot(b.x - cue.x, b.y - cue.y) < R * 2)) cue.x -= R
+     balls.unshift(cue)
+   }
+   ```
+
+5. `update()`'in son satırını (`if (!moving) state = 'aiming'`) şu üç satırla değiştir:
+
+   ```js
+     if (moving) return                           // ← değişti
+     if (!balls.includes(cue)) respot()           // ← yeni
+     state = balls.length === 1 ? 'won' : 'aiming' // ← yeni
+   }
+   ```
+
+6. Tuş dinleyicisindeki boşluk satırını değiştir: kazandıysan boşluk yeni oyun başlatsın:
+
+   ```js
+     else if (event.key === ' ') state === 'won' ? reset() : shoot() // ← değişti
+   ```
+
+7. `draw()` içinde yeşil çuhayı boyayan satırdan hemen sonra cepleri çiz:
+
+   ```js
+     ctx.fillRect(LEFT, TOP, RIGHT - LEFT, BOTTOM - TOP)
+     for (const [px, py] of POCKETS) { // ← yeni
+       ctx.fillStyle = '#020617'
+       ctx.beginPath()
+       ctx.arc(px, py, POCKET_R, 0, Math.PI * 2)
+       ctx.fill()
+     }
+   ```
+
+8. `draw()`'un sonundaki `ctx.fillText('Shots ' + shots, LEFT, 22)` satırını değiştir ve altına kazanma yazısını ekle:
+
+   ```js
+     ctx.fillText('Shots ' + shots + '  Left ' + (balls.filter((b) => !b.cue).length), LEFT, 22) // ← değişti
+     if (state === 'won') {                                                                      // ← yeni
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.fillText('Table cleared in ' + shots + ' shots!', canvas.width / 2, 170)
+     }
+   }
+   ```
+
+9. **Çalıştır**'a bas. Masada altı siyah cep görmelisin, üstte `Shots 0  Left 10` yazmalı. Oynamak için önce oyuna
+   tıkla ve vur: cebe giren toplar kaybolmalı. Alttaki kontrollerin hepsi yeşil olmalı. Yazı kontrolü kırmızıysa
+   `'  Left '` içindeki iki boşluğa bak.
 
 # --tests--
 

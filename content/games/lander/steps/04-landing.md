@@ -21,18 +21,51 @@ After a landing or a crash, Space (or a tap) starts a new flight over new hills.
 
 # --explanation-tr--
 
-Zemine değmek ancak o anda **her şey** doğruysa bir iniştir:
+**Bu adımda:** yere değmek artık ya **iniş** ya da **kaza** olacak. Sol üstte dört gösterge (yakıt, düşüş hızı,
+yana kayma, eğim) göreceksin: değer güvenliyse yeşil, değilse kırmızı. İnince ortada yeşil "Landed!", çakılınca
+kırmızı "Crashed." yazısı çıkacak; Boşluk ya da dokunuş yeni bir uçuş başlatacak.
 
-- iki ayak da pistte,
-- yavaş düşüyor: kare başına en fazla 1.2 piksel,
-- yana pek kaymıyor: en fazla 0.6,
+**Ne zaman iniş sayılır?** Değdiği anda **her şey** doğru olmalı:
+
+- iki ayak da pistin üstünde,
+- yavaş düşüyor: karede en fazla 1.2 piksel,
+- neredeyse hiç yana kaymıyor: en fazla 0.6,
 - neredeyse dik: en fazla 0.2 radyan (yaklaşık 11°) eğim.
 
-Biri bile yanlışsa kazadır. Sınırları tek bir nesnede, `SAFE`'te tutmak kuralları tek yerde tutar ve aynı sayılar
-**göstergeleri** boyayabilir: her değer sınırın içindeyken yeşil, değilken kırmızı gösterilir. Bu, gizli kuralları oyuncunun
-görüp öğrenebileceği bir şeye çevirir; zor bir oyunu adil hissettiren de budur.
+Biri bile yanlışsa kazadır. Sınırları tek bir nesnede (`SAFE`, güvenli) tutarız; kurallar tek yerde durur ve aynı
+sayılarla göstergeleri de boyarız. Gizli kuralları oyuncunun görebildiği bir şeye çevirmek zor bir oyunu adil
+hissettirir.
 
-Bir iniş ya da kazadan sonra Boşluk (ya da dokunuş) yeni tepelerin üstünde yeni bir uçuş başlatır.
+**Kontrol parça parça:**
+
+```js
+const onPad = lander.x - FEET >= pad.x1 && lander.x + FEET <= pad.x2
+```
+
+Sol ayak pistin sol ucundan sağda **ve** sağ ayak pistin sağ ucundan solda mı? `>=` "büyük veya eşit", `<=` "küçük
+veya eşit" demektir. Sonuç `true` ya da `false` olur ve `onPad` adıyla saklanır.
+
+```js
+const gentle = lander.vy <= SAFE.vy && Math.abs(lander.vx) <= SAFE.vx && Math.abs(lander.angle) <= SAFE.angle
+```
+
+`Math.abs` bir sayının işaretsiz hâlidir (`Math.abs(-0.8)` → 0.8): sola kayma da sağa kayma kadar tehlikelidir.
+Sonra `if (onPad && gentle)` ise iniş: `state = 'landed'` ve araç tam pistin üstüne oturtulur (`pad.y - 10`, çünkü
+ayaklar ortanın 10 piksel altında). `return` fonksiyonu orada bitirir; oraya gelmediysek `state = 'crashed'` olur.
+
+**Göstergeler.** Her gösterge `[yazı, iyi mi]` şeklinde iki elemanlı küçük bir **dizidir**; dördü de bir dizinin içinde
+durur:
+
+- `'Fuel ' + lander.fuel` → `+` yazı ile sayıyı uç uca ekler: `'Fuel 400'`.
+- `sayı.toFixed(1)` → sayıyı virgülden sonra tek haneyle yazıya çevirir: `0.4567` → `'0.5'`.
+- `Math.round((açı * 180) / Math.PI)` → radyanı dereceye çevirip en yakın tam sayıya yuvarlar.
+- `readouts.forEach(([text, ok], i) => ...)` → her gösterge için bir kez çalışır. `[text, ok]` iki elemanı ayrı
+  adlara açar; `i` sıra numarasıdır (0, 1, 2, 3), bu yüzden `20 + i * 18` her yazıyı bir alta koyar.
+- `ok ? '#4ade80' : '#f87171'` → iyiyse yeşil, değilse kırmızı.
+- `ctx.textAlign = 'left'` yazıyı verilen `x`'ten sağa doğru, `'center'` ise ortalı yazar.
+
+**Yeniden başlamak.** Uçuş bittiyse (`state !== 'flying'`) Boşluk ya da dokunuş `reset()`'i çağırır: yeni tepeler, dolu
+depo. Dokunuşta `return`, o dokunuşun ayrıca motoru ya da dönüşü açmasını engeller.
 
 # --task--
 
@@ -47,15 +80,98 @@ Bir iniş ya da kazadan sonra Boşluk (ya da dokunuş) yeni tepelerin üstünde 
 
 # --task-tr--
 
-1. `SAFE = { vy: 1.2, vx: 0.6, angle: 0.2 }` ekle. Bir ayak zemine değince çağrılan `touchdown()`'ı yaz: iki ayak da pistin
-   içindeyse ve hızlar ile eğim `SAFE` içindeyse durum `'landed'` olur ve araç piste oturur (`y = pad.y - 10`); değilse
-   `'crashed'`.
-2. Durum `'flying'` değilken Boşluk ya da dokunuş yeniden başlatır (`reset()`).
-3. Sol üste `'bold 14px monospace'` ile `y = 20`'den başlayarak 18 piksel arayla dört gösterge çiz: `Fuel 400`, `Down 0.5`,
-   `Side 1.0` ve `Tilt 3°` (hızlar için bir ondalık, tam derece); her biri iyiyken `'#4ade80'`, değilken `'#f87171'` (yakıt
-   50'nin üstünde iyidir).
-4. `y = 140`'ta ortalı olarak `'#4ade80'` ile `Landed! Space: fly again` ya da `'#f87171'` ile `Crashed. Space: try again`
-   göster.
+1. `const SPIN = ...` satırının altına güvenli sınırları ekle:
+
+   ```js
+   const SAFE = { vy: 1.2, vx: 0.6, angle: 0.2 } // the most a landing may have
+   ```
+
+2. `let state` satırının yorumunu güncelle (durum artık `'down'` değil):
+
+   ```js
+   let state // 'flying', 'landed' or 'crashed'
+   ```
+
+3. `keydown` dinleyicisine Boşluk satırını ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow') || event.key === ' ') event.preventDefault()
+     if (event.key === ' ' && state !== 'flying') reset()       // ← yeni
+   })
+   ```
+
+4. `pointerdown` dinleyicisinin başına yeniden başlatmayı ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'flying') {                                   // ← yeni
+       reset()                                                   // ← yeni
+       return                                                    // ← yeni
+     }                                                           // ← yeni
+     const rect = canvas.getBoundingClientRect()
+   ```
+
+5. `burning()` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function update()`'in **üstüne**)
+   şunu yaz:
+
+   ```js
+   function touchdown() {
+     const onPad = lander.x - FEET >= pad.x1 && lander.x + FEET <= pad.x2
+     const gentle = lander.vy <= SAFE.vy && Math.abs(lander.vx) <= SAFE.vx && Math.abs(lander.angle) <= SAFE.angle
+     if (onPad && gentle) {
+       state = 'landed'
+       lander.y = pad.y - 10
+       return
+     }
+     state = 'crashed'
+   }
+   ```
+
+6. `update()`'in son satırında, sondaki `state = 'down'` yerine `touchdown()` yaz:
+
+   ```js
+     if (feet >= groundY(lander.x - FEET) || feet >= groundY(lander.x) || feet >= groundY(lander.x + FEET)) touchdown()   // ← değişti
+   ```
+
+7. `draw()` içinde `drawLander()` satırından sonra, fonksiyonun son `}`'sinden önce bir boş satır bırak ve
+   göstergeleri ve sonuç yazısını ekle:
+
+   ```js
+     drawLander()
+
+     // Readouts: green while the value is safe for landing, red when it is not.
+     const readouts = [
+       ['Fuel ' + lander.fuel, lander.fuel > 50],
+       ['Down ' + lander.vy.toFixed(1), lander.vy <= SAFE.vy],
+       ['Side ' + lander.vx.toFixed(1), Math.abs(lander.vx) <= SAFE.vx],
+       ['Tilt ' + Math.round((lander.angle * 180) / Math.PI) + '°', Math.abs(lander.angle) <= SAFE.angle],
+     ]
+     ctx.font = 'bold 14px monospace'
+     ctx.textAlign = 'left'
+     readouts.forEach(([text, ok], i) => {
+       ctx.fillStyle = ok ? '#4ade80' : '#f87171'
+       ctx.fillText(text, 10, 20 + i * 18)
+     })
+
+     ctx.textAlign = 'center'
+     ctx.font = 'bold 22px sans-serif'
+     if (state === 'landed') {
+       ctx.fillStyle = '#4ade80'
+       ctx.fillText('Landed! Space: fly again', canvas.width / 2, 140)
+     }
+     if (state === 'crashed') {
+       ctx.fillStyle = '#f87171'
+       ctx.fillText('Crashed. Space: try again', canvas.width / 2, 140)
+     }
+   }
+   ```
+
+   Derece işareti (`°`) klavyende yoksa **Çözümü göster** ile kopyalayabilirsin.
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Motorla yavaşlayıp dik şekilde yeşil piste in: "Landed!"
+   çıkmalı. Hızlı çakılırsan "Crashed." çıkmalı; Boşluk ile yeniden uç. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

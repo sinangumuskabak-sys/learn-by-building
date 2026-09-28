@@ -33,30 +33,58 @@ Drawing becomes a loop over the array: `for (const part of snake) { ... }`.
 
 # --explanation-tr--
 
-Yılan, baştan başlayan bir **hücre listesidir**. Dizi (array) tam buna uygundur:
+**Bu adımda:** tek kare, üç hücrelik bir yılana dönüşecek. Çalıştırınca yan yana üç yeşil kare göreceksin; ok
+tuşlarıyla döndüğünde gövde başı izleyecek.
+
+**Dizi (array) nedir?** Yılan bir **hücre listesidir**: önce baş, sonra gövde, en sonda kuyruk. Sıralı bir
+listeyi tutmanın yolu **dizidir**. Alışveriş listesi gibi düşün: maddeler sırayla yazılır.
 
 ```js
 let snake = [
-  { x: 5, y: 5 },  // baş (0. indeks)
+  { x: 5, y: 5 },  // baş (sıra numarası 0)
   { x: 4, y: 5 },
-  { x: 3, y: 5 },  // kuyruk (son indeks)
+  { x: 3, y: 5 },  // kuyruk (son sıra)
 ]
 ```
 
-Koca yılan bir adım nasıl ilerler? Her parçayı taşıman gerekmez. Önceki ve sonraki resme bak: ortası tam olarak
-yerinde kalır. Yalnızca iki şey değişir:
+- Köşeli parantez `[ ]` bir dizi açar ve kapatır. İçindeki elemanlar virgülle ayrılır.
+- Burada her eleman, 3. adımda gördüğün gibi bir `{ x, y }` nesnesi: bir hücre.
+- Elemanlara **sıra numarasıyla (index)** ulaşılır ve sayma **0'dan başlar**: `snake[0]` baştır, `snake[1]`
+  ikinci parça. `snake[0].x` "başın sütunu" demektir.
+- `snake.length` dizide kaç eleman olduğunu söyler (burada 3).
 
-1. Eski başın bir hücre önünde **yeni bir baş** belirir → `snake.unshift(newHead)` onu başa ekler.
-2. **Kuyruk** kaybolur → `snake.pop()` son elemanı siler.
+**Bütün yılan nasıl bir adım ilerler?** Her parçayı tek tek kaydırmana gerek yok. Önceki ve sonraki resme bak:
+ortadaki parçalar yerinden hiç oynamıyor. Yalnızca iki şey değişiyor:
+
+1. Eski başın bir hücre önünde **yeni bir baş** belirir → `snake.unshift(yeniBaş)` onu listenin **başına**
+   ekler.
+2. **Kuyruk** kaybolur → `snake.pop()` listenin **son** elemanını çıkarır.
 
 ```
-önce:  K G B .        sonra:  . K G B
+önce:  K G B .        sonra:  . K G B      (K kuyruk, G gövde, B baş)
 ```
 
-Bu hile yılan ne kadar uzarsa uzasın ucuzdur: hareket başına iki dizi işlemi. Bir sonraki adımda büyümeyi de çok
-kolaylaştıracak.
+Yılan ne kadar uzarsa uzasın, bu hep iki işlemdir. Bir sonraki adımda büyümeyi de çok kolaylaştıracak.
 
-Çizim dizi üzerinde bir döngüye dönüşür: `for (const part of snake) { ... }`.
+**Yeni baş nerede?** Eski başın konumuna yönü ekleriz:
+
+```js
+const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
+```
+
+Bu `head`, `update()`'in **içinde** `const` ile yazıldığı için sadece o fonksiyonun içinde geçerli, geçici bir
+addır. Eski `let head` değişkenine artık gerek yok; yerini `snake` alıyor.
+
+**Döngüyle çizmek.** Her parça için aynı kareyi çizmek istiyoruz. Bunu bir **döngüyle** (loop) yaparız:
+
+```js
+for (const part of snake) {
+  ctx.fillRect(part.x * CELL, part.y * CELL, CELL, CELL)
+}
+```
+
+"`snake` dizisindeki her eleman için: ona sırayla `part` de ve süslü parantezin içini yap." Üç parça varsa içerisi
+üç kez çalışır; her seferinde `part` bir sonraki hücredir.
 
 # --task--
 
@@ -67,10 +95,45 @@ kolaylaştıracak.
 
 # --task-tr--
 
-1. `head` yerine, yukarıdaki üç hücreyi baş önde olacak şekilde tutan `let snake` yaz.
-2. `update()` içinde `const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }` oluştur, `unshift` ile başa
-   ekle ve kuyruğu `pop` ile sil.
-3. `draw()` içinde `snake`'in her parçası için bir lime hücre boya.
+1. `let head = { x: 5, y: 5 }` satırını sil ve yerine yılan dizisini yaz:
+
+   ```js
+   let snake = [
+     { x: 5, y: 5 },
+     { x: 4, y: 5 },
+     { x: 3, y: 5 },
+   ]
+   ```
+
+2. `update()` fonksiyonunun içindeki iki satırı (`head.x += dir.x` ve `head.y += dir.y`) sil. Fonksiyon şöyle
+   olsun:
+
+   ```js
+   function update() {
+     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y } // ← yeni
+     snake.unshift(head) // ← yeni
+     snake.pop() // ← yeni
+   }
+   ```
+
+3. `draw()` fonksiyonunun son satırı olan `ctx.fillRect(head.x * CELL, head.y * CELL, CELL, CELL)` satırını sil
+   ve yerine her parçayı çizen döngüyü yaz. Fonksiyon şöyle olsun:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#111'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'lime'
+     for (const part of snake) { // ← yeni
+       ctx.fillRect(part.x * CELL, part.y * CELL, CELL, CELL) // ← yeni
+     } // ← yeni
+   }
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Üç karelik yeşil yılan sağa ilerlemeli; ok tuşlarına basınca
+   gövde başı izlemeli. Alttaki kontrollerin hepsi yeşil olmalı. Ekran boşsa ve hata görüyorsan, kodda hâlâ eski
+   `head.x` kullanan bir satır kalmış olabilir.
 
 # --tests--
 

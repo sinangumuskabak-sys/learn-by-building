@@ -35,31 +35,49 @@ Number(localStorage.getItem('snake-best')) || 0           // 12, or 0 if nothing
 
 # --explanation-tr--
 
-İki şey bir oyunu bitmiş hissettirir: oyuncu ne kadar iyi gittiğini görür ve sayfayı yenilemeden yeniden oynayabilir.
+**Bu adımda:** oyunu tamamlanmış hissettiren iki şey ekleyeceğiz. Sol üst köşede `Score:` (skor) ve `Best:` (en
+iyi skor) yazıları görünecek. Oyun bitince Boşluk (Space) ya da Enter tuşuna basarak sayfayı yenilemeden yeniden
+oynayabileceksin.
 
-**Yeniden başlatmak**, tüm durumu başlangıçtaki hâline döndürmek demektir. Bu başlangıç değerleri dosyanın her yerine
-dağılmışsa birini unutmak kolaydır (unutulan bir `gameOver = true` yeni oyunu doğmadan öldürür). O yüzden hepsini bir
-fonksiyonda topla:
+**Yeniden başlamak** demek, her durum bilgisini oyunun başındaki hâline geri koymak demek. Bu başlangıç değerleri
+dosyanın her yerine dağılmışsa birini unutmak kolaydır (unutulan tek bir `gameOver = true` yeni oyunu daha
+başlamadan bitirir). Bu yüzden hepsini **tek bir fonksiyonda** toplarız:
 
 ```js
 function reset() {
   snake = [...]
   dir = { x: 1, y: 0 }
-  // ...durumun geri kalan her parçası...
+  // ...diğer her durum bilgisi...
 }
-reset()   // ilk oyun da sonrakilerle aynı şekilde başlar
+reset()   // ilk oyun da sonraki her oyunla aynı yoldan başlar
 ```
 
-Artık dosyanın başı değişkenleri yalnızca *tanımlar* (`let snake`), değerlerini `reset()` verir. "Yeni bir oyun"
-için tek bir doğruluk kaynağı.
+Artık dosyanın başında değişkenler sadece **tanıtılır** (`let snake`, değersiz), değerlerini `reset()` verir.
+"Yeni bir oyun neye benzer?" sorusunun cevabı tek bir yerde durur.
 
-**En iyi skor** sayfa yenilense de kalmalı. `localStorage`, tarayıcının her site için tuttuğu küçük bir anahtar–değer
-deposudur. Yalnızca metin saklar; okurken çevir:
+**Yazıyla sayıyı birleştirmek.** `'Score: ' + score` → yazıya `+` ile bir şey eklersen yan yana yapıştırılır.
+`score` 3 ise sonuç `'Score: 3'` olur.
+
+**Sayfa yenilense de kalan en iyi skor.** Değişkenler sayfa kapanınca silinir. Tarayıcının her site için tuttuğu
+küçük bir defter vardır: `localStorage`. İçine bir **ad** ile bir değer yazarsın, sonra aynı adla okursun.
 
 ```js
-localStorage.setItem('snake-best', best)                 // "12" olarak saklanır
-Number(localStorage.getItem('snake-best')) || 0           // 12, hiç kayıt yoksa 0
+localStorage.setItem('snake-best', best)          // "snake-best" adıyla kaydet, "12" olarak saklanır
+Number(localStorage.getItem('snake-best')) || 0   // 12; hiç kayıt yoksa 0
 ```
+
+Bunu parça parça okuyalım:
+
+- `setItem(ad, değer)` → deftere yaz. Defter her şeyi **yazı** olarak saklar.
+- `getItem(ad)` → defterden oku. Hiç kayıt yoksa boş (`null`) gelir.
+- `Number(...)` → yazıyı sayıya çevirir: `'12'` → `12`.
+- `|| 0` → "soldaki boşsa ya da sıfırsa, 0 kullan". `||` burada "yoksa şu" anlamında bir yedek değer verir.
+
+Oyun bittiğinde `score > best` (skor en iyiden **büyükse**) en iyiyi günceller ve deftere yazarız.
+
+**Tuşla yeniden başlama.** Boşluk tuşunun adı `' '` (tırnak içinde bir boşluk), Enter'ınki `'Enter'`. Yalnızca
+oyun bittiyse çalışsın diye `gameOver &&` ile başlarız. Parantezler hangi parçanın birlikte değerlendirileceğini
+belirler, matematikteki gibi: "oyun bitti **ve** (Boşluk **veya** Enter)".
 
 # --task--
 
@@ -74,14 +92,102 @@ Number(localStorage.getItem('snake-best')) || 0           // 12, hiç kayıt yok
 
 # --task-tr--
 
-1. `snake` (başlangıçtaki üç hücre), `dir`, `nextDir`, `score = 0` ve `gameOver = false` değerlerini ayarlayıp
-   `placeFood()` çağıran `function reset()` yaz. `let` tanımlarını en üstte ama değersiz bırak; eski `placeFood()`
-   çağrısını `reset()` ile değiştir.
-2. `let best = Number(localStorage.getItem('snake-best')) || 0` ekle. Oyun bittiğinde `score > best` ise `best`'i
-   güncelle ve `localStorage.setItem('snake-best', best)` ile kaydet.
-3. `draw()` içinde sol üst köşede, beyaz 16px ve sola hizalı yazıyla `Score: 3` ve `Best: 5` göster (gerçek
-   sayılarla).
-4. Oyun bittiğinde Boşluk (`' '`) ya da Enter'a basmak `reset()` çağırmalı.
+1. Dosyanın başındaki değişkenleri değersiz hâle getir ve en iyi skoru ekle. `const SPEED = 150` satırının
+   altından `let last = 0` satırına kadar olan kısım tam olarak şöyle olmalı:
+
+   ```js
+   let snake
+   let dir
+   let nextDir
+   let food
+   let score
+   let gameOver
+   let best = Number(localStorage.getItem('snake-best')) || 0
+   let last = 0
+   ```
+
+   Yani üç hücreli yılan dizisi, `{ x: 1, y: 0 }`, `= dir`, `= 0` ve `= false` kısımları buradan siliniyor (bir
+   sonraki maddede `reset()`'e taşınacaklar).
+
+2. `let last = 0` satırının altına bir boş satır bırak ve `reset` fonksiyonunu yaz (`function placeFood()`'dan
+   önce):
+
+   ```js
+   function reset() {
+     snake = [
+       { x: 5, y: 5 },
+       { x: 4, y: 5 },
+       { x: 3, y: 5 },
+     ]
+     dir = { x: 1, y: 0 }
+     nextDir = dir
+     score = 0
+     gameOver = false
+     placeFood()
+   }
+   ```
+
+3. `placeFood` fonksiyonunun hemen altında tek başına duran `placeFood()` çağrısını sil (artık onu `reset()`
+   yapıyor).
+
+4. Tuş dinleyicisinin içinde, en başa yeniden başlatma kontrolünü ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (gameOver && (event.key === ' ' || event.key === 'Enter')) { // ← yeni
+       reset() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     const turn = turns[event.key]
+     // ... geri kalanı aynı
+   ```
+
+5. `update()` fonksiyonunda, çarpma olduğunda en iyi skoru kaydet:
+
+   ```js
+     if (hitWall || hitSelf) {
+       gameOver = true
+       if (score > best) { // ← yeni
+         best = score // ← yeni
+         localStorage.setItem('snake-best', best) // ← yeni
+       } // ← yeni
+       return
+     }
+   ```
+
+6. `draw()` fonksiyonunda, yılanı çizen `for` döngüsünden sonraki kısmı şöyle yap (skor yazıları eklendi,
+   `gameOver` bölümü değişti):
+
+   ```js
+     ctx.fillStyle = 'white' // ← yeni
+     ctx.font = '16px sans-serif' // ← yeni
+     ctx.textAlign = 'left' // ← yeni
+     ctx.fillText('Score: ' + score, 8, 20) // ← yeni
+     ctx.fillText('Best: ' + best, 8, 40) // ← yeni
+
+     if (gameOver) {
+       ctx.font = '32px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+       ctx.font = '16px sans-serif' // ← yeni
+       ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 32) // ← yeni
+     }
+   }
+   ```
+
+   `if (gameOver)` içindeki `ctx.fillStyle = 'white'` satırı silindi, çünkü renk hemen yukarıda zaten beyaz
+   yapıldı.
+
+7. Dosyanın en altındaki `requestAnimationFrame(loop)` satırının **üstüne** ilk oyunu başlatan çağrıyı ekle:
+
+   ```js
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sol üstte `Score: 0` ve `Best: 0` görünmeli. Yem yiyince
+   skor artmalı. Duvara çarpınca Boşluk tuşuna bas: yeni oyun başlamalı ve `Best:` rekorunu göstermeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Ekran boş kalıyorsa en alttaki `reset()` çağrısını unutmuş olabilirsin.
 
 # --tests--
 

@@ -24,21 +24,38 @@ without ever overlapping it; this is called **tunneling**. Capping the fall spee
 
 # --explanation-tr--
 
-Yerçekimi şimdiye kadarki her oyundaki gibi çalışır: dikey hıza ekle, sonra hareket et. Yeni olan, yalnızca düz bir
-zemin çizgisine değil, her biçim ve yükseklikteki **döşemelere inmek**.
+**Bu adımda:** yerçekimini ekleyip oyunu canlandıracağız. Oyuncu artık saniyede 60 kez güncellenecek; zeminde duracak,
+çukurun üstüne gelirse düşecek. Şimdilik yürüyemediği için ekranda değişen bir şey göremeyebilirsin, ama kontroller
+oyuncuyu havaya koyup düşüşünü deneyecek.
 
-Tarif şu: hareket et, sonra kontrol et. Hareket katı bir şeyin içinde bittiyse çarptığın döşemenin kenarına **geri
-yapıştır**:
+**Hız ve yerçekimi.** Oyuncunun iki yeni alanı var: `vx` yatay hız, `vy` dikey hız (her karede kaç piksel gideceği).
+`vy` pozitifse aşağı, negatifse yukarı gider. Yerçekimi her karede `vy`'yi biraz artırır; bu yüzden düşen şey gittikçe
+hızlanır. Sonra hız konumu değiştirir: `body.y += body.vy` (`+=` "üstüne ekle" demektir). Üçüncü alan `grounded`
+(yerde mi?) `true` ya da `false` olur.
 
-- düşerken (`vy > 0`): ayaklar alttaki döşemeye girdi; ayakları tam üstüne koy: `y = döşemeÜstü - h`, döşeme satırı
-  `Math.floor((y + h - EPS) / TILE)`. Artık `grounded`'sın (yerdesin).
-- yükselirken (`vy < 0`): kafa üstteki döşemeye çarptı; kafayı tam altına koy.
+**Önce hareket et, sonra kontrol et.** Hareket bir karenin içine girerek bittiyse, çarptığın karenin kenarına **geri
+it**:
 
-Her iki durumda da dikey hareketi durdur (`vy = 0`).
+- **Düşüyorsan** (`vy > 0`): ayakların alttaki kareye girdi. Ayakların satırı
+  `Math.floor((y + h - EPS) / TILE)`'dır; o satırın tepesi `satır * TILE`. Ayakları tam oraya koyarız:
+  `y = tepe - h`. Artık `grounded = true`.
+- **Yükseliyorsan** (`vy < 0`): kafan üstteki kareye çarptı. Kafanın satırı `Math.floor(y / TILE)`; o karenin altı
+  `satır * TILE + TILE`. Kafayı oraya koyarız.
 
-Bir kural daha bunu güvenli tutar. Bir gövde bir karede **bir döşemeden fazla** yol alırsa, hiç kesişmeden ince bir
-zeminin üstünden atlayabilir; buna **tünelleme** denir. Düşüş hızını döşeme boyunun altında sınırlamak
-(`MAX_FALL = 12` < 32) bunu imkânsız kılar.
+İki durumda da dikey hareketi durdururuz: `vy = 0`.
+
+`if (!overlapsSolid(body)) return` → `!` "değil" demektir: "hiçbir şeye değmiyorsa işin bitti, fonksiyondan çık".
+`return` fonksiyonu o anda bitirir. `else` ise "`if` doğru değilse şunu yap" demektir.
+
+**Tünel etkisi.** Bir cisim bir karede **bir kareden fazla** yol alırsa ince bir zeminin üstünden hiç değmeden geçebilir
+(**tunneling**). Düşüş hızını kare boyunun altında tutmak bunu imkânsız yapar: `MAX_FALL = 12` (32'den küçük).
+`Math.min(a, b)` ikisinden küçüğünü verir; `Math.min(MAX_FALL, player.vy + GRAVITY)` hız 12'yi geçmek üzereyse 12'de
+tutar.
+
+**Oyun döngüsü.** Hareket görmek için her şeyi saniyede yaklaşık 60 kez hesaplayıp yeniden çizmeliyiz.
+`requestAnimationFrame(loop)` tarayıcıya "bir sonraki karede `loop`'u çalıştır" der. `loop` de önce `update()`
+(hesapla), sonra `draw()` (çiz) yapar ve kendini yeniden sıraya koyar. Böylece durmadan dönen bir döngü olur. Bu yüzden
+en alttaki tek `draw()` çağrısının yerini döngü alıyor.
 
 # --task--
 
@@ -51,12 +68,61 @@ zeminin üstünden atlayabilir; buna **tünelleme** denir. Düşüş hızını d
 
 # --task-tr--
 
-1. `const GRAVITY = 0.5` ve `const MAX_FALL = 12` ekle; oyuncuya `vx: 0, vy: 0, grounded: false` ver.
-2. `function moveY(body)` yaz: `body.grounded = false` yap, `body.y`'ye `body.vy` ekle; şimdi katı bir şeyle
-   kesişiyorsa anlatıldığı gibi geri yapıştır (düşerken ayaklar döşemenin üstüne ve `grounded = true`, yükselirken kafa
-   döşemenin altına), sonra `body.vy = 0` yap.
-3. `update()` yaz: `player.vy = Math.min(MAX_FALL, player.vy + GRAVITY)`, sonra `moveY(player)`. Güncelleyen, çizen
-   ve sonraki kareyi isteyen bir `loop()` ekle ve başlat.
+1. `const COLORS = ...` satırının altına (oyuncuyu oluşturan `let player` satırından önce) iki sabit ekle:
+
+   ```js
+   const GRAVITY = 0.5
+   const MAX_FALL = 12 // TILE'dan küçük kalmalı, yoksa hızlı düşüş bir kareyi atlayabilir
+   ```
+
+2. Oyuncuyu oluşturan satıra üç alan ekle:
+
+   ```js
+     if (col !== -1) player = { x: col * TILE + 4, y: row * TILE + 2, w: 24, h: 30, vx: 0, vy: 0, grounded: false } // ← değişti
+   ```
+
+3. `overlapsSolid` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp dikey hareketi yapan fonksiyonu yaz:
+
+   ```js
+   // Hareket et; bir karenin içinde bittiyse karenin kenarına geri it.
+   function moveY(body) {
+     body.grounded = false
+     body.y += body.vy
+     if (!overlapsSolid(body)) return
+     if (body.vy > 0) {
+       body.y = Math.floor((body.y + body.h - EPS) / TILE) * TILE - body.h
+       body.grounded = true
+     } else {
+       body.y = Math.floor(body.y / TILE) * TILE + TILE
+     }
+     body.vy = 0
+   }
+   ```
+
+4. Altına her karede yerçekimini uygulayan `update` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     player.vy = Math.min(MAX_FALL, player.vy + GRAVITY)
+     moveY(player)
+   }
+   ```
+
+5. En alttaki `draw()` satırını **sil** ve yerine oyun döngüsünü yaz:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas. Kırmızı oyuncu toprağın üstünde durmaya devam etmeli (titremeden); alttaki kontrollerin hepsi
+   yeşil olmalı. Kırmızı kalırsa `moveY`'deki iki `Math.floor` satırını harf harf karşılaştır: birinde `- body.h`,
+   ötekinde `+ TILE` var.
 
 # --tests--
 

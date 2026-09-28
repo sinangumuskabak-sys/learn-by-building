@@ -29,10 +29,28 @@ path too: an `arc` that goes all the way round, `Math.PI * 2`.
 
 # --explanation-tr--
 
-Her ıska figüre bir parça ekler: baş, gövde, iki kol, iki bacak. Altı parça, altı ıska.
+**Bu adımda:** darağacını çizeceğiz ve her yanlış tahminde çöp adama bir parça ekleyeceğiz: baş, gövde, iki kol, iki
+bacak. Altı parça, altı ıska. Sağda kahverengi bir darağacı, yanlış harf yazdıkça da beliren bir adam göreceksin.
 
-Altı `if` yazabilirdik (`if (wrong >= 1) drawHead()`, `if (wrong >= 2) ...`) ama daha düzgün bir yol var: parçaları sırayla
-bir **fonksiyon dizisinde** tut ve ilk `wrong` tanesini çağır:
+**Düz çizgi çizmek: yol (path).** Canvas'ta düz bir çizgi bir **yoldur**: yolu başlat, kalemi başlangıç noktasına
+götür, bitiş noktasına çiz, sonra çizgiyi boya.
+
+```js
+ctx.beginPath()       // yeni bir yol başlat
+ctx.moveTo(80, 270)   // kalemi kaldırıp buraya götür
+ctx.lineTo(80, 50)    // buraya kadar çiz
+ctx.stroke()          // çizgiyi boya
+```
+
+Çizginin rengi `ctx.strokeStyle`, kalınlığı `ctx.lineWidth` ile seçilir. Bu dört satırı her çizgi için tekrar
+yazmamak için küçük bir yardımcı fonksiyon yazarız: `line(x1, y1, x2, y2)`. `x1, y1` başlangıç, `x2, y2` bitiş;
+fonksiyona verilen bu değerlere **parametre** denir.
+
+**Baş: bir daire.** Daire de bir yoldur: `ctx.arc(x, y, yarıçap, 0, Math.PI * 2)` merkezi ve yarıçapı verilen bir yay
+çizer; `Math.PI * 2` tam bir tur demektir. `stroke()` ile sadece kenarını çizeriz.
+
+**Parçaları bir listede tutmak.** Altı ayrı `if` yazabilirdik (`if (wrong >= 1) baş`, `if (wrong >= 2) gövde`...).
+Daha düzgün bir yol var: parçaları sırayla bir **fonksiyon dizisinde** tutup ilk `wrong` tanesini çağırmak.
 
 ```js
 const PARTS = [
@@ -43,12 +61,13 @@ const PARTS = [
 for (let i = 0; i < wrong; i++) PARTS[i]()
 ```
 
-JavaScript'te fonksiyonlar değerdir; sayılar gibi bir dizide durabilirler. Yedinci bir parça (bir ip, bir yüz...) eklemek
-diziye bir satır eklemek demektir, başka hiçbir şey değişmez.
+JavaScript'te fonksiyonlar da birer **değerdir**; sayılar gibi bir listede durabilirler. `() => ...` parametresiz
+kısa bir fonksiyondur; `PARTS[0]` listedeki ilk fonksiyon, sonuna `()` koyunca **çağrılır**: `PARTS[0]()`.
+Birden fazla satırı olan fonksiyon `{ }` içine yazılır (başınki gibi).
 
-Canvas'ta düz bir çizgi bir **yoldur** (path): `beginPath()`, başlangıca `moveTo`, sona `lineTo`, sonra geçerli `strokeStyle`
-ve `lineWidth` ile `stroke()`. Küçük bir `line(x1, y1, x2, y2)` yardımcısı çizim kodunu kısa tutar. Baş da bir yoldur: tam bir
-tur dönen, `Math.PI * 2`'lik bir `arc`.
+`for (let i = 0; i < wrong; i++)` → bir **döngü**: `i` 0'dan başlar, `wrong`'dan küçük olduğu sürece tekrarlar, her
+turda `i++` ile 1 artar. `wrong` 2 ise `PARTS[0]()` ve `PARTS[1]()` çalışır: baş ve gövde. Yedinci bir parça (ip, yüz)
+eklemek istersen listeye bir satır eklersin, başka hiçbir şey değişmez.
 
 # --task--
 
@@ -61,13 +80,59 @@ tur dönen, `Math.PI * 2`'lik bir `arc`.
 
 # --task-tr--
 
-1. Tek bir düz çizgi çizen `line(x1, y1, x2, y2)`'yi yaz.
-2. Darağacını her karede `strokeStyle = '#78350f'` ve `lineWidth = 6` ile çiz: `(40, 270)`–`(220, 270)`,
-   `(80, 270)`–`(80, 50)`, `(80, 50)`–`(170, 50)` ve `(170, 50)`–`(170, 90)`.
-3. `PARTS`'ı bu sırayla altı fonksiyon olarak ekle: baş (`(170, 110)`'da, `20` yarıçaplı bir daire), gövde
-   `(170, 130)`–`(170, 200)`, `(170, 150)`'den `(140, 180)` ve `(200, 180)`'e kollar, `(170, 200)`'den `(145, 245)` ve
-   `(195, 245)`'e bacaklar.
-4. İlk `wrong` parçayı `strokeStyle = '#1f2937'` ve `lineWidth = 4` ile çiz.
+1. `keydown` dinleyicisinin kapanış `})`'sinden sonra, `function draw()`'dan önce bir satır boşluk bırakıp çizgi
+   yardımcısını ekle:
+
+   ```js
+   function line(x1, y1, x2, y2) {
+     ctx.beginPath()
+     ctx.moveTo(x1, y1)
+     ctx.lineTo(x2, y2)
+     ctx.stroke()
+   }
+   ```
+
+2. Hemen altına parça listesini ekle:
+
+   ```js
+   // One drawing per wrong guess.
+   const PARTS = [
+     () => {
+       ctx.beginPath()
+       ctx.arc(170, 110, 20, 0, Math.PI * 2) // head
+       ctx.stroke()
+     },
+     () => line(170, 130, 170, 200), // body
+     () => line(170, 150, 140, 180), // left arm
+     () => line(170, 150, 200, 180), // right arm
+     () => line(170, 200, 145, 245), // left leg
+     () => line(170, 200, 195, 245), // right leg
+   ]
+   ```
+
+   Her elemandan sonra virgül var; listenin sonu `]` ile kapanıyor.
+
+3. `draw()` içinde, arka planı boyayan `ctx.fillRect(...)` satırından sonra ve `ctx.fillStyle = '#1f2937'` ile başlayan
+   yazı bölümünden önce bir satır boşluk bırakıp darağacını ve parçaları çiz:
+
+   ```js
+     // The gallows
+     ctx.strokeStyle = '#78350f'
+     ctx.lineWidth = 6
+     line(40, 270, 220, 270)
+     line(80, 270, 80, 50)
+     line(80, 50, 170, 50)
+     line(170, 50, 170, 90)
+     ctx.strokeStyle = '#1f2937'
+     ctx.lineWidth = 4
+     for (let i = 0; i < wrong; i++) PARTS[i]()
+   ```
+
+   Dört çizgi sırayla: taban, direk, üst kiriş, ipin sarktığı kısa çizgi.
+
+4. **Çalıştır**'a bas. Sağda darağacını görmelisin. Oynamak için önce oyuna tıkla ve yanlış harfler yaz: her ıskada
+   adama bir parça eklenmeli (önce baş, sonra gövde, kollar, bacaklar). Alttaki kontrollerin hepsi yeşil olmalı.
+   Sıra kontrolü kırmızıysa `PARTS` içindeki satırların sırasını kontrol et.
 
 # --tests--
 

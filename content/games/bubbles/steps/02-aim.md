@@ -27,23 +27,51 @@ player plan two moves ahead.
 
 # --explanation-tr--
 
-Atıcı altta durur ve yukarı ateş eder. Nişan bir açıdır ve canvas'ta **tam yukarı `-π/2`'dir**, çünkü y aşağı doğru büyür.
+**Bu adımda:** en alta bir atıcı koyup nişan alacağız. Altta yüklü balonu, yanında küçük "sıradaki" balonu ve yukarı doğru
+beyaz bir nişan çizgisi göreceksin. Çizgi sol/sağ ok tuşlarıyla ya da fareyi (parmağı) oynatarak döner.
 
-Nişan almanın iki yolu:
+**Nişan bir açıdır.** Açıları radyanla ölçeriz (1. adımda tam tur `2π` idi, yarım tur `π`). Canvas'ta `y` aşağı büyüdüğü
+için **tam yukarı `-π/2`**'dir (`-Math.PI / 2`). Tam sağ `0`, tam sol `-π`.
 
-- ok tuşları her basışta açıyı biraz döndürür;
-- işaretçi: atıcıdan işaretçiye açı `Math.atan2(dy, dx)`'tir; `dy` ve `dx` atıcıdan işaretçiye gider. Atıcının altındaki noktalar
-  yok sayılır; zemine ateş edemezsin.
+**Açıdan çizgiye.** Açısı `aim` olan, 80 piksel uzunluğunda bir çizginin ucu:
 
-İki durumda da açı **sınırlanır**: yataydan asla 0,15 radyandan daha yatık değil. Neredeyse zemin boyunca bir atış duvarlar
-arasında uzun süre sekip balonlara hiç ulaşmazdı.
+```js
+x = SHOOTER.x + Math.cos(aim) * 80
+y = SHOOTER.y + Math.sin(aim) * 80
+```
+
+`Math.cos` açının ne kadar yana, `Math.sin` ne kadar yukarı/aşağı gittiğini verir (–1 ile 1 arası). Çizgi çizmek için:
+`ctx.beginPath()`, `ctx.moveTo(x, y)` (kalemi koy), `ctx.lineTo(x, y)` (oraya çiz), `ctx.stroke()` (çizgiyi boya).
+`ctx.strokeStyle` çizgi rengi, `ctx.lineWidth` kalınlığıdır. `'rgba(255, 255, 255, 0.6)'` %60 opak beyazdır (son sayı
+saydamlık).
+
+**İki yolla nişan:**
+
+- **Ok tuşları.** Tarayıcı bir tuşa basıldığında `keydown` **olayı** yayar; `document.addEventListener('keydown', ...)`
+  onu dinler. `event.key` basılan tuştur. Sol ok açıyı `0.04` azaltır, sağ ok artırır. `if ... else if ... else return` →
+  "sol oksa şunu, değilse ve sağ oksa bunu, ikisi de değilse çık". Ok tuşunda `event.preventDefault()` sayfanın kaymasını
+  engeller.
+- **Fare / parmak.** `pointermove` (hareket) ve `pointerdown` (basma) olaylarında `pointAt` çalışır. Olay yeri **sayfaya
+  göre** verir (`event.clientX`); `canvas.getBoundingClientRect()` canvas'ın sayfadaki kutusunu verir. Farkı alıp
+  ölçekleyerek canvas içindeki `x`, `y`'yi buluruz. Sonra atıcıdan o noktaya olan açıyı `Math.atan2(dy, dx)` hesaplar
+  (`dy` ve `dx`: atıcıdan noktaya dikey ve yatay fark). Atıcının **altındaki** noktaları yok sayarız (`if (y < SHOOTER.y)`):
+  yere ateş edilmez.
+
+**Açıyı sınırlamak (clamp).** Açı hiçbir zaman yataya 0.15 radyandan fazla yaklaşmaz; neredeyse yatay bir atış duvarlar
+arasında sonsuza dek sekip balonlara ulaşmazdı.
 
 ```js
 const clampAim = (angle) => Math.max(-Math.PI + 0.15, Math.min(-0.15, angle))
 ```
 
-Atıcı **yüklü** balonu gösterir ve yanındaki daha küçük bir balon **sıradakini** gösterir. Sıradaki rengi bilmek bir oyuncunun iki
-hamle ilerisini planlamasını sağlayan şeydir.
+`Math.min(a, b)` küçüğünü, `Math.max(a, b)` büyüğünü verir. İçteki `min` açıyı `-0.15`'ten büyük olamaz yapar, dıştaki
+`max` `-π + 0.15`'ten küçük olamaz. Sonuç hep bu iki sınırın arasındadır.
+
+**Yüklü ve sıradaki balon.** `loaded` atıcıdaki balonun, `next` sonrakinin renk numarasıdır. `pickColor()` rastgele bir
+renk numarası verir (1. adımdaki `Math.floor(Math.random() * ...)`). Sıradaki rengi bilmek, iki hamle ilerisini planlamayı
+sağlar.
+
+`SHOOTER = { x: 200, y: 490 }` bir **nesnedir**: atıcının yerini adlarıyla tutar (`SHOOTER.x`, `SHOOTER.y`).
 
 # --task--
 
@@ -57,13 +85,74 @@ hamle ilerisini planlamasını sağlayan şeydir.
 
 # --task-tr--
 
-1. `SHOOTER = { x: 200, y: 490 }`, `aim` (`reset()`'te `-Math.PI / 2`) ve her biri `pickColor()`'dan rastgele bir renk sırası olan
-   `loaded` ile `next`'i ekle.
-2. `clampAim(angle)` yaz. Sol ve Sağ `aim`'i `0.04` değiştirir (sınırlı, `preventDefault()`).
-3. `pointAt(event)` yaz: canvas piksellerine çevir ve nokta atıcının üstündeyse ona nişan al. Onu `pointermove` ve `pointerdown`'da
-   çağır.
-4. Nişan çizgisini (`'rgba(255, 255, 255, 0.6)'`, kalınlık 2) atıcıdan nişan boyunca 80 piksel, yüklü balonu atıcıda ve
-   sıradakini (yarıçap 12) `(SHOOTER.x + 60, SHOOTER.y + 10)`'da çiz.
+1. `const COLORS = [...]` satırının altına atıcının yerini ekle:
+
+   ```js
+   const SHOOTER = { x: 200, y: 490 }
+   ```
+
+2. `let grid ...` satırının altına üç değişken ekle:
+
+   ```js
+   let aim // angle of the shot, in radians
+   let loaded // color of the bubble in the shooter
+   let next // color of the one after
+   ```
+
+3. `const cellPos = ...` satırının altına bir satır boşluk bırakıp renk seçen yardımcıyı ekle:
+
+   ```js
+   const pickColor = () => Math.floor(Math.random() * COLORS.length)
+   ```
+
+4. `reset()`'in sonuna, son `}`'den önce ekle:
+
+   ```js
+     aim = -Math.PI / 2
+     loaded = pickColor()
+     next = pickColor()
+   ```
+
+5. `reset()`'in kapanış `}`'sinin altına, `function drawBubble` satırından önce şunları yaz:
+
+   ```js
+   const clampAim = (angle) => Math.max(-Math.PI + 0.15, Math.min(-0.15, angle))
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') aim = clampAim(aim - 0.04)
+     else if (event.key === 'ArrowRight') aim = clampAim(aim + 0.04)
+     else return
+     event.preventDefault()
+   })
+
+   function pointAt(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     if (y < SHOOTER.y) aim = clampAim(Math.atan2(y - SHOOTER.y, x - SHOOTER.x))
+   }
+
+   canvas.addEventListener('pointermove', pointAt)
+   canvas.addEventListener('pointerdown', pointAt)
+   ```
+
+6. `draw()`'un sonunda, balonları çizen iki döngünün kapanışından sonra (fonksiyonun son `}`'sinden önce) nişanı ve atıcıyı
+   çiz:
+
+   ```js
+     // The aim: a short line from the shooter.
+     ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+     ctx.lineWidth = 2
+     ctx.beginPath()
+     ctx.moveTo(SHOOTER.x, SHOOTER.y)
+     ctx.lineTo(SHOOTER.x + Math.cos(aim) * 80, SHOOTER.y + Math.sin(aim) * 80)
+     ctx.stroke()
+     drawBubble(SHOOTER.x, SHOOTER.y, loaded)
+     drawBubble(SHOOTER.x + 60, SHOOTER.y + 10, next, 12)
+   ```
+
+7. **Çalıştır**'a bas. Altta bir balon, yanında küçük bir balon ve yukarı bakan bir çizgi görmelisin. Oynamak için önce
+   oyuna tıkla; sol/sağ oklar ya da fareyi oynatmak çizgiyi döndürmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

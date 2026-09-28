@@ -31,28 +31,50 @@ pattern shows up everywhere in games (and in UI code too).
 
 # --explanation-tr--
 
-Dene: sağa giderken Sol'a bas. Baş dönüp kendi boynunun içine giriyor. Gerçek Yılan oyununda bu hamle görmezden
-gelinir. Akla gelen ilk çözüm "`dir`'in tam tersini gösteren tuşu görmezden gel":
+**Bu adımda:** yılanın kendi boynuna geri dönmesini engelleyeceğiz. Çalıştırıp sağa giderken sol oka basarsan
+artık hiçbir şey olmayacak; yılan yoluna devam edecek.
+
+**Sorun.** Dene: yılan sağa giderken sol oka bas. Baş dönüp doğrudan kendi boynuna girer. Gerçek Yılan oyununda
+bu hamle yok sayılır. İlk akla gelen çözüm: "şu anki yönün **tam tersi** olan tuşu yok say."
 
 ```js
 if (turn.x === -dir.x && turn.y === -dir.y) return
 ```
 
-Ama burada sinsi bir hata saklanıyor. Yılan yalnızca 150 ms'de bir hareket ediyor ve hızlı bir oyuncu bu aralıkta
-**iki** tuşa basabilir. Sağa giderken hızlıca önce Yukarı, sonra Sol'a bas:
+- `-dir.x` → `dir.x`'in işaret değiştirmiş hâli. Sağ `{ x: 1, y: 0 }` ise tersi `{ x: -1, y: 0 }`, yani sol.
+- `return` → "bu fonksiyondan **hemen çık**, aşağıdaki satırları yapma".
 
-1. Yukarı, sağın tersi değil → `dir` yukarı olur.
-2. Sol, *yukarının* tersi değil → `dir` sol olur.
-3. Bir sonraki hareket sola: yine boynun içine!
+**Gizli bir hata.** Yılan sadece 150 milisaniyede bir hareket ediyor. Hızlı bir oyuncu bu arada **iki** tuşa
+basabilir. Sağa giderken hızlıca önce yukarı, sonra sol oka bas:
 
-Yılan aslında hiç yukarı gitmedi. Kontrol, yalnızca *planlanmış* bir yönle karşılaştırma yaptı. Çözüm iki değişken
+1. Yukarı, sağın tersi değil → yön yukarı olur.
+2. Sol, *yukarının* tersi değil → yön sol olur.
+3. Bir sonraki adım sola gider: yine boyna!
+
+Yılan aslında hiç yukarı gitmedi. Kontrol, sadece *planlanmış* bir yönle karşılaştırma yaptı. Çözüm iki değişken
 tutmak:
 
 - `dir`: **son gerçek hareketin** yönü.
-- `nextDir`: oyuncunun istediği yön. Tuşlar bunu ayarlar ve `dir`'e göre kontrol edilir.
+- `nextDir`: oyuncunun **istediği** yön. Tuşlar bunu değiştirir; kontrol `dir`'e göre yapılır.
 
-`update()` hareket etmeden hemen önce `nextDir`'i `dir`'e kopyalar. "İsteği hatırla, bir sonraki adımda uygula"
-kalıbı oyunlarda (ve arayüz kodunda da) her yerde karşına çıkar.
+`update()` hareket etmeden hemen önce `nextDir`'i `dir`'e kopyalar. "İsteği not et, bir sonraki adımda uygula"
+yöntemi oyunlarda çok sık kullanılır. Garsonun siparişi deftere yazıp mutfağa sırası gelince iletmesi gibi.
+
+**Tuş → yön tablosu.** Dört ayrı `if` yerine bir **arama nesnesi** kullanırız: anahtarı tuş adı, değeri yön.
+
+```js
+const turns = { ArrowUp: { x: 0, y: -1 }, ... }
+const turn = turns[event.key]
+```
+
+`turns[event.key]` → köşeli parantezle, adı bir değişkende duran alanı okuruz. `event.key` `'ArrowUp'` ise
+`turns.ArrowUp` gelir. Tabloda olmayan bir tuşsa (`'a'` gibi) sonuç **boştur** (`undefined`).
+
+```js
+if (!turn) return
+```
+
+`!` "**değil**" demektir. `!turn` → "turn boşsa". Yani ok tuşu değilse fonksiyondan çık, hiçbir şey yapma.
 
 # --task--
 
@@ -72,19 +94,46 @@ if (!turn) return
 
 # --task-tr--
 
-1. `let nextDir = dir` ekle.
-2. Tuş işleyicisini yeniden yaz: tuşu bir yöne çevir (`turn`); `dir`'in tersiyse
-   (`turn.x === -dir.x && turn.y === -dir.y`) görmezden gel, değilse `nextDir = turn` yap. Tuşlar artık `dir`'i
-   doğrudan değiştirmemeli.
-3. `update()`'in başında `dir = nextDir` yap.
+1. `let dir = { x: 1, y: 0 }` satırının hemen altına istenen yönü tutan değişkeni ekle:
 
-İpucu: bir arama nesnesi işleyiciyi kısa tutar:
+   ```js
+   let nextDir = dir
+   ```
 
-```js
-const turns = { ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ... }
-const turn = turns[event.key]
-if (!turn) return
-```
+2. Şimdi tuşları dinleyen kodun tamamını (`document.addEventListener('keydown', ...` ile başlayıp `})` ile biten,
+   içinde dört `if` olan blok) sil. Yerine şunu yaz:
+
+   ```js
+   const turns = {
+     ArrowUp: { x: 0, y: -1 },
+     ArrowDown: { x: 0, y: 1 },
+     ArrowLeft: { x: -1, y: 0 },
+     ArrowRight: { x: 1, y: 0 },
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const turn = turns[event.key]
+     if (!turn) return
+     // Ignore a turn straight back into the snake's own neck.
+     if (turn.x === -dir.x && turn.y === -dir.y) return
+     nextDir = turn
+   })
+   ```
+
+   Dikkat: tuşlar artık `dir`'i değil, `nextDir`'i değiştiriyor.
+
+3. `update()` fonksiyonunun **ilk satırı** olarak istenen yönü uygula:
+
+   ```js
+   function update() {
+     dir = nextDir // ← yeni
+     const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y }
+     // ... geri kalanı aynı
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağa giderken sol oka bas: yılan dönmemeli. Normal dönüşler
+   (yukarı, aşağı) çalışmaya devam etmeli. Alttaki kontrollerin hepsi yeşil olmalı. "`dir` yalnızca yılan hareket
+   edince değişmeli" kontrolü kırmızıysa, tuş kodunda hâlâ `dir = ...` yazan bir satır kalmıştır.
 
 # --tests--
 

@@ -17,15 +17,37 @@ play, a few percent of deals are impossible, and a simple "always take the obvio
 
 # --explanation-tr--
 
-Dört temelin hepsi 13 kart tuttuğunda oyun kazanılır. Kazandırabilecek tek hamle bir temele yapılan hamledir; bu yüzden `tryMove` her
-hamleden sonra kontrol eder. Bu, hangi hamlenin son olabileceğini tahmin etmeye çalışmaktan daha basittir.
+**Bu adımda:** oyun kazanılabilir olacak. Dört temelin her birinde 13 kart olunca ortada "You won in 120 moves!"
+yazan bir panel çıkacak. Üstte `Moves 12  Time 95` (hamle ve saniye) ve sağda en iyi süren (`Best 95s`) görünecek.
+`N` tuşu istediğin an yeni oyun dağıtacak.
 
-Bir saat oyunun karelerini sayar ve kazanılınca durur. En hızlı kazancın (saniye olarak) `localStorage`'da tutulur; böylece her zaman
-geçilecek bir süre vardır.
+**Ne zaman kazanılır?** Dört temelin hepsinde 13 kart olunca. Kazandıran hamle ancak bir temele giden hamle olabilir; bu
+yüzden her başarılı `tryMove`'dan sonra kontrol ederiz. Bu, hangi hamlenin son olacağını tahmin etmeye çalışmaktan çok
+daha basittir.
 
-Kazandıktan sonra bir dokunuş yeni bir oyun dağıtır ve N her an yenisini başlatır, çünkü her Klondike dağıtımı kazanılamaz. Kusursuz
-oyunda bile dağıtımların küçük bir yüzdesi imkânsızdır ve basit bir "her zaman bariz hamleyi yap" oyuncusu dört oyundan yalnızca
-yaklaşık birini kazanır.
+```js
+['f0', 'f1', 'f2', 'f3'].every((f) => piles[f].length === 13)
+```
+
+`every` (hepsi) listedeki her eleman için soruyu sorar ve **hepsi** `true` ise `true` verir. 4. adımdaki `some`'ın
+kardeşidir: `some` "en az biri", `every` "hepsi".
+
+**Saat.** `frames`, oyun başladığından beri geçen kare sayısıdır. `loop` her karede, kazanılmadıysa (`!won`) bir artırır.
+Saniyede ~60 kare olduğu için `Math.floor(frames / 60)` geçen saniyedir (`Math.floor` küsuratı atar).
+
+**En iyi süre: `localStorage`.** Tarayıcının bu site için tuttuğu, sayfa kapanınca silinmeyen küçük bir not defteridir.
+`localStorage.setItem('solitaire-best', best)` kaydeder, `getItem` okur (yazı olarak; hiç yoksa `null`). `Number(...)`
+yazıyı sayıya çevirir, `|| 0` "işe yaramazsa 0 kullan" demektir. `best` 0 ise henüz hiç kazanılmamıştır; bu yüzden
+"hiç yoksa (`best === 0`) **veya** (`||`) yeni süre daha kısaysa (`<`)" kaydederiz.
+
+**Yeni oyun.** Kazandıktan sonra bir dokunuş yeni oyun dağıtır: `if (won) return deal()` ("kazanıldıysa dağıt ve dur").
+`N` tuşu her an yeni oyun başlatır, çünkü her Klondike dağıtımı kazanılamaz. Kusursuz oynasan bile dağıtımların
+yüzde birkaçı imkânsızdır; "hep bariz hamleyi yap" diyen basit bir oyuncu dört oyundan ancak birini kazanır. Büyük
+harf `'N'` de çalışsın diye iki tuşa birden bakarız.
+
+**Yazılar.** `'Best ' + (best ? best + 's' : '-')` → `best` 0 değilse `'Best 95s'`, 0 ise `'Best -'`. Parantez, önce
+kısa kararın hesaplanmasını sağlar. `ctx.textAlign = 'right'` verilen `x`'i yazının sağ ucu yapar. Panel yarı saydam
+koyu bir dikdörtgendir: `rgba(15, 23, 42, 0.85)` (kırmızı, yeşil, mavi, saydamlık).
 
 # --task--
 
@@ -39,13 +61,100 @@ yaklaşık birini kazanır.
 
 # --task-tr--
 
-1. `frames`, `won` (`deal()`'da `0` ve `false`) ve `localStorage`'da `'solitaire-best'` adıyla tutulan `best` ekle. Döngü kazanılmamışken
-   `frames`'i sayar.
-2. Her başarılı `tryMove`'dan sonra çağrılan `checkWin()`'i yaz: bütün temellerde 13 kart olduğunda `won`'u ayarla ve süreyi saniye
-   olarak `best`'i geçiyorsa (ya da yoksa) kaydet.
-3. Kazandıktan sonra bir `pointerdown` yeni bir oyun dağıtır. N her an yeni bir oyun dağıtır.
-4. Sola `Moves 12  Time 95`, `(canvas.width - LEFT, 24)`'e sağa hizalı `Best 95s` (ya da `Best -`) çiz ve kazanınca
-   `You won in 120 moves!` ile `Tap for a new game` yazan bir panel çiz.
+1. `let moves` satırının altına üç değişken ekle:
+
+   ```js
+   let frames
+   let won
+   let best = Number(localStorage.getItem('solitaire-best')) || 0
+   ```
+
+2. `deal()`'ın sonunda, `moves = 0` satırının altına ikisini sıfırla:
+
+   ```js
+     moves = 0
+     frames = 0                    // ← yeni
+     won = false                   // ← yeni
+   }
+   ```
+
+3. `tryMove()` içinde, `moves += 1` satırının altına (`return true`'nun **üstüne**) kazanma kontrolünü ekle:
+
+   ```js
+     moves += 1
+     checkWin()                    // ← yeni
+     return true
+   }
+   ```
+
+4. `autoMove()` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`// Which card ...` yorumunun
+   **üstüne**) şunu yaz:
+
+   ```js
+   function checkWin() {
+     if (['f0', 'f1', 'f2', 'f3'].every((f) => piles[f].length === 13)) {
+       won = true
+       const seconds = Math.floor(frames / 60)
+       if (best === 0 || seconds < best) {
+         best = seconds
+         localStorage.setItem('solitaire-best', best)
+       }
+     }
+   }
+   ```
+
+5. `pointerdown` dinleyicisinde, `const p = toCanvas(event)` satırının hemen altına şunu ekle:
+
+   ```js
+     const p = toCanvas(event)
+     if (won) return deal()        // ← yeni
+     const h = hit(p.x, p.y)
+   ```
+
+6. `keydown` dinleyicisine `N` satırını ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ') flipStock()
+     else if (event.key === 'n' || event.key === 'N') deal()     // ← yeni
+     else return
+     event.preventDefault()
+   })
+   ```
+
+7. `draw()`'un son satırını (`ctx.fillText('Moves ' + moves, LEFT, 24)`) sil ve yerine şunları yaz:
+
+   ```js
+     ctx.fillText('Moves ' + moves + '  Time ' + Math.floor(frames / 60), LEFT, 24)   // ← değişti
+     ctx.textAlign = 'right'
+     ctx.fillText('Best ' + (best ? best + 's' : '-'), canvas.width - LEFT, 24)
+     if (won) {
+       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+       ctx.fillRect(60, 240, canvas.width - 120, 80)
+       ctx.fillStyle = 'white'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.fillText('You won in ' + moves + ' moves!', canvas.width / 2, 275)
+       ctx.font = '15px sans-serif'
+       ctx.fillText('Tap for a new game', canvas.width / 2, 302)
+     }
+   }
+   ```
+
+   `'  Time '`'ın başında **iki** boşluk var: `Moves 12  Time 95`.
+
+8. `loop()`'un başına saati ekle:
+
+   ```js
+   function loop() {
+     if (!won) frames += 1         // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Üstte hamle ve saniye sayacı ile sağda `Best -` görmelisin. Oyuna tıklayıp `N`'ye basınca yeni
+   kartlar dağıtılmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

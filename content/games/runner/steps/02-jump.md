@@ -27,23 +27,81 @@ accident.)
 
 # --explanation-tr--
 
-Zıplama, Flappy kuşuyla aynı fizik; tek bir yeni parçayla: **zemin seni durdurur**.
+**Bu adımda:** koşucu zıplayacak. Boşluk tuşuna (ya da yukarı ok tuşuna) basınca dikdörtgen yukarı fırlayacak,
+yavaşlayacak, geri düşecek ve tam zemine oturacak.
+
+**Hareket = her karede biraz değişmek.** Çizgi film gibi: resmi saniyede yaklaşık 60 kez yeniden çizeriz, her
+seferinde koşucuyu biraz başka yere koyarız. Her bir resme **kare** (frame) denir. Bunun için iki fonksiyon
+kullanacağız: `update()` (durumu bir kare ilerlet) ve `draw()` (şimdiki durumu çiz).
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki resmi çizmeden hemen önce `loop`'u çalıştır"
+der. `loop` her çalıştığında sonunda kendini yeniden ister; böylece sonsuza kadar kare kare döner:
 
 ```js
-runner.vy += GRAVITY   // yerçekimi her karede biraz daha çeker
-runner.y += runner.vy  // hareket et
-if (onGround()) {      // zemine girdin mi (ya da değdin mi)?
-  runner.y = GROUND - runner.h   // tam üstünde dur
-  runner.vy = 0                  // ve düşmeyi bırak
+function loop() {
+  update()                     // 1. durumu ilerlet
+  draw()                       // 2. çiz
+  requestAnimationFrame(loop)  // 3. bir sonraki karede yine gel
 }
 ```
 
-Koşucu dururken bile yerçekimi çekmeye devam eder; zemin kontrolü bunu her karede geri alır. Kulağa israf gibi gelir
-ama en basit doğru yaklaşım budur: koşucu havada olsun olmasın tek bir kural seti vardır.
+**Hız ve yerçekimi.** Koşucuya yeni bir alan ekliyoruz: `vy`, yani dikey hız (velocity y): her karede kaç piksel
+aşağı kayacağı. Eksi değer yukarı demektir (çünkü `y` aşağı doğru büyür).
 
-Zıplama hızı `JUMP` (yukarı) yapar, ama **yalnızca yerdeyken**. Bu kontrol olmadan oyuncu havada yeniden zıplayıp uçup
-gider. (Bazı oyunlar bilerek "çift zıplamaya" izin verir. O zaman sayılan, bilinçli bir kuraldır; asla bir kaza
-değildir.)
+```js
+runner.vy += GRAVITY   // hız her karede biraz daha aşağı yönelir
+runner.y += runner.vy  // koşucu o hız kadar kayar
+```
+
+`a += b`, "`a`'ya `b` ekle ve sonucu yine `a`'ya koy" demektir (`a = a + b`'nin kısası). Zıplamak için hızı
+`JUMP = -11` yaparız: koşucu yukarı fırlar, yerçekimi (`0.6`) her karede bu hızı biraz azaltır, sonunda hız artıya
+döner ve koşucu düşer. Topu havaya atmak gibi.
+
+**Zemin seni durdurur.** Düşen koşucu zemine gelince durmalı. Önce "zemindeyim ya da zeminin içine girdim mi?"
+sorusunu soran bir fonksiyon yazarız:
+
+```js
+function onGround() {
+  return runner.y + runner.h >= GROUND
+}
+```
+
+- `runner.y + runner.h` koşucunun **alt kenarıdır** (tepesi + boyu).
+- `>=` "büyük ya da eşit" demek. Karşılaştırmanın sonucu `true` (doğru) ya da `false` (yanlış) olur.
+- `return` fonksiyonun **cevabını geri verir**. `onGround()` çağıran yer bu `true`/`false`'u alır.
+
+**`if` (eğer).** Bir şeyi yalnızca bir koşul doğruysa yapmak için:
+
+```js
+if (onGround()) {
+  runner.y = GROUND - runner.h   // zeminin tam üstüne koy
+  runner.vy = 0                  // düşmeyi durdur
+}
+```
+
+Parantez içi doğruysa `{ }` içindekiler çalışır, değilse atlanır. Tek bir komut varsa süslü parantezsiz, aynı
+satıra da yazılabilir: `if (onGround()) runner.vy = JUMP`.
+
+Dururken bile yerçekimi her karede koşucuyu biraz aşağı iter, zemin kontrolü de hemen geri koyar. İsraf gibi görünür
+ama en basit doğru yol budur: koşucu havada da olsa yerde de olsa **tek bir kural seti** vardır.
+
+**Sadece yerdeyken zıpla.** `jump()` hızı yalnızca `onGround()` doğruysa değiştirir. Bu kontrol olmasa oyuncu havada
+tekrar tekrar basıp uçup giderdi. (Bazı oyunlar bilerek "çift zıplama" verir; o zaman bu sayılan, bilinçli bir
+kuraldır, kaza değil.)
+
+**Tuşu dinlemek (olay, event).** Tarayıcıya "bir tuşa basılınca bana haber ver" deriz:
+
+```js
+document.addEventListener('keydown', (event) => {
+  if (event.key === ' ' || event.key === 'ArrowUp') jump()
+})
+```
+
+- `addEventListener('keydown', ...)` → "tuşa basılma (`keydown`) olayında şunu çalıştır".
+- `(event) => { ... }` **adsız kısa bir fonksiyondur** (ok fonksiyonu, arrow function). `=>` "şunu yap" diye
+  okunur. Tarayıcı onu çağırırken basılan tuşun bilgisini `event` içinde verir.
+- `event.key` basılan tuşun adıdır: boşluk için `' '` (tırnak içinde bir boşluk), yukarı ok için `'ArrowUp'`.
+- `===` "tam olarak eşit mi?" diye sorar. `||` "veya" demektir: iki koşuldan biri doğruysa yeterli.
 
 # --task--
 
@@ -57,12 +115,65 @@ değildir.)
 
 # --task-tr--
 
-1. `const GRAVITY = 0.6` ve `const JUMP = -11` ekle; koşucuya `vy: 0` ver.
-2. Koşucunun altı (`runner.y + runner.h`) `GROUND`'da ya da altındaysa doğru döndüren `function onGround()` yaz.
-3. Yalnızca koşucu yerdeyken `runner.vy = JUMP` yapan `function jump()` yaz. Boşluk (`' '`) ve `'ArrowUp'` için
-   `keydown`'da çağır.
-4. Yukarıdaki yerçekimi ve yere inme koduyla `update()`'i, `update()`, `draw()` ve `requestAnimationFrame(loop)`
-   çağıran bir `loop()` yaz. Döngüyü başlat.
+1. `const GROUND = 180 // y of the ground line` satırının hemen **altına** iki sabit ekle:
+
+   ```js
+   const GRAVITY = 0.6
+   const JUMP = -11 // speed at the start of a jump (negative = up)
+   ```
+
+2. `let runner = ...` satırının sonuna `vy: 0` alanını ekle. Satır şöyle olmalı:
+
+   ```js
+   let runner = { x: 50, y: GROUND - 44, w: 40, h: 44, vy: 0 }
+   ```
+
+3. `runner` satırının altına bir satır boşluk bırakıp zemin kontrolünü, zıplamayı ve tuş dinleyicisini yaz:
+
+   ```js
+   function onGround() {
+     return runner.y + runner.h >= GROUND
+   }
+
+   function jump() {
+     if (onGround()) runner.vy = JUMP
+   }
+
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' || event.key === 'ArrowUp') jump()
+   })
+   ```
+
+4. Onun altına (hâlâ `function draw()`'dan **önce**) bir kareyi ilerleten fonksiyonu yaz:
+
+   ```js
+   function update() {
+     runner.vy += GRAVITY
+     runner.y += runner.vy
+     if (onGround()) {
+       runner.y = GROUND - runner.h
+       runner.vy = 0
+     }
+   }
+   ```
+
+5. En alttaki tek başına duran `draw()` satırını **sil** ve yerine döngüyü ve onu başlatan satırı yaz:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+   Artık `draw()`'u döngü her karede kendisi çağırıyor.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra Boşluk ya da yukarı ok tuşuna bas: koşucu zıplayıp
+   zemine geri inmeli, havadayken tekrar basınca bir şey olmamalı. Alttaki kontrollerin hepsi yeşil olmalı.
+   Koşucu zeminin içinden düşüp gidiyorsa `onGround()` içindeki `>=` işaretini kontrol et.
 
 # --tests--
 

@@ -24,21 +24,71 @@ Face-down cards all look the same: a plain colored square. That is the whole poi
 
 # --explanation-tr--
 
-Tahta, aralarında ve kenarlarında boşluk olan 4×4'lük bir kart ızgarası. Tek bir iç içe döngü çifti tüm ızgarayı
-çizer: dış döngü satırlarda aşağı, iç döngü sütunlarda sağa gider.
+**Bu adımda:** hafıza oyununun tahtasını çizeceğiz. Sağda koyu lacivert bir alanın üstünde 4 satır, 4 sütun halinde
+dizilmiş 16 mor kare (kapalı kart) göreceksin.
 
-Her kartın konumu bir formülden gelir; böylece ortalığa saçılmış sihirli sayılar olmaz:
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan yazılar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) nedir?** Sayfada 400 piksel eninde, 440 piksel boyunda boş bir resim alanı var. Adı `canvas`,
+kimliği (id) `game`. Oyundaki her şeyi bu alanın üstüne **boyayarak** göstereceğiz: önce kâğıdı buluruz, sonra
+fırçayı alırız.
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+Bunu parça parça okuyalım:
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** (constant)
+  denir: bir kutuya etiket yapıştırmak gibidir, sonra hep o adla çağırırsın.
+- `document.getElementById('game')` → "sayfada kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `canvas.getContext('2d')` → canvas'ın çizim aracını (bağlam, **context**) verir. `ctx` artık senin fırçan.
+
+**Boyamak iki hareket:** önce renk seç, sonra dikdörtgen boya.
+
+```js
+ctx.fillStyle = 'orange'      // fırçaya turuncu boya sür
+ctx.fillRect(10, 20, 50, 30)  // dikdörtgen: x, y, genişlik, yükseklik
+```
+
+Canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Renkler `'orange'` gibi
+İngilizce adlarla ya da `'#6366f1'` gibi kodlarla yazılır.
+
+**Sabitlerle sayılara ad vermek.** Kartın boyu 85, aradaki boşluk 12 gibi sayıları bir kez adlandırırız:
+`CARD = 85`, `GAP = 12`. Sonra kodda `85` yerine `CARD` yazarız; hem okunur olur hem de değiştirmek istersen tek yeri
+değiştirirsin. `SIZE = 4` bir satırdaki kart sayısı, `TOP = 40` ise üstte hamle sayacı için bırakılan şerit. Sayılar
+tam sığacak şekilde seçildi: dört 85'lik kart ve beş 12'lik boşluk `4 × 85 + 5 × 12 = 400` eder, yani canvas'ın eni.
+
+**Döngü (loop) nedir?** 16 kartı tek tek 16 satırla çizmek yerine bilgisayara "bunu tekrarla" deriz:
+
+```js
+for (let col = 0; col < 4; col++) {
+  // buradaki kod col = 0, 1, 2, 3 için 4 kez çalışır
+}
+```
+
+- `let col = 0` → `col` adında bir **değişken** (variable) aç, 0'dan başlasın. `let`, `const`'tan farklı olarak
+  değeri sonradan değişebilen bir kutudur.
+- `col < 4` → "`col` 4'ten küçük olduğu sürece devam et".
+- `col++` → her turun sonunda `col`'u 1 artır.
+- `{ }` süslü parantezler arası, tekrarlanacak kodun gövdesidir.
+
+Bir döngünün **içine** ikinci bir döngü koyarsak (**iç içe döngü**): dış döngü satırları (`row`) sırayla gezer, her
+satır için iç döngü o satırdaki sütunları (`col`) gezer. 4 × 4 = 16 kez çalışır, her kart için bir kez.
+
+**Kartın yeri nereden gelir?** Her kartın konumu bir formülden hesaplanır:
 
 ```
 x = GAP + col * (CARD + GAP)
 y = TOP + GAP + row * (CARD + GAP)
 ```
 
-Sayılar tam sığacak şekilde seçildi: 85 px'lik dört kart ve 12 px'lik beş boşluk `4 × 85 + 5 × 12 = 400` piksel eder,
-yani canvas genişliği. Canvas, genişliğinden 40 px daha uzun (`TOP`); üstte daha sonra hamle sayacı için bir şerit
-kalır.
-
-Kapalı kartların hepsi aynı görünür: düz renkli bir kare. Oyunun bütün amacı da bu.
+`*` çarpma demektir. Örneğin `col = 0` için `x = 12`, `col = 1` için `x = 12 + 97 = 109`. Kapalı kartların hepsi aynı
+düz renkli karedir: oyunun bütün amacı da bu.
 
 # --task--
 
@@ -50,10 +100,47 @@ Kapalı kartların hepsi aynı görünür: düz renkli bir kare. Oyunun bütün 
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut; `SIZE = 4`, `CARD = 85`, `GAP = 12` ve `TOP = 40` sabitlerini ekle.
-2. Canvas'ı `'#1e1b4b'` ile doldur.
-3. İki iç içe döngüyle (`row` ve `col`, `0`'dan `SIZE - 1`'e) `x = GAP + col * (CARD + GAP)`,
-   `y = TOP + GAP + row * (CARD + GAP)` noktasına `'#6366f1'` renkli `CARD` × `CARD` bir kare çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve kâğıt ile fırçayı alan iki
+   satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve dört sabiti ekle:
+
+   ```js
+   const SIZE = 4
+   const CARD = 85
+   const GAP = 12
+   const TOP = 40
+   ```
+
+3. Bir satır boşluk bırak, sonra bütün alanı koyu laciverte boya:
+
+   ```js
+   ctx.fillStyle = '#1e1b4b'
+   ctx.fillRect(0, 0, canvas.width, canvas.height)
+   ```
+
+   `canvas.width` ve `canvas.height` canvas'ın eni ve boyudur (400 ve 440).
+
+4. Bir satır boşluk bırak, sonra mor rengi seçip iç içe iki döngüyle 16 kartı çiz:
+
+   ```js
+   ctx.fillStyle = '#6366f1'
+   for (let row = 0; row < SIZE; row++) {
+     for (let col = 0; col < SIZE; col++) {
+       ctx.fillRect(GAP + col * (CARD + GAP), TOP + GAP + row * (CARD + GAP), CARD, CARD)
+     }
+   }
+   ```
+
+   Her `{` bir `}` ile kapanmalı: sonda iki tane `}` var, biri iç döngünün, biri dış döngünün.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda lacivert zemin üstünde 4×4 dizilmiş 16 mor kare görmelisin ve
+   alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa parantezleri ve büyük/küçük harfleri harf harf karşılaştır.
 
 # --tests--
 

@@ -24,21 +24,56 @@ that way until you let go.
 
 # --explanation-tr--
 
-Oyuncu bir ok tuşu basılıyken dört yönde yürür. Duvarlar onu durdurur ve kontrol 3B labirenttekidir, şimdi piksellerle: oyuncunun
-kutusunun herhangi bir köşesi bir duvar karosunun içindeyse konum **engellidir**. Her ekseni ayrı ayrı hareket ettirmek, oyuncunun
-duvara yapışmak yerine boyunca kaymasını sağlar:
+**Bu adımda:** yeşil kareyi ok tuşlarıyla yürüteceksin. Duvarlar seni durduracak, ama duvara çapraz gidersen
+boyunca kayacaksın. Telefonda sol alt köşedeki soluk daire yön tuşu olacak.
+
+**Olay (event) nedir?** Bir tuşa basıldığında tarayıcı bir **olay** yayar. Ona önceden "bu olunca şunu yap" diye bir
+fonksiyon verebilirsin:
+
+```js
+document.addEventListener('keydown', (event) => {
+  // bir tuşa basıldığında burası çalışır; event.key basılan tuşun adıdır, örneğin 'ArrowUp'
+})
+```
+
+`'keydown'` tuşa basılınca, `'keyup'` bırakılınca olur. Hangi tuşların basılı olduğunu `held` adlı bir nesnede
+tutarız: basılınca `held[event.key] = true`, bırakılınca `false` (`true` evet, `false` hayır demek). Köşeli parantez
+`held['ArrowUp']` ile nokta `held.ArrowUp` aynı şeydir; ad bir değişkenden geliyorsa köşeli parantez kullanılır.
+`event.preventDefault()` tarayıcının ok tuşlarıyla sayfayı kaydırmasını engeller.
+
+**Yönler bir tabloda.** `DIRS` her ok tuşunu bir `[dx, dy]` çiftine eşler: sağ `[1, 0]` (x artar), yukarı `[0, -1]`
+(y azalır, çünkü y aşağı doğru büyür). Oyuncu her karede yönüyle `SPEED` (2.5 piksel) çarpımı kadar yürür.
+
+**Duvara çarptım mı?** Oyuncunun gövdesi bir kutudur. Kutunun **dört köşesinden** herhangi biri bir duvar ya da kapı
+karosunun içindeyse o konum **kapalıdır** (`blocked`). Bir pikselin hangi karoda olduğunu bulmak kolay: `Math.floor(x / T)`
+(aşağı yuvarlanmış bölme) sütunu, `Math.floor(y / T)` satırı verir. Şimdilik odanın dışı da duvar sayılır.
+
+**Kaymanın sırrı: eksenleri ayrı dene.** Önce sadece yatay hareketi, sonra sadece dikey hareketi deneriz:
 
 ```js
 if (!blocked(body.x + dx, body.y)) body.x += dx
 if (!blocked(body.x, body.y + dy)) body.y += dy
 ```
 
-Fonksiyon oyuncuyu değil bir **gövde** alır; böylece düşmanlar sonra tam olarak aynısını kullanabilir.
+`!` "değil" demektir: "kapalı **değilse** yürü." Duvara çapraz gidersen duvara dik olan kısım durur, duvar boyunca
+olan kısım devam eder; yapışıp kalmazsın. `move` fonksiyonu oyuncuyu değil herhangi bir **gövdeyi** (`body`) alır;
+ileride düşmanlar da aynı fonksiyonu kullanacak.
 
-Oyuncu ayrıca hangi yöne baktığını da hatırlar (`dir`); kılıcın buna ihtiyacı olacak.
+**Yeni küçük şeyler:**
 
-Telefonda sol alt köşedeki silik bir daire bir yön tuşudur: sol, sağ, üst ya da alt tarafına dokunmak, bırakana kadar o yöne
-yürütür.
+- `||` "ya da" demektir: `ch === '#' || ch === 'D'` → "duvar ya da kapı".
+- `for (const [cx, cy] of [[...], [...]])` → dört köşe noktasının her biri için, onun iki sayısını `cx` ve `cy` diye aç.
+- `return true` fonksiyonu hemen bitirir ve "evet" döndürür. Hiçbir köşe çarpmadıysa en sondaki `return false` çalışır.
+- `for (const key in DIRS)` → `DIRS` nesnesindeki her adı (`'ArrowUp'`, ...) sırayla `key` yapar.
+- `+=` "üstüne ekle" demektir: `x += 3` → `x = x + 3`.
+- `null` "hiçbir şey" demektir. `if (dir)` → "`dir` bir şeyse".
+
+**Telefon yön tuşu (pad).** Dokunulan noktayı canvas piksellerine çeviririz (canvas ekranda büyütülmüş ya da küçültülmüş
+olabilir, bu yüzden `canvas.width / rect.width` oranıyla çarparız). Sonra dairenin merkezine uzaklığa bakarız:
+`Math.hypot(dx, dy)` iki nokta arasındaki düz uzaklıktır. Dairenin içindeyse, yatay fark büyükse sağ/sol, dikey fark
+büyükse yukarı/aşağı seçilir. `Math.sign(x)` sayının işaretidir: `1`, `-1` ya da `0`. Daireyi çizmek için
+`ctx.arc(x, y, yarıçap, 0, Math.PI * 2)` tam bir çember yolu çizer, `ctx.stroke()` onun sadece çizgisini boyar
+(`fill` içini boyardı).
 
 # --task--
 
@@ -51,13 +86,110 @@ yürütür.
 
 # --task-tr--
 
-1. `SPEED = 2.5`, `DIRS` (ok tuşundan `[dx, dy]`'ye) ve `keydown`/`keyup`'tan bir `held` nesnesi ekle (oklar için
-   `preventDefault()`).
-2. `blocked(x, y)` yaz: `(x, y)`'deki bir `SIZE` kutusunun herhangi bir köşesi bir duvar ya da kapı karosundaysa ya da (şimdilik)
-   odanın dışındaysa true; ve yukarıdaki gibi `move(body, dx, dy)`.
-3. Her karede: yön basılı ok tuşudur (ya da yön tuşununki); varsa `player.dir`'i ayarla ve `SPEED` kadar hareket ettir.
-4. `PAD = { x: 70, y: 330, r: 60 }` ekle. İçindeki bir `pointerdown` (canvas piksellerinde) `padDir`'i merkezinden uzun eksenin
-   yönüne ayarlar; `pointerup` onu temizler. Onu 2 kalınlığında `'rgba(255, 255, 255, 0.25)'` bir daire çerçevesi olarak çiz.
+1. `const SIZE = 22 ...` satırının altına hızı ekle:
+
+   ```js
+   const SPEED = 2.5
+   ```
+
+2. `const ROWS = 11` satırının altına yön tablosunu ekle:
+
+   ```js
+   const DIRS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
+   ```
+
+3. `let player` satırının altına basılı tuşlar nesnesini ekle:
+
+   ```js
+   const held = {}
+   ```
+
+4. `findIn` fonksiyonunun kapanış `}`'sinden sonra, `function draw()`'un **üstüne** şunların hepsini yaz:
+
+   ```js
+   const solidTile = (ch) => ch === '#' || ch === 'D'
+
+   // Does a box at (x, y) overlap a wall? For now, outside the room counts as a wall too.
+   function blocked(x, y) {
+     for (const [cx, cy] of [[x, y], [x + SIZE - 1, y], [x, y + SIZE - 1], [x + SIZE - 1, y + SIZE - 1]]) {
+       const row = Math.floor(cy / T)
+       const col = Math.floor(cx / T)
+       if (row < 0 || row >= ROWS || col < 0 || col >= COLS || solidTile(tiles[row][col])) return true
+     }
+     return false
+   }
+
+   // Move a body, one axis at a time, stopping at walls.
+   function move(body, dx, dy) {
+     if (!blocked(body.x + dx, body.y)) body.x += dx
+     if (!blocked(body.x, body.y + dy)) body.y += dy
+   }
+
+   document.addEventListener('keydown', (event) => {
+     held[event.key] = true
+     if (DIRS[event.key]) event.preventDefault()
+   })
+   document.addEventListener('keyup', (event) => {
+     held[event.key] = false
+   })
+
+   // Touch: the pad in the corner moves.
+   const PAD = { x: 70, y: 330, r: 60 }
+   let padDir = null
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     const dx = x - PAD.x
+     const dy = y - PAD.y
+     if (Math.hypot(dx, dy) < PAD.r) padDir = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]
+   })
+   canvas.addEventListener('pointerup', () => {
+     padDir = null
+   })
+
+   function update() {
+     let dir = padDir
+     for (const key in DIRS) if (held[key]) dir = DIRS[key]
+     if (dir) {
+       player.dir = dir
+       move(player, dir[0] * SPEED, dir[1] * SPEED)
+     }
+   }
+   ```
+
+   `SIZE - 1` kullanıyoruz çünkü 22 piksellik kutunun son pikseli 21. sıradadır (sayma 0'dan başlar).
+   `update`, önce pad'in yönünü alır; basılı bir ok tuşu varsa onu kullanır; bir yön varsa oyuncuyu o yöne çevirip yürütür.
+
+5. `draw()` fonksiyonunun sonuna, `ctx.restore()` satırından **sonra**, son `}`'den **önce** pad dairesini ekle:
+
+   ```js
+     ctx.restore()
+
+     // The touch pad, faint, in the corner. // ← yeni (buradan aşağısı)
+     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
+     ctx.lineWidth = 2
+     ctx.beginPath()
+     ctx.arc(PAD.x, PAD.y, PAD.r, 0, Math.PI * 2)
+     ctx.stroke()
+   }
+   ```
+
+   `rgba(255, 255, 255, 0.25)` dörtte bir görünür beyazdır (son sayı saydamlık).
+
+6. `loop()` içinde `draw()`'un **üstüne** `update()` çağrısını ekle:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra ok tuşlarıyla yürü. Duvarlarda durmalı, duvara çapraz
+   giderken kaymalısın. Alttaki kontrollerin hepsi yeşil olmalı. Oyuncu hiç kıpırdamıyorsa `update()`'i `loop`'a
+   eklediğini kontrol et.
 
 # --tests--
 

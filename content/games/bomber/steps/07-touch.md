@@ -18,15 +18,44 @@ Finally the game gets a clock, and your fastest win is kept in `localStorage`.
 
 # --explanation-tr--
 
-Telefonda ok tuşları yoktur ama doğal bir kontrol vardır: **parmağını oyuncunun gitmek istediğin tarafına koy**. Parmağı
-oyuncunun merkeziyle karşılaştır; `dx` ve `dy`'den büyük olan ekseni, işareti de yönü belirler. Oyuncunun **üstüne** (yarım kare
-içinde) dokunmak onun yerine bir bomba bırakır.
+**Bu adımda:** oyun telefonda da oynanır olacak ve bir saat kazanacak. Oyuncunun sağına dokunup parmağını tutarsan sağa
+yürüyecek; oyuncunun kendisine dokunursan bomba bırakacak. Sağ üstte `Time 12` gibi geçen saniyeyi, kazandıktan sonra
+da `Best` (en hızlı zaferin) göreceksin.
 
-Güzel olan şu ki dokunmatiğin kendi hareket koduna ihtiyacı yoktur. Klavyenin doldurduğu aynı `held` listesini doldurur: parmak
-sağdayken `['ArrowRight']`, kalkınca `[]`. Geri kalan her şey (hedefler, kayma, duvarlar, bombalar) olduğu gibi çalışır. Bu,
-**girdiyi** (oyuncunun ne istediği) **kurallardan** (ne olduğu) ayırmanın karşılığıdır.
+**Parmakla yön.** Telefonda ok tuşu yoktur, ama doğal bir kontrol vardır: **parmağını oyuncunun gitmek istediğin yanına
+koy**. Parmağı oyuncunun merkeziyle karşılaştırırız:
 
-Son olarak oyun bir saat alır ve en hızlı kazancın `localStorage`'da tutulur.
+- `dx` parmağın merkezden ne kadar sağda (eksiyse solda), `dy` ne kadar aşağıda (eksiyse yukarıda) olduğudur.
+- İkisinden hangisi büyükse (`Math.abs` ile eksisiz hâlleri karşılaştırılır) ekseni o belirler; işareti de yönü:
+  `dx > 0` sağ, değilse sol.
+- İkisi de yarım kareden küçükse parmak **oyuncunun üstündedir**: `touch` `null` ("hiçbir şey") döndürür ve bu bomba
+  demektir.
+
+Parmağın canvas içindeki yeri için olayın `clientX`/`clientY`'sini canvas pikseline çeviririz:
+`canvas.getBoundingClientRect()` canvas'ın pencerede nerede ve ne boyda göründüğünü verir; ondan uzaklığı alıp
+`canvas.width / rect.width` ile ölçekleriz (canvas ekranda küçültülmüş olabilir).
+
+**Dokunuş kendi hareket kodunu istemez.** Güzel yanı şu: dokunmatik, klavyenin doldurduğu aynı `held` listesini doldurur:
+parmak sağdayken `['ArrowRight']`, kalkınca `[]`. Geri kalan her şey (hedefler, kayma, duvarlar, bombalar) olduğu gibi
+çalışır. **Girdiyi** (oyuncu ne istiyor) **kurallardan** (ne olur) ayırmanın ödülü budur.
+
+Üç olay dinleriz:
+
+- `pointerdown` (parmak/fare bastı): oyun bittiyse yeniden başlat (`return reset()` hem çağırır hem çıkar); yön varsa
+  `held = [dir]`, yoksa bomba.
+- `pointermove` (parmak kaydı): yalnızca zaten yürüyorsak (`held` boş değilse) yönü güncelle.
+- `pointerup` (parmak kalktı): `held = []`, dur. Bunu `document`'te dinleriz ki parmak canvas dışında kalksa da dursun.
+
+**Saat.** Döngü saniyede 60 kez çalıştığı için oyun sürerken her karede `frames`'i 1 artırırız; saniye
+`Math.floor(frames / 60)`'tır (`Math.floor` aşağı yuvarlar).
+
+**En hızlı zafer: `localStorage`.** Tarayıcının, sayfayı kapatsan da silinmeyen küçük defteridir:
+`localStorage.setItem('bomber-best', 42)` yazar, `localStorage.getItem('bomber-best')` okur. Defter her şeyi **yazı**
+olarak tutar; `Number(...)` sayıya çevirir. İlk seferde not yoktur; `|| 0` "yoksa 0" demektir ve 0 "henüz kazanılmadı"
+anlamına gelir. Az olan iyidir: kayıt yoksa (`best === 0`) **veya** yeni süre daha kısaysa kaydederiz.
+
+Ekranda `(best ? '  Best ' + best : '')` → en iyi varsa `'  Best 38'`, yoksa boş yazı (`''`) eklenir.
+`ctx.textAlign = 'right'` verilen noktayı yazının sağ ucu yapar; yazı sağ kenara yaslanır.
 
 # --task--
 
@@ -42,14 +71,78 @@ Son olarak oyun bir saat alır ve en hızlı kazancın `localStorage`'da tutulur
 
 # --task-tr--
 
-1. `touch(event)` yaz: canvas piksellerine çevir, oyuncunun merkeziyle karşılaştır (`player.x * TILE + TILE / 2`,
-   `TOP + player.y * TILE + TILE / 2`); iki eksende de yarım kare içindeyse `null`, değilse büyük farkın ok tuşunu döndür.
-2. `pointerdown`: oyun bittiyse `reset()`; değilse `held = [dir]` yap ya da `touch` `null` döndürdüyse `dropBomb()` et.
-   `pointermove`, `held` boş değilken onu günceller; document'ın `pointerup`'ı onu boşaltır.
-3. `frames` ekle (`reset()`'te `0`, oynarken sayılır). Kazanınca saniyeleri `best`'i geçiyorsa (ya da yoksa) `localStorage`'a
-   `'bomber-best'` adıyla kaydet.
-4. `(canvas.width - 8, 22)`'ye sağa hizalı `Time 42` (en iyi varsa `  Best 38` ile) çiz ve son satırı
-   `Press Enter or tap to play again` yap.
+1. `let state ...` satırının altına iki satır ekle:
+
+   ```js
+   let frames
+   let best = Number(localStorage.getItem('bomber-best')) || 0
+   ```
+
+2. `reset()`'in sonuna, `state = 'playing'` satırının altına `frames = 0` ekle.
+
+3. `update()` içinde `if (state !== 'playing') return` satırının altına `frames += 1` ekle. Aynı fonksiyonun son satırını
+   şöyle değiştir:
+
+   ```js
+     if (state === 'playing' && enemies.length === 0) { // ← değişti
+       state = 'won'
+       const seconds = Math.floor(frames / 60)
+       if (best === 0 || seconds < best) {
+         best = seconds
+         localStorage.setItem('bomber-best', best)
+       }
+     }
+   ```
+
+4. `keyup` bloğunun kapanışının (`})`) altına, bir boş satır bırakıp dokunmatik kodu ekle:
+
+   ```js
+   // Touch: hold a finger on one side of the player to walk that way; tap on the player to drop a bomb.
+   function touch(event) {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     const dx = x - (player.x * TILE + TILE / 2)
+     const dy = y - (TOP + player.y * TILE + TILE / 2)
+     if (Math.abs(dx) < TILE / 2 && Math.abs(dy) < TILE / 2) return null
+     if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'ArrowRight' : 'ArrowLeft'
+     return dy > 0 ? 'ArrowDown' : 'ArrowUp'
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'playing') return reset()
+     const dir = touch(event)
+     if (dir) held = [dir]
+     else dropBomb()
+   })
+
+   canvas.addEventListener('pointermove', (event) => {
+     if (held.length === 0) return
+     const dir = touch(event)
+     if (dir) held = [dir]
+   })
+
+   document.addEventListener('pointerup', () => {
+     held = []
+   })
+   ```
+
+5. `draw()` içinde kalpleri yazan satırın altına saati ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Time ' + Math.floor(frames / 60) + (best ? '  Best ' + best : ''), canvas.width - 8, 22)
+   ```
+
+6. Aynı fonksiyonda son yazıyı değiştir:
+
+   ```js
+       ctx.fillText('Press Enter or tap to play again', canvas.width / 2, 222) // ← değişti
+   ```
+
+7. **Çalıştır**'a bas. Sağ üstte `Time 0` yazmalı ve her saniye artmalı. Oyun alanında oyuncunun sağına tıklayıp basılı
+   tut: oyuncu sağa yürümeli, bırakınca durmalı. Oyuncunun üstüne tıklayınca bomba bırakmalı. Kazanınca `Best` ile
+   süren görünmeli; oyun bitince bir dokunuş yeniden başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

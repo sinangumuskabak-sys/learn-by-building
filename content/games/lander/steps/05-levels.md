@@ -18,15 +18,41 @@ landing Space goes to the next level; after a crash, to a new game. The best sco
 
 # --explanation-tr--
 
-Bir inişten sonra sonraki uçuş **daha zor** olmalı: yerçekimi her bölümle büyür ve 3. bölümden itibaren pist yarı genişliktedir.
-İki küçük değişiklik ve aynı oyun giderek daha zorlayıcı olur.
+**Bu adımda:** oyun bölümlere ayrılacak. Her başarılı inişten sonra bir sonraki bölüm gelecek: yerçekimi biraz
+artacak, 3. bölümden itibaren pist yarı yarıya daralacak. Sağ üstte beyaz bir `Level 1  Score 0  Best 0` satırı
+göreceksin; en iyi skor sayfayı kapatsan da hatırlanacak.
 
-Skor hem ilerlemeyi hem beceriyi ödüllendirir: her iniş için `100 × level`, artı **kalan yakıt**. Yalnızca gerektiği kadar yakan
-dikkatli bir pilot, etrafta süzülüp duran birinden daha çok puan alır. İyi skor kuralları oyunculara iyi oynamayı öğretir.
+**Zorlaşan oyun.** İki küçük değişiklikle aynı oyun giderek zorlaşır:
 
-Bölüm ve skor bütün oyuna, araç ve zemin tek bir uçuşa aittir. Bu yüzden artık iki fonksiyon var: `startLevel()` yeni tepeler
-ve yeni bir araç yapar, `reset()` skorsuz 1. bölüme döner ve onu başlatır. Bir inişten sonra Boşluk sonraki bölüme, bir kazadan
-sonra yeni bir oyuna götürür. En iyi skor oyun bittiğinde kaydedilir.
+- Yerçekimi artık sabit değil, bölüme göre hesaplanan bir **değişken**: `gravity = 0.02 + level * 0.005`
+  (1. bölümde 0.025, 2.'de 0.03...). Büyük harfli `GRAVITY` sabitini kaldırıp küçük harfli `gravity`'yi kullanırız.
+- Pist genişliği: `const width = level < 3 ? 2 : 1` → bölüm 3'ten küçükse 2 aralık (80 px), değilse 1 aralık (40 px).
+  `koşul ? a : b` 3. adımda gördüğün kısa karardır.
+
+**Puan.** Her iniş `100 × bölüm` artı **kalan yakıt** kadar puan verir. Sadece gerektiği kadar yakan dikkatli pilot,
+havada oyalanandan fazla kazanır. İyi puan kuralları oyuncuya iyi oynamayı öğretir.
+
+**İki ayrı başlangıç.** Bölüm ve skor bütün oyuna aittir; araç ve zemin ise tek bir uçuşa. Bu yüzden `reset()`'i
+ikiye ayırırız:
+
+- `startLevel()` → yeni tepeler, yeni araç, bu bölümün yerçekimi, `state = 'flying'`. (Eski `reset()`'in yaptığı iş.)
+- `reset()` → `level = 1`, `score = 0`, sonra `startLevel()`. Yani yepyeni bir oyun.
+
+`next()` ("sonraki") Boşluk ve dokunuş için karar verir: indiysen bölüm bir artar (`level += 1`) ve yeni bölüm
+başlar; çakıldıysan oyun baştan başlar. Uçarken ikisi de değilse hiçbir şey olmaz.
+
+**Kalıcı hafıza: `localStorage`.** Tarayıcının bu site için tuttuğu küçük bir not defteridir; sayfa kapansa da silinmez.
+
+```js
+localStorage.setItem('lander-best', best)      // 'lander-best' adıyla kaydet
+localStorage.getItem('lander-best')            // oku: yazı olarak gelir, hiç kaydedilmemişse null
+```
+
+`Number(...)` okunan yazıyı sayıya çevirir. Hiç kayıt yoksa sonuç `0` ya da geçersiz bir sayı olur; `|| 0` "bu işe
+yaramazsa 0 kullan" demektir. Oyun bitince (kaza) skor en iyiden büyükse (`>`) yeni en iyi odur ve kaydedilir.
+
+**Sağa yaslı yazı.** `ctx.textAlign = 'right'` verilen `x`'in yazının **sağ ucu** olmasını sağlar; böylece yazı ne kadar
+uzun olursa olsun sağ kenara yaslanır.
 
 # --task--
 
@@ -42,14 +68,128 @@ sonra yeni bir oyuna götürür. En iyi skor oyun bittiğinde kaydedilir.
 
 # --task-tr--
 
-1. `level`, `score`, `best` (`localStorage` `'lander-best'`'ten) ve `GRAVITY`'nin yerini alan `gravity`'yi ekle:
-   `startLevel()`'da ayarlanan `0.02 + level * 0.005`.
-2. `reset()`'i böl: `startLevel()` zemini, aracı, yerçekimini ve `'flying'` durumunu yapar; `reset()` `level = 1`,
-   `score = 0` yapar ve `startLevel()` çağırır.
-3. Pist 3. bölümden önce 2 adım, o zamandan sonra 1 adım genişliğindedir.
-4. Bir iniş skora `100 * level + fuel` ekler. Bir kaza, skor en iyiyi geçiyorsa onu en iyi olarak kaydeder.
-5. Boşluk ve dokunuşlar için `next()` yaz: bir inişten sonra sonraki bölüm; bir kazadan sonra `reset()`. Sağ üste
-   `Level 2  Score 530  Best 900` çiz ve mesajları `Landed! Space: next level` ile `Crashed. Space: new game` yap.
+1. `const GRAVITY = 0.025 ...` satırını **sil** (artık bölüme göre hesaplanacak).
+
+2. `let lander` satırının altına üç değişken ekle; `let state ...` satırının altına en iyi skoru ekle. Bu bölüm
+   şöyle olmalı:
+
+   ```js
+   let lander
+   let gravity                                                     // ← yeni
+   let level                                                       // ← yeni
+   let score                                                       // ← yeni
+   let state // 'flying', 'landed' or 'crashed'
+   let best = Number(localStorage.getItem('lander-best')) || 0     // ← yeni
+   const keys = {}
+   ```
+
+3. `makeGround()` içinde pist genişliğini bölüme bağla (üstündeki yorumu da güncelle):
+
+   ```js
+   // Random hills, with one flat stretch: the pad. It gets narrower on later levels.   // ← değişti
+   function makeGround() {
+     const points = canvas.width / STEP + 1
+     ground = Array.from({ length: points }, () => 210 + Math.random() * 120)
+     const width = level < 3 ? 2 : 1                                                     // ← değişti
+   ```
+
+4. `function reset() {` satırındaki adı `startLevel` yap, içine yerçekimini ekle ve altına yeni bir `reset()` yaz:
+
+   ```js
+   function startLevel() {                                          // ← değişti
+     makeGround()
+     lander = { x: 60, y: 40, vx: 1, vy: 0, angle: 0, fuel: 400 }
+     gravity = 0.02 + level * 0.005                                 // ← yeni
+     state = 'flying'
+   }
+
+   function reset() {                                               // ← yeni
+     level = 1                                                      // ← yeni
+     score = 0                                                      // ← yeni
+     startLevel()                                                   // ← yeni
+   }                                                                // ← yeni
+   ```
+
+5. `keydown` dinleyicisindeki Boşluk satırını değiştir:
+
+   ```js
+     if (event.key === ' ') next()                                  // ← değişti
+   ```
+
+6. `keyup` dinleyicisinin kapanışından (`})`) sonra bir boş satır bırak ve (`// Touch: ...` yorumunun **üstüne**)
+   `next()`'i yaz:
+
+   ```js
+   // After a landing, the next level; after a crash, a new game.
+   function next() {
+     if (state === 'landed') {
+       level += 1
+       startLevel()
+     } else if (state === 'crashed') {
+       reset()
+     }
+   }
+   ```
+
+7. `pointerdown` dinleyicisinin başındaki `reset()`'i `next()` yap:
+
+   ```js
+     if (state !== 'flying') {
+       next()                                                       // ← değişti
+       return
+     }
+   ```
+
+8. `touchdown()`'ı puan ve en iyi skorla güncelle:
+
+   ```js
+   function touchdown() {
+     const onPad = lander.x - FEET >= pad.x1 && lander.x + FEET <= pad.x2
+     const gentle = lander.vy <= SAFE.vy && Math.abs(lander.vx) <= SAFE.vx && Math.abs(lander.angle) <= SAFE.angle
+     if (onPad && gentle) {
+       state = 'landed'
+       lander.y = pad.y - 10
+       score += 100 * level + lander.fuel                           // ← yeni
+       return
+     }
+     state = 'crashed'
+     if (score > best) {                                            // ← yeni
+       best = score                                                 // ← yeni
+       localStorage.setItem('lander-best', best)                    // ← yeni
+     }                                                              // ← yeni
+   }
+   ```
+
+9. `update()` içinde `lander.vy += GRAVITY` satırını küçük harfle değiştir:
+
+   ```js
+     lander.vy += gravity                                           // ← değişti
+   ```
+
+10. `draw()` içinde göstergeleri yazan `readouts.forEach(...)` bloğunun kapanışından (`})`) hemen sonra bölüm/skor
+    satırını ekle:
+
+    ```js
+      ctx.fillStyle = 'white'
+      ctx.textAlign = 'right'
+      ctx.fillText('Level ' + level + '  Score ' + score + '  Best ' + best, canvas.width - 10, 20)
+    ```
+
+    `'  Score '` ve `'  Best '` başında **iki** boşluk var; kontrol bunu harfi harfine arar.
+
+11. Aynı fonksiyonun sonundaki iki mesajı değiştir:
+
+    ```js
+        ctx.fillText('Landed! Space: next level', canvas.width / 2, 140)   // ← değişti
+    ```
+
+    ```js
+        ctx.fillText('Crashed. Space: new game', canvas.width / 2, 140)    // ← değişti
+    ```
+
+12. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ üstte bölüm ve skor görünmeli. İnince Boşluk seni 2. bölüme
+    götürmeli; çakılınca oyun 1. bölümden, skor sıfırdan başlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+    kalırsa kodda `GRAVITY` (büyük harf) kalıp kalmadığına bak.
 
 # --tests--
 

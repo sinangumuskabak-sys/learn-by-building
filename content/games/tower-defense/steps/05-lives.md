@@ -22,19 +22,40 @@ remembers its `maxHp`.
 
 # --explanation-tr--
 
-Şimdi düşmanların bir tehdit olması gerekiyor. Yolun sonundan çıkan her düşman 20 **canından** birine mal olur; sıfırda oyun
-biter. Sıraya dikkat: geçip giden bir düşmanın canı, hiçbir mermi onu kovalamaya devam etmesin diye 0 yapılır ama altın
-kazandırmamalıdır, çünkü onu kuleler öldürmedi.
+**Bu adımda:** düşmanları gerçek bir tehdit yapacağız. Sol üstte **Gold 120  Lives 20** yazacak; yolun sonundan çıkan
+her düşman bir can götürecek. Her düşmanın üstünde yeşil bir can çubuğu görünecek. Canlar bitince ekran kararıp
+**Game Over** yazacak; Boşluk ya da bir tıklama yeni oyun başlatacak.
 
-Oyuncuların savaşın nasıl gittiğini de görmesi gerekir. Bir **can çubuğu** üst üste iki dikdörtgendir: tam genişlik koyu
-kırmızı, üstünde de kalan can kadar geniş yeşil bir parça:
+**Canlar.** 20 **canın** (`lives`) var. Yolun sonundan çıkan her düşman bir can götürür; sıfırda oyun biter. Sıraya
+dikkat: geçip giden düşmanın canı (`hp`) 0 yapılır ki peşinden mermi gitmesin, ama altın **vermemeli**, çünkü onu
+kuleler öldürmedi. Bu yüzden onu, ödül satırından önce listeden sileriz (önceki adımda kurduğumuz sıra aynen kalıyor).
+`lives -= 1` "canı 1 azalt" demektir.
+
+**Oyunun durumu.** `let state` bir yazı tutar: `'playing'` (oynanıyor) ya da `'over'` (bitti). Bitince:
+
+- `update()` en başta `if (state === 'over') return` ile hemen çıkar; hiçbir şey hareket etmez.
+- `build()` kule kurmaz.
+- Boşluk ya da tıklama `reset()` ile yeni oyun başlatır.
+
+**Klavye.** `document.addEventListener('keydown', ...)` sayfada bir tuşa basılınca çalışır; `event.key` basılan
+tuşun adıdır. Boşluk tuşunun adı `' '` (tırnaklar arasında tek boşluk). Tarayıcı normalde Boşluk'a basınca sayfayı
+aşağı kaydırır; `event.preventDefault()` bu **varsayılan davranışı** durdurur.
+
+**Can çubuğu.** Üst üste iki dikdörtgendir: altta tam genişlikte koyu kırmızı, üstte kalan can kadar geniş yeşil:
 
 ```js
-ctx.fillRect(x - 14, y - 20, 28 * e.hp / e.maxHp, 4)
+ctx.fillRect(x - 14, y - 20, (28 * e.hp) / e.maxHp, 4)
 ```
 
-`hp / maxHp` 0 ile 1 arasında bir kesirdir; böylece aynı satır zayıf ve güçlü düşmanlar için çalışır. Her düşmanın artık
-`maxHp`'sini hatırlamasının nedeni budur.
+`e.hp / e.maxHp` 0 ile 1 arasında bir orandır (yarı can → 0,5). 28 ile çarpınca yeşil kısmın genişliği çıkar
+(0,5 × 28 = 14 piksel). Aynı satır zayıf ve güçlü düşmanlar için çalışsın diye her düşman artık en yüksek canını da
+(`maxHp`) hatırlar.
+
+**Karartma.** Oyun bitince bütün ekranı yarı saydam koyu bir renkle (`'rgba(15, 23, 42, 0.8)'`, %80 kapak) boyarız;
+harita hafifçe altta görünür, yazılar öne çıkar. `ctx.fillText` yazı yazar; `canvas.width / 2` yatayda ortası.
+
+`!==` "eşit değil" demektir: `hover && state !== 'over'` → "farenin altında bir kare varsa **ve** oyun bitmediyse
+önizlemeyi çiz".
 
 # --task--
 
@@ -49,14 +70,144 @@ ctx.fillRect(x - 14, y - 20, 28 * e.hp / e.maxHp, 4)
 
 # --task-tr--
 
-1. Düşmanlar `{ d: 0, hp: 10, maxHp: 10 }` olarak başlar. `lives` (20) ve `state` (`'playing'`) ekle.
-2. Sonu geçen bir düşman bir cana mal olur. Kaçan düşmanları kuleler hedef aramadan önce çıkar; böylece yalnızca kulelerin
-   öldürdüğü düşmanlar altın verir.
-3. `lives` `0`'a ulaşınca durum `'over'` olur: `update()` durur, artık kule kurulmaz ve Boşluk (ya da tıklama) yeni bir oyun
-   başlatır.
-4. Her düşmanın üstüne bir can çubuğu çiz: `x - 14, y - 20`'de 28'e 4 `'#7f1d1d'`, üstünde kalan can kadar geniş
-   `'#22c55e'`. `Gold 120  Lives 20` göster; oyun bitince ekranı `'rgba(15, 23, 42, 0.8)'` ile ört ve `Game Over` ile
-   `Press Space to play again` yaz.
+1. Değişken satırlarına iki yeni satır ekle:
+
+   ```js
+   let gold
+   let lives // ← yeni
+   let toSpawn // enemies still to come
+   let spawnIn // frames until the next one
+   let state // 'playing' or 'over' // ← yeni
+   let selected // the kind of tower to build: only 'arrow' so far
+   ```
+
+2. `reset()` içine iki satır ekle:
+
+   ```js
+     gold = 120
+     lives = 20 // ← yeni
+     toSpawn = 30
+     spawnIn = 0
+     state = 'playing' // ← yeni
+     selected = 'arrow'
+   ```
+
+3. `build()` fonksiyonunun ilk satırını değiştir:
+
+   ```js
+     if (state === 'over' || !canBuild(col, row)) return // ← değişti
+   ```
+
+4. `pointerdown` bloğunu şöyle yap:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const p = tileAt(event)
+     if (state === 'over') { // ← yeni
+       reset() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     build(p.col, p.row)
+   })
+   ```
+
+5. `pointerleave` bloğunun bittiği `})` satırının hemen altına Boşluk tuşunu dinleyen bloğu ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ') {
+       event.preventDefault()
+       if (state === 'over') reset()
+     }
+   })
+   ```
+
+6. `update()` fonksiyonunun başını şöyle değiştir (en üste bir satır, düşman satırına `maxHp`, yolun sonu kısmına can
+   kaybı):
+
+   ```js
+   function update() {
+     if (state === 'over') return // ← yeni
+
+     if (toSpawn > 0) {
+       spawnIn -= 1
+       if (spawnIn <= 0) {
+         enemies.push({ d: 0, hp: 10, maxHp: 10 }) // ← değişti
+         toSpawn -= 1
+         spawnIn = 45
+       }
+     }
+
+     for (const e of enemies) e.d += SPEED
+     // Walked off the end of the road: it got through. Its hp drops to 0 so no bullet chases it any more. // ← değişti
+     for (const e of enemies) { // ← değişti
+       if (pointAt(e.d) === null) { // ← değişti
+         e.hp = 0 // ← değişti
+         lives -= 1 // ← yeni
+       } // ← yeni
+     } // ← yeni
+     enemies = enemies.filter((e) => e.hp > 0)
+   ```
+
+   Eski tek satırlık `for (const e of enemies) if (pointAt(e.d) === null) e.hp = 0` satırını silmeyi unutma.
+
+7. `update()`'in en sonunda, son `enemies = enemies.filter(...)` satırının altına oyun sonu kontrolünü ekle:
+
+   ```js
+     for (const e of enemies) if (e.hp <= 0) gold += 5
+     enemies = enemies.filter((e) => e.hp > 0)
+
+     if (lives <= 0) { // ← yeni
+       lives = 0 // ← yeni
+       state = 'over' // ← yeni
+     } // ← yeni
+   }
+   ```
+
+8. `draw()` içinde önizleme satırını değiştir:
+
+   ```js
+     if (hover && state !== 'over') { // ← değişti
+   ```
+
+9. `draw()` içindeki düşman döngüsünde, `ctx.fill()` satırının altına can çubuğunu ekle:
+
+   ```js
+       ctx.arc(x, y, 11, 0, Math.PI * 2)
+       ctx.fill()
+       // Health bar: red underneath, green for what is left. // ← yeni
+       ctx.fillStyle = '#7f1d1d' // ← yeni
+       ctx.fillRect(x - 14, y - 20, 28, 4) // ← yeni
+       ctx.fillStyle = '#22c55e' // ← yeni
+       ctx.fillRect(x - 14, y - 20, (28 * e.hp) / e.maxHp, 4) // ← yeni
+     }
+   ```
+
+10. `draw()`'un sonunu şöyle yap:
+
+    ```js
+      ctx.fillStyle = 'white'
+      ctx.font = 'bold 16px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('Gold ' + gold + '  Lives ' + lives, 10, 26) // ← değişti
+      ctx.textAlign = 'center'
+      if (state === 'over') { // ← yeni (buradan kapanışa kadar)
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = 'white'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+        ctx.font = '18px sans-serif'
+        ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 30)
+      }
+    }
+    ```
+
+    `'  Lives '` içinde başta **iki** boşluk var; kontroller yazıyı harfi harfine arar.
+
+11. **Çalıştır**'a bas. Sol üstte **Gold 120  Lives 20** görünmeli; hiç kule kurmazsan her çıkan düşman bir can
+    götürmeli ve sonunda **Game Over** çıkmalı. Oynamak için önce oyuna tıkla; Boşluk yeni oyun başlatmalı. Alttaki
+    kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

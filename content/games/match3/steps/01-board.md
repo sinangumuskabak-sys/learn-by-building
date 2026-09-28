@@ -28,26 +28,67 @@ Every cell is `SIZE` pixels; the board starts at `LEFT` and `TOP`, so cell `(r, 
 
 # --explanation-tr--
 
-Üçlü eşleştirme oyunu altı renkte 8'e 8 bir mücevher ızgarasıdır. Aynı renkten üç ya da daha fazlasını sıraya dizmek için
-yan yana iki mücevheri takas edersin, onlar da kaybolur. Bütün oyun tek bir **2 boyutlu dizide** yaşar: `board[row][col]`,
-`0`'dan `5`'e bir renk sırası tutar.
+**Bu adımda:** 8×8'lik bir mücevher tahtası çizeceğiz. Sağda damalı mor karelerin üstünde altı farklı renkte
+yuvarlak mücevherler göreceksin. Tahtada hiçbir yerde aynı renkten üç mücevher yan yana ya da alt alta olmayacak.
 
-İlk sürpriz: düz rastgele renklerle doldurulan bir tahta neredeyse her zaman **zaten** yan yana üç içerir ve oyun, oyuncunun
-hiç dokunmadığı mücevherleri temizleyerek başlar. Bu yüzden her mücevher bir kuralla seçilir. Tahtayı satır satır, soldan
-sağa dolduruyoruz; yani bir mücevher yerleştirirken yalnızca **solundaki** ve **üstündeki** hücreler vardır. Soldaki iki
-mücevher yenisiyle aynı renkteyse ya da üstteki ikisi öyleyse bir sıra oluşturacağız, o yüzden yeniden zar atarız:
+**Oyun nedir?** Altı renkli mücevherlerden oluşan 8×8 bir ızgara. Yan yana iki mücevherin yerini değiştirip aynı
+renkten üç ya da daha fazlasını sıraya dizersin, onlar yok olur.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur ve yapar. `//` ile başlayan kısımlar **yorumdur**:
+bilgisayar atlar, sadece insanlar için not.
+
+**Canvas ve fırça.** Sayfada 400×480 piksellik bir resim alanı (`canvas`, kimliği `game`) var. Her şeyi onun
+üstüne boyarız:
+
+```js
+const canvas = document.getElementById('game')  // kâğıdı bul
+const ctx = canvas.getContext('2d')             // fırçayı (çizim bağlamı, context) al
+```
+
+`const ad = değer` bir şeye değişmeyen bir ad (**sabit**) verir; `let ad` içi sonradan değişebilen bir
+**değişken** açar. Nokta (`.`) "bunun içindeki" demek; tırnak içindekiler **yazıdır**. Canvas'ta `(0, 0)` sol üst
+köşedir; `x` sağa, `y` **aşağı** doğru büyür. `ctx.fillStyle = renk` fırçaya renk sürer, `ctx.fillRect(x, y, en,
+boy)` dikdörtgen boyar. `'#ef4444'` gibi yazılar renk kodudur.
+
+**Dizi (array) ve iki boyutlu tahta.** Dizi köşeli parantez içinde bir listedir: `['#ef4444', '#f59e0b']`.
+Elemanlar **0'dan** numaralanır: `COLORS[0]` ilk renk. `.length` eleman sayısıdır. Tahta, satırlardan oluşan bir
+listedir: `board[r][c]` → `r`. satırın `c`. hücresi. Hücrede rengin kendisini değil **sıra numarasını** (0–5)
+tutarız; rengi çizerken `COLORS[gem]` ile buluruz.
+
+**Fonksiyon.** Bir işi bir ad altında toplar. `function ad(parametreler) { ... }` ile tanımlanır, `ad(...)` ile
+çağrılır. Parametreler çağırırken verdiğin değerlerin içerideki adlarıdır. `return` cevabı geri verir. Kısa yazımı
+da var: `const randomGem = () => ...` "hiçbir şey almayan, `=>`'nun sağındakini veren fonksiyon".
+
+**Rastgele renk.** `Math.random()` 0 ile 1 arası rastgele bir sayı verir; `* COLORS.length` (× 6) onu 0 ile 5,99…
+arasına genişletir; `Math.floor` aşağı yuvarlar: 0–5 arası tam sayı.
+
+**İlk sürpriz.** Tamamen rastgele renklerle doldurulmuş bir tahtada neredeyse **her zaman** zaten üçlü sıralar olur;
+oyun, oyuncunun dokunmadığı mücevherleri silerek başlardı. Bu yüzden her mücevheri bir kuralla seçeriz. Tahtayı
+satır satır, soldan sağa doldururuz; bir mücevheri koyarken yalnızca **solundaki** ve **üstündeki** hücreler var.
+Soldaki iki hücre ya da üstteki iki hücre yeni mücevherle aynı renkse üçlü olur; o zaman yeniden zar atarız:
 
 ```js
 let gem
 do gem = randomGem()
-while (makesRun(r, c, gem))   // üç yapmayana kadar yeniden dene
+while (makesRun(r, c, gem))   // üçlü yapmayana kadar yeniden dene
 ```
 
-`do ... while` gövdesini en az bir kez çalıştırır ve koşul doğru kaldıkça tekrarlar. Her zaman biter: en fazla iki renk
-yasaktır ve altı renk vardır.
+`do ... while` içini **en az bir kez** yapar, koşul doğru olduğu sürece tekrarlar. Hep biter: en fazla iki renk
+yasaktır, altı renk var.
 
-Her hücre `SIZE` pikseldir; tahta `LEFT` ve `TOP`'tan başlar, yani `(r, c)` hücresi `x = LEFT + c * SIZE`,
-`y = TOP + r * SIZE`'dadır. Bir mücevher, hücresinin ortasında bir dairedir.
+`makesRun` içinde: `c >= 2` "solda iki hücre var mı?" (`>=` büyük ya da eşit), `===` "eşit mi?", `&&` "ve", `||`
+"veya". `board[r][c - 1]` bir soldaki hücredir.
+
+**Döngüler.** `for (let r = 0; r < N; r++) { ... }` sayan bir döngüdür: `r = 0`'dan başla, `r < 8` olduğu sürece
+dön, her turdan sonra `r`'yi bir artır (`r++`). İç içe iki döngü 64 hücrenin hepsini gezer. `board.push(x)`
+listenin sonuna ekler.
+
+**Konum.** Her hücre `SIZE` (48) piksel. Tahta `LEFT` ve `TOP`'tan başlar; `(r, c)` hücresi `x = LEFT + c * SIZE`,
+`y = TOP + r * SIZE`'dadır. Dama deseni: `(r + c) % 2 === 0` → "satır + sütun çift mi?" (`%` bölümden kalan).
+
+**Daire çizmek.** `ctx.beginPath()` yeni bir şekle başlar, `ctx.arc(x, y, yarıçap, 0, Math.PI * 2)` merkezi
+`(x, y)` olan tam bir çember tarif eder (`Math.PI * 2` tam tur), `ctx.fill()` içini boyar.
 
 # --task--
 
@@ -61,13 +102,98 @@ Her hücre `SIZE` pikseldir; tahta `LEFT` ve `TOP`'tan başlar, yani `(r, c)` h�
 
 # --task-tr--
 
-1. `N = 8`, `SIZE = 48`, `LEFT = (canvas.width - N * SIZE) / 2`, `TOP = 72` ve altı `COLORS`'ı
-   (`'#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'`) ekle.
-2. `randomGem()` (`COLORS` içine rastgele bir sıra) ve `makesRun(r, c, gem)` yaz: soldaki iki hücre ya da üstteki iki hücre
-   ikisi de `gem` tutuyorsa true.
-3. `board`'u yukarıdaki `do ... while` ile satır satır kuran `newBoard()`'u ve onu çağıran `reset()`'i yaz.
-4. Her karede canvas'ı `'#1e1b4b'` ile doldur, sonra her hücreyi bir kare (`(r + c)` çiftse `'#312e81'`, değilse
-   `'#3730a3'`) ve mücevherini kendi renginde `SIZE / 2 - 6` yarıçaplı bir daire olarak çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve şunları yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+
+   const N = 8 // 8 by 8 gems
+   const SIZE = 48
+   const LEFT = (canvas.width - N * SIZE) / 2
+   const TOP = 72 // room for the score and the moves left
+   const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899']
+
+   let board // board[row][col]: a color index
+   ```
+
+   `LEFT` tahtayı yatayda ortalar: (400 − 8 × 48) / 2 = 8. `TOP` üstte skor için yer bırakır.
+
+2. Bir satır boşluk bırakıp rastgele renk ve üçlü kontrolünü yaz:
+
+   ```js
+   const randomGem = () => Math.floor(Math.random() * COLORS.length)
+
+   // Would this gem make three in a row with the two to its left, or the two above it?
+   function makesRun(r, c, gem) {
+     const left = c >= 2 && board[r][c - 1] === gem && board[r][c - 2] === gem
+     const up = r >= 2 && board[r - 1][c] === gem && board[r - 2][c] === gem
+     return left || up
+   }
+   ```
+
+3. Altına tahtayı kuran fonksiyonu ve `reset()`'i yaz:
+
+   ```js
+   // A new board with no three in a row: each gem avoids the colors that would make one.
+   function newBoard() {
+     board = []
+     for (let r = 0; r < N; r++) {
+       board.push([])
+       for (let c = 0; c < N; c++) {
+         let gem
+         do gem = randomGem()
+         while (makesRun(r, c, gem))
+         board[r].push(gem)
+       }
+     }
+   }
+
+   function reset() {
+     newBoard()
+   }
+   ```
+
+   Her satırın başında boş bir liste (`[]`) eklenir, sonra o satıra 8 mücevher itilir.
+
+4. Altına çizim fonksiyonunu, oyun döngüsünü ve başlatan satırları yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e1b4b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         const x = LEFT + c * SIZE
+         const y = TOP + r * SIZE
+         ctx.fillStyle = (r + c) % 2 === 0 ? '#312e81' : '#3730a3'
+         ctx.fillRect(x, y, SIZE, SIZE)
+         const gem = board[r][c]
+         ctx.fillStyle = COLORS[gem]
+         ctx.beginPath()
+         ctx.arc(x + SIZE / 2, y + SIZE / 2, SIZE / 2 - 6, 0, Math.PI * 2)
+         ctx.fill()
+       }
+     }
+   }
+
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+   `koşul ? a : b` "koşul doğruysa `a`, değilse `b`" demektir. Mücevher hücrenin ortasında, yarıçapı
+   `48 / 2 - 6 = 18`. `requestAnimationFrame(loop)` tarayıcıdan "bir sonraki karede `loop`'u çalıştır" ister;
+   `loop` her seferinde çizip kendini yeniden ister, ekran saniyede ~60 kez güncellenir.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda damalı bir tahta ve üzerinde 64 renkli yuvarlak görmelisin;
+   her çalıştırmada renkler değişir, ama hiçbir yerde üç aynı renk sıralanmaz. Alttaki kontrollerin hepsi yeşil
+   olmalı. Üçlü testi kırmızıysa `makesRun`'daki `c - 1`, `c - 2`, `r - 1`, `r - 2` yazımını kontrol et.
 
 # --tests--
 

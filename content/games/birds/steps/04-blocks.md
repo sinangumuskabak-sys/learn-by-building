@@ -31,27 +31,57 @@ steps. Blocks come from a **level** written as data: `[kind, x, y, width, height
 
 # --explanation-tr--
 
-Şimdi hedef: tahta ve taş bloklardan bir kule. Her blok kuş gibi bir cisimdir, yani yerçekimi onu zaten aşağı çeker. Eksik olan,
-iki kutunun **birbirini nasıl ittiği**.
+**Bu adımda:** sağ tarafa bir hedef kuracağız: iki tahta direğin üstünde bir tahta kiriş ve yanında gri bir taş blok.
+Kule kendi başına dimdik duracak; kuşu ona fırlatınca bloklar itilip devrilecek.
 
-İki kutu üst üste bindiğinde her eksende ne kadar örtüştüklerine bakar ve onları **küçük** olan boyunca ayırırız. Bir başkasının
-üstünde duran kutu dikeyde çok az, yatayda çok örtüşür; bu yüzden yukarı itilir ve bir kuleyi ayakta tutan tam olarak budur.
+**Bloklar da gövdedir.** Her blok, kuş gibi `bodies` listesinde bir gövde; yani yerçekimi onları zaten aşağı çekiyor.
+Eksik olan şey: iki kutunun **birbirini itmesi**. Bunu `collide(a, b)` (çarpış) fonksiyonu yapacak.
 
-Kimin hareket edeceğine **kütle** karar verir. Ağır bir kuşun çarptığı hafif bir tahta uçar; bir taş blok neredeyse fark etmez.
-Her cismin ters kütlesini (`1 / mass`) kullanırız: itme ve hız değişimi onunla orantılı paylaşılır. Sonra kutular o eksende hâlâ
-yaklaşıyorsa seker:
+**1. İç içe mi?** İki kutunun yatayda ne kadar üst üste bindiğine (`ox`) ve dikeyde ne kadar bindiğine (`oy`) bakarız.
+İkisinden biri sıfır ya da eksiyse kutular değmiyordur, hiçbir şey yapmayız.
+
+**2. En az bindikleri yönde ayır.** Bir kutunun üstünde duran kutu dikeyde çok az, yatayda çok binmiştir; bu yüzden
+**yukarı** itilir. Bir kuleyi ayakta tutan tam budur. İtme yönüne **normal** denir: `(nx, ny)`. Yatay ayırmada `nx`
+1 ya da -1 (a'dan b'ye doğru), `ny` 0; dikeyde tersi.
+
+**3. Kütle kimin kıpırdayacağına karar verir.** Ağır bir kuşun çarptığı hafif tahta uçar; taş blok ise zor fark eder.
+Kütle = alan × yoğunluk / 400 (`mass`). Her gövdenin **ters kütlesini** kullanırız: `ia = 1 / mass(a)`. Hafif gövdenin
+ters kütlesi büyüktür, o yüzden itmenin ve hız değişiminin büyük payı ona düşer.
+
+**4. Birbirlerine doğru geliyorlarsa sektir.** `closing`, normal yönünde birbirlerine yaklaşma hızlarıdır. Artıysa bir
+**darbe** (impulse) uygularız:
 
 ```js
-const j = (1.2 * closing) / (ia + ib) // çarpmanın büyüklüğü
-a.vx -= j * nx * ia                   // hafif bir cisim (büyük ia) çok değişir
+const j = (1.2 * closing) / (ia + ib)   // darbenin büyüklüğü (1.2: biraz sekmeli bir çarpma)
+a.vx -= j * nx * ia                     // hafif gövde (büyük ia) çok değişir
 b.vx += j * nx * ib
 ```
 
-Momentum (`kütle × hız`), gerçek çarpışmalardaki gibi öncesinde ve sonrasında aynıdır. Biraz **sürtünme** birbirinin üstünde
-kayan kutuları yavaşlatır; böylece yığınlar kayıp dağılmaz.
+Biri ne kadar kaybederse öbürü o kadar kazanır: **momentum** (kütle × hız) çarpmadan önce ve sonra aynı kalır, gerçek
+çarpışmalardaki gibi. Sonra biraz **sürtünme**: birbirinin üstünde kayan kutuları yavaşlatır (en fazla `0.5 × j`); yoksa
+yığınlar buz pateni yapar gibi dağılırdı.
 
-Kuş artık küçük bloklara karşı hızlı hareket ediyor; bu yüzden bilardo oyunundaki gibi her kare `SUB = 4` küçük fizik adımına
-bölünür. Bloklar veri olarak yazılmış bir **seviyeden** gelir: `[kind, x, y, width, height]`.
+**Her çifti karşılaştırmak.** Listede her gövdeyi her gövdeyle bir kez karşılaştırırız:
+
+```js
+for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) collide(bodies[i], bodies[j])
+```
+
+`j`, `i + 1`'den başladığı için her çift bir kez denenir ve hiçbir gövde kendisiyle karşılaştırılmaz.
+
+**Küçük adımlar (`SUB`).** Kuş küçük bloklara göre hızlı gider; bir karede bir bloğun içinden geçip gidebilir. Bu yüzden
+her kareyi 4 küçük fizik adımına böleriz: `step()` her seferinde yerçekiminin ve hızın dörtte birini uygular, `update()`
+onu karede 4 kez çalıştırır.
+
+**Seviye veri olarak yazılır.** Her blok bir satırdır: `[tür, x, y, en, boy]` (`x`, `y` sol üst köşe). `LEVEL.map(...)` her
+satırı bir gövdeye çevirir. `([kind, x, y, w, h]) => ...` → gelen diziyi beş ayrı ada açar.
+
+**Yeni küçük şeyler:**
+
+- `[nx, depth] = [1, ox]` → iki değişkene tek satırda iki değer verir.
+- `a.x + a.w / 2` kutunun ortasıdır. `a.x + a.w / 2 < b.x + b.w / 2 ? 1 : -1` → "a b'nin solundaysa 1, değilse -1".
+- `Math.max(-0.5 * j, Math.min(0.5 * j, ...))` → sürtünmeyi -0.5j ile 0.5j arasında tutar.
+- `if (b.kind === 'bird') { ... } else { ... }` → kuş daire, geri kalan her şey dikdörtgen çizilir.
 
 # --task--
 
@@ -66,14 +96,125 @@ bölünür. Bloklar veri olarak yazılmış bir **seviyeden** gelir: `[kind, x, 
 
 # --task-tr--
 
-1. `MATERIALS`'a `wood` (`'#b45309'`, yoğunluk 1) ve `stone` (`'#64748b'`, yoğunluk 2.5), `LEVEL` verisi ve alan × yoğunluk / 400
-   olan `mass(b)` ekle. `reset()` cisimleri `LEVEL`'dan yapar.
-2. `collide(a, b)` yaz: kutular iki eksende de örtüşüyorsa en az örtüşme eksenini ve `a`'dan `b`'ye normal `(nx, ny)`'yi bul;
-   onları ters kütleyle paylaştırarak örtüşme kadar ayır; normal boyunca yaklaşıyorlarsa `j = 1.2 × closing / (ia + ib)` itkisini
-   ve kaymalarına karşı en fazla `0.5 × j` bir sürtünme itkisini uygula.
-3. `SUB = 4` ekle: `step()` `GRAVITY / SUB` ekler ve `hız / SUB` kadar hareket ettirir, sonra her cisim çiftini çarpıştırır;
-   `update()` onu karede `SUB` kez çalıştırır.
-4. Blokları kendi renklerinde dikdörtgenler olarak çiz (kuş daire kalır).
+1. `const BIRD = 10 ...` satırının altına alt adım sayısını ekle:
+
+   ```js
+   const SUB = 4 // physics steps per frame
+   ```
+
+2. `MATERIALS`'a tahta ve taşı ekle, altına seviyeyi yaz:
+
+   ```js
+   const MATERIALS = {
+     wood: { color: '#b45309', density: 1 }, // ← yeni
+     stone: { color: '#64748b', density: 2.5 }, // ← yeni
+     bird: { color: '#dc2626', density: 4 },
+   }
+   // The level: [kind, x, y, width, height], x and y the top left corner.
+   const LEVEL = [
+     ['wood', 380, 230, 12, 60], ['wood', 440, 230, 12, 60], ['wood', 370, 218, 94, 12], ['stone', 480, 250, 40, 40],
+   ]
+   ```
+
+   İki dik tahta direk, üstlerinde yatay bir tahta kiriş ve yerde bir taş blok.
+
+3. `const body = ...` satırının altına kütleyi ekle:
+
+   ```js
+   const mass = (b) => (b.w * b.h * MATERIALS[b.kind].density) / 400
+   ```
+
+4. `reset()` içinde `bodies = []` satırını değiştir:
+
+   ```js
+     bodies = LEVEL.map(([kind, x, y, w, h]) => body(kind, x, y, w, h)) // ← değişti
+   ```
+
+5. `launch()` fonksiyonunun kapanış `}`'sinden sonra, `function step()`'in **üstüne** `collide`'ı yaz:
+
+   ```js
+   // Two overlapping boxes: push them apart along the axis where they overlap least, then bounce their velocities
+   // along that axis like a collision between two masses, with a little friction along the other axis.
+   function collide(a, b) {
+     const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+     const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+     if (ox <= 0 || oy <= 0) return
+     const ia = 1 / mass(a)
+     const ib = 1 / mass(b)
+     let nx = 0
+     let ny = 0
+     let depth
+     if (ox < oy) [nx, depth] = [a.x + a.w / 2 < b.x + b.w / 2 ? 1 : -1, ox]
+     else [ny, depth] = [a.y + a.h / 2 < b.y + b.h / 2 ? 1 : -1, oy]
+     const push = depth / (ia + ib)
+     a.x -= nx * push * ia
+     a.y -= ny * push * ia
+     b.x += nx * push * ib
+     b.y += ny * push * ib
+     const closing = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny
+     if (closing <= 0) return
+     const j = (1.2 * closing) / (ia + ib) // 1.2: a slightly bouncy hit
+     a.vx -= j * nx * ia
+     a.vy -= j * ny * ia
+     b.vx += j * nx * ib
+     b.vy += j * ny * ib
+     // Friction: slow down the sliding along the surface.
+     const slide = (a.vx - b.vx) * ny - (a.vy - b.vy) * nx
+     const f = Math.max(-0.5 * j, Math.min(0.5 * j, slide / (ia + ib)))
+     a.vx -= f * ny * ia
+     a.vy += f * nx * ia
+     b.vx += f * ny * ib
+     b.vy -= f * nx * ib
+   }
+   ```
+
+   Uzun ama yukarıdaki dört adımın aynısı: iç içe mi, ayır, yaklaşıyorlarsa sektir, sürtünme. Harf harf kopyala;
+   `+` ve `-` işaretlerinin her biri önemli.
+
+6. `step()`'in içinde üç satırı `/ SUB` ile böl ve zemin döngüsünden sonra çarpışma satırını ekle:
+
+   ```js
+   function step() {
+     for (const b of bodies) {
+       b.vy += GRAVITY / SUB // ← değişti
+       b.x += b.vx / SUB // ← değişti
+       b.y += b.vy / SUB // ← değişti
+       if (b.y + b.h > GROUND) {
+         b.y = GROUND - b.h
+         b.vy = 0
+         b.vx *= 0.9 // the ground is rough
+       }
+     }
+     for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) collide(bodies[i], bodies[j]) // ← yeni
+     // Fallen off the world: gone.
+   ```
+
+7. `update()`'in ilk satırını değiştir:
+
+   ```js
+   function update() {
+     for (let i = 0; i < SUB; i++) step() // ← değişti
+   ```
+
+8. `draw()`'un sonundaki gövde döngüsünde, daireyi sadece kuş için çiz, geri kalanları dikdörtgen yap:
+
+   ```js
+     for (const b of bodies) {
+       const m = MATERIALS[b.kind]
+       ctx.fillStyle = m.color
+       if (b.kind === 'bird') { // ← yeni
+         ctx.beginPath()
+         ctx.arc(b.x + b.w / 2, b.y + b.h / 2, b.w / 2, 0, Math.PI * 2)
+         ctx.fill()
+       } else { // ← yeni (bu üç satır)
+         ctx.fillRect(b.x, b.y, b.w, b.h)
+       }
+     }
+   ```
+
+9. **Çalıştır**'a bas. Sağda iki kahverengi direk, üstünde bir kiriş ve yanında gri bir taş görmelisin; hiçbiri
+   kıpırdamamalı. Oynamak için önce oyuna tıkla ve kuşu kuleye fırlat: bloklar itilip devrilmeli. Alttaki kontrollerin
+   hepsi yeşil olmalı. Kule kendi kendine çöküyor ya da titriyorsa `collide`'daki işaretleri ve `/ SUB` bölmelerini kontrol et.
 
 # --tests--
 

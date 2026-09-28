@@ -26,22 +26,48 @@ does not launch, so a stray tap does not waste a bird.
 
 # --explanation-tr--
 
-Körlemesine nişan almak sinir bozucudur. Fiziği bildiğimize göre **yolu atıştan önce çizebiliriz**.
+**Bu adımda:** nişan alırken kuşun gideceği yol beyaz noktalarla önceden görünecek. Ayrıca fareyle (ya da parmakla)
+sapanı tutup geri çekerek, gerçek bir sapan gibi nişan alıp bırakabileceksin.
 
-Havasız ortamda `t` kare sonraki konumun bir formülü vardır. Yana doğru hız hiç değişmez, bu yüzden `x` her karede yalnızca `vx`
-kadar büyür. Aşağı doğru hız her karede `GRAVITY` kadar artar ve düşülen mesafe zamanın **karesiyle** büyür:
+**Körlemesine nişan almak sinir bozucu.** Fiziği bildiğimize göre yolu **atıştan önce çizebiliriz**. Hava direnci
+olmadığında, `t` kare sonraki konum için bir formül var:
+
+- **Yana doğru** hız hiç değişmez; `x` her karede `vx` kadar büyür: `x = SLING.x + vx * t`.
+- **Aşağı doğru** hız her karede `GRAVITY` kadar artar; düşülen yol zamanın **karesiyle** büyür:
 
 ```js
 x = SLING.x + vx * t
 y = SLING.y + vy * t + (GRAVITY * t * t) / 2
 ```
 
-Yol zemine ulaşana kadar her 4 karede bir nokta, noktalı çizgiyi verir. Gerçek kuş noktalardan bir tık aşağıda kalır, çünkü oyun
-yerçekimini yumuşakça değil tam kare adımlarıyla ekler. Formül yumuşak sürümdür ve birkaç piksellik fark nişan için önemli değildir.
+Her 4 karede bir nokta koyarız (`t = 4, 8, 12, ... 60`), yol zemine ulaşana kadar. Bu, noktalı çizgiyi verir. Gerçek
+kuş noktalardan bir tık aşağıda kalır, çünkü oyun yerçekimini kare kare, basamak basamak ekler; formül ise pürüzsüz
+hâlidir. Birkaç piksellik fark nişan için önemli değil.
 
-Sonra işaretçi: **sapanın üstüne** (60 piksel içinde) bas, uzağa çek ve bırak. Bilardo oyunundaki gibi işaretçiden sapana geri
-giden vektör hem açıyı (`Math.atan2`) hem çekişi (`Math.hypot`, `MAX_PULL` ile sınırlı) verir. Küçücük bir çekiş fırlatmaz;
-böylece yanlışlıkla bir dokunuş bir kuşu harcamaz.
+**Döngüde yeni iki şey:**
+
+- `for (let t = 4; t <= 60; t += 4)` → `t` 4'ten başlar, her turda 4 artar, 60'ı geçince durur.
+- `break` → "döngüyü hemen bitir". Nokta zeminin altına düşünce (`y > GROUND`) sonrakileri çizmeyiz.
+
+Noktalar 4×4 küçük karelerdir; `x - 2`, `y - 2` onları noktanın tam ortasına oturtur. `'rgba(255, 255, 255, 0.8)'`
+biraz saydam beyazdır (son sayı saydamlık).
+
+**Fareyle nişan: sapanı tut ve çek.** Sapana 60 pikselden yakın bir yere basarsın, uzaklaşarak çekersin, bırakırsın.
+Göstericiden sapana doğru olan ok, hem açıyı hem çekişi verir:
+
+- `Math.atan2(dy, dx)` bir farkın **yönünü** radyan olarak verir → açı.
+- `Math.hypot(dx, dy)` iki nokta arasındaki düz **uzaklıktır** → çekiş (en fazla `MAX_PULL`).
+
+Fark `SLING - point` alındığı için sapanın sol altına çekersen kuş sağ üste nişan alır. Küçücük bir çekiş (15'ten az)
+fırlatmaz; yanlışlıkla dokunmak bir kuşu harcamasın.
+
+**Fare olayları:** `pointerdown` (basıldı), `pointermove` (hareket etti), `pointerup` (bırakıldı). Basılı olup olmadığını
+`dragging` (`true`/`false`) değişkeninde tutarız. `pointerup`'ı `canvas`'a değil `document`'e (bütün sayfaya) bağlarız;
+böylece fare canvas'ın dışında bırakılsa bile yakalanır.
+
+**Ekran noktasını canvas noktasına çevirmek.** Canvas ekranda büyütülmüş ya da küçültülmüş olabilir. `toCanvas(event)`
+bunu düzeltir: `getBoundingClientRect()` canvas'ın sayfadaki yerini ve boyunu verir; `event.clientX - rect.left`
+göstericinin canvas'ın solundan uzaklığıdır; `canvas.width / rect.width` oranıyla çarpınca canvas pikseline çevrilir.
 
 # --task--
 
@@ -54,12 +80,91 @@ böylece yanlışlıkla bir dokunuş bir kuşu harcamaz.
 
 # --task-tr--
 
-1. Nişan alırken `t = 4, 8, ..., 60` için yukarıdaki formülle `'rgba(255, 255, 255, 0.8)'` bir nokta (noktaya ortalı 4'e 4 bir kare)
-   çiz; zeminin altındaki ilk noktada dur.
-2. `dragging` ekle (`reset()`'te `false`) ve `toCanvas(event)` ile açıyı ve çekişi `SLING - point` vektöründen ayarlayan
-   `pull(point)`'u yaz.
-3. Nişan alırken sapanın 60 piksel içinde `pointerdown` sürüklemeyi başlatır ve çeker; `pointermove` sürüklerken çeker;
-   document'ın `pointerup`'ında sürüklemeyi bitir ve çekiş en az 15'se fırlat.
+1. `let aim ...` satırının altına ekle:
+
+   ```js
+   let dragging
+   ```
+
+2. `reset()` içinde `aim = ...` satırının altına ekle:
+
+   ```js
+     dragging = false
+   ```
+
+3. `keydown` olayının kapanış `})`'sinden sonra, `function draw()`'un **üstüne** fare kodunu yaz:
+
+   ```js
+   function toCanvas(event) {
+     const rect = canvas.getBoundingClientRect()
+     return {
+       x: ((event.clientX - rect.left) * canvas.width) / rect.width,
+       y: ((event.clientY - rect.top) * canvas.height) / rect.height,
+     }
+   }
+
+   // Drag back from the sling like a real one: the bird flies the other way, harder the further you pull.
+   function pull(point) {
+     const dx = SLING.x - point.x
+     const dy = SLING.y - point.y
+     aim.angle = Math.atan2(dy, dx)
+     aim.pull = Math.min(MAX_PULL, Math.hypot(dx, dy))
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state !== 'aiming') return
+     const point = toCanvas(event)
+     if (Math.hypot(point.x - SLING.x, point.y - SLING.y) > 60) return
+     dragging = true
+     pull(point)
+   })
+
+   canvas.addEventListener('pointermove', (event) => {
+     if (dragging) pull(toCanvas(event))
+   })
+
+   document.addEventListener('pointerup', () => {
+     if (!dragging) return
+     dragging = false
+     if (aim.pull >= 15) launch()
+   })
+   ```
+
+   `pointerdown`: nişan alınmıyorsa ya da sapandan 60 pikselden uzağa basıldıysa hiçbir şey yapmaz; değilse çekmeye başlar.
+
+4. `draw()` içinde yorumu değiştir; `if (state === 'aiming') {` satırının hemen altına hızı hesaplayan satırı, lastiği
+   çizen `ctx.stroke()`'un altına da noktaları ekle:
+
+   ```js
+     // The sling and, while aiming, the pulled-back bird and the path it will take. // ← değişti
+     ctx.fillStyle = '#78350f'
+     ctx.fillRect(SLING.x - 4, SLING.y, 8, GROUND - SLING.y)
+     if (state === 'aiming') {
+       const { vx, vy } = launchVelocity() // ← yeni
+       const bx = SLING.x - Math.cos(aim.angle) * aim.pull * 0.5
+       const by = SLING.y - Math.sin(aim.angle) * aim.pull * 0.5
+       ctx.strokeStyle = '#451a03'
+       ctx.lineWidth = 3
+       ctx.beginPath()
+       ctx.moveTo(SLING.x, SLING.y)
+       ctx.lineTo(bx, by)
+       ctx.stroke()
+       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)' // ← yeni (buradan)
+       for (let t = 4; t <= 60; t += 4) {
+         // Where the bird will be after t frames: x grows steadily, y follows a parabola.
+         const x = SLING.x + vx * t
+         const y = SLING.y + vy * t + (GRAVITY * t * t) / 2
+         if (y > GROUND) break
+         ctx.fillRect(x - 2, y - 2, 4, 4)
+       } // ← (buraya kadar)
+       ctx.fillStyle = MATERIALS.bird.color
+   ```
+
+   Altındaki kuş çizimi aynen kalır.
+
+5. **Çalıştır**'a bas. Sapandan sağa doğru beyaz noktalı bir yay görmelisin; oklarla nişanı değiştirince yay da
+   değişmeli. Fareyle kuşun yanına basıp sol aşağı çek ve bırak: kuş noktaların gösterdiği yoldan uçmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. "Parabol" kontrolü kırmızıysa `y` formülündeki `(GRAVITY * t * t) / 2` parantezlerini kontrol et.
 
 # --tests--
 

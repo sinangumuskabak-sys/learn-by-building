@@ -27,23 +27,45 @@ against, like the tiles.
 
 # --explanation-tr--
 
-Kule savunmasının bir ritmi vardır: **kur**, sonra **savun**, sonra yine kur. Bu ritim iki oyun durumu olan bir durum
-makinesidir:
+**Bu adımda:** oyunu dalgalara böleceğiz. Artık düşmanlar sen başlatana kadar gelmeyecek. Alttaki çubukta mor bir
+**Start wave 1** düğmesi ve sağda **Best 0** yazacak. Dalga sürerken **Wave 1: 8 left** gibi kaç düşman kaldığı
+görünecek; her dalga bir öncekinden güçlü olacak.
+
+**Kur, savun, yeniden kur.** Kule savunmasının bir ritmi vardır. Bu ritim, iki oynama durumu olan bir **durum
+makinesi**dir:
 
 ```
 'building'  --Dalgayı başlat-->  'wave'  --bütün düşmanlar gitti-->  'building'
       herhangi bir durum  --can kalmadı-->  'over'
 ```
 
-Kurarken düşman gelmez ve acele etmeden düşünebilirsin. Bir dalga `6 + 2 × wave` düşman gönderir; sonuncusu gidince bir
-sonraki tur için `20 + 5 × wave` altın bonus alırsın.
+Kurma sırasında (`'building'`) düşman gelmez, acele etmeden kule dikebilirsin. Bir dalga `6 + 2 × dalga` düşman
+gönderir; sonuncusu da gidince bir sonraki tur için `20 + 5 × dalga` altın bonus alırsın.
 
-Her dalga ayrıca **zorlaşır**: düşmanların canı her seferinde %25 artar (`10 × 1.25^(wave - 1)`) ve birbirlerine daha yakın
-gelirler. Can çarparak (üstel olarak) büyürken altının toplayarak büyür; bu yüzden er ya da geç her savunma çöker. Bu
-bilerek yapıldı: soru kaybedip kaybetmeyeceğin değil, kaç dalga dayanacağındır ve o sayı en iyi skorundur.
+**Her dalga daha zor.** Düşmanların canı her seferinde %25 artar ve birbirlerine daha yakın gelirler:
 
-Telefonda Boşluk tuşu yok; bu yüzden alt çubuk bir **Başlat** düğmesi alır. Tıklamayı karşılaştırdığın bir dikdörtgendir,
-tıpkı döşemeler gibi.
+```js
+Math.round(10 * 1.25 ** (wave - 1))
+```
+
+`**` **üs alma**dır: `1.25 ** 2` = 1,25 × 1,25. `Math.round` en yakın tam sayıya yuvarlar. 1. dalgada 10 can, 5.
+dalgada 24 can. Can **çarparak** (üstel) büyürken altının **toplayarak** büyür; er ya da geç her savunma çöker. Bu
+bilerek böyle: soru kaybedip kaybetmeyeceğin değil, kaç dalga dayanacağın. O sayı senin en iyi skorundur.
+
+`Math.max(20, 46 - wave * 2)` → iki sayıdan büyüğü: dalga arttıkça aralık kısalır ama 20 karenin altına inmez.
+
+**En iyi skoru saklamak (`localStorage`).** Tarayıcının küçük bir defteridir; sayfa kapansa da içine yazılanı
+hatırlar. `localStorage.setItem('td-best', best)` yazar, `localStorage.getItem('td-best')` okur. Defter her şeyi yazı
+olarak saklar, `Number(...)` sayıya çevirir. Hiç yazılmamışsa sonuç 0 olur; `|| 0` de her ihtimale karşı "geçerli bir
+sayı değilse 0 kullan" demektir. Dalga temizleyince `wave`, kaybedince dayandığın dalga sayısı `wave - 1` rekoru
+geçiyorsa kaydedilir.
+
+**Telefon için düğme.** Telefonda Boşluk tuşu yok; bu yüzden alt çubuğa bir **Başlat** düğmesi koyuyoruz. Düğme
+yalnızca bir dikdörtgendir: `START = { x: 150, w: 180 }` (soldan 150 pikselde başlar, 180 piksel geniş). Tıklama
+alt çubukta (`p.y >= BAR`) ve düğmenin sol ile sağ kenarı arasındaysa dalga başlar. `BAR = TOP + ROWS * TILE` alt
+çubuğun başladığı yükseklik (40 + 9 × 40 = 400).
+
+`if (...) { ... } else if (...) { ... }` → "birinci doğruysa onu, değilse ve ikinci doğruysa bunu yap".
 
 # --task--
 
@@ -60,16 +82,152 @@ tıpkı döşemeler gibi.
 
 # --task-tr--
 
-1. `BAR = TOP + ROWS * TILE`, `START = { x: 150, w: 180 }`, `wave` ve `best` (`localStorage` `'td-best'`'ten) ekle.
-   `reset()` `wave = 0`, `toSpawn = 0` ve `'building'` durumunu ayarlar.
-2. `startWave()` yaz: sonraki dalga, `toSpawn = 6 + wave * 2`, `'wave'` durumu; ve `enemyHp()`:
-   `Math.round(10 * 1.25 ** (wave - 1))`. Kurarken Boşluk bir dalga başlatır; alt çubukta başlat düğmesinin içine tıklamak
-   da.
-3. Düşmanlar yalnızca bir dalga sırasında, `enemyHp()` canla, `Math.max(20, 46 - wave * 2)` kare arayla çıkar.
-4. Bir dalganın çıkaracak düşmanı ve kalan düşmanı yoksa: yeniden kurma, `20 + wave * 5` altın ve `wave` onu geçiyorsa yeni
-   bir en iyi. Kaybetmek, yeni bir en iyiyse `wave - 1`'i (dayandığın dalgaları) kaydeder.
-5. Alt çubuğa kurarken `Start wave 2` yazan `'#4f46e5'` bir başlat düğmesi, dalga sırasında `Wave 2: 5 left`, sağa da
-   `Best 4` çiz. Game Over ekranı `Survived 3 waves (best 4)` ekler.
+1. `const TOP = 40` satırının altına alt çubuğun yerini ekle:
+
+   ```js
+   const BAR = TOP + ROWS * TILE // the bottom bar, with the start button, begins here
+   ```
+
+2. Değişken satırlarını şöyle değiştir:
+
+   ```js
+   let lives
+   let wave // ← yeni
+   let toSpawn // enemies still to come in this wave // ← yorum değişti
+   let spawnIn // frames until the next one
+   let state // 'building', 'wave' or 'over' // ← yorum değişti
+   let selected // the kind of tower to build: only 'arrow' so far
+   let hover = null // the tile under the mouse
+   let best = Number(localStorage.getItem('td-best')) || 0 // ← yeni
+   ```
+
+3. `reset()` içinde üç satırı değiştir:
+
+   ```js
+     lives = 20
+     wave = 0 // ← yeni
+     toSpawn = 0 // ← değişti (30 idi)
+     spawnIn = 0
+     state = 'building' // ← değişti
+     selected = 'arrow'
+   ```
+
+4. `pointAt` fonksiyonunun kapanış `}`'sinin altına, bir satır boşlukla iki fonksiyon yaz:
+
+   ```js
+   function startWave() {
+     wave += 1
+     toSpawn = 6 + wave * 2
+     spawnIn = 0
+     state = 'wave'
+   }
+
+   function enemyHp() {
+     return Math.round(10 * 1.25 ** (wave - 1))
+   }
+   ```
+
+5. `build()` fonksiyonunun kapanış `}`'sinin altına, `pointerdown` bloğundan önce düğmenin yerini ekle:
+
+   ```js
+   // The start button in the bottom bar.
+   const START = { x: 150, w: 180 }
+   ```
+
+6. `pointerdown` bloğunu şöyle yap:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const p = tileAt(event)
+     if (state === 'over') {
+       reset()
+       return
+     }
+     if (p.y >= BAR) { // ← yeni
+       if (state === 'building' && p.x >= START.x && p.x < START.x + START.w) startWave() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     build(p.col, p.row)
+   })
+   ```
+
+7. `keydown` bloğunda `if (state === 'over') reset()` satırını şu iki satırla değiştir:
+
+   ```js
+       if (state === 'building') startWave() // ← yeni
+       else if (state === 'over') reset() // ← değişti
+   ```
+
+8. `update()` fonksiyonunun baştaki düşman çıkarma kısmını şöyle yap:
+
+   ```js
+     if (state === 'wave' && toSpawn > 0) { // ← değişti
+       spawnIn -= 1
+       if (spawnIn <= 0) {
+         const hp = enemyHp() // ← yeni
+         enemies.push({ d: 0, hp, maxHp: hp }) // ← değişti
+         toSpawn -= 1
+         // Later waves come closer together, which is where splash damage shines. // ← yeni
+         spawnIn = Math.max(20, 46 - wave * 2) // ← değişti
+       }
+     }
+   ```
+
+9. `update()`'in sonundaki `if (lives <= 0) { ... }` bloğunu şöyle yap:
+
+   ```js
+     if (lives <= 0) {
+       lives = 0
+       state = 'over'
+       if (wave - 1 > best) { // ← yeni (buradan sona kadar)
+         best = wave - 1
+         localStorage.setItem('td-best', best)
+       }
+       return
+     }
+     if (state === 'wave' && toSpawn === 0 && enemies.length === 0) {
+       state = 'building'
+       gold += 20 + wave * 5
+       if (wave > best) {
+         best = wave
+         localStorage.setItem('td-best', best)
+       }
+     }
+   }
+   ```
+
+10. `draw()` içinde `ctx.fillText('Gold ' + ...)` satırından sonraki kısmı fonksiyonun sonuna kadar şöyle yap:
+
+    ```js
+      ctx.fillText('Gold ' + gold + '  Lives ' + lives, 10, 26)
+      ctx.textAlign = 'center'
+      if (state === 'building') { // ← yeni
+        ctx.fillStyle = '#4f46e5' // ← yeni
+        ctx.fillRect(START.x, BAR + 6, START.w, 28) // ← yeni
+        ctx.fillStyle = 'white' // ← yeni
+        ctx.fillText('Start wave ' + (wave + 1), START.x + START.w / 2, BAR + 26) // ← yeni
+      } else if (state === 'wave') { // ← yeni
+        ctx.fillText('Wave ' + wave + ': ' + (toSpawn + enemies.length) + ' left', canvas.width / 2, BAR + 26) // ← yeni
+      } // ← yeni
+      ctx.textAlign = 'right' // ← yeni
+      ctx.fillText('Best ' + best, canvas.width - 10, BAR + 26) // ← yeni
+      ctx.textAlign = 'center' // ← yeni
+      if (state === 'over') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = 'white'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+        ctx.font = '18px sans-serif'
+        ctx.fillText('Survived ' + (wave - 1) + ' waves (best ' + best + ')', canvas.width / 2, canvas.height / 2 + 30) // ← yeni
+        ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 56) // ← değişti (30 → 56)
+      }
+    }
+    ```
+
+11. **Çalıştır**'a bas. Düşman gelmemeli; alt çubukta mor **Start wave 1** düğmesi görünmeli. Birkaç kule kur, sonra
+    düğmeye tıkla (ya da oyuna tıklayıp Boşluk'a bas): 8 düşman gelmeli ve alt çubukta kaç tane kaldığı yazmalı.
+    Dalga bitince düğme **Start wave 2** olarak geri gelmeli. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

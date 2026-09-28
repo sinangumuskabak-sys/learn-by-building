@@ -22,18 +22,31 @@ over is just rebuilding the state.
 
 # --explanation-tr--
 
-Yeme, oyuncu bir döşemeye **vardığında** olur. O an `advance()` içinde zaten var; bu yüzden bağlanmak için doğal yer
-orasıdır: adım bittikten sonra `arrive(e)` çağır.
+**Bu adımda:** oyuncu yemleri yiyecek. Üstünden geçtiğin yemler kaybolacak, sol üstte puanın (`Score`), sağ üstte bölüm
+numaran (`Level`) yazacak. Bütün yemleri bitirince labirent yeniden dolacak ve bölüm bir artacak.
 
-Yemler anahtarlardan oluşan bir `Set` olduğu için birini yemek tek satırdır; `delete` yenecek bir şey olup olmadığını bile
-söyler:
+**Ne zaman yenir?** Oyuncu bir kareye **vardığında**. O an zaten `advance()` içinde var: `progress` sıfırlanıp `col`/`row`
+ilerlediği yer. Oraya yeni bir fonksiyon çağrısı ekleriz: `arrive(e)` ("vardı").
+
+`advance` hem oyuncu hem ileride hayaletler için çalışacak; ama sadece oyuncu yer. `if (e !== player) return` →
+"varan oyuncu değilse hiçbir şey yapma". `!==` "eşit değil" demektir.
+
+**Tek satırda yemek.** Yemler bir küme (`Set`) olduğu için yemek tek satırdır. Üstelik `delete` sana silinecek bir şey
+olup olmadığını da söyler:
 
 ```js
-if (pellets.delete(here)) score += 10   // yalnızca yem hâlâ oradaysa true
+if (pellets.delete(here)) score += 10   // yem hâlâ oradaysa true, zaten yenmişse false
 ```
 
-İki küme de boşalınca labirent bitmiştir: bölüm artar, yemler labirent metninden geri gelir ve herkes başlangıcına döner.
-Bölümü (metin) durumdan (kümeler) ayrı tutmanın karşılığı budur: baştan başlamak yalnızca durumu yeniden kurmaktır.
+Yani aynı kareden ikinci kez geçince puan gelmez. Yem 10, güç yemi 50 puan.
+
+**Labirent bitince.** İki küme de boşsa (`size === 0`, `&&` "ve") labirent temizlenmiştir: bölüm artar, yemler labirent
+yazısından yeniden kurulur ve herkes başlangıç yerine döner. 1. adımda "bölüm (yazı)" ile "durum (kümeler)" ayrı
+tuttuğumuzun faydası burada: yeniden başlamak sadece durumu yeniden kurmaktır.
+
+**Yazı.** `'Score: ' + score` → `+` yazıları yan yana ekler: `'Score: 10'`. `ctx.font` yazının kalınlığını, boyunu ve
+türünü seçer; `ctx.textAlign = 'left'` yazıyı verilen noktadan sağa, `'right'` sola doğru yazar (sağ kenara yaslamak
+için). `ctx.fillText(yazı, x, y)` yazıyı boyar.
 
 # --task--
 
@@ -45,11 +58,63 @@ Bölümü (metin) durumdan (kümeler) ayrı tutmanın karşılığı budur: baş
 
 # --task-tr--
 
-1. `let score` ve `let level` ekle; `reset()` onları `0` ve `1` yapar.
-2. `advance()`'in sonunda, hareketten sonra `arrive(e)` çağır. `arrive` içinde yalnızca oyuncu için: döşemesindeki yemi
-   (10 puan) ya da güç yemini (50 puan) sil. `pellets` ve `powers` ikisi de boşsa `level`'a 1 ekle, yemleri yeniden doldur
-   ve karakterleri yeniden yerleştir.
-3. Sol üste `Score: 10`, sağ üste `Level 1` yaz (beyaz, `'bold 18px sans-serif'`).
+1. `let player` satırının hemen altına iki ad ekle:
+
+   ```js
+   let score
+   let level
+   ```
+
+2. `reset` fonksiyonunun başına puanı ve bölümü sıfırlayan iki satır ekle:
+
+   ```js
+   function reset() {
+     score = 0 // ← yeni
+     level = 1 // ← yeni
+     fillPellets()
+     placeActors()
+   }
+   ```
+
+3. `advance` fonksiyonunun sonuna, `e.row += e.dir[1]` satırından sonra `arrive(e)` çağrısını ekle; `advance`'in
+   kapanış `}`'inden sonra da `arrive` fonksiyonunu yaz:
+
+   ```js
+     e.col = wrap(e.col + e.dir[0])
+     e.row += e.dir[1]
+     arrive(e) // ← yeni
+   }
+
+   function arrive(e) {
+     if (e !== player) return
+     const here = key(player.col, player.row)
+     if (pellets.delete(here)) score += 10
+     if (powers.delete(here)) score += 50
+     if (pellets.size === 0 && powers.size === 0) {
+       level += 1
+       fillPellets()
+       placeActors()
+     }
+   }
+   ```
+
+4. `draw()`'un en sonunda, oyuncuyu çizen `ctx.fill()` satırından sonra ve kapanış `}`'inden önce puanı ve bölümü yaz:
+
+   ```js
+     ctx.fill()
+
+     ctx.fillStyle = 'white'                                   // ← yeni
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score: ' + score, 10, 27)
+     ctx.textAlign = 'right'
+     ctx.fillText('Level ' + level, canvas.width - 10, 27)
+   }
+   ```
+
+5. **Çalıştır**'a bas. Üstte `Score: 0` ve `Level 1` görünmeli. Oynamak için önce oyuna tıkla ve yürü: yediğin yemler
+   kaybolmalı, puan 10'ar artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `'Score: '` içindeki iki
+   noktadan sonraki boşluğa ve `arrive(e)` çağrısının `advance`'in **en sonunda** olduğuna bak.
 
 # --tests--
 

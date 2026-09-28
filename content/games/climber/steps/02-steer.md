@@ -25,22 +25,63 @@ handlers simply set the same `keys`, so `update()` does not need to know where t
 
 # --explanation-tr--
 
-Yönlendirme akıcı olmalı: bir tuş **basılı tutulduğu** sürece oyuncu hareket etmeye devam eder. Bu yüzden her `keydown`'da
-bir şey yapmak yerine hangi tuşların basılı olduğunu bir `keys` nesnesinde hatırla ve `update()` bunu her karede okusun:
+**Bu adımda:** oyuncuyu sağ ve sol ok tuşlarıyla (telefonda parmakla) yönlendireceğiz. Sağdan çıkınca soldan geri
+gelecek, tıpkı eski oyunlardaki gibi.
+
+**Tuşu basılı tutmak.** Yönlendirme akıcı olmalı: tuş **basılı** kaldığı sürece oyuncu kaymaya devam etmeli. Bunun
+için hangi tuşların şu an basılı olduğunu bir not defterinde tutarız. Bu defter boş bir nesnedir:
 
 ```js
-const direction = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)   // -1, 0 ya da 1
-player.x += direction * SPEED
+const keys = {}
 ```
 
-İki tuşu birden basılı tutmak `0` verir; tam da beklediğin gibi.
+Tuşa basınca `keys.ArrowRight = true` (doğru), bırakınca `false` (yanlış) yazarız. `true` ve `false`'a
+**mantıksal değer** (boolean) denir: evet ya da hayır.
 
-Duvar yok: sağ taraftan çıkarsan soldan geri gelirsin. Geçiş oyuncunun **ortası** kenarı geçtiğinde olur ve oyuncu bir
-taraftan yarı yarıya taşmışken onu öbür tarafa ikinci kez çiz; böylece zıplamak yerine kenardan kayarak geçiyormuş gibi
-görünür.
+**Olay (event) dinlemek.** Tarayıcı, bir tuşa basıldığında sana haber verebilir:
 
-Telefonda parmağını oyunun sol ya da sağ yarısında tutmak bir ok tuşunu basılı tutmakla aynıdır. Dokunma işleyicileri
-aynı `keys`'i ayarlar; böylece `update()`'in girdinin nereden geldiğini bilmesi gerekmez.
+```js
+document.addEventListener('keydown', (event) => {
+  keys[event.key] = true
+})
+```
+
+Parça parça:
+
+- `addEventListener('keydown', ...)` → "bir tuşa basıldığında şunu yap". `'keyup'` ise tuş bırakıldığında olur.
+- `(event) => { ... }` → adsız, kısa bir fonksiyondur (ok fonksiyonu, **arrow function**). `event` tarayıcının
+  verdiği bilgidir; `event.key` basılan tuşun adıdır, örneğin `'ArrowLeft'` ya da `'ArrowRight'`.
+- `keys[event.key]` → köşeli parantez, alanın adını bir değişkenden almamızı sağlar. Sağ oka basıldıysa bu
+  `keys.ArrowRight` ile aynı şeydir.
+- `event.preventDefault()` → tarayıcının o tuşla normalde yaptığı şeyi (sayfayı kaydırmak) engeller.
+- `===` "eşit mi?" diye sorar (tek `=` ise değer atar, karıştırma). `||` "ya da" demektir: iki koşuldan biri doğruysa
+  sonuç doğrudur.
+
+**Yön hesabı.** `update()` her karede defterden okur:
+
+```js
+const direction = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)
+```
+
+`a ? b : c` kısa bir "eğer"dir: `a` doğruysa `b`, değilse `c`. Yani sağ basılıysa `1 - 0 = 1`, sol basılıysa
+`0 - 1 = -1`, ikisi birden basılıysa `1 - 1 = 0` (oyuncu durur). Sonra `player.x += direction * SPEED` ile oyuncu
+her karede 5 piksel sağa ya da sola gider (`*` çarpmadır).
+
+**Kenardan dolanmak.** Duvar yok. Oyuncunun **ortası** (`x + w / 2`, `/` bölmedir) `0`'ın altına inerse `x`'e
+`canvas.width` (400) ekleriz, sağ kenarı geçerse çıkarırız; böylece öbür taraftan çıkar. Oyuncu yarısı taşmışken
+kaybolmasın diye onu **ikinci kez**, öbür tarafta da çizeriz. Böylece kenardan kayarak geçiyormuş gibi görünür. Tek
+satırlık `if`'lerde süslü parantez gerekmez: `if (koşul) komut`.
+
+**Telefonda dokunmak.** `pointerdown` parmak (ya da fare) basıldığında, `pointerup` kalktığında, `pointercancel`
+dokunma yarıda kesildiğinde olur. Parmak oyunun sol yarısındaysa sol oku, sağdaysa sağ oku "basılı" sayarız:
+
+- `canvas.getBoundingClientRect()` → canvas'ın ekrandaki yerini ve boyunu verir (`rect.left`, `rect.width`).
+- `event.clientX - rect.left` → parmağın canvas'ın sol kenarından uzaklığı.
+- Bu uzaklık `rect.width / 2`'den küçükse (`<`) parmak sol yarıdadır.
+
+Dokunma da aynı `keys` defterine yazdığı için `update()`'in komutun klavyeden mi parmaktan mı geldiğini bilmesine
+gerek kalmaz. Parmak kalkınca ikisini birden bırakan `stopSteering` adlı bir fonksiyon yazarız ve onu iki olaya da
+veririz (burada adını parantezsiz yazarız: "çağır" değil "şu fonksiyonu kullan" deriz).
 
 # --task--
 
@@ -56,15 +97,76 @@ aynı `keys`'i ayarlar; böylece `update()`'in girdinin nereden geldiğini bilme
 
 # --task-tr--
 
-1. `SPEED = 5` ve `const keys = {}` ekle. `keydown`'da `keys[event.key] = true` yap (sol ve sağ oklar için
-   `preventDefault()`); `keyup`'ta onu yeniden `false` yap.
-2. `update()` içinde fizikten önce oyuncuyu `direction * SPEED` kadar hareket ettir. Ortası (`x + w / 2`) `0`'ın altına
-   indiyse `x`'e `canvas.width` ekle; `canvas.width`'i geçtiyse çıkar.
-3. `draw()` içinde `player.x < 0` iken oyuncuyu `x + canvas.width`'te de, sağ kenarı canvas'ı geçtiğinde
-   `x - canvas.width`'te de çiz.
-4. Canvas'taki `pointerdown`'da dokunuş sol yarıdaysa (`rect = canvas.getBoundingClientRect()` ile
-   `event.clientX - rect.left < rect.width / 2`) `ArrowLeft`'i, değilse `ArrowRight`'ı basılı tut. `pointerup` ve
-   `pointercancel`'da ikisini de bırak.
+1. `const JUMP = -11` satırının hemen altına yan hızı ekle:
+
+   ```js
+   const SPEED = 5 // her karede yana kaç piksel gidilir
+   ```
+
+2. `let player = { ... }` satırının hemen altına tuş defterini ve klavye dinleyicilerini ekle:
+
+   ```js
+   const keys = {}
+
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') event.preventDefault()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+3. Hemen altına dokunmayla yönlendirmeyi ekle:
+
+   ```js
+   // Dokunma: oyunun sol ya da sağ yarısını basılı tut.
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const left = event.clientX - rect.left < rect.width / 2
+     keys[left ? 'ArrowLeft' : 'ArrowRight'] = true
+   })
+   function stopSteering() {
+     keys.ArrowLeft = false
+     keys.ArrowRight = false
+   }
+   canvas.addEventListener('pointerup', stopSteering)
+   canvas.addEventListener('pointercancel', stopSteering)
+   ```
+
+4. `update()` fonksiyonunun **en başına**, fizik satırlarından önce dört satır ekle. Fonksiyon şöyle olmalı:
+
+   ```js
+   function update() {
+     const direction = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0) // ← yeni
+     player.x += direction * SPEED // ← yeni
+     if (player.x + player.w / 2 < 0) player.x += canvas.width // ← yeni
+     if (player.x + player.w / 2 > canvas.width) player.x -= canvas.width // ← yeni
+
+     player.vy += GRAVITY
+     player.y += player.vy
+     // Yere değmek bir sonraki sekişi başlatır.
+     if (player.y + player.h >= FLOOR) {
+       player.y = FLOOR - player.h
+       player.vy = JUMP
+     }
+   }
+   ```
+
+5. `draw()` fonksiyonunda oyuncuyu çizen `ctx.fillRect(player.x, ...)` satırının altına, taşan yarıyı öbür tarafta
+   çizen iki satırı ekle:
+
+   ```js
+     ctx.fillStyle = '#f59e0b'
+     ctx.fillRect(player.x, player.y, player.w, player.h)
+     if (player.x < 0) ctx.fillRect(player.x + canvas.width, player.y, player.w, player.h) // ← yeni
+     if (player.x + player.w > canvas.width) ctx.fillRect(player.x - canvas.width, player.y, player.w, player.h) // ← yeni
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra sağ/sol ok tuşlarını basılı tut: kare o yöne kaymalı, sağdan
+   çıkınca soldan girmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `ArrowLeft`/`ArrowRight`
+   yazımına (büyük A ve R) ve `<`/`>` işaretlerinin yönüne bak.
 
 # --tests--
 

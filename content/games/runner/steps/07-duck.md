@@ -32,29 +32,65 @@ mechanics gradually is a core idea of game design, and of teaching.
 
 # --explanation-tr--
 
-Kaktüsler hep tek bir soru sorar ("şimdi zıpla?"). İkinci bir engel türü, kafa hizasında uçan bir kuş, başka bir soru
-sorar: **eğil**. İki tehdide iki cevap ve oyuncunun hangisinin geldiğini okuması gerekir.
+**Bu adımda:** kafa hizasında uçan turuncu kuşlar eklenecek. Aşağı ok tuşunu basılı tutunca koşucu eğilip
+kısalacak ve kuşun altından geçecek. Kuşlar bir süre koştuktan sonra (mesafe 1500'ü geçince) çıkmaya başlayacak.
 
-Engeller düz veridir; yeni bir tür yalnızca yeni biçimli bir nesnedir:
+**İki tehlike, iki cevap.** Kaktüs "şimdi zıpla" der, kuş "şimdi eğil". Oyuncu hangisinin geldiğini okumak zorunda.
+
+**Yeni engel türü = yeni bir nesne şekli.** Engeller sadece veridir. Kuş da bir nesne, yalnızca başka yerde ve bir
+etiketle:
 
 ```js
-{ x: canvas.width, y: GROUND - 50, w: 34, h: 20, bird: true }   // kafa hizası
+{ x: canvas.width, y: GROUND - 50, w: 34, h: 20, bird: true }    // kafa hizası
 ```
 
-Çizim kodu rengi `o.bird`'e göre seçer, çarpışma kodu hiç değişmez: kutu kutudur. Özel durumlar yerine veri etrafında
-tasarlamak, içerik eklemeyi ucuz yapan şeydir.
+`true`/`false` değerlerine **mantıksal değer** (boolean) denir. Kaktüslere de `bird: false` veririz. Çarpışma kodu
+hiç değişmez: kutu kutudur. Çizim kodu da sadece rengi `bird`'e göre seçer.
 
-Eğilmek, aşağı ok zeminde basılı tutulurken koşucuyu **kısaltır**: 44 yerine 26 px. Yükseklik değişince `y`'yi farkı
-kadar kaydır ki ayaklar zeminde kalsın, çünkü `y` kutunun üstü:
+**Kısa `if`: `? :`.** Bir değeri koşula göre seçmek için:
+
+```js
+ctx.fillStyle = o.bird ? '#b45309' : '#15803d'
+```
+
+"`o.bird` doğru mu? Öyleyse turuncu, **değilse** yeşil." `koşul ? evetse : hayırsa` diye okunur.
+
+**`if` / `else`.** Bir koşul doğruysa bir şeyi, değilse başka şeyi yapmak için:
+
+```js
+if (distance > 1500 && Math.random() < 0.3) {
+  // kuş ekle
+} else {
+  // kaktüs ekle
+}
+```
+
+`Math.random() < 0.3` her denemede yaklaşık %30 ihtimalle doğrudur (0 ile 1 arası sayının 0,3'ten küçük olma şansı).
+Kuşlar ancak oyuncu zıplamaya alıştıktan sonra gelir: her seferinde tek beceri öğretmek hem oyun tasarımının hem
+öğretmenin temel fikridir.
+
+**Basılı tuşları hatırlamak.** Eğilmek için "aşağı ok **şu an** basılı mı?" diye sormamız lazım. Boş bir nesne
+açarız, tuşa basılınca o tuşun adıyla `true`, bırakılınca `false` yazarız:
+
+```js
+const keys = {}
+keys[event.key] = true    // ör. keys['ArrowDown'] = true
+```
+
+Köşeli parantez `keys[...]`, alanın adı bir değişkenin içindeyken kullanılır. Sonra `keys.ArrowDown` ile sorarız.
+(`const` olsa da nesnenin **içi** değişebilir; sadece `keys` etiketi başka bir nesneye yapıştırılamaz.)
+
+**Eğilmek: boyu değiştir, ayakları yerinde tut.** Eğilince boy 44 yerine 26 olur. Ama `y` kutunun **tepesi**; boyu
+kısaltıp `y`'yi bırakırsak koşucu havada asılı kalır. Tepeyi aradaki fark kadar aşağı indiririz:
 
 ```js
 const h = keys.ArrowDown && onGround() ? DUCK_H : STAND_H
-runner.y += runner.h - h   // ayakları yerinde tut
+runner.y += runner.h - h   // 44 - 26 = 18 piksel aşağı
 runner.h = h
 ```
 
-Kuşlar ancak bir süre sonra (`distance > 1500`) çıkmaya başlar; böylece oyuncu becerileri tek tek öğrenir. Mekanikleri
-yavaş yavaş tanıtmak oyun tasarımının, ve öğretmenin, temel fikirlerinden biridir.
+Kalkarken fark eksi çıkar (`26 - 44 = -18`) ve tepe yeniden yukarı çıkar. Eğilmiş koşucu zıplayamaz: `jump()`
+yalnızca `runner.h === STAND_H` iken zıplatır.
 
 # --task--
 
@@ -68,13 +104,83 @@ yavaş yavaş tanıtmak oyun tasarımının, ve öğretmenin, temel fikirlerinde
 
 # --task-tr--
 
-1. `const STAND_H = 44`, `const DUCK_H = 26` ve `const keys = {}` ekle; basılı tuşları `keydown`/`keyup`'ta kaydet.
-   Koşucunun başlangıç yüksekliği için `STAND_H` kullan.
-2. `update()` içinde yere indikten sonra yukarıdaki eğilme kodunu uygula. Zıplamaya yalnızca koşucu ayaktayken
-   (`runner.h === STAND_H`) izin ver.
-3. Kaktüslere `bird: false` ver. `spawn()` içinde `distance > 1500` olduktan sonra yeni engel %30 olasılıkla
-   (`Math.random() < 0.3`) bir kuş olsun: `{ x: canvas.width, y: GROUND - 50, w: 34, h: 20, bird: true }`.
-4. Kuşları `'#b45309'`, kaktüsleri `'#15803d'` renginde çiz.
+1. `const MARGIN = 6 ...` satırının hemen **altına** iki sabit ekle:
+
+   ```js
+   const STAND_H = 44
+   const DUCK_H = 26
+   ```
+
+2. `let best = ...` satırının hemen **altına** basılı tuşlar nesnesini ekle:
+
+   ```js
+   const keys = {}
+   ```
+
+3. `reset()` içindeki `runner = ...` satırında `44` yerine `STAND_H` kullan:
+
+   ```js
+     runner = { x: 50, y: GROUND - STAND_H, w: 40, h: STAND_H, vy: 0 }
+   ```
+
+4. `jump()` fonksiyonunun son satırına "ayaktaysa" koşulunu ekle:
+
+   ```js
+     if (onGround() && runner.h === STAND_H) runner.vy = JUMP // ← değişti
+   ```
+
+5. İki klavye dinleyicisinin **ilk satırına** tuşu kaydeden satırı ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true // ← yeni
+     if ((event.key === ' ' || event.key === 'ArrowUp') && !event.repeat) jump()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false // ← yeni
+     if (event.key === ' ' || event.key === 'ArrowUp') endJump()
+   })
+   ```
+
+6. `spawn()` fonksiyonunu kuş ya da kaktüs seçecek şekilde değiştir:
+
+   ```js
+   function spawn() {
+     // Birds only show up once the player has got used to jumping.
+     if (distance > 1500 && Math.random() < 0.3) {
+       obstacles.push({ x: canvas.width, y: GROUND - 50, w: 34, h: 20, bird: true })
+     } else {
+       obstacles.push({ x: canvas.width, y: GROUND - 40, w: 20, h: 40, bird: false })
+     }
+     // At least 50 frames apart, so there is always room to land and jump again.
+     nextIn = 50 + Math.floor(Math.random() * 70)
+   }
+   ```
+
+7. `update()` fonksiyonunda, yere inme `if`'inin kapanan `}`'sinin hemen altına (`distance += speed`'den önce)
+   eğilme kodunu ekle:
+
+   ```js
+     // Duck only on the ground; keep the feet in place when the height changes.
+     const h = keys.ArrowDown && onGround() ? DUCK_H : STAND_H
+     runner.y += runner.h - h
+     runner.h = h
+   ```
+
+8. `draw()` fonksiyonunda kaktüsleri çizen iki satırı (`ctx.fillStyle = '#15803d'` ve altındaki `for`) sil, yerine
+   her engelin rengini kendisi seçen döngüyü yaz:
+
+   ```js
+     for (const o of obstacles) {
+       ctx.fillStyle = o.bird ? '#b45309' : '#15803d'
+       ctx.fillRect(o.x, o.y, o.w, o.h)
+     }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Aşağı oku basılı tutunca koşucu kısalmalı, ayakları zeminde
+   kalmalı; bırakınca eski boyuna dönmeli. Bir süre koşunca turuncu kuşlar gelmeli. Alttaki kontrollerin hepsi
+   yeşil olmalı. Eğilince koşucu havada kalıyorsa `runner.y += runner.h - h` satırının `runner.h = h`'den **önce**
+   olduğunu kontrol et.
 
 # --tests--
 

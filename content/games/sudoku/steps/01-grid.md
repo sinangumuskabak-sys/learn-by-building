@@ -27,24 +27,61 @@ centered on the border between two cells.
 
 # --explanation-tr--
 
-Sudoku, dokuz tane 3'e 3 **kutuya** bölünmüş 9'a 9 bir ızgaradır. Her satır, her sütun ve her kutu 1'den 9'a rakamları tam
-bir kez içermelidir. Bazı rakamlar verilmiştir; gerisini sen doldurursun.
+**Bu adımda:** bir Sudoku bulmacasını ekrana çizeceğiz. Sağda 9×9 beyaz karelerden bir ızgara, kalın çizgilerle
+ayrılmış dokuz 3×3 kutu ve bulmacanın verdiği 30 koyu rakam göreceksin.
 
-Bir bulmacayı satır satır, boş hücre için `0` ile **81 karakter** olarak yazmak kolaydır. Bulmacalar internette böyle
-paylaşılır ve 2 boyutlu bir diziye çevirmesi kolaydır:
+**Sudoku nedir?** 9×9'luk bir ızgara, dokuz tane 3×3 **kutuya** bölünmüş. Her satır, her sütun ve her kutu 1'den 9'a
+kadar rakamları **birer kez** içermeli. Bazı rakamlar verilir, gerisini sen doldurursun.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur ve yapar. `//` ile başlayan kısımlar **yorumdur**:
+bilgisayar atlar, sadece insanlar için not.
+
+**Canvas ve fırça.** Sayfada 460×560 piksellik bir resim alanı (`canvas`, kimliği `game`) var. Her şeyi onun
+üstüne boyarız:
+
+```js
+const canvas = document.getElementById('game')  // kâğıdı bul
+const ctx = canvas.getContext('2d')             // fırçayı (çizim bağlamı, context) al
+```
+
+`const ad = değer` bir şeye değişmeyen bir ad (**sabit**) verir; `let ad` içi sonradan değişebilen bir
+**değişken** açar. Nokta (`.`) "bunun içindeki" demek; tırnak içindekiler **yazıdır**. Canvas'ta `(0, 0)` sol üst
+köşedir; `x` sağa, `y` **aşağı** doğru büyür. `ctx.fillStyle = renk` fırçaya renk sürer, `ctx.fillRect(x, y, en,
+boy)` dikdörtgen boyar, `ctx.fillText(yazı, x, y)` yazı yazar.
+
+**Bulmaca bir yazı olarak.** Bulmacayı satır satır **81 karakterlik** bir yazı olarak yazarız; boş hücre `0`.
+Bulmacalar internette de böyle paylaşılır. İlk 9 karakter ilk satır, sonraki 9 ikinci satır…
+
+**Dizi (array) ve iki boyutlu ızgara.** Dizi köşeli parantez içinde bir listedir: `[5, 3, 0]`. Elemanlar **0'dan**
+numaralanır. Izgara, satırlardan oluşan bir liste: `grid[0]` ilk satır, `grid[0][2]` ilk satırın üçüncü hücresi.
+Kodda `r` satır (row), `c` sütun (column) numarasıdır.
 
 ```js
 grid = Array.from({ length: 9 }, (_, r) => [...PUZZLE.slice(r * 9, r * 9 + 9)].map(Number))
 ```
 
-`PUZZLE.slice(r * 9, r * 9 + 9)` metin olarak `r` satırıdır, `[...text]` onu karakterlere böler ve `.map(Number)` `'5'`'i
-`5`'e çevirir.
+Parça parça:
 
-Hangi rakamların **verildiğini** de ikinci bir `true`/`false` ızgarasında hatırlarız. Oyuncunun onları değiştirmesine izin
-verilmeyecek ve oyuncunun kendi rakamlarından farklı görünsünler diye kalın çizilirler.
+- `Array.from({ length: 9 }, ...)` 9 elemanlı bir liste yapar; her elemanı sağdaki fonksiyon üretir. O fonksiyon
+  sırayı `r` (0, 1, … 8) olarak alır. `_` "bu parametreyi kullanmıyorum" demek.
+- `(... ) => ...` kısa bir **fonksiyondur** (ok fonksiyonu): solundakileri al, sağındakini ver.
+- `PUZZLE.slice(r * 9, r * 9 + 9)` yazının `r`. satırını keser (ör. `r = 1` → 9. ile 17. karakter arası).
+- `[...yazı]` yazıyı tek tek karakterlere ayırıp listeye koyar: `'530'` → `['5', '3', '0']`.
+- `.map(Number)` listedeki her elemanı `Number`'dan geçirir: `'5'` yazısı `5` sayısı olur.
 
-Kutuları görünür kılan kalın çizgilerdir: her üçüncü çizgi daha kalın ve daha koyudur. Bir çizgi, iki hücre arasındaki sınırın
-ortasına yerleştirilmiş ince bir `fillRect`'ten ibarettir.
+**Verilen rakamları hatırlamak.** İkinci bir ızgara (`given`) her hücre için `true` (verildi) ya da `false` tutar.
+Oyuncu verilenleri değiştiremeyecek ve onlar kalın yazılacak. `d !== 0` "`d` sıfır **değil** mi?" diye sorar.
+
+**Döngüler.** `for (let r = 0; r < 9; r++) { ... }` sayan bir döngüdür: `r = 0`'dan başla, `r < 9` olduğu sürece
+dön, her turdan sonra `r`'yi bir artır (`r++`). İç içe iki döngü 81 hücrenin hepsini gezer. `continue` o turun
+geri kalanını atlayıp sonraki hücreye geçer (boş hücreye rakam yazmayız).
+
+**Kısa `if`: `? :`.** `given[r][c] ? '#0f172a' : '#2563eb'` → "verildiyse koyu, değilse mavi".
+
+**Kalın çizgiler.** Kutuları gösteren şey her üçüncü çizginin kalın ve koyu olmasıdır. `%` bölümden **kalanı**
+verir: `6 % 3` → `0`, `7 % 3` → `1`. Yani `i % 3 === 0` "i, 3'e tam bölünüyor mu?" (0, 3, 6, 9). Çizgi ince bir
+`fillRect`'tir; iki hücrenin sınırına ortalansın diye kalınlığının yarısı kadar geri kaydırılır.
 
 # --task--
 
@@ -58,14 +95,89 @@ ortasına yerleştirilmiş ince bir `fillRect`'ten ibarettir.
 
 # --task-tr--
 
-1. `SIZE = 48`, `LEFT = (canvas.width - 9 * SIZE) / 2`, `TOP = 56` ve bulmacayı ekle:
-   `PUZZLE = '530070000600195000098000060800060003400803001700020006060000280000419005000080079'`.
-2. `reset()`'te `PUZZLE`'dan `grid`'i ve `given`'ı kur: rakamın `0` olmadığı yerde `true`.
-3. Her karede canvas'ı `'#f8fafc'` ile doldur, her hücreyi beyaz 48'e 48 bir kare olarak ve rakamını (`0` değilse) ortasına
-   çiz: verilen rakamlar için `'#0f172a'` renginde `'bold 26px sans-serif'`, diğerleri için `'#2563eb'` renginde
-   `'26px sans-serif'`, `y + SIZE / 2 + 9`'da ortalı.
-4. Her yönde 10 çizgi çiz: `i % 3 === 0` olduğunda `'#0f172a'` renginde 3 kalınlığında, değilse `'#94a3b8'` renginde 1
-   kalınlığında.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve şunları yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+
+   const SIZE = 48
+   const LEFT = (canvas.width - 9 * SIZE) / 2
+   const TOP = 56
+
+   // The puzzle, row by row; 0 is an empty cell.
+   const PUZZLE = '530070000600195000098000060800060003400803001700020006060000280000419005000080079'
+
+   let grid // grid[r][c]: 1 to 9, or 0 for an empty cell
+   let given // given[r][c]: true for the puzzle's own digits, which cannot be changed
+   ```
+
+   `SIZE` bir hücrenin piksel boyu. `LEFT` ızgarayı yatayda ortalar: (460 − 9 × 48) / 2 = 14. `TOP` üstten boşluk.
+   Bulmaca yazısını kopyalayıp yapıştırmak en güvenlisi.
+
+2. Bir satır boşluk bırakıp bulmacayı ızgaraya çeviren fonksiyonu yaz:
+
+   ```js
+   function reset() {
+     grid = Array.from({ length: 9 }, (_, r) => [...PUZZLE.slice(r * 9, r * 9 + 9)].map(Number))
+     given = grid.map((row) => row.map((d) => d !== 0))
+   }
+   ```
+
+   İkinci satır her satırın her rakamını `true`/`false`'a çevirir.
+
+3. Altına çizim fonksiyonunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#f8fafc'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     for (let r = 0; r < 9; r++) {
+       for (let c = 0; c < 9; c++) {
+         const x = LEFT + c * SIZE
+         const y = TOP + r * SIZE
+         ctx.fillStyle = '#ffffff'
+         ctx.fillRect(x, y, SIZE, SIZE)
+         if (grid[r][c] === 0) continue
+         ctx.fillStyle = given[r][c] ? '#0f172a' : '#2563eb'
+         ctx.font = (given[r][c] ? 'bold ' : '') + '26px sans-serif'
+         ctx.textAlign = 'center'
+         ctx.fillText(String(grid[r][c]), x + SIZE / 2, y + SIZE / 2 + 9)
+       }
+     }
+     // Thin lines between cells, thick ones around each box.
+     for (let i = 0; i <= 9; i++) {
+       ctx.fillStyle = i % 3 === 0 ? '#0f172a' : '#94a3b8'
+       const w = i % 3 === 0 ? 3 : 1
+       ctx.fillRect(LEFT + i * SIZE - w / 2, TOP, w, 9 * SIZE)
+       ctx.fillRect(LEFT, TOP + i * SIZE - w / 2, 9 * SIZE, w)
+     }
+   }
+   ```
+
+   Her hücre önce beyaz boyanır, boş değilse ortasına rakamı yazılır (`String(...)` sayıyı yazıya çevirir,
+   `textAlign = 'center'` yazıyı `x`'e ortalar, `+ 9` rakamı dikeyde ortaya indirir). Sonra 10 dikey ve 10 yatay
+   çizgi çizilir: 3'e bölünenler 3 piksel kalın ve koyu, diğerleri 1 piksel ve açık gri.
+
+4. Altına oyun döngüsünü ve başlatan satırları yaz:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+   `requestAnimationFrame(loop)` tarayıcıdan "bir sonraki karede `loop`'u çalıştır" ister; `loop` her seferinde
+   çizip kendini yeniden ister. Böylece ekran saniyede ~60 kez güncellenir.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda kalın çizgilerle dokuz kutuya bölünmüş bir ızgara ve ilk
+   satırda 5, 3, 7 gibi koyu rakamlar görmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Rakamlar yanlış yerdeyse
+   `PUZZLE` yazısını karakter karakter karşılaştır.
 
 # --tests--
 

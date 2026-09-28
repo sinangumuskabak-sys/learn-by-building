@@ -25,22 +25,60 @@ short message shows what happened.
 
 # --explanation-tr--
 
-Kimse tam doğru karede basmaz, bu yüzden bir vuruşun bir **pencereye** ihtiyacı vardır: notanın zamanı şu andan `WINDOW` kare içindeyse,
-biraz erken ya da biraz geç, basış sayılır.
+**Bu adımda:** notalara tuşla vuracağız. `D`, `F`, `J`, `K` (ya da dört ok tuşu) dört şeride karşılık gelir. Nota
+çizgiye geldiğinde doğru tuşa basarsan nota kaybolur, ortada sarı "Hit" yazısı çıkar, basılan şerit bir an aydınlanır
+ve sol üstte `Hits 1` gibi bir sayaç artar.
 
-Bir basış hangi notaya vurur? O şeritte henüz vurulmamış **en yakın** olana. En yakını bile pencerenin dışındaysa basış çok erkendi (ya
-da çok geç) ve hiçbir şey olmaz: nota hâlâ oradadır, bekler.
+**Tuşu şeride çevirmek.** Hangi tuşun hangi şeride gittiğini bir **nesnede** tutarız:
+
+```js
+const KEYS = { d: 0, f: 1, j: 2, k: 3, ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 }
+```
+
+`KEYS['j']` → 2. Olmayan bir tuş sorulursa sonuç `undefined` ("tanımsız", yani yok) olur.
+
+**Tuşa basılınca: olay (event).** Tarayıcı bir tuşa basıldığında `keydown` **olayı** gönderir. `addEventListener` ile
+"bu olay olunca şu fonksiyonu çalıştır" deriz. Fonksiyona olayın bilgileri `event` adıyla gelir; `event.key` basılan
+tuşun adıdır (`'d'`, `'ArrowUp'`).
+
+**Zamanlama penceresi.** Kimse tam doğru karede basamaz. Bu yüzden notanın zamanına `WINDOW` (9) kare kadar yakın her
+basış sayılır, biraz erken ya da biraz geç. Uzaklığı `Math.abs` ile ölçeriz (işaretsiz değer: `Math.abs(-3)` → 3):
 
 ```js
 const off = Math.abs(closest.time - frame)
-if (off > WINDOW) return
+if (off > WINDOW) return   // çok erken ya da çok geç: hiçbir şey olmasın, nota beklemeye devam etsin
 ```
 
-Burada çok önemli bir ayrıntı: bir tuşu basılı tuttuğunda bilgisayar `keydown` olayını saniyede birçok kez tekrarlar. Çoğu oyunda bu
-işe yarar ama bir ritim oyununda bir basış bir vuruş olmalıdır; bu yüzden tekrarlanan olaylar (`event.repeat` true) yok sayılır.
+Tek başına `return` "burada dur, fonksiyonun gerisini yapma" demektir.
 
-Tuşlar, klavyede parmaklarının durduğu D, F, J ve K ya da dört ok tuşudur. Basılan şerit bir an yanar ve kısa bir mesaj ne olduğunu
-gösterir.
+**Hangi nota?** O şeritteki, henüz vurulmamış **en yakın** nota. Bunu bulmak için listeyi baştan sona geziyoruz ve
+şimdiye kadarki en yakını `closest` adlı değişkende tutuyoruz:
+
+- `let closest = null` → `null` "henüz hiçbir şey" demek.
+- `if (n.hit || n.lane !== lane) continue` → vurulmuşsa **veya** (`||`) başka şeritteyse (`!==` "eşit değil") atla.
+- `if (!closest || ...) closest = n` → `!` "değil" demektir: "henüz bir aday yoksa **veya** bu nota adaydan daha
+  yakınsa, yeni aday bu".
+
+**Basılı tutmak sayılmaz.** Bir tuşu basılı tutunca bilgisayar `keydown`'u saniyede birçok kez tekrarlar. Ritim
+oyununda bir basış bir vuruş olmalı; tekrarlanan olaylarda `event.repeat` `true`'dur ve onları yok sayarız.
+
+**Büyük harf de çalışsın.** Caps Lock açıksa tuş `'D'` gelir. `event.key.toLowerCase()` yazıyı küçük harfe çevirir.
+`a ?? b` → "`a` yoksa (`undefined` ya da `null`) `b`'yi kullan": önce tuşun kendisine, bulamazsak küçük harflisine
+bakarız. `event.preventDefault()` ok tuşlarının sayfayı kaydırmasını engeller.
+
+**Kısa süreli şeyler: sayaçlar.** Şeridin yanması ve mesaj bir an görünüp kaybolmalı. Her biri için bir geri sayım
+tutarız, `update()` her karede bir azaltır:
+
+- `lit = [0, 0, 0, 0]` → her şerit için "kaç kare daha yanık kalacak". Basınca `lit[lane] = 8`.
+- `lit.map((n) => Math.max(0, n - 1))` → `map` listenin her elemanını dönüştürüp yeni bir liste yapar: her sayıdan 1
+  çıkar ama 0'ın altına inme (`Math.max` iki sayıdan büyüğünü verir).
+- `feedback = { text, color, time: 30 }` → gösterilecek mesaj ve 30 karelik ömrü. `--feedback.time` sayıyı bir
+  azaltır ve yeni değeri verir; 0'a inince `feedback = null` ile mesaj silinir. `feedback && ...` "mesaj varsa" demektir
+  (`&&` "ve"): mesaj yoksa ikinci kısma hiç bakılmaz.
+
+**Koşullu renk.** `lit[lane] > 0 ? '#334155' : '#1e293b'` → `koşul ? evetse : hayırsa`: şerit yanıksa açık, değilse
+koyu renk. `'Hits ' + hits` yazıyla sayıyı uç uca ekler: `'Hits 3'`. `ctx.textAlign` yazının verilen `x`'e göre
+nereye hizalanacağını seçer (`'center'` ortalı, `'left'` soldan başlar); `ctx.font` boyu ve türü seçer.
 
 # --task--
 
@@ -55,14 +93,107 @@ gösterir.
 
 # --task-tr--
 
-1. `WINDOW = 9`, `KEYS` (d, f, j, k ve oklardan 0'dan 3'e şeritlere) ve `hits`, `feedback` ve `lit` ekle (`reset()`'te `0`, `null` ve dört
-   sıfır).
-2. `feedback = { text, color, time: 30 }` yapan `judge(text, color)`'u yaz.
-3. `press(lane)` yaz: şeridi yak (`lit[lane] = 8`), şeritte henüz vurulmamış en yakın notayı bul ve `WINDOW` kare içindeyse onu vurulmuş
-   işaretle, `hits`'e 1 ekle ve `judge('Hit', '#fde047')` et.
-4. `keydown`'da: tekrarları yok say; tuşun şeridini bul (büyük harfler için de) ve onu `press` et (`preventDefault()`).
-5. `update()` `lit`'i ve geri bildirimin süresini azaltır. Yanık bir şeridi `'#334155'`, geri bildirimi kendi renginde
-   (`'bold 28px sans-serif'`, `y = 300`'de ortalı) ve `(12, 24)`'e `Hits 3` çiz.
+1. `const LEAD = 120 ...` satırının altına pencereyi ve tuş tablosunu ekle:
+
+   ```js
+   const WINDOW = 9 // frames either side of the exact moment that still count
+   const KEYS = { d: 0, f: 1, j: 2, k: 3, ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 }
+   ```
+
+2. `let frame` satırının altına üç değişken ekle:
+
+   ```js
+   let hits
+   let feedback // { text, color, time } shown for a moment
+   let lit // frames each lane stays lit after a press
+   ```
+
+3. `reset()` içinde, `frame = 0` satırının altına başlangıç değerlerini ekle:
+
+   ```js
+     frame = 0
+     hits = 0                  // ← yeni
+     feedback = null           // ← yeni
+     lit = [0, 0, 0, 0]        // ← yeni
+   }
+   ```
+
+4. `const noteY = ...` satırından sonra bir boş satır bırak ve (`function update()`'in **üstüne**) mesaj ve basış
+   fonksiyonlarını yaz:
+
+   ```js
+   function judge(text, color) {
+     feedback = { text, color, time: 30 }
+   }
+
+   // A key press hits the closest note in its lane, if it is close enough in time.
+   function press(lane) {
+     lit[lane] = 8
+     let closest = null
+     for (const n of notes) {
+       if (n.hit || n.lane !== lane) continue
+       if (!closest || Math.abs(n.time - frame) < Math.abs(closest.time - frame)) closest = n
+     }
+     if (!closest) return
+     const off = Math.abs(closest.time - frame)
+     if (off > WINDOW) return // too early: nothing happens, and the note is still there
+     closest.hit = true
+     hits += 1
+     judge('Hit', '#fde047')
+   }
+   ```
+
+5. `update()`'in başına iki geri sayım satırı ekle:
+
+   ```js
+   function update() {
+     lit = lit.map((n) => Math.max(0, n - 1))                   // ← yeni
+     if (feedback && --feedback.time === 0) feedback = null     // ← yeni
+     frame += 1
+   }
+   ```
+
+6. `update()`'in kapanan `}`'sinden sonra bir boş satır bırak ve (`function draw()`'un **üstüne**) klavye dinleyicisini
+   yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.repeat) return // holding a key down is not a new press
+     const lane = KEYS[event.key] ?? KEYS[event.key.toLowerCase()]
+     if (lane === undefined) return
+     event.preventDefault()
+     press(lane)
+   })
+   ```
+
+7. `draw()` içinde şerit rengini seçen `ctx.fillStyle = '#1e293b'` satırını değiştir:
+
+   ```js
+       ctx.fillStyle = lit[lane] > 0 ? '#334155' : '#1e293b'     // ← değişti
+   ```
+
+8. `draw()`'un sonunda, notaları çizen `for (const n of notes) { ... }` bloğunun kapanışından sonra, fonksiyonun son
+   `}`'sinden önce bir boş satır bırak ve yazıları ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.textAlign = 'center'
+     ctx.font = 'bold 14px sans-serif'
+     if (feedback) {
+       ctx.fillStyle = feedback.color
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText(feedback.text, canvas.width / 2, 300)
+     }
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Hits ' + hits, 12, 24)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Nota renkli çizgiye gelince o şeridin tuşuna bas (`D F J K`):
+   nota kaybolmalı, "Hit" yazısı çıkmalı, sayaç artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa
+   `??` (iki soru işareti) ve `--feedback.time` (iki eksi) yazımına bak.
 
 # --tests--
 

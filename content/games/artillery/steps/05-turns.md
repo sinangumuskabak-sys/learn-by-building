@@ -24,21 +24,39 @@ When a tank reaches 0 hp, the other side wins.
 
 # --explanation-tr--
 
-Artık iki oyuncu klavyeyi (ya da ekranı) paylaşıyor ve sırayla oynuyor. `turn` mavi için 0, kırmızı için 1'dir. "Tanktan" söz eden her
-kural artık `tanks[turn]` anlamına gelir: tuşlar ona nişan aldırır, işaretçi ondan gösterir ve mermi onun namlusundan çıkar. Bir atış
-bitince `turn = 1 - turn` sırayı devreder.
+**Bu adımda:** iki kişi aynı klavyeyi (ya da ekranı) paylaşıp sırayla ateş edecek. Tankların üstünde yeşil can çubukları
+olacak, sırası gelen tankın üstünde küçük bir üçgen belirecek ve sağ üstte `Blue to shoot` (Mavi atar) ya da
+`Red to shoot` (Kırmızı atar) yazacak. Bir tankın canı bitince kazanan ilan edilecek.
 
-Patlamalar acıtır. Merkeze daha yakın bir tank daha çok hasar alır: tam ortada 60, patlamanın kenarında hiç, arada da düz bir çizgi
-boyunca azalır:
+**Sıra tek bir sayıdır.** `turn` mavi için `0`, kırmızı için `1`. Şimdiye kadar "tank" dediğimiz her kural
+(`tanks[0]`) artık `tanks[turn]` olacak: tuşlar ona nişan aldırır, fare ondan gösterir, mermi onun namlusundan çıkar.
+Atış bitince `turn = 1 - turn` sırayı devreder: `1 - 0` → `1`, `1 - 1` → `0`.
+
+**Patlamalar can yakar.** Her tankın `hp` (can) değeri 100 ile başlar. Patlamanın merkezine yakın olan tank daha çok
+hasar alır: tam ortada 60, patlamanın kenarında hiç, arada düz bir çizgi hâlinde azalır:
 
 ```js
 if (d < BLAST) t.hp -= (1 - d / BLAST) * 60
 ```
 
-Diğer tanka dosdoğru uçan bir mermi onun içinden geçmemeli; bu yüzden `fly`, mermi atış yapmayan bir tanka 12 pikselden çok
-yaklaştığında `'tank'` da bildirir. Patlama tam orada olur.
+`d` tankın ortası ile patlama arasındaki uzaklıktır (`Math.hypot`). `d = 0` ise `(1 - 0) * 60 = 60`; `d = 15` ise
+`(1 - 0.5) * 60 = 30`. Sonucu `Math.round` ile yuvarlarız ve `Math.max(0, ...)` ile asla eksiye düşürmeyiz.
 
-Bir tank 0 hp'ye ulaştığında diğer taraf kazanır.
+**Mermi tankın içinden geçmemeli.** Doğrudan öbür tanka uçan bir mermi, tankın 12 pikselden yakınına gelince `fly`
+artık `'tank'` da döndürür ve patlama tam orada olur. `tanks.some(f)` → "listede `f`'in doğru dediği **en az bir**
+eleman var mı?" `t !== tanks[turn]` → "ateş eden tank değilse" (kendi mermin sana çarpmasın).
+
+**Sıranın sonu: `endTurn()`.** Patlama bitince çağrılır. Kırmızının canı 0 ise `'won'` (mavi kazandı), mavinin canı 0
+ise `'lost'` (mavi kaybetti), değilse sıra öbür tanka geçer ve tekrar `'aiming'` olur. Bitti ekranında Boşluk ya da
+dokunuş `reset()` ile yeniden başlatır. `return reset()` → "`reset`'i çağır ve burada dur".
+
+**Yeni küçük şeyler:**
+
+- `for (const [i, t] of tanks.entries())` → listedeki her tankı numarasıyla birlikte verir: `i` 0 ya da 1, `t` tank.
+  Böylece "bu tank sırası gelen mi?" (`i === turn`) diye sorabiliriz.
+- Can çubuğu iki dikdörtgendir: önce 32 piksellik koyu bir zemin, üstüne canla orantılı renkli kısım (`32 * t.hp / 100`).
+  Can 30'un üstündeyse yeşil, değilse kırmızı.
+- Üçgen: `moveTo` ile bir köşe, iki `lineTo` ile diğer köşeler, `fill()` ile içini boya.
 
 # --task--
 
@@ -53,14 +71,149 @@ Bir tank 0 hp'ye ulaştığında diğer taraf kazanır.
 
 # --task-tr--
 
-1. Her tanka `hp: 100` ver ve `turn` ekle (`reset()`'te `0`). `fire`, `aimBy` ve `pointAt` `tanks[turn]`'ü kullanır.
-2. `fly`, mermi atış yapan dışındaki herhangi bir tankın `(t.x, t.y - 6)`'sına 12 pikselden yakınken `'tank'` döndürür.
-3. `explode`, patlamaya `BLAST`'tan yakın her tanka `(1 - d / BLAST) * 60` (yuvarlanmış, asla 0'ın altına değil) hasar verir.
-4. Patlama bitince çağrılan `endTurn()`'ü yaz: kırmızının 0 hp'si varsa `'won'`, mavinin varsa `'lost'`, değilse diğer tankın sırası
-   ve `'aiming'`. `'won'` ya da `'lost'`'ta Boşluk ya da bir dokunuş yeniden başlatır.
-5. Her tankın üstüne bir can çubuğu (`t.y - 22`'de 32'ye 4, `'#0f172a'`, üstünde `'#22c55e'` ya da 30 hp ve altında `'#ef4444'`),
-   sırası gelen tankın üstüne küçük koyu bir üçgen, sağ üste `Blue to shoot` ya da `Red to shoot` ve sonda `Blue wins!` ya da
-   `Red wins!` yazan bir panel çiz.
+1. Değişkenlerde `let tanks` ve `let state` satırlarının yorumlarını güncelle, `let tanks`'ın altına `turn`'ü ekle:
+
+   ```js
+   let tanks // [blue, red]: { x, y, hp, angle, power, color }
+   let turn // 0 or 1: whose shot it is
+   ```
+
+   ```js
+   let state // 'aiming', 'flying', 'boom', 'won' or 'lost'
+   ```
+
+2. `reset()` içinde iki tank satırına `hp: 100` ekle ve `for (const t of tanks) ...` satırının altına `turn = 0` yaz:
+
+   ```js
+       { x: 70, y: 0, hp: 100, angle: -Math.PI / 4, power: 8, color: '#2563eb' }, // ← değişti
+       { x: W - 70, y: 0, hp: 100, angle: (-3 * Math.PI) / 4, power: 8, color: '#dc2626' }, // ← değişti
+     ]
+     for (const t of tanks) t.y = groundAt(t.x)
+     turn = 0 // ← yeni
+   ```
+
+3. `fire()`, `aimBy()` ve `pointAt()` içindeki `const t = tanks[0]` satırlarının üçünü de şöyle yap:
+
+   ```js
+     const t = tanks[turn] // ← değişti
+   ```
+
+   `pointAt`'in üstündeki yorumu da güncelle: `// Point from the tank whose turn it is: the direction is the aim, the distance is the power.`
+
+4. `fly()` içinde `return 'ground'` satırının altına (`return null`'un üstüne) ekle:
+
+   ```js
+     if (tanks.some((t) => t !== tanks[turn] && Math.hypot(t.x - s.x, t.y - 6 - s.y) < 12)) return 'tank'
+   ```
+
+5. `explode()`'u şöyle yap (yorum değişti, zemin döngüsünden sonra hasar döngüsü eklendi); hemen altına `endTurn`'ü yaz:
+
+   ```js
+   // Blow a round hole in the ground and hurt the tanks nearby.
+   function explode(x, y) {
+     for (let cx = Math.floor(x - BLAST); cx <= x + BLAST; cx++) {
+       if (cx < 0 || cx >= W) continue
+       const bottom = y + Math.sqrt(BLAST * BLAST - (cx - x) ** 2)
+       if (bottom > ground[cx]) ground[cx] = Math.min(H - 2, bottom)
+     }
+     for (const t of tanks) { // ← yeni (buradan)
+       const d = Math.hypot(t.x - x, t.y - 6 - y)
+       if (d < BLAST) t.hp = Math.max(0, Math.round(t.hp - (1 - d / BLAST) * 60))
+     } // ← (buraya kadar)
+     blast = { x, y }
+   }
+
+   function endTurn() {
+     if (tanks[1].hp === 0) state = 'won'
+     else if (tanks[0].hp === 0) state = 'lost'
+     else {
+       turn = 1 - turn
+       state = 'aiming'
+     }
+   }
+   ```
+
+6. `update()` içinde patlama bitince yapılan işi değiştir:
+
+   ```js
+     if (state === 'boom' && --timer === 0) {
+       blast = null
+       endTurn() // ← değişti (eskiden: state = 'aiming')
+     }
+   ```
+
+7. `keydown` olayında son iki satırı (`else if (event.key === ' ') fire()` ve `else return`) sil, yerine şunu yaz:
+
+   ```js
+     else if (event.key === ' ') {
+       if (state === 'won' || state === 'lost') reset()
+       else fire()
+     } else return
+   ```
+
+8. `pointerdown` olayının en başına ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'won' || state === 'lost') return reset() // ← yeni
+     if (state !== 'aiming') return
+   ```
+
+9. `draw()` içindeki tank döngüsünü şöyle değiştir (ilk satır değişti, sona can çubuğu ve üçgen eklendi):
+
+   ```js
+     for (const [i, t] of tanks.entries()) { // ← değişti
+       ctx.fillStyle = t.color
+       ctx.fillRect(t.x - 10, t.y - 8, 20, 8)
+       ctx.strokeStyle = t.color
+       ctx.lineWidth = 3
+       ctx.beginPath()
+       ctx.moveTo(t.x, t.y - 8)
+       ctx.lineTo(t.x + Math.cos(t.angle) * 14, t.y - 8 + Math.sin(t.angle) * 14)
+       ctx.stroke()
+       // Health bar // ← yeni (buradan)
+       ctx.fillStyle = '#0f172a'
+       ctx.fillRect(t.x - 16, t.y - 22, 32, 4)
+       ctx.fillStyle = t.hp > 30 ? '#22c55e' : '#ef4444'
+       ctx.fillRect(t.x - 16, t.y - 22, (32 * t.hp) / 100, 4)
+       if (i === turn && state === 'aiming') {
+         ctx.fillStyle = '#0f172a'
+         ctx.beginPath()
+         ctx.moveTo(t.x - 5, t.y - 34)
+         ctx.lineTo(t.x + 5, t.y - 34)
+         ctx.lineTo(t.x, t.y - 27)
+         ctx.fill()
+       } // ← (buraya kadar)
+     }
+   ```
+
+10. `draw()`'un sonunda `const now = tanks[0]` satırını `tanks[turn]` yap ve açı yazısının altına sıra yazısını ve bitiş
+    panelini ekle:
+
+    ```js
+      const now = tanks[turn] // ← değişti
+      ctx.fillStyle = '#0f172a'
+      ctx.font = 'bold 14px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('Angle ' + Math.round((-now.angle * 180) / Math.PI) + '°  Power ' + now.power.toFixed(1), 10, 20)
+      ctx.textAlign = 'right' // ← yeni (buradan)
+      ctx.fillText(turn === 0 ? 'Blue to shoot' : 'Red to shoot', W - 10, 20)
+      if (state === 'won' || state === 'lost') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+        ctx.fillRect(140, 110, 280, 80)
+        ctx.fillStyle = 'white'
+        ctx.textAlign = 'center'
+        ctx.font = 'bold 22px sans-serif'
+        ctx.fillText(state === 'won' ? 'Blue wins!' : 'Red wins!', W / 2, 145)
+        ctx.font = '15px sans-serif'
+        ctx.fillText('Space or tap to play again', W / 2, 172)
+      } // ← (buraya kadar)
+    }
+    ```
+
+11. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Mavi ile ateş et; patlama bitince sağ üstte `Red to shoot`
+    yazmalı ve oklar artık kırmızı namluyu çevirmeli. Tanka isabet eden atış can çubuğunu kısaltmalı. Alttaki
+    kontrollerin hepsi yeşil olmalı. Tuşlar hâlâ maviyi oynatıyorsa üç `tanks[0]`'ın hepsini `tanks[turn]` yaptığından emin ol.
 
 # --tests--
 

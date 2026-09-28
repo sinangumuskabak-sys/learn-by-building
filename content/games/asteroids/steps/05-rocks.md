@@ -25,22 +25,53 @@ For collisions, the rock is still treated as a simple circle of radius `r`. The 
 
 # --explanation-tr--
 
-Bir asteroitin konumu, hızı ve bir **boyutu** vardır: 3 (büyük), 2 (orta) ya da 1 (küçük). Yarıçapı küçük bir arama
-tablosundan gelir, `SIZES[size]`, ve rastgele bir yönde hareket eder: rastgele bir açı seç, sonra onu itkideki gibi `cos`
-ve `sin` ile bir hıza çevir.
+**Bu adımda:** ekrana dört büyük, pürüzlü kaya koyacağız. Çalıştırınca yukarıdan başlayıp her biri kendi yönünde
+yavaşça süzülen, kenarlardan dolaşan dört taş göreceksin.
 
-Kusursuz bir daire kaya değil baloncuk gibi görünür. Hile, köşeleri merkezden **biraz rastgele uzaklıklarda** duran bir
-çokgen çizmektir:
+**Kaya neyi bilir?** Konumunu (`x`, `y`), hızını (`vx`, `vy`) ve **boyunu** (`size`): 3 büyük, 2 orta, 1 küçük. Boyuna
+göre yarıçapını (`r`) küçük bir tablodan okuruz:
 
 ```js
-shape: Array.from({ length: 10 }, () => 0.75 + Math.random() * 0.35)   // köşe başına bir ölçek
+const SIZES = [0, 15, 28, 45]
+SIZES[3]   // 45
 ```
 
-`i`. köşe tam turun `i / 10`'u açıda, `r * shape[i]` uzaklıkta durur. Rastgele ölçekler asteroit yapılırken **bir kez**
-seçilir ve onunla birlikte saklanır. Her karede yeni rastgele sayılar çekseydin taslak cızırdar ve titrerdi. Rastgeleliği
-bir kez belirleyip hatırlamak, oyunların her düşmana, ağaca ya da buluta kendi sabit görünümünü vermesinin yoludur.
+Dizideki öğelerin sıra numarası (index) **0'dan** başlar: `SIZES[0]` 0, `SIZES[1]` 15, `SIZES[3]` 45. Baştaki 0 boş
+bir yer tutucudur, böylece "boy 3" doğrudan `SIZES[3]` olur.
 
-Çarpışmalarda kaya yine `r` yarıçaplı basit bir daire sayılır. Pürüzlü taslak yalnızca göz içindir.
+**Rastgelelik.** `Math.random()` her çağrıldığında 0 ile 1 arasında (1 hariç) rastgele bir sayı verir. Onu büyütüp
+kaydırarak istediğin aralığı elde edersin:
+
+- `Math.random() * Math.PI * 2` → 0 ile tam tur arasında rastgele bir açı.
+- `0.6 + Math.random() * (4 - size) * 0.5` → en az 0.6 olan bir hız. `size` küçüldükçe `(4 - size)` büyür, yani
+  küçük kayalar daha hızlı olabilir.
+
+Açıdan hıza geçiş, itkideki `cos`/`sin` hesabının aynısıdır.
+
+**Kayayı kaya gibi göstermek.** Düz bir daire balon gibi görünür. Hile: 10 köşeli bir çokgen çiziyoruz ve her köşeyi
+merkezden **biraz farklı** uzaklığa koyuyoruz. Her köşe için bir ölçek sayısı (0.75 ile 1.1 arası) üretiriz:
+
+```js
+const shape = Array.from({ length: 10 }, () => 0.75 + Math.random() * 0.35)
+```
+
+`Array.from({ length: 10 }, ...)` → "10 öğeli bir dizi yap; her öğeyi şu fonksiyonla üret". Sonuç `[0.93, 0.81, ...]`
+gibi 10 sayıdır. Bu sayılar kaya **doğarken bir kez** seçilir ve kayayla birlikte saklanır. Her karede yeni rastgele
+sayı çekseydik kayanın çizgisi titreyip kıpırdardı. Rastgeleliği bir kez seçip hatırlamak, oyunlarda her ağaca, buluta
+ya da düşmana kendine özgü ve sabit bir görünüm vermenin yoludur.
+
+**Yeni araçlar:**
+
+- `return { x, y, size }` → kısa yazım: `{ x: x, y: y, size: size }` ile aynı. Ad ile değer aynıysa bir kere yazılır.
+- `asteroid.shape.forEach((scale, i) => { ... })` → dizideki her öğe için işi yapar; `scale` öğenin kendisi, `i` sıra
+  numarası (0, 1, 2 ... 9). `i`. köşe tam turun `i / 10`'unda, `r * scale` uzaklıktadır.
+- `if (i === 0) ... else ...` → `else` "değilse" demektir: ilk köşede kalemi oraya götür (`moveTo`), diğerlerinde çizgi
+  çek (`lineTo`).
+- `for (let i = 0; i < 4; i++) ...` → sayan döngü: `i` 0'dan başlar, 4'ten küçük olduğu sürece işi yapar, her turda
+  `i++` ile 1 artar. Yani iş 4 kez yapılır.
+- `koşul ? A : B` → kısa "eğer": koşul doğruysa A, değilse B. `Math.random() < 0.5 ? 0 : ...` yarı yarıya ihtimalle 0.
+
+Çarpışma için kaya yine basit bir `r` yarıçaplı daire sayılacak; pürüzlü çizgi sadece göz için.
 
 # --task--
 
@@ -52,11 +83,84 @@ bir kez belirleyip hatırlamak, oyunların her düşmana, ağaca ya da buluta ke
 
 # --task-tr--
 
-1. `SIZES = [0, 15, 28, 45]` ve `let asteroids` ekle.
-2. `makeAsteroid(x, y, size)` yaz: rastgele bir açı, `speed = 0.6 + Math.random() * (4 - size) * 0.5` (küçük olan daha
-   hızlı), açıdan hız, `r: SIZES[size]` ve 0.75 ile 1.1 arası 10 rastgele ölçekten oluşan bir `shape`.
-3. Üst ya da sol kenarda 4 büyük asteroitle başla. `update()` içinde her asteroiti taşı ve dolaştır.
-4. Pürüzlü taslağı çizgiyle çizen `drawAsteroid(asteroid)` yaz ve her asteroiti çiz.
+1. `const BULLET_LIFE = 55` satırının hemen altına boy tablosunu ekle:
+
+   ```js
+   const SIZES = [0, 15, 28, 45] // asteroid radius for size 1, 2 and 3
+   ```
+
+2. `let bullets` satırının hemen altına kaya listesinin adını ekle:
+
+   ```js
+   let asteroids
+   ```
+
+3. `resetShip` fonksiyonunun kapanış `}`'inden sonra, `function shoot()`'tan önce kaya üreten fonksiyonu yaz:
+
+   ```js
+   function makeAsteroid(x, y, size) {
+     const angle = Math.random() * Math.PI * 2
+     const speed = 0.6 + Math.random() * (4 - size) * 0.5 // smaller asteroids are faster
+     // A jagged outline: 10 corners at slightly random distances from the center.
+     const shape = Array.from({ length: 10 }, () => 0.75 + Math.random() * 0.35)
+     return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, r: SIZES[size], shape }
+   }
+   ```
+
+4. `update()` içinde mermileri hareket ettiren `for` döngüsünün kapanış `}`'inden sonra, `bullets = bullets.filter(...)`
+   satırından önce kayaları hareket ettiren döngüyü ekle:
+
+   ```js
+     for (const asteroid of asteroids) {                              // ← yeni
+       asteroid.x = wrap(asteroid.x + asteroid.vx, canvas.width)
+       asteroid.y = wrap(asteroid.y + asteroid.vy, canvas.height)
+     }
+
+     bullets = bullets.filter((bullet) => bullet.life > 0)
+   ```
+
+5. `drawShip` fonksiyonunun kapanış `}`'inden sonra, `function draw()`'dan önce bir kayayı çizen fonksiyonu yaz:
+
+   ```js
+   function drawAsteroid(asteroid) {
+     ctx.beginPath()
+     asteroid.shape.forEach((scale, i) => {
+       const angle = (i / asteroid.shape.length) * Math.PI * 2
+       const x = asteroid.x + Math.cos(angle) * asteroid.r * scale
+       const y = asteroid.y + Math.sin(angle) * asteroid.r * scale
+       if (i === 0) ctx.moveTo(x, y)
+       else ctx.lineTo(x, y)
+     })
+     ctx.closePath()
+     ctx.stroke()
+   }
+   ```
+
+6. `draw()` içinde `ctx.lineWidth = 2` satırının hemen altına bütün kayaları çizen satırı ekle:
+
+   ```js
+     ctx.strokeStyle = 'white'
+     ctx.lineWidth = 2
+     for (const asteroid of asteroids) drawAsteroid(asteroid) // ← yeni
+
+     drawShip()
+   ```
+
+7. En alttaki başlangıç satırlarına, `bullets = []`'in altına iki satır ekle: boş kaya listesi ve 4 büyük kaya.
+
+   ```js
+   bullets = []
+   asteroids = []                                                                                                        // ← yeni
+   for (let i = 0; i < 4; i++) asteroids.push(makeAsteroid(Math.random() < 0.5 ? 0 : Math.random() * canvas.width, 0, 3)) // ← yeni
+   resetShip()
+   requestAnimationFrame(loop)
+   ```
+
+   Her kaya üst kenarda (`y` = 0), rastgele bir yerde doğar ve boyu 3'tür (büyük).
+
+8. **Çalıştır**'a bas. Dört büyük pürüzlü kaya yavaşça süzülmeli ve kenarlardan dolaşmalı (henüz vurulamazlar, gemiye
+   de çarpmazlar). Alttaki kontrollerin hepsi yeşil olmalı. Çizgi sayısı kontrolü kırmızıysa `drawAsteroid` içindeki
+   `if (i === 0)` / `else` kısmına bak.
 
 # --tests--
 

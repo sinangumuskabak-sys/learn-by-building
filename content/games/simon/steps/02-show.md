@@ -22,18 +22,53 @@ go dark in between, or the player would see one long flash instead of two.
 
 # --explanation-tr--
 
-Bilgisayar **küçük bir gösteri** yapmalı: ilk tuşu yarım saniye yak, dur, sonrakini yak ve böyle devam et. Bir `for` döngüsü
-bunu yapamaz, çünkü bütün diziyi tek bir karede bitirirdi. Bunun yerine gösteri sayaçlarla birçok kareye yayılır:
+**Bu adımda:** bilgisayar diziyi göstermeye başlayacak. Çalıştırınca kısa bir beklemeden sonra rastgele bir tuş
+yarım saniye kadar parlayıp sönecek. Üstte solda `Round 1` (1. tur), sağda önce `Watch...` (izle), sonra
+`Your turn` (sıra sende) yazacak.
 
-- `timer` sonraki olaya kadar geri sayar,
-- `showAt` dizinin sıradaki adımını söyler,
-- `litFor` şu anki tuşun ne kadar daha yanık kalacağını geri sayar.
+**Küçük bir gösteri.** Bilgisayar bir gösteri yapmalı: ilk tuşu yarım saniye yak, dur, sonrakini yak... Bunu
+bir `for` döngüsüyle yapamayız, çünkü döngü bütün diziyi tek bir karede (ekranın bir kez çizildiği anda) bitirir,
+göz hiçbir şey görmez. Bunun yerine gösteriyi **sayaçlarla** birçok kareye yayarız. Döngümüz saniyede yaklaşık
+60 kez çalışıyor, yani 30 kare yarım saniye eder.
 
-Her karede `update()` geri sayar; `timer` sıfıra ulaşınca sonraki tuşu yakar ve `timer`'ı yeniden kurar. Her adım gösterilince
-durum `'showing'`'den `'input'`'a geçer: oyuncunun sırası.
+- `timer` → bir sonraki olaya kaç kare kaldığını geri sayar.
+- `showAt` → dizinin sıradaki hangi adımının gösterileceğini tutar.
+- `litFor` → yanan tuşun daha kaç kare yanık kalacağını geri sayar.
 
-Tuşlar arasında neden tam `SHOW_FRAMES` değil de `SHOW_FRAMES + 8` bekleniyor? Aynı tuş art arda iki kez gelirse arada sönmesi
-gerekir; yoksa oyuncu iki yerine tek uzun bir yanma görürdü.
+Mutfak zamanlayıcısı gibi: her karede bir azalır, sıfıra inince bir şey olur.
+
+**Oyunun hâli (`state`).** Oyun ya gösteri yapıyor (`'showing'`) ya da oyuncuyu bekliyor (`'input'`). Bunu bir
+yazıyla tutarız. Bütün dizi gösterilince hâl `'showing'`'den `'input'`'a geçer: sıra oyuncuda.
+
+**Diziye rastgele tuş eklemek.**
+
+```js
+sequence.push(Math.floor(Math.random() * 4))
+```
+
+- `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir sayı verir; `* 4` ile 0–3.99 olur; `Math.floor` aşağı
+  yuvarlar: 0, 1, 2 ya da 3. Yani rastgele bir tuş numarası.
+- `dizi.push(x)` → `x`'i dizinin **sonuna ekler**. `sequence.length` dizinin eleman sayısıdır; bu da tur
+  numarasıdır.
+
+**Yeni kısaltmalar ve kalıplar.**
+
+- `litFor -= 1` → "`litFor`'dan 1 çıkar" (`litFor = litFor - 1`'in kısası). `showAt += 1` ise 1 ekler.
+- `>` büyüktür, `!==` "eşit değil mi?" demektir.
+- `if (...) return` → "koşul doğruysa fonksiyondan hemen çık, aşağıyı yapma". Örneğin
+  `if (state !== 'showing') return` = "gösteri yapmıyorsak geri kalan gösteri kodunu atla".
+
+**Neden `SHOW_FRAMES + 8`?** Bir tuş 30 kare yanar ama bir sonrakine kadar 38 kare bekleriz. Aynı tuş arka arkaya
+iki kez gelirse arada **sönmesi** gerekir; yoksa oyuncu iki yanış yerine tek uzun bir yanış görür.
+
+**Yeni oyun ve yeni tur.** `reset()` her şeyi baştan kurar (boş dizi, ışık kapalı) ve `nextRound()`'u çağırır.
+`nextRound()` diziye bir tuş ekler ve gösteriyi başlatır. Bu yüzden dosyanın üstünde değişkenler artık **değersiz**
+tanıtılır (`let sequence`); değerlerini bu fonksiyonlar verir. `lit` de böyle: değerini (`-1`) artık `reset()`
+veriyor.
+
+**Yazı.** `ctx.font` yazı tipini, `ctx.textAlign` hizalamayı seçer: `'left'` ise verilen `x` yazının solu,
+`'right'` ise sağı olur. `ctx.fillText(yazı, x, y)` yazıyı boyar. `'Round ' + sequence.length` → `+` yazıyla
+sayıyı yan yana yapıştırır: `'Round 1'`.
 
 # --task--
 
@@ -48,13 +83,96 @@ gerekir; yoksa oyuncu iki yerine tek uzun bir yanma görürdü.
 
 # --task-tr--
 
-1. `SHOW_FRAMES = 30` ile `sequence`, `state`, `showAt`, `timer` ve `litFor` ekle.
-2. `reset()` diziyi boşaltır, ışığı söndürür ve rastgele bir tuş (0–3) ekleyen, durumu `'showing'`, `showAt = 0` ve
-   `timer = 40` yapan `nextRound()`'u çağırır.
-3. `light(pad, frames)` `lit` ve `litFor`'u ayarlar.
-4. `update()`: `litFor`'u geri say ve 0'a ulaşınca ışığı söndür. Gösterirken `timer`'ı geri say; 0'da, bütün dizi gösterildiyse
-   `'input'`'a geç; değilse sonraki tuşu `SHOW_FRAMES` boyunca yak ve `timer = SHOW_FRAMES + 8` yap.
-5. Sol üste `Round 1`, sağ üste `Watch...` ya da `Your turn` çiz (beyaz, `'bold 18px sans-serif'`, `y = 27`).
+1. `PADS` listesinin kapanan `]` işaretinin altına gösteri süresini ekle:
+
+   ```js
+   const SHOW_FRAMES = 30 // how long each pad of the sequence stays lit
+   ```
+
+2. `let lit = -1 // the pad lit right now, or -1` satırını sil ve yerine şu değişkenleri yaz (araya bir boş
+   satır bırak):
+
+   ```js
+   let sequence // the pads to repeat, growing by one every round
+   let state // 'showing' or 'input'
+   let showAt // which step of the sequence is being shown, and when
+   let timer
+   let lit // the pad lit right now, or -1
+   let litFor
+   ```
+
+3. Bunların altına bir boş satır bırak ve dört fonksiyonu yaz (`function draw()`'dan önce):
+
+   ```js
+   function reset() {
+     sequence = []
+     lit = -1
+     litFor = 0
+     nextRound()
+   }
+
+   function nextRound() {
+     sequence.push(Math.floor(Math.random() * 4))
+     state = 'showing'
+     showAt = 0
+     timer = 40 // a short pause before the sequence is shown
+   }
+
+   function light(pad, frames) {
+     lit = pad
+     litFor = frames
+   }
+
+   function update() {
+     if (litFor > 0) {
+       litFor -= 1
+       if (litFor === 0) lit = -1
+     }
+     if (state !== 'showing') return
+     timer -= 1
+     if (timer > 0) return
+     if (showAt === sequence.length) {
+       state = 'input'
+       return
+     }
+     // Light the next pad, then wait a little longer than it stays lit, so repeats are two separate flashes.
+     light(sequence[showAt], SHOW_FRAMES)
+     showAt += 1
+     timer = SHOW_FRAMES + 8
+   }
+   ```
+
+   `update()`'i yukarıdan aşağı oku: önce yanan tuşun süresini azalt; gösteri yoksa çık; zamanlayıcıyı azalt,
+   daha zaman varsa çık; dizi bittiyse sırayı oyuncuya ver; bitmediyse sıradaki tuşu yak.
+
+4. `draw()` fonksiyonunda, `PADS.forEach(...)` bloğunun kapanan `})` işaretinden sonra, fonksiyonun son `}`
+   işaretinden **önce** üst yazıları ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Round ' + sequence.length, 10, 27)
+     ctx.textAlign = 'right'
+     ctx.fillText(state === 'showing' ? 'Watch...' : 'Your turn', canvas.width - 10, 27)
+   ```
+
+5. `loop()` fonksiyonunda çizimden önce güncelle, ve en alttaki başlatma satırının üstüne `reset()` ekle:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset() // ← yeni
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas. Kısa bir süre sonra bir tuş parlayıp sönmeli, üstte `Round 1` ve önce `Watch...`, sonra
+   `Your turn` yazmalı. Alttaki kontrollerin hepsi yeşil olmalı. Tuş hiç yanmıyorsa `loop()` içindeki `update()`
+   çağrısını ya da en alttaki `reset()` çağrısını kontrol et.
 
 # --tests--
 

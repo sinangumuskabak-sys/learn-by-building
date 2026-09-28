@@ -27,24 +27,48 @@ Pick the kind with the keys 1 and 2, or with the two buttons in the top bar.
 
 # --explanation-tr--
 
-Tek bir kule türü tek bir oynama biçimi verir. **Farklı güçlü yanları** olan ikinci bir tür, kurmayı bir seçime çevirir:
+**Bu adımda:** ikinci bir kule türü, **top** (cannon) ekleyeceğiz. Üst çubuğun sağında iki düğme görünecek:
+**arrow 50** ve **cannon 70**. Seçili olan kendi renginde (ok mavi, top turuncu) parlayacak. Turuncu top kuleleri
+yavaş ama güçlü ateş edecek ve hedefin çevresindeki düşmanları da yaralayacak.
+
+**Tek tür, tek oyun tarzı demek.** Farklı **güçlü yanları** olan ikinci bir tür, kule kurmayı bir seçime çevirir:
 
 | | ok (arrow) | top (cannon) |
 |---|---|---|
-| fiyat | 50 | 70 |
-| dolma | 24 kare | 60 kare |
-| hasar | 4, tek düşman | 8, 1.2 döşeme içindeki herkes |
+| bedel | 50 | 70 |
+| yeniden dolma | 24 kare | 60 kare |
+| hasar | 4, tek düşman | 8, 1,2 kare içindeki herkes |
 
-Top sert ama yavaş vurur ve **alan hasarı** nişan aldığı düşmanın yakınındaki herkesi yaralar. Birbirinden uzak düşmanlara
-karşı oklar daha iyidir; sonraki dalgaların sık gruplarına karşı top parlar. Hiçbiri doğrudan daha iyi değil ve bir seçimi
-ilginç yapan da budur.
+Top sert ama yavaş vurur; **alan hasarı** (splash) nişan aldığı düşmanın yakınındaki herkesi yaralar. Birbirinden uzak
+düşmanlara karşı oklar daha iyidir; sonraki dalgaların sıkışık gruplarına karşı top parlar. Hiçbiri açıkça daha iyi
+değil; seçimi ilginç yapan da bu.
 
-Kuleler her şeyi zaten `TOWERS` tablosundan okuduğu için yeni bir tür çoğunlukla **tek bir yeni veri satırıdır**. Yalnızca
-`hit()` değişir: yalnızca hedefi yaralamak yerine hedefin türünün `splash`'i içindeki her düşmanı yaralar (okların
-`splash: 0`'ı var; onlar için hiçbir şey değişmez). Yeni içeriğin yeni kod değil veri olacağı biçimde kod tasarlamak,
-gerçek oyunların yüzlerce birime büyümesini sağlayan şeydir.
+**Yeni içerik = yeni veri.** Kuleler her şeyi zaten `TOWERS` tablosundan okuduğu için yeni bir tür çoğunlukla **tek
+satırlık veridir**. Yalnızca `hit()` değişir: artık sadece hedefi değil, hedefin noktasına türün `splash` mesafesi
+kadar yakın olan her düşmanı yaralar. Okların `splash` değeri `0` olduğu için onlar için hiçbir şey değişmez. Kodu, yeni
+içerik yeni kod değil veri olacak şekilde tasarlamak, gerçek oyunların yüzlerce birime büyümesini sağlar.
 
-Türü 1 ve 2 tuşlarıyla ya da üst çubuktaki iki düğmeyle seç.
+**Yeni `hit()`, parça parça:**
+
+- `const center = pointAt(bullet.target.d)` → hedefin haritadaki noktası; patlamanın merkezi.
+- Her düşman için: `e === bullet.target` (hedefin kendisi) **veya** (`||`) merkeze uzaklığı (`Math.hypot`) `splash`'ten
+  küçük ya da eşitse `close` (yakın) `true` olur ve canı hasar kadar azalır.
+- Hedefin kendisini ayrıca saymamızın sebebi: okta `splash` 0, yani yalnızca hedef vurulsun.
+
+**Tür seçmek.** `1` ve `2` tuşları türü seçer. Üst çubukta da iki düğme var; her biri `{ kind, x, w }` bilgisi olan
+bir nesne, hepsi `BUTTONS` listesinde:
+
+```js
+const button = BUTTONS.find((b) => p.x >= b.x && p.x < b.x + b.w)
+```
+
+`find` listede koşulu sağlayan **ilk** elemanı verir; hiçbiri sağlamazsa `undefined` ("yok") verir. Koşul: tıklamanın
+x'i düğmenin sol kenarı ile sağ kenarı arasında mı? `if (button)` "bir düğme bulunduysa" demektir. Tıklama üst
+çubuktaysa (`p.y < TOP`) iş orada biter (`return`), kule kurulmaya çalışılmaz.
+
+**Düğmeleri çizmek.** Seçili düğme türün renginde, koyu yazılı; öteki gri (`'#334155'`), beyaz yazılı:
+`b.kind === selected ? kind.color : '#334155'` → "seçiliyse türün rengi, değilse gri". Yazı `b.kind + ' ' + kind.cost`
+→ `'cannon 70'`. Düğmelerden sonra fırçayı yeniden beyaza boyarız ki alt çubuktaki yazılar beyaz çıksın.
 
 # --task--
 
@@ -58,13 +82,95 @@ Türü 1 ve 2 tuşlarıyla ya da üst çubuktaki iki düğmeyle seç.
 
 # --task-tr--
 
-1. Oka `splash: 0` ve çözümdeki topu `TOWERS`'a ekle.
-2. `hit(bullet)`'u yeniden yaz: hedef olan ya da noktası hedefin noktasına türün `splash`'i kadar yakın olan her düşman türün
-   `damage`'ı kadar can kaybeder.
-3. `1` ve `2` tuşları `'arrow'` ve `'cannon'`'u seçer. `BUTTONS` ekle (`arrow` `x: 250`'de, `cannon` `x: 364`'te, ikisi de
-   `w: 110`); üst çubukta bir düğmeye tıklamak onu seçer.
-4. Düğmeleri `y = 6`'dan, 28 yüksekliğinde çiz: seçili olan türünün renginde `'#0f172a'` yazıyla, öbürü `'#334155'` beyaz
-   yazıyla; `arrow 50` ve `cannon 70` göstersin.
+1. `TOWERS` tablosunu şöyle yap (okun satırına `splash: 0` eklendi, top satırı yeni):
+
+   ```js
+   const TOWERS = {
+     arrow: { cost: 50, range: 2.5, damage: 4, reload: 24, splash: 0, color: '#38bdf8' }, // ← değişti
+     cannon: { cost: 70, range: 2, damage: 8, reload: 60, splash: 1.2, color: '#f97316' }, // ← yeni
+   }
+   ```
+
+2. `let selected` satırının yorumunu kısalt:
+
+   ```js
+   let selected // the kind of tower to build
+   ```
+
+3. `// The start button in the bottom bar.` yorumunu değiştir ve altına düğme listesini ekle; `const START` satırı
+   aynen kalır:
+
+   ```js
+   // The tower buttons in the top bar, and the start button in the bottom bar. // ← değişti
+   const BUTTONS = [ // ← yeni
+     { kind: 'arrow', x: 250, w: 110 }, // ← yeni
+     { kind: 'cannon', x: 364, w: 110 }, // ← yeni
+   ] // ← yeni
+   const START = { x: 150, w: 180 }
+   ```
+
+4. `pointerdown` bloğunda, `if (state === 'over') { ... }` kısmından sonra ve `if (p.y >= BAR)` satırından önce üst
+   çubuk kontrolünü ekle:
+
+   ```js
+     if (state === 'over') {
+       reset()
+       return
+     }
+     if (p.y < TOP) { // ← yeni
+       const button = BUTTONS.find((b) => p.x >= b.x && p.x < b.x + b.w) // ← yeni
+       if (button) selected = button.kind // ← yeni
+       return // ← yeni
+     } // ← yeni
+     if (p.y >= BAR) {
+   ```
+
+5. `keydown` bloğunun en başına iki satır ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === '1') selected = 'arrow' // ← yeni
+     if (event.key === '2') selected = 'cannon' // ← yeni
+     if (event.key === ' ') {
+   ```
+
+6. `hit(bullet)` fonksiyonunun içini değiştir:
+
+   ```js
+   function hit(bullet) {
+     const kind = TOWERS[bullet.kind] // ← yeni (buradan kapanışa kadar)
+     const center = pointAt(bullet.target.d)
+     for (const e of enemies) {
+       const p = pointAt(e.d)
+       const close = e === bullet.target || Math.hypot(p.x - center.x, p.y - center.y) <= kind.splash
+       if (close) e.hp -= kind.damage
+     }
+   }
+   ```
+
+   Eski tek satır `bullet.target.hp -= TOWERS[bullet.kind].damage` silinir.
+
+7. `draw()` içinde, `ctx.fillText('Gold ' + ...)` satırının altındaki `ctx.textAlign = 'center'` ile
+   `if (state === 'building')` satırı arasına düğmeleri çizen kısmı ekle:
+
+   ```js
+     ctx.textAlign = 'center'
+     for (const b of BUTTONS) { // ← yeni
+       const kind = TOWERS[b.kind] // ← yeni
+       ctx.fillStyle = b.kind === selected ? kind.color : '#334155' // ← yeni
+       ctx.fillRect(b.x, 6, b.w, 28) // ← yeni
+       ctx.fillStyle = b.kind === selected ? '#0f172a' : 'white' // ← yeni
+       ctx.fillText(b.kind + ' ' + kind.cost, b.x + b.w / 2, 26) // ← yeni
+     } // ← yeni
+
+     ctx.fillStyle = 'white' // ← yeni
+     if (state === 'building') {
+   ```
+
+8. **Çalıştır**'a bas. Üst çubuğun sağında **arrow 50** (mavi) ve **cannon 70** (gri) düğmeleri görünmeli. Oynamak
+   için önce oyuna tıkla; `2`'ye bas ya da **cannon 70**'e tıkla, sonra çimene tıklayıp turuncu bir top kulesi kur.
+   Alttaki kontrollerin hepsi yeşil olmalı. Düğmeye tıklayınca kule kuruluyorsa `if (p.y < TOP)` bloğundaki `return`'e
+   bak.
 
 # --tests--
 

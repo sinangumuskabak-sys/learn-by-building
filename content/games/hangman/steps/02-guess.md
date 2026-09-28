@@ -23,21 +23,49 @@ guess on a letter you already know is wrong. The wrong letters are the guessed o
 
 # --explanation-tr--
 
-Her tuş basışı bir tahmindir ama her tuş bir harf değildir. `event.key`, A tuşu için `'a'`'dır ama `'Enter'`, `'1'` ya da
-`'Shift'` de olabilir. Bu yüzden onu büyük harfe çeviririz ve yalnızca **bir karakter uzunluğundaysa** ve 26 harften biriyse
-tutarız:
+**Bu adımda:** klavyeden harf tahmin edebileceksin. Doğru harfler boşluklara yerleşir; yanlışlar sağ üstte kırmızıyla
+listelenir ve `Misses 2 / 6` gibi bir sayaç ıska sayısını gösterir.
+
+**Klavye olayı.** Bir tuşa basılınca tarayıcı `keydown` **olayını** (event) gönderir. Onu dinleriz:
+
+```js
+document.addEventListener('keydown', (event) => {
+  // her tuşa basılınca burası çalışır; basılan tuş: event.key
+})
+```
+
+`(event) => { ... }` kısa yazılmış bir fonksiyondur (ok fonksiyonu). `event.key` A tuşu için `'a'`'dır ama `'Enter'`,
+`'1'` ya da `'Shift'` de olabilir. Bu yüzden önce `toUpperCase()` ile büyük harfe çeviririz, sonra sadece **tek
+karakterse** ve 26 harften biriyse kabul ederiz:
 
 ```js
 const letter = event.key.toUpperCase()
 if (letter.length === 1 && LETTERS.includes(letter)) guess(letter)
 ```
 
-Zaten denediğin bir harf hiçbir şeye mal olmamalı; bu yüzden `guessed.has(letter)` olduğunda `guess` erken döner. Değilse
-harfi hatırlar ve kelime onu içermiyorsa bu bir ıskadır.
+`===` "**eşit mi?**", `&&` "**ve**" demektir. `LETTERS.includes(letter)` → "harf listesinde bu var mı?" (`true` ya da
+`false`). `if (koşul) komut` koşul doğruysa komutu çalıştırır.
 
-`MAX_WRONG` ıskadan sonra oyun şimdilik biter, bu yüzden `guess` dinlemeyi bırakır. Iskaları da gösteririz; böylece yanlış
-olduğunu zaten bildiğin bir harfe tahmin harcamazsın. Yanlış harfler, kelimede **olmayan** tahmin edilmiş harflerdir:
-`[...guessed].filter((l) => !word.includes(l))`.
+**`guess(letter)`: bir tahmin.**
+
+- Zaten denediğin bir harf hiçbir şeye mal olmamalı; oyun bittiyse de (ıskalar `MAX_WRONG`'a ulaştıysa) tahmin
+  sayılmamalı. İkisini birden sorarız: `guessed.has(letter) || wrong === MAX_WRONG` (`||` "**veya**"). Doğruysa
+  `return` ile fonksiyondan hemen çıkarız, aşağısı çalışmaz.
+- Değilse harfi hatırla: `guessed.add(letter)` kümeye ekler.
+- `if (!word.includes(letter)) wrong += 1` → kelime bu harfi **içermiyorsa** (`!` "değil") ıskayı 1 artır
+  (`+= 1`, `wrong = wrong + 1`'in kısası).
+
+**Yanlış harfleri göstermek.** Yanlış harfler, denenen ama kelimede **olmayan** harflerdir:
+
+```js
+[...guessed].filter((l) => !word.includes(l)).join(' ')
+```
+
+`[...guessed]` kümeyi listeye çevirir, `.filter(...)` sadece kelimede olmayanları tutar, `.join(' ')` aralarına boşluk
+koyup yazıya çevirir: `'Q X'`. Böylece zaten yanlış olduğunu bildiğin bir harfe tahmin harcamazsın.
+
+`'Misses ' + wrong + ' / ' + MAX_WRONG` yazı ile sayıları `+` ile birleştirir: `'Misses 2 / 6'`. `ctx.textAlign =
+'left'` yazının sol ucunu verilen noktaya koyar.
 
 # --task--
 
@@ -50,12 +78,56 @@ olduğunu zaten bildiğin bir harfe tahmin harcamazsın. Yanlış harfler, kelim
 
 # --task-tr--
 
-1. `LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`, `MAX_WRONG = 6` ve `wrong` (`newWord()`'de `0`) ekle.
-2. `guess(letter)` yaz: zaten tahmin edildiyse ya da `wrong` `MAX_WRONG`'a ulaştıysa hiçbir şey yapma; değilse onu `guessed`'a
-   ekle ve kelime onu içermiyorsa `wrong`'a 1 ekle.
-3. `keydown`'da tuş tek bir harfse (büyük ya da küçük) onu tahmin et.
-4. `(260, 100)`'e `Misses 2 / 6` (`'bold 16px sans-serif'`, `'#1f2937'`, sola hizalı) ve boşluklarla birleştirilmiş yanlış
-   harfleri `(260, 130)`'a `'#b91c1c'` ile çiz.
+1. `WORDS` listesini kapatan `]` satırının hemen altına ekle:
+
+   ```js
+   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+   const MAX_WRONG = 6
+   ```
+
+2. `let guessed ...` satırının hemen altına ekle:
+
+   ```js
+   let wrong
+   ```
+
+3. `newWord()` fonksiyonunda `guessed = new Set()` satırının altına ekle:
+
+   ```js
+     wrong = 0
+   ```
+
+4. `newWord()`'ün kapanış `}`'sinden sonra, `function draw()`'dan önce bir satır boşluk bırakıp şunları ekle:
+
+   ```js
+   function guess(letter) {
+     if (guessed.has(letter) || wrong === MAX_WRONG) return
+     guessed.add(letter)
+     if (!word.includes(letter)) wrong += 1
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const letter = event.key.toUpperCase()
+     if (letter.length === 1 && LETTERS.includes(letter)) guess(letter)
+   })
+   ```
+
+5. `draw()` içinde, arka planı boyayan `ctx.fillRect(...)` satırından sonra ve `ctx.textAlign = 'center'` satırından
+   önce bir satır boşluk bırakıp şunu ekle:
+
+   ```js
+     ctx.fillStyle = '#1f2937'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Misses ' + wrong + ' / ' + MAX_WRONG, 260, 100)
+     ctx.fillStyle = '#b91c1c'
+     ctx.fillText([...guessed].filter((l) => !word.includes(l)).join(' '), 260, 130)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra harf tuşlarına bas: doğru harfler kelimede görünmeli,
+   yanlışlar sağ üstte kırmızıyla listelenmeli ve `Misses` sayısı artmalı. Aynı harfe ikinci kez basmak bir şey
+   değiştirmemeli. Alttaki kontrollerin hepsi yeşil olmalı. Yazı kontrolü kırmızıysa `' / '` içindeki boşlukları
+   kontrol et.
 
 # --tests--
 

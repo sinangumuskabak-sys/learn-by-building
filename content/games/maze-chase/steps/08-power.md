@@ -23,20 +23,41 @@ ghosts flash white, a warning that the tables are about to turn.
 
 # --explanation-tr--
 
-Dört büyük yem oyunu birkaç saniyeliğine tersine çevirir: hayaletler **korkar**, maviye döner, yavaşlar, rastgele dolaşır
-ve oyuncu onları yiyebilir.
+**Bu adımda:** dört büyük yem oyunu tersine çevirecek. Birini yiyince dışarıdaki hayaletler maviye dönecek, yavaşlayacak,
+rastgele dolaşacak ve **sen onları yiyebileceksin**. Korkunun son iki saniyesinde beyaz yanıp sönerek seni uyaracaklar.
 
-Üç ayrıntı bunu doğru hissettirir:
+Oyunu doğru hissettiren üç ayrıntı var:
 
-- Korkan her hayalet hemen **geri döner**. Bir şeyin değiştiğinin işaretidir ve oyuncuya hayaletler yetişmeden önce bir an
-  verir.
-- Korkmuş hayaletler kovalamak yerine her kavşakta **rastgele** bir açık yön seçer. "Asla geri dönme" kuralı kalır; yine
-  akıcı dolaşırlar.
-- Hayaletleri art arda yemek ödülü **ikiye katlar**: 200, 400, 800, 1600. Küçük bir `chain` değişkeni yeter ve "bir hayalet
-  ye"yi "hepsini ye"ye, gerçek bir risk kararına çevirir.
+- Korkan her hayalet **hemen geri döner** (3. adımdaki `turnAround`). Bu, bir şeylerin değiştiğinin işaretidir ve
+  hayaletler sana ulaşmadan oyuncuya bir an kazandırır.
+- Korkmuş hayaletler kavşaklarda kovalamak yerine açık yönlerden **rastgele** birini seçer. "Asla geri dönme" kuralı
+  sürer, bu yüzden yine akıcı dolaşırlar.
+- Hayaletleri art arda yemek ödülü **ikiye katlar**: 200, 400, 800, 1600. Tek bir `chain` (zincir) değişkeni yeter.
+  Bu, "bir hayalet ye"yi "hepsini ye"ye çevirir: gerçek bir risk kararı.
 
-Yenen hayalet 3 saniyeliğine eve döner ve yeniden normal olarak çıkar. Son 2 saniyede korkmuş hayaletler beyaz yanıp söner:
-tabloların dönmek üzere olduğunun uyarısı.
+Yenen hayalet 3 saniyeliğine (180 kare) eve döner ve sonra normal hâliyle çıkar.
+
+**Rastgele seçim.** `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir sayı verir. Onu seçenek sayısıyla çarpıp
+`Math.floor` ile aşağı yuvarlarsak 0 ile `options.length - 1` arasında rastgele bir **sıra numarası** elde ederiz:
+
+```js
+options[Math.floor(Math.random() * options.length)]   // 3 seçenek varsa 0, 1 ya da 2. öğe
+```
+
+**Korku süresi.** `scaredFor` korkunun kaç kare daha süreceğidir: 420 kare, yani yaklaşık 7 saniye. Her karede 1 azalır;
+0 olunca hiçbir hayalet korkmuş değildir. Korkmuş hayalet bir kareyi 16 karede geçer (normalde 9), yani neredeyse yarı
+hızda.
+
+**Yanıp sönme.** Son 2 saniyede (`scaredFor < 120`) hayaleti 10 karelik dilimlerin bir çift, bir tek olanında beyaz
+çizeriz: `Math.floor(scaredFor / 10) % 2 === 0` → "10'a bölümünün tam kısmı çift mi?". `Math.floor` küsuratı atar,
+`% 2 === 0` çiftliği sorar.
+
+**Renk seçimi tek satırda.** `g.scared ? (flash ? '#e5e7eb' : '#3b82f6') : g.color` → iç içe iki kısa "eğer":
+korkmuşsa ve yanıp sönme anıysa beyaz, korkmuşsa mavi, değilse kendi rengi.
+
+**Yakalanma mı, yemek mi?** Karşılaşma kontrolünde hayalet korkmuş **değilse** (`!g.scared`) eskisi gibi can gider.
+Korkmuşsa onu yeriz: `chain` kadar puan, `chain` ikiye katlanır (`*= 2`), hayalet `Object.assign` ile eve konur.
+Burada `return` yok: aynı karede birden çok korkmuş hayalet yenebilir.
 
 # --task--
 
@@ -51,14 +72,110 @@ tabloların dönmek üzere olduğunun uyarısı.
 
 # --task-tr--
 
-1. `let scaredFor` ve `let chain` ekle; her hayalet `scared: false` alır ve `placeActors()` `scaredFor = 0` yapar.
-2. `frighten()` yaz: `scaredFor = 420`, `chain = 200` ve evin dışındaki her hayalet korkar ve `turnAround` eder. Bir güç
-   yemi yemek onu çağırır.
-3. `ghostFrames` korkmuş bir hayalet için `16` döndürür. Korkmuş bir hayalet `Math.random()` ile rastgele bir seçenek seçer.
-4. Her karede `scaredFor`'u geri say; `0`'a ulaşınca hiçbir hayalet artık korkmuş değildir.
-5. Korkmuş bir hayaletle karşılaşmak onu yer: `chain` puan, `chain` ikiye katlanır ve hayalet `dir: STOP`, `progress: 0`,
-   `waiting: 180` ve `scared: false` ile `col: 9, row: 9`'a döner.
-6. Korkmuş hayaletleri `'#3b82f6'`, `scaredFor < 120` ve `Math.floor(scaredFor / 10)` çiftken `'#e5e7eb'` çiz.
+1. `let clock ...` satırının hemen altına iki ad ekle:
+
+   ```js
+   let scaredFor // frames the ghosts stay scared
+   let chain // points for the next ghost eaten
+   ```
+
+2. `ghostFrames` fonksiyonunun başına korkmuş hayalet için satır ekle:
+
+   ```js
+   function ghostFrames(g) {
+     if (g.scared) return 16 // ← yeni
+     return 9
+   }
+   ```
+
+3. `placeActors` içindeki `ghosts = ...` satırının sonuna `scared: false` ekle ve `clock = 0`'ın altına korkuyu sıfırla:
+
+   ```js
+     ghosts = GHOSTS.map((g, i) => ({ ...g, col: 8 + (i % 3), row: 9, dir: STOP, progress: 0, frames: 10, waiting: g.delay, scared: false })) // ← değişti
+     for (const g of ghosts) if (g.waiting === 0) release(g)
+     clock = 0
+     scaredFor = 0 // ← yeni
+     state = 'ready'
+   ```
+
+4. `arrive` içindeki güç yemi satırını, yemi yiyince `frighten()` çağıracak şekilde değiştir:
+
+   ```js
+     if (powers.delete(here)) { // ← değişti
+       score += 50
+       frighten()
+     }
+   ```
+
+5. `chooseGhost` içinde `if (options.length === 0) { ... }` bloğunun kapanış `}`'inden sonra, `const t = target(g)`'den
+   önce rastgele seçimi ekle:
+
+   ```js
+     if (g.scared) {                                               // ← yeni
+       g.dir = options[Math.floor(Math.random() * options.length)]
+       return
+     }
+     const t = target(g)
+   ```
+
+6. `steer` fonksiyonunun kapanış `}`'inden sonra, `function caught()`'tan önce korkutma fonksiyonunu yaz:
+
+   ```js
+   function frighten() {
+     scaredFor = 420
+     chain = 200
+     for (const g of ghosts) {
+       if (g.waiting > 0) continue
+       g.scared = true
+       turnAround(g)
+     }
+   }
+   ```
+
+   Evde bekleyen hayaletler (`waiting > 0`) korkmaz.
+
+7. `update()` içinde `clock += 1` satırının hemen altına korku sayacını ekle:
+
+   ```js
+     clock += 1
+     if (scaredFor > 0) {                                          // ← yeni
+       scaredFor -= 1
+       if (scaredFor === 0) for (const g of ghosts) g.scared = false
+     }
+   ```
+
+8. `update()`'in sonundaki yakalanma döngüsünde `caught()` ve `return` satırlarını şununla değiştir:
+
+   ```js
+       if (Math.abs(p.x - q.x) + Math.abs(p.y - q.y) > 0.6) continue
+       if (!g.scared) {                                            // ← değişti
+         caught()
+         return
+       }
+       // A scared ghost is eaten: points, and back to the house for a while.
+       score += chain
+       chain *= 2
+       Object.assign(g, { col: 9, row: 9, dir: STOP, progress: 0, waiting: 180, scared: false })
+     }
+   }
+   ```
+
+9. `draw()` içinde hayaletleri çizen döngüde `ctx.fillStyle = g.color` satırını şu üç satırla değiştir:
+
+   ```js
+     for (const g of ghosts) {
+       const q = position(g)
+       // Blue while scared, flashing white in the last two seconds.
+       const flash = scaredFor < 120 && Math.floor(scaredFor / 10) % 2 === 0 // ← yeni
+       ctx.fillStyle = g.scared ? (flash ? '#e5e7eb' : '#3b82f6') : g.color // ← değişti
+       ctx.fillRect(q.x * TILE + 3, TOP + q.y * TILE + 3, TILE - 6, TILE - 6)
+     }
+   ```
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bir köşedeki büyük yeme git: dışarıdaki hayaletler maviye
+    dönmeli, geri dönüp yavaşlamalı; birine değersen puanın 200 artmalı ve hayalet eve dönmeli. Alttaki kontrollerin
+    hepsi yeşil olmalı. Kırmızı kalırsa `frighten` içindeki `continue` satırına ve eve dönüş bilgilerine
+    (`col: 9, row: 9`, `waiting: 180`) bak.
 
 # --tests--
 

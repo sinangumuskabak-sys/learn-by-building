@@ -26,24 +26,62 @@ A **monospace** font gives every character the same width, so the blanks and the
 
 # --explanation-tr--
 
-Adam asmaca bir kelime oyunudur: bilgisayar gizli bir kelime seçer ve yalnızca her harf için bir tane olmak üzere bir boşluk
-sırası gösterir. Harf tahmin edersin; doğrular doldurulur, yanlışlar darağacında yavaş yavaş bir çöp adam çizer.
+**Bu adımda:** adam asmaca oyununun gizli kelimesini seçip ekrana boşluklar halinde yazacağız. Sağda açık sarı bir
+zeminde `_ _ _ _ _ _` gibi, kelimenin her harfi için bir çizgi göreceksin.
 
-Gizli kelime bir listeden gelir: `WORDS[Math.floor(Math.random() * WORDS.length)]`, `0`'dan `WORDS.length - 1`'e herhangi bir
-sırayı seçer.
+**Oyun nasıl oynanır?** Bilgisayar gizli bir kelime seçer ve sadece harf sayısı kadar boşluk gösterir. Sen harf
+tahmin edersin; doğrular yerine yerleşir, yanlışlar yavaş yavaş darağacında bir çöp adam çizer.
 
-Denediğin harfler bir **`Set`**'e gider. `Set`, her değeri en fazla bir kez tutan bir dizi gibidir ve `guessed.has('E')` diye
-sormak anlıktır. İkisi de tahminin tam olarak ihtiyaç duyduğu şeylerdir.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan yazılar **yorumdur**:
+bilgisayar onları atlar, sadece insanlar için not.
 
-Boşluklar tek satırdan gelir. Kelimeyi harflere yay, her harfi tahmin edildiyse göster, edilmediyse `_`, ve `_ _` tek uzun bir
-çizgi gibi görünmesin diye aralarına boşluk koyarak birleştir:
+**Canvas ve fırça.** Sayfada 480×480 piksellik bir çizim alanı (**canvas**, kimliği `game`) var. Önce onu buluruz,
+sonra çizim aracını (**context**, bağlam) alırız:
+
+```js
+const canvas = document.getElementById('game')  // kâğıdı bul
+const ctx = canvas.getContext('2d')             // fırçayı al
+```
+
+`const ad = ...` bir şeye ad verir (**sabit**); `let ad` ise değeri sonradan değişebilen bir kutu açar (**değişken**).
+Nokta (`.`) "bunun içindeki şu komut" demektir; tırnak içindeki `'APPLE'` bir **yazıdır** (metin). Canvas'ın sol üst
+köşesi `(0, 0)`'dır; `x` sağa, `y` aşağı doğru büyür. `ctx.fillStyle = 'renk'` rengi seçer,
+`ctx.fillRect(x, y, en, boy)` dikdörtgen boyar, `ctx.fillText(yazı, x, y)` yazı yazar.
+
+**Kelime listesi: dizi.** `WORDS = ['APPLE', 'BANANA', ...]` bir **dizidir** (array): köşeli parantez içinde,
+virgülle ayrılmış sıralı liste. `WORDS[0]` ilk eleman (sayma 0'dan başlar), `WORDS.length` eleman sayısıdır.
+
+**Rastgele seçmek.** `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir. Onu kelime sayısıyla
+çarpıp `Math.floor` ile aşağı yuvarlarız: `WORDS[Math.floor(Math.random() * WORDS.length)]` → 0 ile son sıra arasında
+rastgele bir kelime.
+
+**Tahmin edilen harfler: `Set`.** Denediğin harfleri bir **`Set`** (küme) içinde tutarız. `Set` her değeri **en fazla
+bir kez** tutan bir listedir; `guessed.has('E')` "E denendi mi?" sorusunu anında cevaplar. `new Set()` boş bir küme
+oluşturur.
+
+**Boşlukları üretmek.** Tek satırda:
 
 ```js
 [...word].map((letter) => (guessed.has(letter) ? letter : '_')).join(' ')
 ```
 
-**Eş aralıklı** (monospace) bir yazı tipi her karaktere aynı genişliği verir; böylece kelime ne olursa olsun boşluklar ve
-harfler hizalanır.
+Parça parça:
+
+- `[...word]` → kelimeyi harflerine ayırır: `'ZEBRA'` → `['Z', 'E', 'B', 'R', 'A']`.
+- `.map((letter) => ...)` → her harf için küçük fonksiyonu çalıştırıp yeni bir liste yapar. `(letter) => ...` kısa
+  yazılmış bir **fonksiyondur** (ok fonksiyonu): `letter` verilir, oktan sonrası sonuçtur.
+- `guessed.has(letter) ? letter : '_'` → kısa bir `if`: "harf denendiyse harfin kendisi, değilse `_`".
+- `.join(' ')` → listeyi aralarına boşluk koyarak tek yazıya çevirir. Böylece `__` tek uzun çizgi gibi görünmez.
+
+**Fonksiyon.** `function newWord() { ... }` içindeki kodlara ad verir; `newWord()` diye **çağırınca** çalışır.
+`const masked = () => ...` da bir fonksiyondur; `masked()` diye çağrılınca yazıyı geri verir.
+
+**Eşit genişlikte yazı.** `monospace` yazı tipinde her karakter aynı genişliktedir; harfler ve çizgiler hep hizalı
+durur.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki karede `loop`'u çağır" der; `loop` sonunda
+kendini yine istediği için ekran saniyede ~60 kez yeniden çizilir.
 
 # --task--
 
@@ -55,11 +93,73 @@ harfler hizalanır.
 
 # --task-tr--
 
-1. Yalnızca büyük harflerden (A'dan Z'ye) en az 40 kelimelik bir `WORDS` listesi ekle.
-2. `newWord()` yaz: rastgele bir `word` seç ve `guessed`'ı boş bir `Set` olarak başlat. Başta çağır.
-3. `masked()` yaz: `guessed` içinde olmayan her harfin `_` gösterildiği, boşluklarla ayrılmış kelime.
-4. Her karede canvas'ı `'#fefce8'` ile doldur ve `masked()`'i `y = 340`'ta ortalı, `'bold 32px monospace'`, `'#1f2937'`
-   ile çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve şunu yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve kelime listesini ekle (kopyalayıp yapıştırabilirsin; en az 40 kelime olmalı, hepsi
+   A–Z arası büyük harf):
+
+   ```js
+   const WORDS = [
+     'APPLE', 'BANANA', 'CASTLE', 'DRAGON', 'ELEPHANT', 'FOREST', 'GARDEN', 'HAMMER', 'ISLAND', 'JACKET',
+     'KITCHEN', 'LEMON', 'MONKEY', 'NOTEBOOK', 'ORANGE', 'PENGUIN', 'QUEEN', 'ROCKET', 'SPIDER', 'TIGER',
+     'UMBRELLA', 'VIOLIN', 'WINDOW', 'YELLOW', 'ZEBRA', 'BRIDGE', 'CANDLE', 'DOLPHIN', 'ENGINE', 'FLOWER',
+     'GUITAR', 'HONEY', 'IGLOO', 'JUNGLE', 'KANGAROO', 'LADDER', 'MARKET', 'NEEDLE', 'OCEAN', 'PIRATE',
+     'RABBIT', 'SILVER', 'TURTLE', 'VALLEY', 'WIZARD', 'PLANET', 'COOKIE', 'PUZZLE', 'KEYBOARD', 'CAMERA',
+   ]
+   ```
+
+3. Bir satır boşluk bırak ve değişkenleri, `masked`'ı ve `newWord`'ü ekle:
+
+   ```js
+   let word
+   let guessed // a Set of the letters tried so far
+
+   // The word with the letters not guessed yet hidden: 'C _ S T _ E'.
+   const masked = () => [...word].map((letter) => (guessed.has(letter) ? letter : '_')).join(' ')
+
+   function newWord() {
+     word = WORDS[Math.floor(Math.random() * WORDS.length)]
+     guessed = new Set()
+   }
+   ```
+
+4. Bir satır boşluk bırak ve çizim fonksiyonunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#fefce8'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.textAlign = 'center'
+     ctx.font = 'bold 32px monospace'
+     ctx.fillStyle = '#1f2937'
+     ctx.fillText(masked(), canvas.width / 2, 340)
+   }
+   ```
+
+   `ctx.textAlign = 'center'` yazının ortasını verilen noktaya koyar; `canvas.width / 2` canvas'ın ortasıdır (`/`
+   bölme).
+
+5. Altına oyun döngüsünü yaz ve en sonda ikisini başlat:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   newWord()
+   requestAnimationFrame(loop)
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda açık sarı zeminde, kelimenin harf sayısı kadar `_` görmelisin;
+   her çalıştırmada kelime değişebilir. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa tırnakları, virgülleri
+   ve parantezleri harf harf karşılaştır.
 
 # --tests--
 

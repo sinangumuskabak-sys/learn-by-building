@@ -28,25 +28,60 @@ click starts a new game.
 
 # --explanation-tr--
 
-Her hamleden sonra bütün tahtada dördü yan yana arayabilirsin ama daha akıllıca bir gözlem var: yeni bir dörtlü çizgi az önce
-**inen diskten geçmek zorundadır**. Öyleyse yalnızca o diskin çevresine bak.
+**Bu adımda:** oyun kazananı bulacak. Aynı renkten dört disk yan yana, alt alta ya da çapraz gelince o dört diskin
+etrafına beyaz halka çizilecek ve üstte `Red wins! Click to play again` (Kırmızı kazandı! Yeniden oynamak için
+tıkla) yazacak. Tahta kimse kazanmadan dolarsa `Draw` (berabere) yazacak.
 
-Bir çizgi dört yönden birine gider: yatay `[1, 0]`, dikey `[0, 1]` ve iki çapraz `[1, 1]` ile `[1, -1]`. Her yön için yeni
-diskten başla ve diskler aynı renkte oldukça **iki yöne de** yürü, giderken say:
+**Akıllıca bir gözlem.** Her hamleden sonra bütün tahtada dörtlü arayabilirdin. Ama yeni bir dörtlü mutlaka **az
+önce inen diskten geçer**. O yüzden sadece o diskin çevresine bakarız.
+
+**Dört yön.** Bir çizgi dört yönden birinde uzanır: yatay `[1, 0]`, dikey `[0, 1]` ve iki çapraz `[1, 1]` ile
+`[1, -1]`. Her çift "bir adımda sütun (`dx`) ve satır (`dy`) ne kadar değişir" demektir.
+
+**İki yöne yürümek.** Her yön için yeni diskten başlar, disk aynı renk olduğu sürece **iki yöne de** yürür ve
+sayarız:
 
 ```js
 for (const sign of [1, -1]) {
   let r = row + dy * sign
   let c = col + dx * sign
-  while (inside(r, c) && board[r][c] === who) { ...say, sonra yine adım at... }
+  while (inside(r, c) && board[r][c] === who) {
+    cells.push([r, c])
+    r += dy * sign
+    c += dx * sign
+  }
 }
 ```
 
-Bir yön 4 ya da daha fazla verirse o oyuncu kazanır. İki yöne de yürümek önemli: bir boşluğun **ortasına** bırakılan disk
-(`X X _ X`), iki uçta da olmadığı hâlde bir çizgiyi tamamlar.
+Bunu parça parça okuyalım:
 
-En üst satır doluysa ve kimse kazanmadıysa tahta doludur: beraberlik. Kazanan hücreler beyazla çevrelenir ve bir tıklama yeni
-bir oyun başlatır.
+- `for (const sign of [1, -1])` → "dizideki her değer için": önce `sign = 1` (ileri), sonra `sign = -1` (geri).
+- `while (koşul) { ... }` → yeni bir döngü türü: "koşul doğru **olduğu sürece** tekrarla". Kaç kez döneceğini
+  önceden bilmediğimizde kullanılır: aynı renk bitene kadar yürürüz.
+- `inside(r, c)` → tahtanın içinde miyiz? Dışarı taşarsak `board[r]` yok olur, bu yüzden önce bunu sorarız.
+  `&&` sayesinde ilk koşul yanlışsa ikincisine hiç bakılmaz.
+- `cells.push([r, c])` → bulunan hücreyi listeye ekle (`push` dizinin sonuna ekler). Liste yeni diskle başlar:
+  `const cells = [[row, col]]`.
+
+Herhangi bir yönde 4 ya da daha fazla hücre bulunursa o oyuncu kazanır. İki yöne yürümek önemli: boşluğun
+**ortasına** atılan bir disk (`X X _ X`) ucunda olmasa da dörtlüyü tamamlar.
+
+**Yeni yazımlar.**
+
+- `const inside = (row, col) => ...` → bir fonksiyonu bir sabitte saklamak. `=>`'dan sonra süslü parantez yoksa
+  sağdaki sonuç doğrudan geri verilir.
+- `function lineThrough(row, col, [dx, dy])` → üçüncü bilgi bir dizi olarak gelir; köşeli parantezli yazım onun
+  iki elemanına `dx` ve `dy` adlarını verir. Aynı şekilde `for (const [row, col] of line)` her `[satır, sütun]`
+  çiftini açar.
+- `board[0].every((cell) => cell !== 0)` → "en üst satırın **her** hücresi dolu mu?" Doluysa tahta tamamen
+  doludur.
+- `else if` → "değilse, eğer...". Kazanma yoksa berabereliğe, o da yoksa sıra değişimine bakarız.
+
+**Halka çizmek.** Daireyi boyamak yerine sadece **kenarını** çizmek için `fill` yerine `stroke` kullanılır:
+`ctx.strokeStyle` çizgi rengi, `ctx.lineWidth` çizgi kalınlığıdır.
+
+**Kazanan durum.** `winner` oynarken `0`, sonra `1`, `2` ya da `'draw'`. `0` "yok" sayıldığı için `if (winner)`
+"oyun bittiyse" demektir. Oyun bitince tıklama ya da tuş `reset()` ile yeni oyun başlatır.
 
 # --task--
 
@@ -61,13 +96,144 @@ bir oyun başlatır.
 
 # --task-tr--
 
-1. `DIRECTIONS` (yukarıdaki dördü), `winner` (oynanırken `0`, `1`, `2` ya da `'draw'`) ve `line` (kazanan hücreler) ekle.
-2. `inside(row, col)`, o hücreden o yönde (iki yöne de) geçen aynı renkteki `[row, col]` hücrelerinin listesini döndüren
-   `lineThrough(row, col, [dx, dy])` ve 4 ya da daha fazla hücreli ilk listeyi ya da `null` döndüren `wins4(row, col)` yaz.
-3. `land()` içinde: yeni disk kazandırıyorsa `winner` ve `line`'ı ayarla; yoksa en üst satır doluysa `'draw'`; değilse sırayı
-   değiştir. Bir kazanan varken `play` hiçbir şey yapmaz; bir tıklama ya da tuş o zaman `reset()` çağırır.
-4. Her kazanan hücreyi beyaz 4 piksellik bir çizgiyle çevrele (yarıçap `CELL / 2 - 10`) ve `Red wins! Click to play again`,
-   `Yellow wins! Click to play again` ya da `Draw. Click to play again` göster.
+1. `const COLORS = ...` satırının altına dört yönü ekle:
+
+   ```js
+   const DIRECTIONS = [
+     [1, 0],
+     [0, 1],
+     [1, 1],
+     [1, -1],
+   ]
+   ```
+
+2. `let turn` satırının altına iki değişken ekle:
+
+   ```js
+   let winner // 0 while playing, 1 or 2, or 'draw'
+   let line // the four winning cells
+   ```
+
+3. `reset()` fonksiyonunda `turn = 1` satırının altına ekle:
+
+   ```js
+     turn = 1
+     winner = 0 // ← yeni
+     line = [] // ← yeni
+     falling = null
+   ```
+
+4. `dropRow` fonksiyonunun altına (`function play`'den önce) bir boş satır bırak ve şunları yaz:
+
+   ```js
+   const inside = (row, col) => row >= 0 && row < ROWS && col >= 0 && col < COLS
+
+   // Count the discs in a row through (row, col) in one direction and its opposite.
+   function lineThrough(row, col, [dx, dy]) {
+     const who = board[row][col]
+     const cells = [[row, col]]
+     for (const sign of [1, -1]) {
+       let r = row + dy * sign
+       let c = col + dx * sign
+       while (inside(r, c) && board[r][c] === who) {
+         cells.push([r, c])
+         r += dy * sign
+         c += dx * sign
+       }
+     }
+     return cells
+   }
+
+   function wins4(row, col) {
+     for (const dir of DIRECTIONS) {
+       const cells = lineThrough(row, col, dir)
+       if (cells.length >= 4) return cells
+     }
+     return null
+   }
+   ```
+
+5. `play()` fonksiyonunun ilk satırına `winner ||` ekle:
+
+   ```js
+     if (winner || falling || dropRow(col) === -1) return // ← değişti
+   ```
+
+6. `land()` fonksiyonunu şöyle değiştir (son satır olan `turn = 3 - turn` artık `else`'in içinde):
+
+   ```js
+   function land() {
+     const { col, row, who } = falling
+     board[row][col] = who
+     falling = null
+     const four = wins4(row, col) // ← yeni
+     if (four) { // ← yeni
+       winner = who // ← yeni
+       line = four // ← yeni
+     } else if (board[0].every((cell) => cell !== 0)) { // ← yeni
+       winner = 'draw' // ← yeni
+     } else { // ← yeni
+       turn = 3 - turn
+     } // ← yeni
+   }
+   ```
+
+7. `pointerdown` dinleyicisinin başına oyun bitti kontrolünü ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (winner) { // ← yeni
+       reset() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     hoverCol = colAt(event)
+     play(hoverCol)
+   })
+   ```
+
+8. `keydown` dinleyicisinde, `event.preventDefault()`'tan sonraki `play(hoverCol)` satırını iki satırla değiştir:
+
+   ```js
+       event.preventDefault()
+       if (winner) reset() // ← yeni
+       else play(hoverCol) // ← değişti
+   ```
+
+9. `draw()` fonksiyonunda üç değişiklik:
+
+   - Bekleyen disk satırının koşulunu `if (!winner && !falling)` yap:
+
+     ```js
+       if (!winner && !falling) disc(hoverCol * CELL + CELL / 2, TOP - CELL / 2, COLORS[turn]) // ← değişti
+     ```
+
+   - Düşen diski çizen `if (falling) disc(...)` satırının altına halkaları ekle:
+
+     ```js
+       for (const [row, col] of line) {
+         ctx.strokeStyle = 'white'
+         ctx.lineWidth = 4
+         ctx.beginPath()
+         ctx.arc(col * CELL + CELL / 2, TOP + row * CELL + CELL / 2, CELL / 2 - 10, 0, Math.PI * 2)
+         ctx.stroke()
+       }
+     ```
+
+   - En sondaki `ctx.fillText(turn === 1 ? "Red's turn" : "Yellow's turn", canvas.width / 2, 26)` satırını sil ve
+     yerine şunu yaz:
+
+     ```js
+       let message = turn === 1 ? "Red's turn" : "Yellow's turn"
+       if (winner === 1) message = 'Red wins! Click to play again'
+       if (winner === 2) message = 'Yellow wins! Click to play again'
+       if (winner === 'draw') message = 'Draw. Click to play again'
+       ctx.fillText(message, canvas.width / 2, 26)
+     ```
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Aynı renkten dört diski yan yana getir: dördünün etrafında
+    beyaz halka çıkmalı ve üstte kazanan yazmalı; bir tıklama yeni oyun başlatmalı. Alttaki kontrollerin hepsi
+    yeşil olmalı. Ortaya atılan disk dörtlüyü tamamlamıyorsa `lineThrough` içindeki `[1, -1]` (iki yön) kısmını
+    kontrol et.
 
 # --tests--
 

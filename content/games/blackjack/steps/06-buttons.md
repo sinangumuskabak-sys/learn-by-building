@@ -18,15 +18,40 @@ Finally, the highest number of chips you ever held is kept in `localStorage` as 
 
 # --explanation-tr--
 
-Kart oyunları telefonda doğaldır ama telefonun H ya da S tuşu yoktur. Bu yüzden masa dört düğme alır: **Hit, Stand, Double,
-Deal**. Her tuş zaten `press(button)`'dan geçtiği için düğmelerin yalnızca hangisine dokunulduğunu bulup aynı fonksiyonu
-çağırması gerekir. Kurallar tek bir yerde kalır.
+**Bu adımda:** masanın altına dört düğme gelecek: **Hit, Stand, Double, Deal**. Telefonda da parmakla oynanabilecek.
+O an kullanılamayan düğmeler soluk yeşil görünecek. Sağ üstte de şimdiye kadarki en yüksek fiş sayın (`Best`)
+yazacak.
 
-Şu an kullanılamayan bir düğme **soluk** çizilir: el sırasında Deal, elden sonra Hit ve Stand, üçüncü karttan sonra Double. Bu,
-oyunun zaten kontrol ettiği koşulun, oyuncuya neyin mümkün olduğunu söylemek için ikinci kez kullanılmasıdır. İyi arayüzler,
-basarak öğrenmene bırakmak yerine ne yapabileceğini gösterir.
+**Tek yerden kurallar.** Telefonda H ya da S tuşu yok. Neyse ki her tuş zaten `press(button)` üzerinden geçiyor.
+Düğmeler de yalnızca hangisine dokunulduğunu bulup aynı `press`'i çağıracak. Kurallar tek yerde kalır.
 
-Son olarak, elinde tuttuğun en yüksek fiş sayısı rekorun olarak `localStorage`'da saklanır.
+**Düğme şeridi.** Canvas'ın alt kısmı (`y` 404 ve aşağısı) düğme şeridi. Genişlik dört eşit parçaya bölünür:
+`BUTTON_W = 480 / 4 = 120`. Tıklanan yerin `x`'ini 120'ye bölüp aşağı yuvarlarsak düğmenin sırasını buluruz:
+`x = 300` → `300 / 120 = 2,5` → `2` → `BUTTONS[2]` = `'Double'`.
+
+**Tıklanan noktayı bulmak.** Tarayıcı tıklamanın konumunu **sayfaya göre** verir (`event.clientX`, `event.clientY`).
+Canvas sayfada bir yerde ve ekranda küçültülmüş olabilir. `canvas.getBoundingClientRect()` canvas'ın sayfadaki
+yerini ve ekrandaki boyunu verir; ondan canvas içindeki gerçek koordinatı hesaplarız:
+
+```js
+const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+```
+
+"Canvas'ın sol kenarından ne kadar sağdayım, bunu ekrandaki boydan canvas'ın gerçek boyuna çevir." `y` de aynı.
+
+**Soluk düğmeler.** Bir düğme kullanılamıyorsa soluk çizilir: el sürerken Deal, el bitince Hit ve Stand, üçüncü
+karttan sonra Double. Bu, oyunun zaten kontrol ettiği koşulun ikinci kez, oyuncuya "ne yapabilirsin" demek için
+kullanılmasıdır. İyi bir arayüz, basıp denemeni beklemek yerine neyin mümkün olduğunu gösterir.
+
+```js
+const active = label === 'Deal' ? phase === 'done' : phase === 'player' && (label !== 'Double' || player.length === 2)
+```
+
+"Deal ise: el bittiyse etkin. Değilse: senin sıransa **ve** (Double değilse **ya da** elinde 2 kart varsa) etkin."
+
+**Rekor (`localStorage`).** Tarayıcının sayfa kapansa da hatırladığı küçük bir defter. `localStorage.setItem(ad,
+değer)` yazar, `getItem(ad)` okur (yazı olarak ya da hiç yoksa `null`). `Number(...)` sayıya çevirir; kayıt yoksa
+`|| START` ile 100'den başlarız (`a || b`: `a` boş ya da sıfırsa `b`).
 
 # --task--
 
@@ -40,13 +65,73 @@ Son olarak, elinde tuttuğun en yüksek fiş sayısı rekorun olarak `localStora
 
 # --task-tr--
 
-1. `BAR_Y = 404`, `BUTTONS = ['Hit', 'Stand', 'Double', 'Deal']` ve `BUTTON_W = canvas.width / BUTTONS.length` ekle.
-2. `BAR_Y`'de ya da altında bir `pointerdown` altındaki düğmeye basar.
-3. Her düğmeyi kenarlarından 6 piksel içeride, 44 yüksekliğinde çiz: kullanılabiliyorsa `'#f8fafc'`, değilse `'#4b7a5a'`;
-   etiketi `'#14532d'` renginde, `'bold 18px sans-serif'` ile `BAR_Y + 29`'da ortalı. Deal `'done'`'da kullanılabilir;
-   diğerleri `'player'`'da, Double yalnızca iki kartla.
-4. `best`'i `localStorage`'da `'blackjack-best'` adıyla tut (`START`'tan başlayarak); `finish()`'te `bank` onu geçince kaydet.
-   `(canvas.width - 20, 28)`'e sağa hizalı `Best 115` çiz.
+1. `const DELAY = 30 ...` satırının hemen **altına** düğme ayarlarını ekle:
+
+   ```js
+   const BAR_Y = 404
+   const BUTTONS = ['Hit', 'Stand', 'Double', 'Deal']
+   const BUTTON_W = canvas.width / BUTTONS.length
+   ```
+
+2. `let timer` satırının hemen **altına** rekoru ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('blackjack-best')) || START
+   ```
+
+3. `finish()` fonksiyonunda `bank += paid` satırı ile `if (bank < BET) ...` satırının **arasına** rekoru
+   kaydeden kısmı ekle:
+
+   ```js
+     bank += paid
+     if (bank > best) {                               // ← yeni
+       best = bank                                    // ← yeni
+       localStorage.setItem('blackjack-best', best)   // ← yeni
+     }                                                // ← yeni
+     if (bank < BET) message += ' - out of chips!'
+   ```
+
+4. Klavye dinleyicisinin (`document.addEventListener('keydown', ...)`) kapanan `})`'sinin altına bir satır boşluk
+   bırakıp dokunma dinleyicisini yaz:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     if (y >= BAR_Y) press(BUTTONS[Math.floor(x / BUTTON_W)])
+   })
+   ```
+
+   `pointerdown` fareyle tıklamada da parmakla dokunmada da gelir.
+
+5. `draw()` fonksiyonunda `ctx.fillText('Chips ' + ...)` satırının hemen **altına** rekor yazısını ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Best ' + best, canvas.width - 20, 28)
+   ```
+
+6. `draw()` fonksiyonunun en sonuna, `if (message) { ... }` bloğunun kapanan `}`'sinden sonra ve fonksiyonun
+   kapanan `}`'sinden önce düğmeleri çizen kısmı ekle:
+
+   ```js
+     BUTTONS.forEach((label, i) => {
+       const active = label === 'Deal' ? phase === 'done' : phase === 'player' && (label !== 'Double' || player.length === 2)
+       ctx.fillStyle = active ? '#f8fafc' : '#4b7a5a'
+       ctx.fillRect(i * BUTTON_W + 6, BAR_Y, BUTTON_W - 12, 44)
+       ctx.fillStyle = '#14532d'
+       ctx.font = 'bold 18px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText(label, i * BUTTON_W + BUTTON_W / 2, BAR_Y + 29)
+     })
+   ```
+
+   Her düğme kendi bölmesinin iki yanından 6 piksel içeride, 44 piksel yüksekliğinde; yazısı bölmenin ortasında.
+
+7. **Çalıştır**'a bas. Altta dört düğme görmelisin; el başında Deal soluk olmalı. Düğmelere tıklayarak oyna; sağ
+   üstteki `Best` fişin rekoru geçince artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Düğmeler yanlış işi
+   yapıyorsa `BUTTONS` listesinin sırasını kontrol et: `'Hit', 'Stand', 'Double', 'Deal'`.
 
 # --tests--
 

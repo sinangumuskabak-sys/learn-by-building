@@ -42,16 +42,20 @@ this explores about half a million positions, and a computer does that in a blin
 
 # --explanation-tr--
 
-Kural tabanlı bilgisayarın bir zayıflığı var. X'i bir köşeye oyna, o ortayı alır; sonra **karşı** köşeye oyna.
-Kazanacak ya da engelleyecek bir şey olmadığından rastgele bir hücre seçer. Bu bir köşeyse X aynı anda iki çizgiyi
-tehdit edebilir (**çatal**) ve o yalnızca birini engelleyebilir. Her tuzak için yeni kural eklemek hızla karmaşıklaşır.
+**Bu adımda:** bilgisayarı yenilmez yapacağız. Oynadığında bilgisayarın hiçbir tuzağa düşmediğini göreceksin: en
+iyi ihtimalle berabere kalırsın.
 
-Gerçek çözüm tahmin etmeyi bırakıp **olası her geleceğe ileriye bakmak**. XOX bunu tamamen yapabilecek kadar küçük.
-Buna **minimax** denir:
+**Kurallı bilgisayarın zayıf noktası.** X'i bir köşeye koy; bilgisayar ortayı alır. Sonra **karşı** köşeye koy.
+Kazanacak ya da engelleyecek bir şey olmadığı için bilgisayar rastgele bir kutu seçer. O kutu bir köşeyse, X aynı
+anda iki çizgiyi tehdit edebilir (buna **çatal** denir) ve bilgisayar yalnızca birini kapatabilir. Her tuzak için
+yeni kural eklemek hızla karmaşıklaşır.
 
-- Biten her oyuna O'nun gözünden bir puan ver: O kazandıysa `1`, X kazandıysa `-1`, beraberlikse `0`.
-- Bitmemiş bir konum için her boş hücreyi dene, ortaya çıkan her konumu **özyinelemeli olarak** puanla ve iki tarafın
-  da en iyisini oynadığını varsay: O **en büyüğü** (max), X **en küçüğü** (min) seçer.
+**Gerçek çözüm: geleceğin tamamına bakmak.** Tahmin etmek yerine **olası her devamı** deneriz. XOX bunu tamamen
+yapabilecek kadar küçük. Bu yönteme **minimax** denir:
+
+- Bitmiş her oyuna O'nun gözünden bir puan ver: O kazandıysa `1`, X kazandıysa `-1`, beraberlik `0`.
+- Bitmemiş bir durum için her boş kutuyu dene, çıkan durumu **aynı yöntemle** puanla ve iki tarafın da en iyi
+  oynadığını varsay: O en **büyük** puanı (maksimum), X en **küçük** puanı (minimum) seçer.
 
 ```js
 function score(cells, turn) {
@@ -60,21 +64,44 @@ function score(cells, turn) {
   if (end === 'X') return -1
   if (end === 'draw') return 0
   const scores = []
-  for (her boş i hücresi) {
-    cells[i] = turn                                  // hamleyi dene
-    scores.push(score(cells, turn === 'O' ? 'X' : 'O'))
-    cells[i] = ''                                    // geri al
+  for (let index = 0; index < 9; index++) {
+    if (cells[index] !== '') continue
+    cells[index] = turn                                  // hamleyi dene
+    scores.push(score(cells, turn === 'O' ? 'X' : 'O'))  // sonucu puanla
+    cells[index] = ''                                    // hamleyi geri al
   }
   return turn === 'O' ? Math.max(...scores) : Math.min(...scores)
 }
 ```
 
-Kendini çağıran fonksiyona **özyinelemeli** (recursive) denir. Çağrıları durduran bir **temel durumu** mutlaka olmalı
-(burada: oyun bitti) ve her çağrı ona yaklaşmalı (burada: bir hücre daha doluyor). Hamleyi dene, özyinele, **geri
-al**: bu "geri izleme" (backtracking) kalıbı Sudoku'yu, labirentleri ve satranç problemlerini de çözer.
+Bunu parça parça okuyalım:
 
-Sonra `computerMove`, O için ortaya çıkan konumu en yüksek puanı alan boş hücreyi seçer. Boş tahtadan başlarken
-yaklaşık yarım milyon konum inceler; bir bilgisayar bunu göz açıp kapayıncaya kadar yapar.
+- `turn` → sıranın kimde olduğu (`'X'` ya da `'O'`).
+- `for (let index = 0; index < 9; index++)` → 1. adımdaki döngü: `index` 0'dan 8'e kadar her kutu.
+- `continue` → "bu turu atla, döngünün bir sonraki turuna geç". Dolu kutular denenmez.
+- `score(cells, ...)` fonksiyonun **içinde** yine `score` çağrılıyor. Kendini çağıran fonksiyona **özyinelemeli
+  (recursive)** denir. İç içe geçmiş Rus bebekleri gibi: her bebeğin içinde biraz daha küçüğü var, en sonda
+  açılmayan küçük bir bebek.
+- Özyinelemenin her zaman bir **durma noktası** olmalı: burada oyunun bitmesi (üstteki üç `return`). Her çağrı ona
+  biraz yaklaşmalı: burada her seferinde bir kutu daha doluyor.
+- `Math.max(...scores)` → dizideki en büyük sayı; `Math.min` en küçüğü. `...` (6. adımda gördüğün üç nokta)
+  dizinin elemanlarını tek tek verir.
+
+**Dene, derinleş, geri al.** Hamleyi gerçek dizide deneyip sonra `cells[index] = ''` ile geri almaya
+**geri izleme (backtracking)** denir. Sudoku, labirent ve satranç bulmacaları da böyle çözülür. Geri almayı
+unutursan tahta bozulur.
+
+**En iyi hamleyi seçmek.** `computerMove` artık her boş kutuya O koyup `score(cells, 'X')` ile puanlar, geri alır
+ve en yüksek puanlı kutuyu seçer:
+
+```js
+let best = -1
+let bestScore = -Infinity
+```
+
+`-Infinity` "eksi sonsuz", her sayıdan küçük bir başlangıç değeridir; böylece ilk denenen kutu mutlaka "şimdiye
+kadarki en iyi" olur. `>` "büyüktür" demektir. Boş tahtadan başlayınca bu yaklaşık yarım milyon durumu inceler;
+bilgisayar bunu göz açıp kapayıncaya kadar yapar.
 
 # --task--
 
@@ -88,13 +115,56 @@ Now try to beat it. You can't. The best you can do is a draw.
 
 # --task-tr--
 
-1. `function score(cells, turn)`'u anlatıldığı gibi yaz: bitmiş konumlar için `1`, `-1` ya da `0` döndür; değilse
-   `turn`'ü her boş hücrede dene, sırası diğer oyuncuda olan sonucu puanla, hamleyi geri al ve en büyüğü (sıra O'da)
-   ya da en küçüğü (sıra X'te) döndür.
-2. `computerMove(cells)`'i yeniden yaz: her boş hücre için `'O'` koy, `score(cells, 'X')` hesapla, geri al ve en
-   yüksek puanlı hücreyi döndür. `cells` değişmeden kalmalı.
+1. `outcome` fonksiyonunun kapanan `}` işaretinin altına bir boş satır bırak ve puanlama fonksiyonunu yaz
+   (`function computerMove`'dan önce):
 
-Şimdi onu yenmeyi dene. Yenemezsin. Yapabileceğin en iyi şey beraberlik.
+   ```js
+   // How good `cells` is for O if both sides play perfectly: 1 = O wins, -1 = X wins, 0 = draw.
+   function score(cells, turn) {
+     const end = outcome(cells)
+     if (end === 'O') return 1
+     if (end === 'X') return -1
+     if (end === 'draw') return 0
+     const scores = []
+     for (let index = 0; index < 9; index++) {
+       if (cells[index] !== '') continue
+       cells[index] = turn
+       scores.push(score(cells, turn === 'O' ? 'X' : 'O'))
+       cells[index] = ''
+     }
+     return turn === 'O' ? Math.max(...scores) : Math.min(...scores)
+   }
+   ```
+
+2. Eski `computerMove` fonksiyonunun **tamamını** (`function computerMove(cells) {` satırından onun kapanan `}`
+   işaretine kadar, içindeki `free`, `completes` ve `random` dahil) sil ve yerine şunu yaz:
+
+   ```js
+   function computerMove(cells) {
+     let best = -1
+     let bestScore = -Infinity
+     for (let index = 0; index < 9; index++) {
+       if (cells[index] !== '') continue
+       cells[index] = 'O'
+       const value = score(cells, 'X')
+       cells[index] = ''
+       if (value > bestScore) {
+         bestScore = value
+         best = index
+       }
+     }
+     return best
+   }
+   ```
+
+   Tıklama dinleyicisi aynı kalıyor; o zaten `computerMove(board)`'u çağırıyor.
+
+3. **Çalıştır**'a bas. Oynamak için kutulara tıkla ve bilgisayarı yenmeye çalış: yenemezsin, en fazla berabere
+   kalırsın. Alttaki kontrollerin hepsi yeşil olmalı (son kontrol binlerce oyunu denediği için birkaç saniye
+   sürebilir). "`score()` tahtayı bulduğu gibi bırakmalı" kontrolü kırmızıysa `cells[index] = ''` geri alma
+   satırını unutmuş olabilirsin.
+
+Tebrikler, XOX oyunun bitti!
 
 # --tests--
 

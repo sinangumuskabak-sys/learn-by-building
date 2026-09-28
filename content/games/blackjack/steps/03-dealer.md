@@ -25,21 +25,44 @@ One small kindness: when you hit to exactly 21, nothing can get better, so the g
 
 # --explanation-tr--
 
-Elinden memnun olduğunda **durursun** (S). Sonra sıra krupiyededir ve krupiyenin **hiç seçeneği yoktur**. Kumarhane kuralları
-onları sabitler: 17'nin altındayken çek, 17 ya da üstünde dur. Bu tek bir `while` döngüsüdür:
+**Bu adımda:** eli bitirmek için **durabileceksin** (S tuşu). Krupiyenin ikinci kartı sen durana kadar mavi arka
+yüzüyle kapalı kalacak; durunca açılacak, krupiye kurala göre kart çekecek ve ortada kimin kazandığı yazacak.
+
+**Krupiyenin hiç seçeneği yok.** Kumarhane kuralı sabittir: toplam 17'nin altındaysa kart çek, 17 ya da üstündeyse
+dur. Bu tek bir `while` döngüsüdür (2. adımda görmüştük: koşul doğru olduğu sürece tekrarla):
 
 ```js
 while (handValue(dealer) < 17) dealer.push(nextCard())
 ```
 
-Kasa avantajı da bu kuraldan gelir. Önce sen oynarsın; yani batarsan, **krupiye de batacak olsa bile** kaybedersin.
+Kumarhanenin avantajı da buradan gelir: önce sen oynarsın; batarsan kaybedersin, **krupiye de batacak olsa bile**.
 
-Sen durana kadar krupiyenin ikinci kartı **kapalıdır**. Yoksa tam olarak neye karşı oynadığını bilirdin. Bu yüzden
-`phase === 'player'` iken o kart gizli çizilir ve krupiyenin toplamı yalnızca görebildiğin kartı sayar.
+**Gizli kart.** Sen durana kadar krupiyenin ikinci kartı ters durur; yoksa neye karşı oynadığını tam bilirdin.
+`phase === 'player'` iken o kartı gizli çizeriz ve krupiyenin toplamında sadece açık kartı sayarız:
 
-Sonra eller karşılaştırılır: sen batarsın, krupiye batar, yüksek toplam kazanır ve eşit toplamlar **berabere**dir (push).
+```js
+const hide = phase === 'player'   // true ya da false
+handValue([dealer[0]])            // yalnızca ilk karttan oluşan bir elin değeri
+```
 
-Küçük bir incelik: tam 21'e çektiğinde hiçbir şey daha iyi olamaz, bu yüzden oyun senin yerine durur.
+`dealer[0]` listenin ilk elemanıdır (numaralar 0'dan başlar). Onu `[ ]` içine alınca tek kartlık yeni bir liste
+olur; `handValue` bir liste beklediği için böyle veririz. 1. adımda yazdığımız `drawHand`'in `hideSecond`
+parametresi şimdi işe yarıyor: `hide` doğruysa ikinci kart arka yüzüyle çizilir.
+
+**Sonucu bulmak.** Eller sırayla karşılaştırılır; ilk doğru olan koşul kazanır. Uzun bir `else if` zinciri bunu
+yapar:
+
+```js
+if (p > 21) message = 'Bust!'                       // sen battın
+else if (d > 21) message = 'Dealer busts, you win'  // krupiye battı
+else if (p > d) message = 'You win'                 // senin toplamın büyük
+else if (p < d) message = 'Dealer wins'             // krupiyeninki büyük
+else message = 'Push'                               // eşit: berabere
+```
+
+`p` ve `d` kısa adlar: senin (player) ve krupiyenin (dealer) toplamı. Sıra önemli: batma kontrolleri önce gelir.
+
+**Küçük bir kolaylık.** Kart çekip tam 21 yaptıysan daha iyisi olamaz; oyun senin yerine durur.
 
 # --task--
 
@@ -51,11 +74,74 @@ Küçük bir incelik: tam 21'e çektiğinde hiçbir şey daha iyi olamaz, bu yü
 
 # --task-tr--
 
-1. `stand()` yaz: yalnızca `'player'`'da; krupiye 17'nin altındayken çeker, sonra `finish()`.
-2. `finish()` elleri karşılaştırır ve `message`'ı ayarlar: `'Bust!'` (21'in üstündesin), `'Dealer busts, you win'`,
-   `'You win'`, `'Dealer wins'` ya da `'Push'`.
-3. Toplamın tam 21 olduğunda `hit()` kendiliğinden durur. S tuşu `'Stand'`'e basar.
-4. `phase === 'player'` iken krupiyenin ikinci kartını gizli çiz ve `Dealer`'ı yalnızca ilk kartın değeriyle göster.
+1. `hit()` fonksiyonunun sonuna 21 kontrolünü ekle, altına da `stand()` fonksiyonunu yaz:
+
+   ```js
+   function hit() {
+     if (phase !== 'player') return
+     player.push(nextCard())
+     if (handValue(player) > 21) finish()
+     else if (handValue(player) === 21) stand() // ← yeni
+   }
+
+   function stand() {
+     if (phase !== 'player') return
+     // The dealer has no choice: draw below 17, stand on 17 or more.
+     while (handValue(dealer) < 17) dealer.push(nextCard())
+     finish()
+   }
+   ```
+
+2. `finish()` fonksiyonunu tamamen şununla değiştir:
+
+   ```js
+   // Compare the hands.
+   function finish() {
+     phase = 'done'
+     const p = handValue(player)
+     const d = handValue(dealer)
+     if (p > 21) message = 'Bust!'
+     else if (d > 21) message = 'Dealer busts, you win'
+     else if (p > d) message = 'You win'
+     else if (p < d) message = 'Dealer wins'
+     else message = 'Push'
+   }
+   ```
+
+3. `press()` fonksiyonuna `'Stand'` düğmesini, klavye sözlüğüne de `s` tuşunu ekle:
+
+   ```js
+   function press(button) {
+     if (button === 'Hit') hit()
+     else if (button === 'Stand') stand() // ← yeni
+     else if (button === 'Deal' && phase === 'done') deal()
+   }
+   ```
+
+   ```js
+     const keys = { h: 'Hit', s: 'Stand', n: 'Deal', ' ': 'Deal' } // ← değişti
+   ```
+
+4. `draw()` fonksiyonunda iki `drawHand` satırının üstüne `hide` satırını ekle, krupiyeninkini değiştir; krupiye
+   toplamını yazan satırı da değiştir:
+
+   ```js
+     const hide = phase === 'player'   // ← yeni
+     drawHand(dealer, DEALER_Y, hide)  // ← değişti
+     drawHand(player, PLAYER_Y, false)
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Dealer ' + (hide ? handValue([dealer[0]]) : handValue(dealer)), 20, DEALER_Y - 10) // ← değişti
+     ctx.fillText('You ' + handValue(player), 20, PLAYER_Y - 10)
+   ```
+
+   Parantez içindeki `hide ? ... : ...` önce hesaplanır, sonra `'Dealer '` yazısına eklenir.
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Krupiyenin ikinci kartı mavi ve kapalı olmalı; S'ye basınca
+   açılmalı, krupiye gerekirse kart çekmeli ve sonuç yazmalı. N ya da Boşluk yeni el dağıtır. Alttaki kontrollerin
+   hepsi yeşil olmalı. Mesaj testleri kırmızıysa yazıları (ör. `'Dealer busts, you win'`) virgülüyle aynen yaz.
 
 # --tests--
 

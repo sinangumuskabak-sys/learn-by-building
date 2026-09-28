@@ -25,22 +25,39 @@ ends.
 
 # --explanation-tr--
 
-Hiç zorlaşmayan bir oyun sıkıcı olur. Her 10 kelimede bir **seviye** atlarsın ve iki şey değişir: kelimeler daha hızlı düşer
-ve daha sık gelir.
+**Bu adımda:** oyun gittikçe zorlaşacak. Her 10 kelimede bir **seviye** (level) atlayacaksın; kelimeler daha hızlı düşüp
+daha sık gelecek. Sol üstte `Score 36  Level 2`, sağ üstte `♥♥♥  Best 42` gibi yazılar göreceksin. En iyi puanın sayfayı
+kapatsan da hatırlanacak.
 
-`SPEED` ve `SPAWN_EVERY` sabitleri yerine seviyenin iki küçük fonksiyonunu kullanırız:
+**Sabit yerine fonksiyon.** Şimdiye kadar hız (`SPEED`) ve kelime aralığı (`SPAWN_EVERY`) hiç değişmeyen sabitlerdi.
+Artık seviyeye bağlılar, bu yüzden onları her sorulduğunda hesaplayan iki küçük fonksiyona çeviriyoruz:
 
 ```js
 const speed = () => 0.25 + level * 0.1
 const spawnEvery = () => Math.max(40, 150 - level * 12)
 ```
 
-`Math.max(40, ...)` kelimeler arasındaki aralığın altına bir taban koyar. O olmasa 13. seviyede aralık negatif olur ve kelimeler
-her karede yağardı. Bu sayıları ayarlamak gerçek oyun tasarımıdır: onlarla dakikada 18 kelime yazan bir oyuncu yaklaşık 40
-saniye, 36 yazan yaklaşık iki dakika, 60 yazan da üç dakikadan fazla dayanır.
+- `() => ...` parametresi olmayan kısa bir fonksiyondur; `=>`'nin sağındaki hesabı **geri verir**. Çağırırken parantez
+  unutulmaz: `speed()`.
+- Seviye 1'de hız `0.25 + 0.1` = 0.35, aralık `150 - 12` = 138: eski sabitlerle aynı. Seviye 5'te hız 0.75, aralık 90.
+- `Math.max(a, b)` ikisinden **büyük** olanı verir. Böylece aralık hiçbir zaman 40'ın altına inmez. Olmasaydı seviye 13'te
+  aralık eksiye düşer, her karede kelime yağardı.
 
-Harfler de her biri `level` puan değerindedir; böylece daha uzun dayanmak kazandırır. En iyi puan oyun bittiğinde
-`localStorage`'a kaydedilir.
+Bu sayıları ayarlamak gerçek bir oyun tasarımı işidir: bu hâliyle dakikada 18 kelime yazan biri yaklaşık 40 saniye,
+36 yazan iki dakika, 60 yazan üç dakikadan fazla dayanır.
+
+**Seviye atlamak.** `cleared` bu oyunda kaç kelime bitirdiğini sayar. `cleared % 10 === 0` → "10'a bölümünden kalan 0 mı?"
+(`%` kalan işaretidir: `20 % 10` = 0, `13 % 10` = 3). Yani 10., 20., 30. kelimelerde doğrudur ve `level` 1 artar. Puan da
+artık `harf sayısı × seviye`: uzun dayanan daha çok kazanır.
+
+**En iyi puanı saklamak (`localStorage`).** Tarayıcının küçük bir defteri vardır; sayfa kapansa da içindekiler kalır.
+
+- `localStorage.setItem('typing-best', best)` → `'typing-best'` adıyla kaydet.
+- `localStorage.getItem('typing-best')` → okuyup geri ver. Defter hep **yazı** saklar; `Number(...)` onu sayıya çevirir.
+- İlk kez oynarken kayıt yoktur ve sonuç sayı olmaz. `|| 0` → "işe yarar bir değer yoksa 0 kullan".
+
+Oyun bitince yapılacak işleri `gameOver()` adlı bir fonksiyonda toplarız: durumu `'over'` yapar, puan rekoru geçtiyse
+(`score > best`) kaydeder.
 
 # --task--
 
@@ -52,11 +69,87 @@ Harfler de her biri `level` puan değerindedir; böylece daha uzun dayanmak kaza
 
 # --task-tr--
 
-1. `SPEED` ve `SPAWN_EVERY`'yi yukarıdaki gibi `speed()` ve `spawnEvery()` ile değiştir.
-2. `level` ve `cleared` ekle (`reset()`'te `1` ve `0`). Biten bir kelime `length * level` puan getirir, `cleared`'a 1 ekler ve
-   her 10. kelime `level`'a 1 ekler.
-3. `gameOver()` yaz: `'over'` yap ve `score` `best`'i geçiyorsa onu `localStorage`'a `'typing-best'` adıyla kaydet.
-4. Solda `Score 36  Level 2`, sağda `♥♥♥  Best 42` çiz.
+1. `const SPEED = 0.35` ve `const SPAWN_EVERY = 138` satırlarını **sil**.
+
+2. `let score` satırının altına iki değişken ekle:
+
+   ```js
+   let level
+   let cleared // words typed this game
+   ```
+
+3. `let state // 'playing' or 'over'` satırının altına en iyi puanı ve iki fonksiyonu ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('typing-best')) || 0
+
+   // Faster and more often as the level goes up.
+   const speed = () => 0.25 + level * 0.1
+   const spawnEvery = () => Math.max(40, 150 - level * 12)
+   ```
+
+4. `reset()`'te `score = 0` satırının altına ekle:
+
+   ```js
+     level = 1
+     cleared = 0
+   ```
+
+5. `type(key)`'in sonundaki `if` şöyle olmalı:
+
+   ```js
+     if (typed === target.text.length) {
+       words = words.filter((w) => w !== target)
+       score += target.text.length * level  // ← değişti
+       cleared += 1                         // ← yeni
+       if (cleared % 10 === 0) level += 1   // ← yeni
+       target = null
+     }
+   }
+   ```
+
+6. `type` fonksiyonunun kapanış `}`'sinin altına `gameOver()`'ı yaz:
+
+   ```js
+   function gameOver() {
+     state = 'over'
+     if (score > best) {
+       best = score
+       localStorage.setItem('typing-best', best)
+     }
+   }
+   ```
+
+7. `update()`'te üç satırı değiştir:
+
+   ```js
+       spawnTimer = spawnEvery()           // ← değişti (eskiden SPAWN_EVERY)
+   ```
+
+   ```js
+     for (const w of words) w.y += speed() // ← değişti (eskiden SPEED)
+   ```
+
+   ve en sondaki `if` içinde `state = 'over'` yerine:
+
+   ```js
+     if (lives <= 0) {
+       lives = 0
+       gameOver() // ← değişti
+     }
+   ```
+
+8. `draw()`'daki puan ve kalp satırlarını şöyle değiştir (iki boşluklara dikkat):
+
+   ```js
+     ctx.fillText('Score ' + score + '  Level ' + level, 10, 22)          // ← değişti
+     ctx.textAlign = 'right'
+     ctx.fillText('♥'.repeat(lives) + '  Best ' + best, canvas.width - 10, 22) // ← değişti
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Üstte `Level 1` ve `Best 0` görmelisin; 10 kelime yazınca
+   `Level 2` olmalı. Alttaki kontrollerin hepsi yeşil olmalı. Yazı kontrolü kırmızıysa `'  Level '` ve `'  Best '`
+   içindeki **iki boşluğu** kontrol et.
 
 # --tests--
 

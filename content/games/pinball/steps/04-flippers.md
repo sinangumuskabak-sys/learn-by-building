@@ -27,23 +27,47 @@ Left or Z moves the left flipper, Right or M the right one.
 
 # --explanation-tr--
 
-Altı iki **palet** korur. Her biri bir eksen etrafında dönen bir parçadır: eksen sabittir ve uç
-`eksen + (cos(açı), sin(açı)) × uzunluk`'tadır.
+**Bu adımda:** masanın altına iki mavi **palet** (flipper) ekleyeceğiz. Sol ok ya da Z sol paleti, Sağ ok ya da M
+sağ paleti kaldıracak; tuşu bırakınca palet geri düşecek. Top paletlere çarpınca duvara çarpmış gibi sekecek.
 
-Bir paletin iki açısı vardır: **dinlenme** (aşağı) ve **yukarı**. Tuşu basılıyken karede `FLIP_SPEED` radyanla yukarıya doğru döner ve
-tuş bırakılınca dinlenmeye geri döner. Bir dönüşün son parçası tam bir adımdan küçüktür; böylece palet taşmak yerine tam açısında durur:
+**Palet bir döner çizgidir.** Bir ucu (eksen, pivot) sabittir; diğer ucu (tip) bir açıyla döner. Ucun yeri
+trigonometriyle bulunur:
 
 ```js
-f.speed = Math.abs(target - f.angle) < FLIP_SPEED ? target - f.angle : dir * FLIP_SPEED
+tipX = f.x + Math.cos(f.angle) * FLIPPER_LENGTH
+tipY = f.y + Math.sin(f.angle) * FLIPPER_LENGTH
 ```
 
-Sağ palet sola bakar, bu yüzden açıları `π` civarındadır ve yukarı açısı dinlenme açısından **büyüktür**. "Yukarı küçük demektir" diye
-varsaymak yerine `Math.sign(target - angle)` yönüyle çalışmak aynı kodu ikisi için de işletir.
+`Math.cos` ve `Math.sin` bir açının yatay ve dikey payını verir. Açılar **radyan** ile ölçülür: `Math.PI`
+(π, yaklaşık 3.14) yarım tur, yani 180°'dir. Açı `0` sağı gösterir; `y` aşağı büyüdüğü için pozitif açı aşağıya,
+negatif açı yukarıya eğer. Sol palet dinlenirken `0.45` (sağ-aşağı), kalkınca `-0.45` (sağ-yukarı) açıdadır.
 
-Çarpışmalar için palet yalnızca bir parça daha. Açı her fizik adımında biraz değişir; böylece top paletle, dönüş sırasında gerçekten
-bulunduğu yerde buluşur.
+**Hedefe doğru dönmek.** Her paletin iki açısı var: `rest` (aşağıda) ve `up` (yukarıda). Tuş basılıysa hedef `up`,
+değilse `rest`. Palet her karede hedefe doğru `FLIP_SPEED` kadar döner. Son parça tam bir adımdan küçükse sadece
+kalan kadar döner; böylece hedefi aşmaz, tam üstünde durur:
 
-Sol ya da Z sol paleti, Sağ ya da M sağ paleti hareket ettirir.
+```js
+f.speed = Math.abs(target - f.angle) < FLIP_SPEED ? (target - f.angle) : dir * FLIP_SPEED
+```
+
+`Math.abs` bir sayının eksisini atar (uzaklık), `Math.sign` yönü verir: pozitifse `1`, negatifse `-1`, sıfırsa `0`.
+Sağ palet sola baktığı için açıları `π` civarındadır ve onun "yukarısı" daha **büyük** bir açıdır. "Yukarı küçük
+demek" diye varsaymak yerine `dir` ile çalışmak, aynı kodu iki palet için de doğru yapar.
+
+**Çarpışma:** palet de bir çizgi parçasıdır, `hitSegment` ile çarpışır. Açı her küçük fizik adımında biraz
+değiştiği için top paleti dönüşün tam o anındaki yerinde bulur.
+
+**Yeni parçalar:**
+
+- `{ ...f, angle: f.rest, speed: 0 }`: üç nokta (`...`) `f` nesnesinin bütün alanlarını yeni nesneye kopyalar,
+  sonra `angle` ve `speed` eklenir. Böylece sabit `FLIPPERS` listesi değişmez; oyun kendi kopyasıyla çalışır.
+- `(f) => ({ ... })`: bir nesne döndüren kısa fonksiyon. Nesnenin süslü parantezi fonksiyon gövdesiyle karışmasın
+  diye `( )` içine alınır.
+- `pressed[f.key]`: köşeli parantezle alan okumak. `f.key` `'left'` ise bu `pressed.left` ile aynıdır.
+- **`keyup`**: tuş **bırakılınca** gelen olay. `key(event, down)` fonksiyonunu ikisi de çağırır: basınca
+  `down = true`, bırakınca `false`. `true`/`false` evet/hayır değerleridir.
+- `else if`: "değilse, şu da doğru mu?". `} else return` başka bir tuşsa fonksiyondan çıkar; böylece
+  `preventDefault()` sadece oyunun tuşlarında çalışır.
 
 # --task--
 
@@ -57,13 +81,110 @@ Sol ya da Z sol paleti, Sağ ya da M sağ paleti hareket ettirir.
 
 # --task-tr--
 
-1. `FLIPPER_LENGTH = 62`, `FLIP_SPEED = 0.25` ve `FLIPPERS`'ı (eksenler `(130, 530)` ve `(270, 530)`'da, açılar çözümdeki gibi, `key`'i
-   `'left'` ya da `'right'`) ekle. `reset()`'te onlardan açısı dinlenmede ve `speed: 0` olan `flippers`'ı ve
-   `pressed = { left: false, right: false }`'u yap.
-2. `tip(f)` yaz. Her karede her paletin `speed`'ini yukarıdaki gibi hedefine doğru ayarla; `step()` onu `speed / SUB` kadar döndürür ve
-   topu onunla çarpıştırır (`bounce` 0.3). Hazırken onu bütün `speed` kadar döndür.
-3. `keydown` ve `keyup`, `pressed.left`'i (Sol, Z) ve `pressed.right`'ı (Sağ, M) ayarlar; Boşluk ve Aşağı hâlâ fırlatır.
-4. Her paleti ekseninden ucuna 10 kalınlığında `'#38bdf8'` bir çizgi olarak çiz.
+1. `BUMPERS` listesinin kapanış `]` satırının altına palet ayarlarını ekle:
+
+   ```js
+   const FLIPPER_LENGTH = 62
+   const FLIP_SPEED = 0.25 // radians per frame
+   const FLIPPERS = [
+     { x: 130, y: 530, rest: 0.45, up: -0.45, key: 'left' },
+     { x: 270, y: 530, rest: Math.PI - 0.45, up: Math.PI + 0.45, key: 'right' },
+   ]
+   ```
+
+2. `let ball // { x, y, vx, vy }` satırının altına iki değişken ekle:
+
+   ```js
+   let flippers // { ...FLIPPERS[i], angle, speed }
+   let pressed // { left, right }
+   ```
+
+3. `reset()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function reset() {
+     score = 0
+     flash = BUMPERS.map(() => 0)
+     flippers = FLIPPERS.map((f) => ({ ...f, angle: f.rest, speed: 0 })) // ← yeni
+     pressed = { left: false, right: false }                            // ← yeni
+     newBall()
+   }
+   ```
+
+4. `reset()`'in kapanış `}`'inin altına paletin ucunu hesaplayan kısa fonksiyonu yaz:
+
+   ```js
+   const tip = (f) => ({ x: f.x + Math.cos(f.angle) * FLIPPER_LENGTH, y: f.y + Math.sin(f.angle) * FLIPPER_LENGTH })
+   ```
+
+5. `step()` fonksiyonunun sonuna, `BUMPERS.forEach(hitBumper)` satırının altına paletleri ekle:
+
+   ```js
+     BUMPERS.forEach(hitBumper)
+     for (const f of flippers) {        // ← yeni
+       f.angle += f.speed / SUB         // ← yeni
+       const t = tip(f)                 // ← yeni
+       hitSegment(f.x, f.y, t.x, t.y, 0.3) // ← yeni
+     }                                  // ← yeni
+   }
+   ```
+
+6. `update()` fonksiyonunun başını şöyle değiştir (`flash = ...` satırı aynı kalır; `if (state === 'ready') return`
+   satırının yerine yeni blok gelir):
+
+   ```js
+   function update() {
+     flash = flash.map((n) => Math.max(0, n - 1))
+     for (const f of flippers) {                                   // ← yeni
+       // Up while the key is held, back down when it is let go, and stop at either end.
+       const target = pressed[f.key] ? f.up : f.rest
+       const dir = Math.sign(target - f.angle)
+       f.speed = Math.abs(target - f.angle) < FLIP_SPEED ? (target - f.angle) : dir * FLIP_SPEED
+     }
+     if (state === 'ready') {                                      // ← değişti
+       for (const f of flippers) f.angle += f.speed
+       return
+     }
+     for (let i = 0; i < SUB; i++) step()
+   ```
+
+   Top kanalda beklerken `step()` çalışmadığı için paletleri burada bir kerede döndürürüz.
+
+7. `document.addEventListener('keydown', ...)` bloğunun **tamamını** (son `})` satırına kadar) sil ve yerine şunu
+   yaz:
+
+   ```js
+   function key(event, down) {
+     const k = event.key
+     if (k === 'ArrowLeft' || k === 'z' || k === 'Z') pressed.left = down
+     else if (k === 'ArrowRight' || k === '/' || k === 'm' || k === 'M') pressed.right = down
+     else if (k === ' ' || k === 'ArrowDown') {
+       if (down) launch()
+     } else return
+     event.preventDefault()
+   }
+
+   document.addEventListener('keydown', (event) => key(event, true))
+   document.addEventListener('keyup', (event) => key(event, false))
+   ```
+
+8. `draw()`'da tamponları çizen `BUMPERS.forEach(...)` bloğunun kapanış `})` satırının altına paletleri çiz:
+
+   ```js
+     ctx.strokeStyle = '#38bdf8'
+     ctx.lineWidth = 10
+     for (const f of flippers) {
+       const t = tip(f)
+       ctx.beginPath()
+       ctx.moveTo(f.x, f.y)
+       ctx.lineTo(t.x, t.y)
+       ctx.stroke()
+     }
+   ```
+
+9. **Çalıştır**'a bas. Altta iki mavi palet görünmeli. Oynamak için önce oyuna tıkla: Sol ok / Z ve Sağ ok / M
+   paletleri kaldırmalı, bırakınca inmeli. Alttaki kontrollerin hepsi yeşil olmalı. Palet takılı kalıyorsa
+   `keyup` satırını unutmuş olabilirsin.
 
 # --tests--
 

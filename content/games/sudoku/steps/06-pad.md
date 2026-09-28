@@ -19,16 +19,40 @@ unbeatable record, and the record would mean nothing.
 
 # --explanation-tr--
 
-Telefonda rakam tuşları yoktur, bu yüzden oyun kendininkileri çizer: tahtanın altında 1'den 9'a ve bir silgiden oluşan on
-düğmelik bir sıra. Her biri `PAD_W` genişliğindedir, yani bir dokunuşun altındaki düğme `Math.floor(x / PAD_W)`'dur. 0'dan
-8'e düğmeler 1'den 9'a rakamları yazar, 9. düğme siler. Klavye de tuş takımı da aynı `enter(d)`'yi çağırır; yani rakamların
-yazıldığı hâlâ tek bir yer vardır.
+**Bu adımda:** ızgaranın altına 1'den 9'a kadar rakam düğmeleri ve bir silgi (`⌫`) gelecek; telefonda da parmakla
+oynayabileceksin. Sol üstte bir saat (`Time 0:42`), sağ üstte en iyi süren ve ipucu sayın (`Best 1:15  Hints 0`)
+görünecek.
 
-Saat kareleri sayar ve `Math.floor(frames / 60)` saniyedir; bulmaca çözülünce durur. Bir süre `m:ss` olarak gösterilir:
-`String(s % 60).padStart(2, '0')` 5'i `05`'e çevirir.
+**Kendi tuş takımımız.** Telefonda rakam tuşu yok; oyun kendi düğmelerini çizer: ızgaranın altında on düğmelik bir
+sıra. Her biri `PAD_W` genişliğinde (432 / 10 = 43,2 piksel), yani dokunulan düğmenin sırası
+`Math.floor(x / PAD_W)`. 0'dan 8'e kadar düğmeler 1'den 9'a rakamları yazar (`button + 1`), 9. düğme siler
+(`0`). Klavye de düğmeler de aynı `enter(d)`'yi çağırır; rakamların yazıldığı tek bir yer kalır.
 
-En iyi süre `localStorage`'a kaydedilir ama **yalnızca ipucusuz oyunlar için**. Yoksa H'ye elli kez basmak yenilmez bir rekor
-kırar ve rekor hiçbir şey ifade etmezdi.
+`button === 9 ? 0 : button + 1` → "son düğmeyse 0 (sil), değilse sırasının bir fazlası".
+
+**Saat.** Oyun döngüsü saniyede ~60 kez döner. Her turda bir sayacı artırırız (`frames += 1`); `Math.floor(frames /
+60)` saniyedir. Bulmaca çözülünce sayacı durdururuz: `if (!won) frames += 1` ("kazanılmadıysa artır"; `!` "değil").
+
+**Süreyi `d:ss` göstermek.** 75 saniye → `1:15`. Dakika `Math.floor(s / 60)`, saniye `s % 60` (bölümden kalan).
+Saniye tek haneliyse başına sıfır ekleriz: `String(5).padStart(2, '0')` → `'05'` (yazıyı soldan 2 karaktere kadar
+`'0'` ile doldurur). Bunu küçük bir fonksiyon yapar:
+
+```js
+const clock = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0')
+```
+
+**En iyi süreyi saklamak (`localStorage`).** Tarayıcının, sayfa kapansa da hatırladığı küçük bir defterdir:
+`localStorage.setItem('sudoku-best', 75)` yazar, `localStorage.getItem('sudoku-best')` okur (yazı olarak ya da hiç
+yoksa `null`). `Number(...)` sayıya çevirir; kayıt yoksa `|| 0` ile `0` olur. `0` "henüz rekor yok" demek.
+
+Rekor yalnızca **ipucu kullanılmayan** oyunlarda kaydedilir. Yoksa H'ye elli kez basan biri yenilmez bir rekor
+koyardı ve rekorun anlamı kalmazdı:
+
+```js
+if (hints === 0 && (best === 0 || seconds < best))
+```
+
+"İpucu yoksa **ve** (henüz rekor yoksa **veya** bu süre daha kısaysa)". Parantez `||`'yi bir arada tutar.
 
 # --task--
 
@@ -42,13 +66,101 @@ kırar ve rekor hiçbir şey ifade etmezdi.
 
 # --task-tr--
 
-1. `PAD_Y = TOP + 9 * SIZE + 16`, `PAD_W = (9 * SIZE) / 10` ve `PAD_H = 44` ekle. `LEFT`'ten başlayarak on düğme çiz: her
-   birinin 2 piksel içinde `'#e0e7ff'` bir dikdörtgen, üzerinde `'#3730a3'` renginde `1`'den `9`'a ve sonra `⌫`.
-2. Tuş takımı içindeki bir tıklama o düğmenin rakamıyla `enter`'ı çağırır (sonuncusu siler).
-3. `frames` ekle (`reset()`'te `0`), `won` değilken her karede artar. Sol üste `Time 0:42` çiz.
-4. `best`'i `localStorage`'da `'sudoku-best'` adıyla (saniye olarak) tut. `checkWin`'de ipucu kullanılmadıysa ve süre `best`'i
-   geçiyorsa (ya da henüz en iyi yoksa) süreyi kaydet.
-5. Sağ üst `Best 1:15  Hints 0` gösterir (henüz en iyi yokken `Best -`) ve kazanma mesajı `Solved in 1:15!` olur.
+1. `const TOP = 56` satırının hemen **altına** tuş takımı ölçülerini ekle:
+
+   ```js
+   const PAD_Y = TOP + 9 * SIZE + 16 // the row of number buttons for touch screens
+   const PAD_W = (9 * SIZE) / 10
+   const PAD_H = 44
+   ```
+
+2. `let selected` satırının altına `let frames`, `let hints` satırının altına da rekoru ekle:
+
+   ```js
+   let frames
+   ```
+
+   ```js
+   let best = Number(localStorage.getItem('sudoku-best')) || 0
+   ```
+
+3. `reset()` içinde `selected = { r: 4, c: 4 }` satırının hemen **altına** ekle:
+
+   ```js
+     frames = 0
+   ```
+
+4. `checkWin()` fonksiyonunun sonuna rekoru kaydeden kısmı ekle:
+
+   ```js
+   function checkWin() {
+     for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) if (grid[r][c] === 0 || conflict(r, c)) return
+     won = true
+     const seconds = Math.floor(frames / 60)                  // ← yeni
+     if (hints === 0 && (best === 0 || seconds < best)) {     // ← yeni
+       best = seconds                                         // ← yeni
+       localStorage.setItem('sudoku-best', best)              // ← yeni
+     }                                                        // ← yeni
+   }
+   ```
+
+5. Tıklama dinleyicisinde, `if (r >= 0 && r < 9 && c >= 0 && c < 9) selected = { r, c }` satırının hemen
+   **altına** tuş takımını ekle:
+
+   ```js
+     else if (y >= PAD_Y && y < PAD_Y + PAD_H && x >= 0 && x < 9 * SIZE) {
+       const button = Math.floor(x / PAD_W)
+       enter(button === 9 ? 0 : button + 1) // the last button erases
+     }
+   ```
+
+   Burada `x` zaten `LEFT` çıkarılmış hâli; yani `0` tuş takımının sol kenarı.
+
+6. `draw()` fonksiyonunda çizgileri çizen `for` döngüsünden sonraki dört satırı (`ctx.fillStyle = '#0f172a'`'dan
+   `ctx.fillText('Hints ' + ...)`'e kadar) sil ve yerine şunları yaz:
+
+   ```js
+     for (let i = 0; i < 10; i++) {
+       const x = LEFT + i * PAD_W
+       ctx.fillStyle = '#e0e7ff'
+       ctx.fillRect(x + 2, PAD_Y, PAD_W - 4, PAD_H)
+       ctx.fillStyle = '#3730a3'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText(i === 9 ? '⌫' : String(i + 1), x + PAD_W / 2, PAD_Y + 30)
+     }
+
+     const seconds = Math.floor(frames / 60)
+     const clock = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0')
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 18px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Time ' + clock(seconds), LEFT, 34)
+     ctx.textAlign = 'right'
+     ctx.fillText('Best ' + (best ? clock(best) : '-') + '  Hints ' + hints, canvas.width - LEFT, 34)
+   ```
+
+   `⌫` simgesini kopyalayıp yapıştırabilirsin. `'  Hints '`'in başında **iki** boşluk var.
+
+7. `if (won) { ... }` bloğunda `'Solved!'` yazan satırı süreyi gösterecek şekilde değiştir:
+
+   ```js
+       ctx.fillText('Solved in ' + clock(seconds) + '!', canvas.width / 2, TOP + 4.5 * SIZE) // ← değişti
+   ```
+
+8. En alttaki `loop()` fonksiyonunun ilk satırı olarak saati ekle:
+
+   ```js
+   function loop() {
+     if (!won) frames += 1 // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Izgaranın altında 1–9 ve `⌫` düğmeleri, üstte `Time 0:00` ve `Best -  Hints 0` görmelisin;
+   saat saniye saniye ilerlemeli. Boş bir hücre seçip bir rakam düğmesine tıkla, rakam yazılmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. `Best -  Hints 0` testi kırmızıysa aradaki iki boşluğu kontrol et.
 
 # --tests--
 

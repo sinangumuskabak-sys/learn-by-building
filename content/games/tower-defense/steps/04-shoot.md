@@ -27,23 +27,41 @@ Every enemy starts with 10 health; each kill is worth 5 gold, which pays for the
 
 # --explanation-tr--
 
-Bir kule saniyede birçok kez tek bir soruyu cevaplamak zorundadır: **hangi düşmanı vuruyorum?** Klasik cevap "menzildekiler
-arasında en uzağa yürümüş olanı"dır, çünkü geçmeye en yakın odur. Geçen adımdaki `d` mesafesi sayesinde "en uzak" yalnızca
-en büyük `d`'dir:
+**Bu adımda:** kuleler ateş etmeye başlayacak. Menzile giren düşmana doğru küçük sarı mermiler uçacak; üç isabet alan
+düşman kaybolacak ve her öldürülen düşman 5 altın kazandıracak.
+
+**Hangi düşmana ateş edilir?** Kule saniyede defalarca aynı soruyu cevaplar. Klasik cevap: "menzildekiler arasında en
+uzağa yürümüş olan", çünkü geçmeye en yakın odur. Önceki adımdaki mesafe `d` sayesinde "en uzak" yalnızca en büyük
+`d`'dir:
 
 ```js
 if (inRange && (!target || e.d > target.d)) target = e
 ```
 
-Kuleler her karede ateş etmez. Her birinin geri sayan bir `cooldown`'u (bekleme süresi) vardır; sıfıra ulaşınca kule ateş
-eder ve bekleme `reload`'dan yeniden başlar. Oyunlardaki her silahı, büyüyü ve yeteneği aynı fikir yönetir: her şey için bir
-sayaç, `update()` içinde geri sayılır.
+"Menzildeyse **ve** (henüz hedef yoksa **veya** bu düşman hedeften daha ilerideyse) hedef bu olsun." `target` `null` ile
+başlar; `!target` "hedef yok" demektir. Döngü bitince elimizde en ilerideki kalır.
 
-Mermiler hedeflerine **güdümlenir**: her karede hedefin şu an olduğu yere doğru dümdüz 0.3 döşeme giderler. Hedefe giden oku
-uzunluğuna bölmek (`dx / distance`) 1 uzunluğunda bir yön verir; 0.3 ile çarpmak adımı verir. Hedef bir adımdan yakınsa
-vurulmuştur. Hedef mermi varmadan ölürse mermi sönüp gider.
+**Uzaklık.** `Math.hypot(dx, dy)` iki nokta arasındaki düz çizgi uzaklığını verir (okuldaki Pisagor:
+√(dx² + dy²)). Kulenin karesinden düşmanın noktasına olan uzaklık menzilden küçük ya da eşitse düşman menzildedir.
 
-Her düşman 10 canla başlar; her öldürme 5 altın değerindedir ve bir sonraki kulenin parasını öder.
+**Yeniden doldurma (cooldown).** Kuleler her karede ateş etmez. Her kulenin geri sayan bir `cooldown`'u vardır; sıfıra
+inince kule ateş eder ve sayaç `reload`'dan (24 kare) yeniden başlar. Oyunlardaki her silah ve yetenek aynı fikirle
+çalışır: her şeyin kendi sayacı, `update()` içinde geri sayılır. Döngüdeki `continue` "bu kuleyi bırak, sıradakine
+geç" demektir.
+
+**Güdümlü mermi.** Mermi her karede hedefin **şu anki** yerine doğru 0,3 kare ilerler:
+
+- `dx`, `dy` → hedefe doğru ok: yatay ve dikey fark.
+- `dx / distance` → oku kendi uzunluğuna bölersek boyu 1 olan bir **yön** elde ederiz. 0,3 ile çarpınca bir adım.
+- Hedef bir adımdan yakınsa (`distance < 0.3`) vurulmuştur: `hit(b)` düşmanın canından (`hp`) kulenin hasarını düşer.
+- Hedef mermi varmadan ölürse mermi söner. Biten mermileri `b.done = true` ile işaretleriz; döngüden sonra
+  `filter` onları listeden atar. (Liste üstünde dolaşırken elemanları silmek karışıklık çıkarır; önce işaretleyip sonra
+  süzmek daha güvenlidir.)
+
+**Can ve ödül.** Her düşman 10 canla (`hp: 10`) başlar. Yolun sonuna varan düşmanın canı 0 yapılır; böylece peşinden
+mermi gitmez ve aynı "canı bitenleri sil" satırıyla listeden çıkar. Bu karede ölen her düşman 5 altın verir; bu da bir
+sonraki kulenin parası olur. Dikkat: yolun sonundan çıkanlar ödül getirmez, çünkü onlar ödül satırından **önce**
+silinir.
 
 # --task--
 
@@ -59,15 +77,117 @@ Her düşman 10 canla başlar; her öldürme 5 altın değerindedir ve bir sonra
 
 # --task-tr--
 
-1. Düşmanlar `{ d: 0, hp: 10 }` olarak başlar; kuleler `cooldown: 0` alır; `bullets` ekle (`reset()`'te `[]`). Sonu geçen
-   bir düşman `hp = 0` alır ve canı kalmayan düşmanlar çıkarılır.
-2. `targetFor(tower)` yaz: kulenin menzilindeki (kulenin döşemesinden düşmanın noktasına `Math.hypot`) düşmanlar arasında
-   en büyük `d`'ye sahip olan ya da `null`.
-3. Her karede her kulenin `cooldown`'unu geri say; `0` ya da altındaysa ve bir hedefi varsa bir mermi
-   `{ x: col, y: row, target, kind }` ekle ve `cooldown`'u türünün `reload`'u yap.
-4. Her mermiyi hedefinin noktasına doğru 0.3 döşeme hareket ettir. 0.3'ten yakınsa: `hit(bullet)` (hedef türün `damage`'ı
-   kadar can kaybeder) ve mermi biter. Hedefinin canı kalmamış bir mermi de biter.
-5. Bu karede ölen her düşman 5 altın verir. Mermileri 4 yarıçaplı `'#fef08a'` daireler olarak çiz.
+1. `let towers` satırının altına mermi listesini ekle:
+
+   ```js
+   let towers
+   let bullets // ← yeni
+   let gold
+   ```
+
+2. `reset()` içinde `towers = []` satırının altına şunu ekle:
+
+   ```js
+     towers = []
+     bullets = [] // ← yeni
+   ```
+
+3. `build()` fonksiyonundaki `towers.push(...)` satırını değiştir:
+
+   ```js
+     towers.push({ col, row, kind: selected, cooldown: 0 }) // ← değişti
+   ```
+
+4. `canvas.addEventListener('pointerleave', ...)` bloğunun bittiği `})` satırının altına, `function update()`
+   satırından önce iki fonksiyon yaz:
+
+   ```js
+   // The enemy in range that has walked the furthest: it is the closest to getting through.
+   function targetFor(tower) {
+     const range = TOWERS[tower.kind].range
+     let target = null
+     for (const e of enemies) {
+       const p = pointAt(e.d)
+       const inRange = Math.hypot(p.x - tower.col, p.y - tower.row) <= range
+       if (inRange && (!target || e.d > target.d)) target = e
+     }
+     return target
+   }
+
+   function hit(bullet) {
+     bullet.target.hp -= TOWERS[bullet.kind].damage
+   }
+   ```
+
+5. `update()` fonksiyonunun tamamını sil ve yerine bunu yaz:
+
+   ```js
+   function update() {
+     if (toSpawn > 0) {
+       spawnIn -= 1
+       if (spawnIn <= 0) {
+         enemies.push({ d: 0, hp: 10 }) // ← değişti
+         toSpawn -= 1
+         spawnIn = 45
+       }
+     }
+
+     for (const e of enemies) e.d += SPEED
+     // Walked off the end of the road. Its hp drops to 0 so no bullet chases it any more. // ← değişti
+     for (const e of enemies) if (pointAt(e.d) === null) e.hp = 0 // ← yeni
+     enemies = enemies.filter((e) => e.hp > 0) // ← değişti
+
+     for (const t of towers) { // ← yeni (buradan sona kadar)
+       t.cooldown -= 1
+       if (t.cooldown > 0) continue
+       const target = targetFor(t)
+       if (!target) continue
+       bullets.push({ x: t.col, y: t.row, target, kind: t.kind })
+       t.cooldown = TOWERS[t.kind].reload
+     }
+
+     // Bullets fly towards their target; if it is gone, they fizzle out.
+     for (const b of bullets) {
+       if (b.target.hp <= 0) {
+         b.done = true
+         continue
+       }
+       const p = pointAt(b.target.d)
+       const dx = p.x - b.x
+       const dy = p.y - b.y
+       const distance = Math.hypot(dx, dy)
+       if (distance < 0.3) {
+         hit(b)
+         b.done = true
+       } else {
+         b.x += (dx / distance) * 0.3
+         b.y += (dy / distance) * 0.3
+       }
+     }
+     bullets = bullets.filter((b) => !b.done)
+
+     for (const e of enemies) if (e.hp <= 0) gold += 5
+     enemies = enemies.filter((e) => e.hp > 0)
+   }
+   ```
+
+   `else` "değilse" demektir: vurmadıysa bir adım daha yaklaş.
+
+6. `draw()` içinde, düşmanları çizen döngünün kapanış `}`'sinin altına ve `ctx.fillStyle = 'white'` satırının üstüne
+   mermileri çizen kısmı ekle:
+
+   ```js
+     ctx.fillStyle = '#fef08a'
+     for (const b of bullets) {
+       ctx.beginPath()
+       ctx.arc((b.x + 0.5) * TILE, TOP + (b.y + 0.5) * TILE, 4, 0, Math.PI * 2)
+       ctx.fill()
+     }
+   ```
+
+7. **Çalıştır**'a bas. Yolun kenarına bir kule kur: düşmanlar yaklaşınca sarı mermiler uçmalı, düşmanlar ölmeli ve
+   altın artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Mermiler hiç çıkmıyorsa `build()` içindeki `cooldown: 0`'ı
+   unutmuş olabilirsin.
 
 # --tests--
 

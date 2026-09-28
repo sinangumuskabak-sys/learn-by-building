@@ -26,22 +26,42 @@ tiny formula for a very recognizable effect; almost every action game uses it.
 
 # --explanation-tr--
 
-Gemiye çarpan bir kaya bir cana mal olur ve gemiyi ortaya geri koyar. Çarpışma, gemiden biraz küçük bir daire kullanır
-(`SHIP_R * 0.7`), çünkü üçgen dairesini doldurmaz: koşucu oyunundaki gibi cömert, "affedici" bir çarpışma kutusu.
+**Bu adımda:** kaya gemiye çarpınca bir can gidecek ve gemi ortada yeniden doğacak. Yeni doğan gemi iki saniye yanıp
+sönecek ve bu sürede kayalar ona zarar veremeyecek. Sağ üstte canların `▲▲▲` olarak görünecek.
 
-Yeniden doğmak bir adalet sorunu doğurur. Ortadan bir kaya geçiyorsa yeni gemi anında vurulur ve oyuncu hiçbir tuşa
-dokunmadan bir can daha kaybeder. Klasik çözüm birkaç saniyelik **dokunulmazlıktır**. Geminin **ne zamana kadar**
-güvende olduğunu sakla; Köstebek Vurmaca'daki zaman damgası fikri:
+**Çarpışma.** 6. adımdaki `hits` fonksiyonunu kullanırız. Gemi için daire yarıçapı `SHIP_R * 0.7`: üçgen, çevresindeki
+daireyi tam doldurmadığı için biraz küçük bir daire daha **adil** hissettirir. Oyuncu "değmedi ki!" demesin.
+
+`asteroids.some((asteroid) => hits(...))` → listede koşulu tutan **en az bir** öğe varsa `true` verir. Yani "herhangi
+bir kaya gemiye değiyor mu?".
+
+**Adalet sorunu.** Gemi ortada yeniden doğarken oradan bir kaya geçiyorsa, oyuncu tek tuşa basmadan bir can daha
+kaybeder. Klasik çözüm: birkaç saniyelik **dokunulmazlık**. Geminin **ne zamana kadar** güvende olduğunu saklarız:
 
 ```js
 ship.safeUntil = now + SAFE_TIME
-...
-if (now >= ship.safeUntil && /* bir kayaya değiyor */) crash()
 ```
 
-Oyuncu güvende olduğunu **görebilmeli**, yoksa kayalar içinden geçince bir hata gibi hisseder. Bu yüzden gemi
-dokunulmazken yanıp söner: yalnızca 150 ms'lik dilimlerde bir çizilir, `Math.floor(now / 150) % 2 === 0`. Çok tanıdık
-bir efekt için küçücük bir formül; neredeyse her aksiyon oyunu bunu kullanır.
+**Zaman nereden gelir?** `requestAnimationFrame`, `loop`'u çağırırken ona sayfa açıldığından beri geçen süreyi
+**milisaniye** olarak verir (1000 milisaniye = 1 saniye). `function loop(time)` diye bir parametre ekleyince bu sayıyı
+alırız ve `now` adlı değişkende saklarız. `SAFE_TIME = 2000` yani 2 saniye.
+
+Çarpışmayı yalnız `now >= ship.safeUntil` ("şimdiki zaman güvenli sürenin sonuna geldi ya da geçti") ise sayarız. `>=`
+"büyük ya da eşit" demektir.
+
+**Yanıp sönme.** Oyuncu güvende olduğunu **görmeli**; yoksa kayaların içinden geçmesi hata gibi görünür. Bunun için
+gemiyi 150 milisaniyelik dilimlerin sadece birinde çizer, diğerinde çizmeyiz:
+
+- `now / 150` → şimdiye kadar kaç tane 150 ms'lik dilim geçti (küsuratlı).
+- `Math.floor(...)` → küsuratı atıp aşağı yuvarlar: `7.8` → `7`.
+- `% 2 === 0` → 2'ye bölümünden kalan 0 mı, yani sayı **çift** mi? Dilim numarası çift, tek, çift, tek diye gider;
+  gemi de görünür, görünmez diye yanıp söner.
+
+`||` "veya" demektir: `!safe || ...` → "güvende değilse **ya da** çift dilimdeyse çiz".
+
+**Canları göstermek.** `'▲'.repeat(3)` yazıyı 3 kez yan yana koyar: `'▲▲▲'`. `Math.max(0, lives)` iki sayıdan
+büyüğünü verir; can eksiye düşerse bile 0 kullanılır. `textAlign = 'right'` yazıyı verilen noktaya sağdan hizalar,
+böylece sağ kenara yaslanır.
 
 # --task--
 
@@ -54,12 +74,90 @@ bir efekt için küçücük bir formül; neredeyse her aksiyon oyunu bunu kullan
 
 # --task-tr--
 
-1. `SAFE_TIME = 2000`, `let lives = 3` ve `let now = 0` (döngünün `time`'ından ayarlanır) ekle. `resetShip()`
-   `safeUntil: now + SAFE_TIME` de ayarlasın.
-2. `crash()` yaz: bir can kaybet ve `resetShip()`. `update()` içinde mermilerden sonra gemi güvende değilken bir
-   asteroite değiyorsa (gemi yarıçapı `SHIP_R * 0.7`) çağır.
-3. Gemiyi yalnızca güvende değilken ya da `Math.floor(now / 150) % 2 === 0` iken çiz. Canları tepede sağa hizalı `▲`
-   sembolleri olarak göster (`'▲'.repeat(lives)`).
+1. `const POINTS = ...` satırının hemen altına güvenli süreyi ekle:
+
+   ```js
+   const SAFE_TIME = 2000 // milliseconds of invulnerability after respawning
+   ```
+
+2. `let score` satırının hemen altına iki satır ekle:
+
+   ```js
+   let lives
+   let now = 0
+   ```
+
+3. `resetShip` fonksiyonundaki satırın sonuna, `vy: 0`'dan sonra `safeUntil`'i ekle:
+
+   ```js
+   function resetShip() {
+     ship = { x: canvas.width / 2, y: canvas.height / 2, angle: -Math.PI / 2, vx: 0, vy: 0, safeUntil: now + SAFE_TIME } // ← değişti
+   }
+   ```
+
+4. `breakAsteroid` fonksiyonunun kapanış `}`'inden sonra, `document.addEventListener('keydown', ...)`'ten önce çarpma
+   fonksiyonunu yaz:
+
+   ```js
+   function crash() {
+     lives -= 1
+     resetShip()
+   }
+   ```
+
+5. `update()`'in en sonunda, `bullets = bullets.filter(...)` satırından sonra ve kapanış `}`'inden önce çarpışma
+   kontrolünü ekle:
+
+   ```js
+     bullets = bullets.filter((bullet) => bullet.life > 0)
+
+     if (now >= ship.safeUntil && asteroids.some((asteroid) => hits(ship, SHIP_R * 0.7, asteroid, asteroid.r))) { // ← yeni
+       crash()
+     }
+   }
+   ```
+
+6. `draw()` içinde tek başına duran `drawShip()` satırını şu üç satırla değiştir:
+
+   ```js
+     // Blink while invulnerable, so the player can see it.
+     const safe = now < ship.safeUntil
+     if (!safe || Math.floor(now / 150) % 2 === 0) drawShip() // ← değişti
+   ```
+
+7. `draw()`'un en sonunda, `ctx.fillText(String(score), 12, 26)` satırından sonra canları yazan iki satırı ekle:
+
+   ```js
+     ctx.fillText(String(score), 12, 26)
+     ctx.textAlign = 'right'                                              // ← yeni
+     ctx.fillText('▲'.repeat(Math.max(0, lives)), canvas.width - 12, 26) // ← yeni
+   }
+   ```
+
+   `▲` işaretini buradan kopyalayıp yapıştırabilirsin.
+
+8. `loop` fonksiyonuna zamanı alan parametreyi ve onu saklayan satırı ekle:
+
+   ```js
+   function loop(time) { // ← değişti
+     now = time          // ← yeni
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. En alttaki başlangıç satırlarında `score = 0`'ın altına canları koy:
+
+   ```js
+   score = 0
+   lives = 3 // ← yeni
+   bullets = []
+   ```
+
+10. **Çalıştır**'a bas. Gemi ilk iki saniye yanıp sönmeli; sağ üstte `▲▲▲` görünmeli. Oynamak için önce oyuna tıkla ve
+    bir kayaya çarp: bir `▲` gitmeli, gemi ortada yanıp sönerek yeniden doğmalı. Alttaki kontrollerin hepsi yeşil
+    olmalı. Kırmızı kalırsa `function loop(time)` ve `now = time` satırlarını unutmadığına bak.
 
 # --tests--
 

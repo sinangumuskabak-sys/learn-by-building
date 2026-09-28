@@ -22,20 +22,48 @@ Finally, the high score is saved when the game ends and shown next to the score.
 
 # --explanation-tr--
 
-3. dalgadan itibaren bazı füzeler inerken **üçe bölünür**. Durdurması kolay görünen bir füze birden farklı şehirlere giden üç
-füzelik bir yelpazeye dönüşür. Bu, füzeleri erken, gökyüzünün yükseklerinde durdurmayı ödüllendirir.
+**Bu adımda:** 3. dalgadan itibaren bazı füzeler inerken **üçe bölünecek**. Kolay durdurulur görünen bir füze birden
+farklı şehirlere giden üç füzeye dönüşecek. Ayrıca en iyi skorun saklanacak; sol üstte `Score 0  Best 4200` gibi bir
+yazı göreceksin.
 
-Bölünme `launch()`'u yeniden kullanır: yalnızca bir başlangıç noktası kabul etmesi gerekir, varsayılan olarak ekranın tepesi:
+**Neden bölünme?** Füzeleri erken, gökyüzünde yüksekteyken durdurmayı ödüllendirir. Bölünecek füzeler `split: true`
+işaretini taşır. 3. dalgadan itibaren her yeni füzenin dörtte bir şansı vardır:
+
+```js
+const split = wave >= 3 && Math.random() < 0.25
+```
+
+`>=` "büyük ya da eşit" demektir. `Math.random() < 0.25` yüzde 25 ihtimalle doğrudur. İkisi `&&` ile bağlı: 1. ve 2.
+dalgada ilki yanlış olduğu için sonuç hep `false`'tur.
+
+**Varsayılan parametre.** Bölünme `launch()`'u yeniden kullanır; yalnızca bir başlangıç noktası kabul etmesi gerekir,
+verilmezse ekranın üstü kullanılır:
 
 ```js
 function launch(sx = Math.random() * canvas.width, sy = 0) { ... }
-launch(m.x, m.y)   // bu füzenin olduğu yerde başlayan yeni bir füze
+launch()           // normal füze: üstte rastgele bir yerden
+launch(m.x, m.y)   // parça: bu füzenin şu anki yerinden
 ```
 
-**Varsayılan parametreler** tek bir fonksiyonun iki işe de yaramasını sağlar: normal bir füze için `launch()`, bir parça için
-`launch(x, y)`.
+Parametrenin yanındaki `= ...` onun **varsayılan değeridir**: çağırırken o değeri vermezsen bu kullanılır. Böylece tek
+fonksiyon iki işe yarar. Eskiden fonksiyonun içinde olan `const sx = ...` ve `const sy = 0` satırları artık parantezin
+içine taşınır.
 
-Son olarak rekor oyun bitince kaydedilir ve skorun yanında gösterilir.
+**Bölünme anı.** Bölünecek bir füze `y = 150`'nin altına inince bölünme işareti kalkar (bir daha bölünmesin) ve
+bulunduğu yerden iki füze daha fırlatılır; kendisi de yoluna devam eder, toplam üç. İki kez tekrar için sayan bir `for`
+döngüsü kullanırız:
+
+```js
+for (let i = 0; i < 2; i++) launch(m.x, m.y)
+```
+
+"`i` 0'dan başlasın; 2'den küçük olduğu sürece tekrar et; her turdan sonra 1 artır (`i++`)." Yani `i` 0 ve 1 iken, iki
+kez çalışır.
+
+**En iyi skor: `localStorage`.** Tarayıcının, sayfayı kapatsan da silinmeyen küçük defteridir:
+`localStorage.setItem('missile-best', 4200)` yazar, `localStorage.getItem('missile-best')` okur. Defter her şeyi
+**yazı** olarak tutar; `Number(...)` yazıyı sayıya çevirir. İlk oyunda not yoktur; `|| 0` "yoksa 0 kullan" demektir.
+Oyun bittiğinde skor en iyiden büyükse (`score > best`) kaydederiz.
 
 # --task--
 
@@ -47,11 +75,60 @@ Son olarak rekor oyun bitince kaydedilir ve skorun yanında gösterilir.
 
 # --task-tr--
 
-1. `launch(sx, sy)` bir başlangıç noktası alır; varsayılan olarak tepede rastgele bir `x` ve `y = 0`. 3. dalgadan itibaren her yeni
-   füzenin dörtte bir `split: true` olma şansı vardır.
-2. `y = 150`'nin altındaki bölünen bir füze bölünmeyi bırakır ve olduğu yerden iki füze daha fırlatır.
-3. Oyun daha yüksek bir skorla bitince kaydedilen `best`'i (`localStorage` `'missile-best'`) ekle ve sol üste
-   `Score 900  Best 4200` çiz.
+1. `let incoming` satırının yorumunu güncelle ve `let pause` satırının altına en iyi skoru okuyan satırı ekle:
+
+   ```js
+   let incoming // enemy missiles: { sx, sy, x, y, tx, ty, speed, split }
+   ```
+
+   ```js
+   let best = Number(localStorage.getItem('missile-best')) || 0
+   ```
+
+2. `launch()` fonksiyonunu şöyle yap (ilk iki satırı parametrelere taşındı):
+
+   ```js
+   function launch(sx = Math.random() * canvas.width, sy = 0) { // ← değişti
+     const targets = cities.filter((c) => c.alive).map((c) => c.x).concat(BASE.x)
+     const tx = targets[Math.floor(Math.random() * targets.length)]
+     const split = wave >= 3 && Math.random() < 0.25 // ← yeni
+     incoming.push({ sx, sy, x: sx, y: sy, tx, ty: GROUND, speed: 0.5 + wave * 0.15, split }) // ← değişti
+   }
+   ```
+
+3. `update()` içinde düşman füzelerinin döngüsünde, patlama kontrolünün (`continue` ile biten blok) altına ve
+   `if (stepTowards(m, m.speed))` satırının üstüne bölünmeyi ekle:
+
+   ```js
+       // Some missiles split into three halfway down.
+       if (m.split && m.y > 150) {
+         m.split = false
+         for (let i = 0; i < 2; i++) launch(m.x, m.y)
+       }
+   ```
+
+4. Aynı fonksiyonda oyun bitince en iyi skoru kaydet:
+
+   ```js
+     if (!cities.some((c) => c.alive)) {
+       state = 'over'
+       if (score > best) { // ← yeni
+         best = score // ← yeni
+         localStorage.setItem('missile-best', best) // ← yeni
+       } // ← yeni
+       return
+     }
+   ```
+
+5. `draw()` içinde skoru yazan satırı değiştir:
+
+   ```js
+     ctx.fillText('Score ' + score + '  Best ' + best, 10, 22) // ← değişti
+   ```
+
+6. **Çalıştır**'a bas. Sol üstte `Score 0  Best 0` yazmalı. 3. dalgaya ulaşınca bazı füzeler yolun üçte biri civarında
+   üçe ayrılmalı. Oyun bitince `Best` yeni skorunu göstermeli. Alttaki kontrollerin hepsi yeşil olmalı. `Best` kontrolü
+   kırmızıysa `'  Best '` içindeki iki boşluğu kontrol et.
 
 # --tests--
 

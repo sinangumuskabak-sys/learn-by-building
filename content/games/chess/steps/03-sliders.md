@@ -26,23 +26,38 @@ At the start the sliding pieces have no moves at all: every one of them is boxed
 
 # --explanation-tr--
 
-Kaleler, filler ve vezirler **kayar**: bir yönde, bir şey onları durdurana kadar istedikleri kadar giderler. Bu yüzden sabit
-sıçramalar yerine **yönleri** vardır ve her yön kare kare izlenir:
+**Bu adımda:** kaleleri, filleri ve vezirleri hareket ettireceğiz. Başta görünürde bir şey değişmeyecek (bu taşların
+hepsi kendi taşlarıyla çevrili); bir atı ya da piyonu kaldırıp yol açınca kale, fil ve vezir o yoldan kayabilecek.
+
+**Kayan taşlar.** Kale, fil ve vezir **kayar**: bir şey onları durdurana kadar bir yönde istedikleri kadar giderler.
+Bu yüzden sabit sıçramalar yerine **yönleri** vardır ve her yön kare kare takip edilir:
 
 ```js
 while (inside(tr, tc)) {
   if (board[tr][tc]) {                      // yolda bir taş var
-    if (rakipse) almayı ekle
-    break                                   // içinden geçemez
+    if (rakipse) yeme hamlesini ekle
+    break                                   // onun içinden geçemez
   }
   hamleyi ekle, sonra bir kare daha ilerle
 }
 ```
 
-Kale dört düz yönü, fil dört çaprazı, vezir sekizini de kullanır: vezir kelimenin tam anlamıyla bir kale ve bir filin birleşimidir
-ve kod tam da bunu `[...STRAIGHT, ...DIAGONAL]` ile söyler.
+**Yeni parçalar:**
 
-Başta kayan taşların hiç hamlesi yoktur: hepsi kendi taşları tarafından kapatılmıştır.
+- **`while (koşul) { ... }`**: koşul doğru olduğu sürece tekrar eder. Burada: kare tahtanın içinde olduğu sürece.
+- **`break`**: döngüden hemen çıkar. Yolda bir taş bulunca o yönde daha fazla gidilmez.
+- **`if (board[tr][tc])`**: karede bir şey varsa (boş yazı `''` "yok" sayılır, `'bN'` gibi dolu yazı "var").
+- **`let` ile değişen konum:** `tr` ve `tc` her turda `tr += dr` ile bir kare daha ilerler (`+=` "üstüne ekle").
+  Bu yüzden `const` değil `let` ile yazılır.
+- **`[...STRAIGHT, ...DIAGONAL]`**: üç nokta (`...`) iki listenin elemanlarını tek bir yeni listeye döker; 4 + 4 = 8
+  yön.
+- Zincirli seçim: `kind === 'R' ? STRAIGHT : kind === 'B' ? DIAGONAL : [...]` → kale ise düz, fil ise çapraz, değilse
+  (vezir) hepsi.
+
+Kale dört düz yönü, fil dört çaprazı, vezir sekizini kullanır: vezir gerçekten kale ile filin toplamıdır ve kod da
+tam bunu söyler.
+
+Başlangıçta kayan taşların hiç hamlesi yoktur: her biri kendi taşlarıyla kapalıdır.
 
 # --task--
 
@@ -52,9 +67,55 @@ Başta kayan taşların hiç hamlesi yoktur: hepsi kendi taşları tarafından k
 
 # --task-tr--
 
-1. `STRAIGHT` ve `DIAGONAL`'ı (her biri dört yön) ekle.
-2. `pseudoMoves` içinde kaleler düz yönlerde, filler çapraz yönlerde, vezirler ikisinde de kayar; kendi taşlarından önce, rakip
-   taşların üstünde (alarak) dururlar.
+1. `const KING = [...]` satırının altına iki yön listesi ekle:
+
+   ```js
+   const STRAIGHT = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+   const DIAGONAL = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+   ```
+
+2. `pseudoMoves`'un üstündeki yorumu değiştir, artık bütün taşları kapsıyor:
+
+   ```js
+   // Every move that follows the pieces' patterns. (Check comes later: for now even a king can be taken.)
+   ```
+
+3. `pseudoMoves` içinde, at-şah bloğunun (`if (kind === 'N' || kind === 'K') { ... }`) kapanış `}`'inin hemen altına
+   kayan taşların bloğunu ekle. Döngünün içi şöyle olmalı:
+
+   ```js
+         const kind = piece[1]
+         if (kind === 'N' || kind === 'K') {
+           for (const [dr, dc] of kind === 'N' ? KNIGHT : KING) {
+             const tr = r + dr
+             const tc = c + dc
+             if (inside(tr, tc) && board[tr][tc][0] !== color) add(r, c, tr, tc)
+           }
+         }
+         if (kind === 'R' || kind === 'B' || kind === 'Q') {                                // ← yeni
+           const dirs = kind === 'R' ? STRAIGHT : kind === 'B' ? DIAGONAL : [...STRAIGHT, ...DIAGONAL]
+           for (const [dr, dc] of dirs) {
+             let tr = r + dr
+             let tc = c + dc
+             while (inside(tr, tc)) {
+               if (board[tr][tc]) {
+                 if (board[tr][tc][0] !== color) add(r, c, tr, tc)
+                 break
+               }
+               add(r, c, tr, tc)
+               tr += dr
+               tc += dc
+             }
+           }
+         }                                                                                   // ← yeni blok bitti
+       }
+     }
+     return moves
+   ```
+
+4. **Çalıştır**'a bas. Piyonlar henüz oynamıyor (sonraki adım), ama b1'deki atı oynatıp sıra tekrar beyaza
+   gelince a1'deki kale boşalan kareye kayabilmeli. Alttaki kontrollerin hepsi yeşil olmalı. Sayfa donarsa `tr += dr`
+   ve `tc += dc` satırlarını kontrol et; yoksa `while` hiç bitmez.
 
 # --tests--
 

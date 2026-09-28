@@ -20,16 +20,36 @@ player by accident.
 
 # --explanation-tr--
 
-Bir sonraki döşeme ortasını beklemek yan koridora dönmek için doğrudur ama **geri** dönmek için yanlıştır. Önde bir hayalet
-belirirse oyuncunun adımı bitirdikten sonra değil, hemen geri dönmesi gerekir. Ve adımın ortasında geri dönmek her zaman
-mümkündür: geri giden yol az önce geldiğin yoldur.
+**Bu adımda:** oyuncu adımın ortasında bile **anında geri dönebilecek**. Telefonda da oynanabilsin diye parmakla
+kaydırmayla (swipe) yön vereceğiz.
 
-Püf noktası ona öbür döşemeden bakmaktır. 9. döşemeden 8. döşemeye adımının 3. karesindeki bir oyuncu, aynı zamanda 8.
-döşemeden 9. döşemeye geri adımının 5. karesindedir. Yani geri dönmek: `col`'u gittiğin döşemeye taşı, `dir`'i ters çevir ve
-`progress`'i `frames - progress` yap. Çizilen konum hiç değişmez; zıplama olmaz, yalnızca yön anında değişir.
+**Sorun.** Yan koridora dönmek için bir sonraki kare ortasını beklemek doğru. Ama **geri** dönmek için yanlış: önünde
+bir hayalet belirirse hemen dönmelisin, adımı bitirince değil. Geri dönmek her zaman mümkündür, çünkü geri yol az önce
+geldiğin yoldur.
 
-Telefonda bir **kaydırma** `want`'ı bir ok tuşuyla aynı biçimde ayarlar. Çok küçük bir hareket yok sayılır; böylece bir
-dokunuş oyuncuyu yanlışlıkla döndürmez.
+**Hile: öbür kareden bakmak.** 9. kareden 8. kareye giden adımın 3. karesindeki oyuncu, aynı zamanda 8. kareden 9. kareye
+dönen bir adımın 5. karesindedir (8 − 3 = 5). Yani geri dönmek şudur:
+
+1. `col`'u gittiğin kareye taşı,
+2. yönü ters çevir,
+3. `progress`'i `frames - progress` yap.
+
+Çizilen yer hiç değişmez; zıplama olmaz, sadece yön anında döner. Kare ortasındaysan (`progress === 0`) ya da
+duruyorsan sadece yönü çevirmek yeter.
+
+`reverse` yönü ters çevirir: `[-dir[0], -dir[1]]`, yani iki sayının da işaretini değiştirir (`[1, 0]` → `[-1, 0]`).
+`steer` içinde istenen yön şimdiki yönün tersiyse (ve durmak değilse) `turnAround` çağırırız.
+
+**Kaydırma (swipe).** Telefonda kaydırma, `want`'ı ok tuşuyla aynı şekilde ayarlar:
+
+- `pointerdown` (parmağı koydun / fareye bastın) olduğunda başlangıç noktasını `swipeStart`'ta saklarız. Olayın
+  `event.clientX`, `event.clientY` bilgileri o noktanın sayfadaki konumudur.
+- `pointerup` (kaldırdın) olunca farkı hesaplarız: `dx` yatay, `dy` dikey kayma.
+- `Math.abs(x)` sayının işaretsiz büyüklüğüdür (`-60` → `60`). `Math.max(a, b)` büyüğünü verir. Kayma 20 pikselden
+  kısaysa bu bir dokunuştur, görmezden geliriz; böylece yanlışlıkla dönmezsin.
+- Hangi yön daha uzunsa o eksende döneriz. `Math.sign(dx)` sayının işaretini verir: eksi ise `-1`, artı ise `1`.
+  Sola kaydırma → `[-1, 0]`.
+- `let swipeStart = null` → `null` "şimdilik bir şey yok" demektir. `if (!swipeStart) return` → başlangıç yoksa çık.
 
 # --task--
 
@@ -42,12 +62,60 @@ dokunuş oyuncuyu yanlışlıkla döndürmez.
 
 # --task-tr--
 
-1. `reverse(dir)` ekle ve `turnAround(e)` yaz: döşeme ortasında (ya da dururken) yalnızca `dir`'i ters çevir; değilse
-   `col`'u (sarılmış) ve `row`'u bir adım taşı, `dir`'i ters çevir ve `progress = frames - progress` yap.
-2. Tuş işlemeyi `steer(dir)`'e taşı: `player.want`'ı ayarla ve `dir` oyuncunun yönünün tersiyse `turnAround(player)`
-   çağır.
-3. Canvas'ta bir `pointerdown`'ın nerede başladığını hatırla. `pointerup`'ta 20 pikselin altındaki hareketleri yok say;
-   değilse uzun eksen boyunca `steer` et.
+1. `const same = ...` satırının hemen altına ters yön fonksiyonunu ekle:
+
+   ```js
+   const reverse = (dir) => [-dir[0], -dir[1]]
+   ```
+
+2. `choosePlayer` fonksiyonunun kapanış `}`'inden sonra, `function steer`'den önce geri dönme fonksiyonunu yaz:
+
+   ```js
+   // Turning around in the middle of a tile: step into the next tile and walk back the rest of the way.
+   function turnAround(e) {
+     if (e.progress === 0 || same(e.dir, STOP)) {
+       e.dir = reverse(e.dir)
+       return
+     }
+     e.col = wrap(e.col + e.dir[0])
+     e.row += e.dir[1]
+     e.dir = reverse(e.dir)
+     e.progress = e.frames - e.progress
+   }
+   ```
+
+3. `steer` fonksiyonuna ters yöne basılınca hemen dönen satırı ekle:
+
+   ```js
+   function steer(dir) {
+     player.want = dir
+     if (same(dir, reverse(player.dir)) && !same(dir, STOP)) turnAround(player) // ← yeni
+   }
+   ```
+
+4. `keydown` dinleyicisinin kapanış `})`'inden sonra, `function update()`'ten önce kaydırma kodunu yaz:
+
+   ```js
+   // Touch: swipe in the direction to go.
+   let swipeStart = null
+   canvas.addEventListener('pointerdown', (event) => {
+     swipeStart = { x: event.clientX, y: event.clientY }
+   })
+   canvas.addEventListener('pointerup', (event) => {
+     if (!swipeStart) return
+     const dx = event.clientX - swipeStart.x
+     const dy = event.clientY - swipeStart.y
+     swipeStart = null
+     if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return
+     if (Math.abs(dx) > Math.abs(dy)) steer([Math.sign(dx), 0])
+     else steer([0, Math.sign(dy)])
+   })
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sola yürürken sağ oka bas: oyuncu adımın ortasında, zıplamadan
+   hemen geri dönmeli. Fareyle oyun alanında basıp bir yöne sürükleyip bırakırsan oyuncu o yöne dönmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `turnAround`'daki satır sırasına bak: önce `col`/`row` ilerler,
+   sonra yön döner, en son `progress` değişir.
 
 # --tests--
 

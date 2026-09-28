@@ -31,27 +31,45 @@ This difference between a *value* and a *reference to an object* is behind count
 
 # --explanation-tr--
 
-Oyun rastgele boş hücrelerdeki iki karoyla başlar ve her hamle bir tane daha ekler: ondan dokuzunda `2`, diğerinde `4`.
+**Bu adımda:** oyunu iki karoyla başlatacağız. **Çalıştır**'a her bastığında tahtada rastgele iki boş hücrede birer `2`
+(ara sıra `4`) belirecek.
 
-Rastgele bir **boş** hücre seçmek için önce hepsini `[row, col]` çiftleri olarak topla, sonra o listeden birini seç.
-Bu, "boş olana kadar rastgele hücre dene"den çok daha iyidir; o yöntem tahta doldukça yavaşlar ve tahta dolunca hiç
-bitmez.
+**Kural.** Oyun rastgele iki boş hücredeki iki karoyla başlar ve her hamle bir karo daha ekler: 10 seferin 9'unda `2`,
+kalanında `4`.
 
-Boş bir tahta kurmak JavaScript'in en ünlü tuzaklarından birini saklar:
+**Rastgele bir boş hücre seçmek.** Önce bütün boş hücreleri `[satır, sütun]` çiftleri olarak bir listeye toplarız,
+sonra o listeden birini seçeriz. "Boş olanı bulana kadar rastgele hücre dene" yöntemi tahta doldukça yavaşlar, tahta
+tamamen doluysa da hiç bitmez.
+
+- `const cells = []` → boş bir liste. `cells.push([row, col])` sonuna bir öğe ekler (burada iki sayılık küçük bir
+  liste). `cells.length` listedeki öğe sayısıdır.
+- `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir. Onu `cells.length` ile çarpıp
+  `Math.floor` ile aşağı yuvarlayınca `0` ile `length - 1` arasında rastgele bir **sıra numarası** (index) çıkar.
+  Örneğin 5 boş hücre varsa 0, 1, 2, 3 ya da 4.
+- `const [row, col] = cells[...]` → seçilen çiftin ilk sayısını `row`'a, ikincisini `col`'a koyar. Buna **parçalama**
+  (destructuring) denir.
+- `Math.random() < 0.9 ? 2 : 4` → rastgele sayı 0.9'dan küçükse (yaklaşık %90) `2`, değilse `4`.
+- `if (cells.length === 0) return` → boş hücre yoksa `return` ile fonksiyondan hemen çık; dolu tahta olduğu gibi kalır.
+
+**JavaScript'in ünlü tuzağı.** Boş bir tahta kurmak kolay görünür:
 
 ```js
-Array(4).fill(Array(4).fill(0))   // doğru görünür... ama bu dört kez paylaşılan TEK bir satır
+Array(4).fill(Array(4).fill(0))   // doğru görünüyor... ama bu TEK bir satır, dört kez paylaşılmış
 ```
 
-`fill` her yuvaya **aynı** dizi nesnesini koyar. `board[0][0] = 2` yap; `board[1][0]`, `board[2][0]` ve `board[3][0]`
-de 2 olur, çünkü hepsi aynı satır. `Array.from` **her** yuva için bir fonksiyon çağırır; böylece her satır yepyeni bir
-dizi olur:
+`Array(4)` 4 yerlik bir liste yapar, `.fill(x)` her yere `x` koyar. Ama `fill` her yere **aynı** satırı koyar. Aynı
+defterin dört fotokopisi değil, dört kişinin elinde tuttuğu **tek bir defter** gibi: `board[0][0] = 2` yazarsan
+`board[1][0]`, `board[2][0]`, `board[3][0]` da 2 olur, çünkü hepsi aynı satır. `Array.from` ise her yer için bir
+fonksiyonu **ayrı ayrı** çağırır, böylece her satır yepyeni bir liste olur:
 
 ```js
 Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
 ```
 
-Bir *değer* ile bir *nesneye başvuru* arasındaki bu fark, oyunların çok ötesinde sayısız hatanın arkasındadır.
+`() => ...` kısa yazılmış, adsız bir fonksiyondur (**ok fonksiyonu**): "her seferinde yeni bir sıfır satırı yap".
+**Değer** ile bir nesneye **başvuru** (reference) arasındaki bu fark, oyunların çok ötesinde sayısız hatanın sebebidir.
+
+Artık tahta `newGame()` ile kurulduğu için en üstte `let board` değersiz yazılır; değerini `newGame()` verir.
 
 # --task--
 
@@ -63,10 +81,58 @@ Bir *değer* ile bir *nesneye başvuru* arasındaki bu fark, oyunların çok öt
 
 # --task-tr--
 
-1. Değeri `0` olan her `[row, col]`'u döndüren `function emptyCells()` yaz.
-2. `function addTile()` yaz: boş hücre varsa rastgele birini seç ve `Math.random() < 0.9` ise `2`, değilse `4` yap.
-3. `function newGame()` yaz: `Array.from` ile (her satır kendi dizisi) yeni bir tahta kur, sonra iki karo ekle.
-   `draw()`'dan önce çağır; `let board`'u değersiz tanımla.
+1. `let board = [ ... ]` tahtasının tamamını (kapanış `]` dahil) sil ve yerine yalnızca şunu yaz:
+
+   ```js
+   let board
+   ```
+
+2. Bir satır boşluk bırak ve altına boş hücreleri listeleyen fonksiyonu yaz:
+
+   ```js
+   function emptyCells() {
+     const cells = []
+     for (let row = 0; row < SIZE; row++) {
+       for (let col = 0; col < SIZE; col++) {
+         if (board[row][col] === 0) cells.push([row, col])
+       }
+     }
+     return cells
+   }
+   ```
+
+3. Altına rastgele bir boş hücreye karo koyan fonksiyonu yaz:
+
+   ```js
+   function addTile() {
+     const cells = emptyCells()
+     if (cells.length === 0) return
+     const [row, col] = cells[Math.floor(Math.random() * cells.length)]
+     board[row][col] = Math.random() < 0.9 ? 2 : 4
+   }
+   ```
+
+4. Altına yeni oyunu kuran fonksiyonu yaz:
+
+   ```js
+   function newGame() {
+     // Array.from her satır için fonksiyonu çağırır; böylece her satır kendi listesi olur.
+     board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+     addTile()
+     addTile()
+   }
+   ```
+
+5. En alttaki `draw()` satırının **hemen üstüne** oyunu başlatan çağrıyı ekle:
+
+   ```js
+   newGame()
+   draw()
+   ```
+
+6. **Çalıştır**'a bas. Tahtada iki karo (genelde iki `2`) görünmeli; her **Çalıştır**'da başka yerlerde çıkmalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `newGame()`'in `draw()`'dan **önce** geldiğine ve `Array.from`
+   satırını harf harf yazdığına bak.
 
 # --tests--
 

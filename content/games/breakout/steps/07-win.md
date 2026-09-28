@@ -22,19 +22,40 @@ at startup too, the same "one reset function" rule as in every game so far.
 
 # --explanation-tr--
 
-İki şey eksik: bir skor ve **kazanmanın** bir yolu. Hiç canlı tuğla kalmayınca oyuncu kazanır. `array.every` tam
-olarak bu soruyu sorar:
+**Bu adımda:** skor, kazanma ve yeni oyun ekleyeceğiz. Sağ üstte `Score: 0` yazacak ve her kırılan tuğla 10 puan
+getirecek. Bütün tuğlaları kırınca `You win!` çıkacak; kazansan da kaybetsen de altında `Click to play again`
+yazacak ve tıklayınca (ya da Boşluk'a basınca) duvar yeniden kurulup yeni oyun başlayacak.
+
+**Ne zaman kazanılır?** Hiç canlı tuğla kalmadığında. Listeler bu soruyu doğrudan sorabilir:
 
 ```js
-bricks.every((brick) => !brick.alive)   // her tuğla ölüyse true
+bricks.every((b) => !b.alive)   // bütün tuğlalar ölü mü?
 ```
 
-`every` ve `some` birbirinin tersidir: "hepsi için doğru mu?" ve "en az biri için doğru mu?". `find`, `filter` ve `map`
-ile birlikte diziler üzerindeki elle yazılmış döngülerin çoğunun yerini alırlar ve kod ne demek istediğini söyler.
+`every` ("her biri") listedeki her elemanı sırayla küçük fonksiyona verir; **hepsi** için cevap doğruysa sonuç
+doğrudur. Tersi `some`'dır: "**en az biri** için doğru mu?". Önceki adımlarda gördüğün `find` (ilk uyanı bul) ile
+birlikte bunlar, listeler üzerinde elle yazılan döngülerin çoğunun yerini tutar ve kod ne demek istediğini
+doğrudan söyler.
 
-İki son, `'won'` ve `'lost'`, aynı yere çıkar: bir tıklama ya da Boşluk **yeni bir oyun** başlatır. Bu, duvarı yeniden
-kurmak, canları doldurmak, skoru sıfırlamak ve yeniden servis etmek demek. Hepsini `newGame()`'e koy ve açılışta da
-onu çağır; şimdiye kadarki her oyundaki "tek bir sıfırlama fonksiyonu" kuralı.
+**İki son, tek kapı.** İki bitiş (`'won'` kazandı ve `'lost'` kaybetti) aynı yere çıkar: bir tıklama ya da Boşluk
+**yeni bir oyun** başlatır. Yeni oyun demek: duvarı yeniden kur, canları doldur, skoru sıfırla, servise dön. Bunların
+hepsini tek bir `newGame()` fonksiyonuna koyarız ve oyunun en başında da onu çağırırız. İlk oyunla onuncu oyun aynı
+koddan başlasın ki farklı başlamasınlar.
+
+`newGame()`, kendisinden daha aşağıda yazılmış `buildBricks()`'i çağırıyor; bu sorun değil. Önemli olan, `newGame()`
+**çalıştırıldığı** anda (en alttaki çağrıda) bütün fonksiyonların tanımlanmış olmasıdır.
+
+**Kısa bir "eğer": `? :`.** Kazandıysak `You win!`, kaybettiysek `Game Over` yazmak için tek satırlık bir seçim
+kullanırız:
+
+```js
+state === 'won' ? 'You win!' : 'Game Over'
+```
+
+"Soru `?` evetse şu `:` değilse bu" diye okunur. Durum `'won'` ise sonuç `'You win!'`, değilse `'Game Over'` olur.
+
+**Sağa yaslı yazı.** `ctx.textAlign = 'right'` verilen noktayı yazının **sağ ucu** yapar. Skoru
+`canvas.width - 10` noktasına yazınca, sayı kaç haneli olursa olsun sağ kenardan 10 piksel içeride biter.
 
 # --task--
 
@@ -48,13 +69,91 @@ onu çağır; şimdiye kadarki her oyundaki "tek bir sıfırlama fonksiyonu" kur
 
 # --task-tr--
 
-1. `let score` ekle. Kırılan her tuğla `10` ekler.
-2. Bir tuğla kırıldıktan sonra her tuğla ölüyse `state = 'won'` yap.
-3. `buildBricks()` çağıran, `lives = 3` ve `score = 0` yapan ve `resetBall()` çağıran `function newGame()` yaz. Ayrı
-   çağrılar yerine açılışta onu kullan.
-4. `launch()` içinde: oyun `'won'` ya da `'lost'` ise onun yerine `newGame()` başlat.
-5. Sağ üst köşeye `Score: 120` yaz (`canvas.width - 10` noktasına sağa hizalı), kazanınca `You win!` yaz. Oyun
-   kazanıldığında ya da kaybedildiğinde mesajın altına `Click to play again` da yaz.
+1. `let lives = 3` ve `let state ...` satırlarını şu üç satırla değiştir (canlara artık değeri `newGame()` verecek):
+
+   ```js
+   let lives
+   let score
+   let state // 'serve', 'playing', 'won' or 'lost'
+   ```
+
+2. `clamp()` fonksiyonunun kapanış `}`'inden sonra, `function resetBall()`'dan **önce**, yeni oyun fonksiyonunu
+   yaz:
+
+   ```js
+   function newGame() {
+     buildBricks()
+     lives = 3
+     score = 0
+     resetBall()
+   }
+   ```
+
+3. `launch()` fonksiyonunun başına, oyun bittiyse yeni oyun başlatan kısmı ekle:
+
+   ```js
+   function launch() {
+     if (state === 'won' || state === 'lost') {   // ← yeni
+       newGame()                                  // ← yeni
+       return                                     // ← yeni
+     }                                            // ← yeni
+     if (state !== 'serve') return
+     state = 'playing'
+     ball.vx = 3
+     ball.vy = -4
+   }
+   ```
+
+4. `update()` fonksiyonunda tuğla kıran `if (brick) { ... }` bloğunu şöyle değiştir:
+
+   ```js
+     if (brick) {
+       brick.alive = false
+       score += 10                                                   // ← yeni
+       const throughTopOrBottom = ball.x >= brick.x && ball.x <= brick.x + BRICK_W
+       if (throughTopOrBottom) ball.vy = -ball.vy
+       else ball.vx = -ball.vx
+       if (bricks.every((b) => !b.alive)) state = 'won'              // ← yeni
+     }
+   ```
+
+5. `draw()` fonksiyonunda üç yeri değiştir:
+
+   - Topu çizen bloğun başındaki `if (state !== 'lost') {` satırını şöyle yap (top sadece servis ve oyun
+     sırasında görünsün):
+
+     ```js
+       if (state === 'serve' || state === 'playing') {
+     ```
+
+   - `ctx.fillText('Lives: ' + lives, 10, 26)` satırının hemen altına skoru ekle:
+
+     ```js
+       ctx.textAlign = 'right'
+       ctx.fillText('Score: ' + score, canvas.width - 10, 26)
+     ```
+
+   - En alttaki `if (state === 'lost') { ... }` bloğunu şununla değiştir:
+
+     ```js
+       if (state === 'won' || state === 'lost') {
+         ctx.font = 'bold 36px sans-serif'
+         ctx.fillText(state === 'won' ? 'You win!' : 'Game Over', canvas.width / 2, 250)
+         ctx.font = '16px sans-serif'
+         ctx.fillText('Click to play again', canvas.width / 2, 280)
+       }
+     ```
+
+6. En alttaki `buildBricks()` ve `resetBall()` satırlarını sil, yerine tek bir çağrı yaz:
+
+   ```js
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağ üstte `Score: 0` görmelisin. Oynamak için önce oyuna tıkla; her
+   kırılan tuğla skoru 10 artırmalı. Oyun bitince tıklamak yeni bir oyun başlatmalı. Alttaki kontrollerin hepsi
+   yeşil olmalı. Kırmızı kalırsa `You win!`'deki ünlemi ve `every` satırındaki `!b.alive`'ı kontrol et.
 
 # --tests--
 

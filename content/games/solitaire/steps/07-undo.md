@@ -25,23 +25,33 @@ game. A new deal starts with an empty history.
 
 # --explanation-tr--
 
-Her iyi kart oyununda **geri alma** vardır. Bu aynı zamanda programlamadaki en kullanışlı fikirlerden biridir: bir **anlık görüntü
-yığını**.
+**Bu adımda:** **geri alma** ekleyeceğiz. `Z` tuşuna her bastığında son hamle geri alınacak: taşınan kartlar yerine
+dönecek, açılan kart yeniden kapanacak, çevrilen deste kartı desteye geri girecek. Sağ üstte `Best -  Z undo` yazacak.
 
-Her değişiklikten önce bütün masanın bir kopyasını kaydederiz ve geri alma sonuncuyu geri alır:
+**Anlık görüntü yığını.** Her iyi kâğıt oyununda geri alma vardır. Bu aynı zamanda programlamanın en kullanışlı
+fikirlerinden biridir: her değişiklikten **önce** bütün masanın bir kopyasını (anlık görüntü, snapshot) saklarız; geri
+alma son kopyayı geri koyar.
 
 ```js
-const save = () => history.push(JSON.stringify(piles))
-piles = JSON.parse(history.pop())
+const save = () => history.push(JSON.stringify(piles))   // masanın kopyasını listenin sonuna ekle
+piles = JSON.parse(history.pop())                       // son kopyayı çıkar ve masayı onunla değiştir
 ```
 
-Neden yalnızca `history.push(piles)` değil de `JSON.stringify`? Çünkü o, bir sonraki hamlenin zaten değiştireceği **aynı** nesneye bir
-başvuru kaydederdi; yani "eski" konum da onunla birlikte değişirdi. Onu bir metne çevirmek gerçek, donmuş bir kopya yapar ve
-`JSON.parse` onu yepyeni dizilere ve kartlara geri çevirir. Ayrıca bir hamlenin dokunduğu her şeyi, açılan kart dahil, hiç özel kod
-olmadan geri getirir.
+**Neden `JSON.stringify`?** Sadece `history.push(piles)` yazsaydık, masanın kopyasını değil **aynı** masayı
+saklardık; bir sonraki hamle onu zaten değiştireceği için "eski" durum da onunla birlikte değişirdi. İki kişinin aynı
+defteri tutması gibi: biri yazınca öbürününki de değişir. `JSON.stringify(piles)` bütün masayı bir **yazıya**
+çevirir; yazı donmuş, gerçek bir kopyadır. `JSON.parse(yazı)` onu yeniden yepyeni listelere ve kartlara çevirir. Bu,
+bir hamlenin dokunduğu her şeyi, açılan kart dahil, özel bir kod yazmadan geri getirir.
 
-Yığın geri alma için tam uygundur: en son yapılan şey ilk geri alınandır. Oyunda geriye yürümek için Z'ye tekrar tekrar bas. Yeni bir
-dağıtım boş bir geçmişle başlar.
+**Yığın (stack) tam geri almaya göre.** `push` sona ekler, `pop` sondan alır: en son yapılan, ilk geri alınır. `Z`'ye
+tekrar tekrar basarak oyunda geriye yürürsün. Yeni dağıtım boş bir geçmişle başlar.
+
+**`undo()` içinde:** geçmiş boşsa (`!history.length`) **veya** (`||`) oyun kazanıldıysa hiçbir şey yapma (`return`).
+Yoksa masayı son kopyayla değiştir. Geri alma da bir hamle sayılır (`moves += 1`).
+
+**`save()` nerede çağrılır?** Masayı değiştiren iki yerde, değişiklikten hemen önce: `flipStock()`'un başında ve
+`tryMove()`'da hamleye izin verildikten **sonra**, kartlar taşınmadan **önce**. İzin verilmeyen denemeler geçmişe
+girmesin diye `if (!allowed) return false` satırının altına koyarız.
 
 # --task--
 
@@ -53,11 +63,72 @@ dağıtım boş bir geçmişle başlar.
 
 # --task-tr--
 
-1. `history` (`deal()`'da `[]`) ve `flipStock()`'un başında ve `tryMove`'da izin verilen bir hamleden hemen önce çağrılan `save()`'i
-   ekle.
-2. `undo()` yaz: geçmiş varsa ve oyun kazanılmadıysa son anlık görüntüyü geri yükle ve `moves`'a 1 ekle. Z tuşu onu çağırır (büyük ya
-   da küçük).
-3. Sağ üstteki en iyi sürenin ardına `  Z undo` ekle.
+1. `let moves` satırının altına geçmiş listesini ekle:
+
+   ```js
+   let history // earlier positions, for undo
+   ```
+
+2. `deal()` içinde, `moves = 0` satırının altına ekle:
+
+   ```js
+     moves = 0
+     history = []                 // ← yeni
+     frames = 0
+   ```
+
+3. `canFound` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function flipStock`'un **üstüne**)
+   kaydetme ve geri alma fonksiyonlarını yaz:
+
+   ```js
+   const save = () => history.push(JSON.stringify(piles))
+
+   function undo() {
+     if (!history.length || won) return
+     piles = JSON.parse(history.pop())
+     moves += 1
+   }
+   ```
+
+4. `flipStock()`'un ilk satırı olarak `save()` ekle:
+
+   ```js
+   function flipStock() {
+     save()                       // ← yeni
+     if (piles.stock.length) {
+   ```
+
+5. `tryMove()` içinde, `if (!allowed) return false` satırının altına `save()` ekle:
+
+   ```js
+     if (!allowed) return false
+     save()                       // ← yeni
+     piles[to].push(...piles[from].splice(index))
+   ```
+
+6. `keydown` dinleyicisinin başına `Z` satırını ekle; eski ilk satırın başına `else ` gelir:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'z' || event.key === 'Z') undo()          // ← yeni
+     else if (event.key === ' ') flipStock()                     // ← değişti
+     else if (event.key === 'n' || event.key === 'N') deal()
+     else return
+     event.preventDefault()
+   })
+   ```
+
+7. `draw()` içinde en iyi süreyi yazan satırın sonuna ipucunu ekle:
+
+   ```js
+     ctx.fillText('Best ' + (best ? best + 's' : '-') + '  Z undo', canvas.width - LEFT, 24)   // ← değişti
+   ```
+
+   `'  Z undo'`'nun başında **iki** boşluk var.
+
+8. **Çalıştır**'a bas. Oyuna tıkla, birkaç hamle yap (desteyi çevir, bir kartı taşı), sonra `Z`'ye bas: hamleler tek tek
+   geri alınmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `save()`'i `if (!allowed) return false`'un
+   **altına** koyduğundan emin ol.
 
 # --tests--
 

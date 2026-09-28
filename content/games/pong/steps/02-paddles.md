@@ -24,21 +24,52 @@ from the state, back to front: court first, paddles on top.
 
 # --explanation-tr--
 
-Her raket küçük bir durum parçasıdır: nerede olduğu. İki raketin boyutu aynı, bu yüzden boyut sabitlere gider ve her
-raket nesnesi yalnızca konumunu tutar:
+**Bu adımda:** sahaya iki beyaz raket koyacağız. Sağda, sol ve sağ kenarın yakınında dik duran iki beyaz
+dikdörtgen göreceksin.
+
+**Durum (state) nedir?** Oyunun şu anki hâlini anlatan bilgilere **durum** denir: raket nerede, top nerede, skor
+kaç. Bir raket için bilmemiz gereken tek şey konumudur.
+
+**Büyük harfli sabitler.** İki raketin boyutu aynıdır ve hiç değişmez. Böyle sabit ayarları, herkes "bu bir ayar"
+diye anlasın diye BÜYÜK HARFLE adlandırırız:
 
 ```js
-const PADDLE_W = 10
-const PADDLE_H = 80
+const PADDLE_W = 10   // raketin eni (W = width, genişlik)
+const PADDLE_H = 80   // raketin boyu (H = height, yükseklik)
+```
+
+**Nesne (object) nedir?** Birbirine ait birkaç bilgiyi tek pakette tutmanın yolu. Süslü parantez açılır, içine
+`ad: değer` çiftleri virgülle yazılır:
+
+```js
 let left = { x: 20, y: 160 }
 ```
 
-Sağ raket sağ kenardan 20 piksel içeride durmalı. `x` onun **sol** kenarıdır; bu yüzden `canvas.width - 20` değil
-`canvas.width - 20 - PADDLE_W` olur. Bunu bir kez, tek yerde doğru yapmak, sonradan çıkacak "on piksel kayma"
-hatalarından kurtarır.
+Bu, "sol raketin `x`'i 20, `y`'si 160" demek. İçindeki bir değeri nokta ile okursun: `left.x` → 20. Raketler
+ileride hareket edeceği için `const` değil `let` kullanıyoruz (1. adımda gördüğün gibi `let` değişebilir).
 
-Artık çizilecek birden fazla şey olduğu için tüm çizimi, sahneyi durumdan arkadan öne yeniden boyayan tek bir
-`draw()` fonksiyonuna taşı: önce saha, üstüne raketler.
+**Sağ raket nerede?** Sağ kenardan 20 piksel içeride durmalı. Ama raketin `x`'i onun **sol** kenarıdır. Sağ kenarı
+600 − 20 = 580'de olsun istiyorsak sol kenarı bir raket eni daha soldadır:
+
+```js
+let right = { x: canvas.width - 20 - PADDLE_W, y: 160 }   // 600 - 20 - 10 = 570
+```
+
+Bu hesabı tek yerde bir kez doğru yapmak, ileride "on piksel kaydı" türü hatalardan korur.
+
+**Fonksiyon (function) nedir?** Bir iş listesine ad verip saklamaktır; bir yemek tarifi gibi. **Tanımlamak** tarifi
+deftere yazmaktır, henüz yemek pişmez. **Çağırmak** tarifi uygulamaktır:
+
+```js
+function draw() {       // "draw" adlı tarifi tanımla; { } içi tarifin adımları
+  // ...
+}
+
+draw()                  // tarifi şimdi uygula (çağır)
+```
+
+Çağırırken adın sonuna `()` yazılır. Çizilecek şeyler çoğaldığı için bütün çizimi tek bir `draw()` fonksiyonuna
+topluyoruz. Sıra önemli: önce saha (arka), sonra raketler (ön), yoksa saha raketlerin üstünü boyar.
 
 # --task--
 
@@ -49,10 +80,46 @@ Artık çizilecek birden fazla şey olduğu için tüm çizimi, sahneyi durumdan
 
 # --task-tr--
 
-1. `const PADDLE_W = 10` ve `const PADDLE_H = 80` ekle.
-2. `let left = { x: 20, y: 160 }` ve `let right = { x: canvas.width - 20 - PADDLE_W, y: 160 }` ekle.
-3. Saha çizimini `function draw()` içine taşı; ardından iki raketi konumlarında `PADDLE_W` × `PADDLE_H` boyutunda
-   `'white'` dikdörtgenler olarak çiz. `draw()`'u bir kez çağır.
+1. `const ctx = canvas.getContext('2d')` satırının altına bir boş satır bırak ve iki boyut sabitini yaz:
+
+   ```js
+   const PADDLE_W = 10
+   const PADDLE_H = 80
+   ```
+
+2. Bir boş satır daha bırak ve iki raketin konumunu ekle:
+
+   ```js
+   let left = { x: 20, y: 160 }
+   let right = { x: canvas.width - 20 - PADDLE_W, y: 160 }
+   ```
+
+3. Altta zaten duran saha çizimini (siyah boyama ve `for` döngüsü) bir `draw()` fonksiyonunun içine al. Sonra iki
+   raketi çizen satırları ekle ve en alta `draw()` çağrısını yaz. Kodunun `let right = ...` satırından sonrası
+   tamamen şöyle olmalı:
+
+   ```js
+   function draw() {                                          // ← yeni
+     ctx.fillStyle = 'black'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'white'
+     for (let y = 0; y < canvas.height; y += 30) {
+       ctx.fillRect(canvas.width / 2 - 2, y, 4, 15)
+     }
+
+     ctx.fillRect(left.x, left.y, PADDLE_W, PADDLE_H)        // ← yeni
+     ctx.fillRect(right.x, right.y, PADDLE_W, PADDLE_H)      // ← yeni
+   }                                                          // ← yeni
+
+   draw()                                                     // ← yeni
+   ```
+
+   Raketler için ayrıca renk seçmedik: fırça zaten beyazda kaldı.
+
+4. **Çalıştır**'a bas. Sahanın iki yanında birer beyaz raket görmelisin; alttaki kontrollerin hepsi yeşil olmalı.
+   Kırmızı kalırsa `function draw() {` ile açtığın süslü parantezin raket satırlarından **sonra** kapandığını
+   kontrol et.
 
 # --tests--
 

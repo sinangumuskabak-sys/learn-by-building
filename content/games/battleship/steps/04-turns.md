@@ -20,16 +20,53 @@ difference.
 
 # --explanation-tr--
 
-Artık gerçek bir oyun: her atışından sonra bilgisayar **senin** denizine ateş eder. `fire(fleet, record, r, c)` sayesinde bu, diğer
-filo ve başka bir ızgarayla, `theirShots`'la aynı fonksiyondur.
+**Bu adımda:** oyun gerçek bir maça dönüşecek. Sen ateş ettikten kısa bir süre sonra bilgisayar da **senin**
+küçük denizine ateş edecek; atışları orada beyaz ve kırmızı noktalar olarak göreceksin. Önce hangisinin donanması
+biterse o kaybeder.
 
-Sıralar küçük bir durum makinesidir: `turn`, `'you'` ya da `'them'`'dir. Sen ateş edince `'them'` olur ve bir `timer` başlar; böylece
-bilgisayarın atışı hemen değil bir an sonra gelir, bu da izlemeyi kolaylaştırır. Sıra bilgisayardayken dokunuşların yok sayılır.
+**Aynı fonksiyon, öbür taraf.** 2. adımda `fire(fleet, record, r, c)`'yi donanmayı ve tabloyu parametre olarak alacak
+şekilde yazmıştık. Şimdi bunun ödülünü alıyoruz: bilgisayarın atışı aynı fonksiyondur, yalnızca öbür donanma
+(`myFleet`) ve başka bir tabloyla (`theirShots`, "onların atışları"):
 
-İlk bilgisayar oyuncusu olabildiğince basittir: **denemediği herhangi bir kareyi** rastgele seçer. Denenmemiş kareleri bir listede
-toplar ve birini seçeriz. Aynı kareye asla atış harcamaz ama gemilerinin nerede olabileceği hakkında hiçbir fikri yoktur; bir filoyu
-batırmak için yaklaşık 95 atışa, neredeyse bütün denize ihtiyacı vardır. Sonraki iki adım onu çok daha akıllı yapar ve farkı
-ölçebilirsin.
+```js
+fire(myFleet, theirShots, r, c)
+```
+
+**Sıra (turn).** Sıralar küçük bir **durum makinesi**dir: `turn` ya `'you'` (sen) ya `'them'` (onlar). Sen ateş
+edince `'them'` olur ve bir sayaç (`timer`) kurulur. Böylece bilgisayarın atışı hemen değil, bir an sonra gelir;
+takip etmesi daha kolay olur. Bilgisayarın sırasında tıklamaların yok sayılır: `playerShoots` başındaki koşula
+`turn !== 'you'` eklenir.
+
+**Kare kare geri sayım.** Oyun döngüsü saniyede yaklaşık 60 kez çalışır; her çalışmaya bir **kare** (frame) denir.
+`THINK = 30` "30 kare bekle" yani yarım saniye demektir. Her karede sayacı bir azaltırız:
+
+```js
+if (state === 'playing' && turn === 'them' && --timer === 0) computerShoots()
+```
+
+`--timer` sayacı **önce** 1 azaltır, sonra yeni değeri verir. Yani "oyun sürüyor **ve** sıra onlarda **ve** sayacı bir
+azaltınca 0'a indiyse, bilgisayar ateş etsin". `&&` zincirinde soldaki yanlışsa sağdakilere hiç bakılmaz; bu yüzden
+sayaç yalnızca bilgisayarın sırasında azalır. Bu işi `update()` fonksiyonu yapar ve döngüde `draw()`'dan önce çağrılır.
+
+**İlk bilgisayar oyuncusu** olabildiğince basittir: **henüz denemediği herhangi bir kareyi** rastgele seçer.
+Denenmemiş kareleri bir listede toplarız:
+
+```js
+const untried = () => {
+  const out = []
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!theirShots[r][c]) out.push({ r, c })
+  return out
+}
+```
+
+- Ok fonksiyonunun gövdesi birden çok satırsa süslü parantez içine yazılır ve sonucu `return` ile verilir.
+- İç içe iki `for` tek satırda: her satır ve her sütun için, kare boşsa (`!` "değil") `{ r, c }` nesnesini listeye ekle.
+  `{ r, c }`, `{ r: r, c: c }`nin kısaltmasıdır.
+
+`pickSquare()` bu listeden rastgele birini seçer (1. adımdaki `Math.floor(Math.random() * ...)` yöntemi). Aynı kareye
+asla iki kez ateş etmez, ama gemilerinin nerede olabileceği hakkında hiçbir fikri yoktur: bir donanmayı batırmak için
+yaklaşık 95 atışa, yani neredeyse bütün denize ihtiyaç duyar. Sonraki iki adım onu çok daha akıllı yapacak ve farkı
+ölçebileceksin.
 
 # --task--
 
@@ -42,12 +79,100 @@ batırmak için yaklaşık 95 atışa, neredeyse bütün denize ihtiyacı vardı
 
 # --task-tr--
 
-1. `THINK = 30` ve `theirShots`, `turn` ve `timer` ekle (`reset()`'te `grid(null)` ve `'you'`). `state` artık `'lost'` da olabilir.
-2. `playerShoots` yalnızca senin sıranda çalışır; kazandırmayan bir atıştan sonra `turn = 'them'` ve `timer = THINK` yap.
-3. Henüz `theirShots`'ta olmayan `{ r, c }`'lerin listesi `untried()`'ı ve onlardan rastgele biri `pickSquare()`'i yaz.
-4. `computerShoots()` yaz: `pickSquare()`'de `myFleet`'e ateş et, bir gemi batırınca `'They sank your ship!'` de (değilse
-   `'Your turn: pick a square'`); bütün filon battıysa `'lost'` ve `'They sank your fleet'` yap, değilse sırayı geri ver.
-5. `draw()`'dan önce çağrılan `update()`, bilgisayarın sırasında sayacı azaltır ve 0'da ateş eder. `theirShots`'ı senin denizine çiz.
+1. `const HOME = ...` satırının altına düşünme süresini ekle:
+
+   ```js
+   const THINK = 30 // frames the computer waits before it shoots
+   ```
+
+2. `let myShots ...` satırının altına üç değişken ekle ve `state` satırının yorumunu güncelle:
+
+   ```js
+   let theirShots // the same, on your sea
+   let turn // 'you' or 'them'
+   let timer
+   ```
+
+   ```js
+   let state // 'playing', 'won' or 'lost'
+   ```
+
+3. `reset()` içinde `myShots = grid(null)` satırının altına iki satır ekle:
+
+   ```js
+     theirShots = grid(null)
+     turn = 'you'
+   ```
+
+4. `playerShoots`'u şöyle yap:
+
+   ```js
+   function playerShoots(r, c) {
+     if (state !== 'playing' || turn !== 'you' || myShots[r][c]) return // ← değişti
+     shots += 1
+     const result = fire(enemyFleet, myShots, r, c)
+     message = result === 'miss' ? 'Miss' : result === 'hit' ? 'Hit!' : 'You sank a ship!'
+     if (enemyFleet.every(sunk)) {
+       state = 'won'
+       message = 'You won in ' + shots + ' shots!'
+       return // ← yeni
+     }
+     turn = 'them' // ← yeni
+     timer = THINK // ← yeni
+   }
+   ```
+
+5. `playerShoots`'un altına, bilgisayarın dört fonksiyonunu ekle:
+
+   ```js
+   const untried = () => {
+     const out = []
+     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!theirShots[r][c]) out.push({ r, c })
+     return out
+   }
+
+   // Any square it has not tried yet, at random.
+   function pickSquare() {
+     const left = untried()
+     return left[Math.floor(Math.random() * left.length)]
+   }
+
+   function computerShoots() {
+     const bestCell = pickSquare()
+     const result = fire(myFleet, theirShots, bestCell.r, bestCell.c)
+     message = result === 'sunk' ? 'They sank your ship!' : 'Your turn: pick a square'
+     if (myFleet.every(sunk)) {
+       state = 'lost'
+       message = 'They sank your fleet'
+       return
+     }
+     turn = 'you'
+   }
+
+   function update() {
+     if (state === 'playing' && turn === 'them' && --timer === 0) computerShoots()
+   }
+   ```
+
+6. `draw()` içinde küçük denizi çizen satırı değiştir; artık bilgisayarın atışları çizilsin:
+
+   ```js
+     drawSea(HOME, SMALL, theirShots, myFleet, true) // ← değişti
+   ```
+
+7. `loop()` içinde `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Düşman denizine ateş et: yarım saniye sonra küçük denizinde bir nokta belirmeli ve sıra sana
+   dönmeli. Bilgisayarın sırasında tıklamaların bir şey yapmamalı. Alttaki kontrollerin hepsi yeşil olmalı.
+   Bilgisayar hiç ateş etmiyorsa `loop()` içine `update()` eklemeyi unutmuş olabilirsin.
 
 # --tests--
 

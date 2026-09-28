@@ -25,23 +25,41 @@ A table like this is easy to extend: a new kind of platform is one more line, no
 
 # --explanation-tr--
 
-Daha yukarıda bazı platformlar bir yandan öbür yana kayar. Her platformun artık bir `kind`'ı (türü) ve yatay bir `vx` hızı
-var; her karede bütün platformlar `vx`'leri kadar hareket eder. Normal platformların `vx: 0`'ı vardır; böylece her tür için
-bir `if` olmadan tek bir döngü hepsini hareket ettirir. Bir duvara çarpmak hızı **tersine çevirir**: `p.vx = -p.vx`;
-Pong'daki topla aynı sekme.
+**Bu adımda:** yukarılarda bazı platformlar sağa sola kaymaya başlayacak. Kayan platformlar mavi, normal olanlar yeşil
+görünecek.
 
-Hareketli bir platform olasılığı `difficulty * 0.5`'tir: başta hiç yok, 10000 piksel yukarıda yarısı. Oyuncu bütün ekranı
-80 karede geçebildiği ve kenarlardan dolandığı için hareketli bir platforma her zaman yine ulaşılabilir; daha zor ama
-imkânsız değil.
+**Her platforma tür ve hız.** Her platform nesnesine iki yeni alan ekliyoruz:
 
-Farklı türler küçük bir arama tablosundan farklı renkler alır:
+- `kind` → türü: `'normal'` ya da `'moving'` (hareketli).
+- `vx` → yatay hızı: her karede kaç piksel yana kayacağı.
+
+Normal platformların hızı `vx: 0`'dır. Böylece **tek bir döngü** hepsini hareket ettirir; her tür için ayrı `if`
+yazmaya gerek kalmaz (sıfır eklemek hiçbir şeyi değiştirmez).
+
+**Duvardan dönmek.** Platformun sol kenarı `0`'ın altına inerse ya da sağ kenarı (`p.x + p.w`) canvas'ı geçerse hızın
+**işaretini çeviririz**: `p.vx = -p.vx`. `1.5` ise `-1.5` olur, `-1.5` ise `1.5`. Eksi hız sola, artı hız sağa demek.
+Duvara çarpan top gibi.
+
+**Olasılıkla karar vermek.** `Math.random()` 0 ile 1 arasında rastgele bir sayı verdiği için
+`Math.random() < 0.3` yaklaşık her 10 denemenin 3'ünde doğru olur. Burada sınır `d * 0.5`: başta `d` 0 olduğu için
+hiç hareketli platform çıkmaz, 10000 piksel yukarıda platformların yarısı hareketlidir. Oyuncu bütün ekranı 80 karede
+geçebildiği ve kenarlardan dolandığı için hareketli bir platforma her zaman ulaşılabilir; oyun zorlaşır ama imkânsız
+olmaz.
+
+Yeni platformu önce `platform` adlı bir sabite koyarız, gerekirse alanlarını değiştiririz (`platform.kind = 'moving'`),
+en son listeye ekleriz. `const` ile ad verilen bir nesnenin **içindeki** alanlar yine değişebilir; değişmeyen, etiketin
+hangi nesneye yapıştığıdır.
+
+**Renk tablosu.** Her türün rengini küçük bir nesnede tutarız:
 
 ```js
 const COLORS = { normal: '#16a34a', moving: '#2563eb' }
 ctx.fillStyle = COLORS[p.kind]
 ```
 
-Böyle bir tablo kolayca genişler: yeni bir platform türü bir `if` daha değil, bir satır daha demektir.
+`COLORS[p.kind]` → platformun türü `'moving'` ise `COLORS.moving`, yani mavi. Köşeli parantez, 2. adımdaki
+`keys[event.key]` gibi, alanın adını bir değişkenden alır. Yeni bir platform türü eklemek artık tabloya bir satır
+eklemekten ibaret; yeni bir `if` gerekmez.
 
 # --task--
 
@@ -53,11 +71,59 @@ Böyle bir tablo kolayca genişler: yeni bir platform türü bir `if` daha deği
 
 # --task-tr--
 
-1. Her platforma `kind: 'normal'` ve `vx: 0` ver (başlangıç platformuna da). `fillPlatforms()` içinde `d * 0.5`
-   olasılıkla yeni platformu `vx: 1.5` ile `kind: 'moving'` yap.
-2. `update()` içinde oyuncunun fiziğinden önce her platformu `vx`'i kadar hareket ettir; platformun sol kenarı `0`'ın
-   altına indiğinde ya da sağ kenarı `canvas.width`'i geçtiğinde `vx`'i tersine çevir.
-3. `COLORS = { normal: '#16a34a', moving: '#2563eb' }` ekle ve her platformu türünün renginde çiz.
+1. `const MAX_GAP = 110` satırının hemen altına renk tablosunu ekle:
+
+   ```js
+   const COLORS = { normal: '#16a34a', moving: '#2563eb' }
+   ```
+
+2. `reset()` fonksiyonunda ilk platformu tanımlayan satıra iki alan ekle:
+
+   ```js
+     platforms = [{ x: 170, y: START_Y, w: 60, h: 12, kind: 'normal', vx: 0 }] // ← değişti
+   ```
+
+3. `fillPlatforms()` fonksiyonunda `platforms.push({ ... })` satırını sil ve yerine şunları yaz. Fonksiyon şöyle olmalı:
+
+   ```js
+   function fillPlatforms() {
+     while (highest > cameraY - 100) {
+       const d = difficulty(highest)
+       const gap = 45 + Math.random() * (MAX_GAP - 45) * (0.4 + 0.6 * d)
+       highest -= gap
+       const platform = { x: Math.random() * (canvas.width - 60), y: highest, w: 60, h: 12, kind: 'normal', vx: 0 } // ← yeni
+       if (Math.random() < d * 0.5) { // ← yeni
+         platform.kind = 'moving' // ← yeni
+         platform.vx = 1.5 // ← yeni
+       } // ← yeni
+       platforms.push(platform) // ← değişti
+     }
+   }
+   ```
+
+4. `update()` fonksiyonunda kenardan dolanma satırlarının (`player.x -= canvas.width` ile biten satır) altına, `const
+   oldBottom = ...` satırından **önce** platformları kaydıran döngüyü ekle:
+
+   ```js
+     for (const p of platforms) {
+       p.x += p.vx
+       if (p.x < 0 || p.x + p.w > canvas.width) p.vx = -p.vx
+     }
+   ```
+
+5. `draw()` fonksiyonunda platformları çizen kısmı şöyle değiştir: döngüden önceki `ctx.fillStyle = '#16a34a'` satırını
+   **sil**, döngünün içine her platformun kendi rengini seçen satırı ekle:
+
+   ```js
+     for (const p of platforms) {
+       ctx.fillStyle = COLORS[p.kind] // ← yeni
+       ctx.fillRect(p.x, p.y - cameraY, p.w, p.h)
+     }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Başta hepsi yeşildir; yükseldikçe mavi, kayan platformlar çıkmaya
+   başlar. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa ilk platforma `kind: 'normal', vx: 0` eklemeyi
+   unutmuş olabilirsin.
 
 # --tests--
 

@@ -30,11 +30,14 @@ same output, so you can check every tricky case directly, as the tests here do.
 
 # --explanation-tr--
 
-Bütün oyun tek bir kurala bağlı. Bir satırı sola kaydırmak:
+**Bu adımda:** oyunun kalbini, tek bir satırı sola kaydırıp birleştiren fonksiyonu yazacağız. Ekranda henüz bir değişiklik
+görmeyeceksin (tuşları bir sonraki adımda bağlayacağız); kontroller fonksiyonu çeşitli satırlarla deneyecek.
+
+**Bütün oyun tek bir kurala dayanır.** Bir satırı sola kaydırınca:
 
 1. her karo gidebildiği kadar sola kayar;
-2. eşit iki komşu, değeri iki katı olan tek bir karoda birleşir;
-3. birleşmeyle az önce oluşan bir karo **aynı hamlede yeniden birleşemez**.
+2. yan yana gelen iki eşit karo, değeri iki katı olan tek bir karoya dönüşür;
+3. bir birleşmeyle yeni oluşan karo **aynı hamlede yeniden birleşemez**.
 
 İlk denemelerin çoğu 3. kuralda yanılır:
 
@@ -44,13 +47,27 @@ Bütün oyun tek bir kurala bağlı. Bir satırı sola kaydırmak:
 [2, 2, 4, 0]  →  [4, 4, 0, 0]    yeni 4, eski 4 ile birleşmez
 ```
 
-Doğru yapmanın temiz bir yolu: önce **sıfırları at**, sonra karoları soldan sağa gez. Bir karo sonrakine eşitse
-toplamlarını yaz ve **sonrakini atla** (`i++`); böylece iki kez kullanılamaz. Değilse karoyu olduğu gibi yaz. Son olarak
-sıfırlarla yeniden dörde tamamla.
+**Temiz bir yol, adım adım:**
 
-Bunu **saf bir fonksiyon** olarak yaz: bir satır alır ve tahtaya ya da başka bir globale dokunmadan yeni bir satırla
-kazanılan puanları döndürür. Saf fonksiyonlar test etmesi ve güvenmesi en kolay koddur: aynı girdi hep aynı çıktıyı
-verir; burada testlerin yaptığı gibi her zor durumu doğrudan kontrol edebilirsin.
+1. Önce **sıfırları at**: `row.filter((value) => value !== 0)`. `filter` listedeki her öğeye bir soru sorar ve yalnızca
+   "evet" diyenlerle **yeni** bir liste yapar. `[2, 0, 0, 2]` → `[2, 2]`.
+2. Kalan karoları soldan sağa dolaş. Bir karo **bir sonrakine** eşitse (`tiles[i] === tiles[i + 1]`) toplamlarını
+   yaz ve **sonrakini atla** (`i++`, yani `i`'yi fazladan 1 artır), böylece o karo iki kez kullanılamaz. Eşit
+   değilse karoyu olduğu gibi yaz.
+3. Sonunda listeyi sıfırlarla yeniden 4'e tamamla: `while (result.length < SIZE) result.push(0)`. **`while`** "koşul
+   doğru olduğu sürece tekrar et" demektir.
+
+Son karoda `tiles[i + 1]` listenin dışına çıkar; olmayan bir yeri okumak `undefined` (tanımsız) verir ve hiçbir sayıya
+eşit değildir, yani sorun olmaz. `gained += ...` "üstüne ekle" demektir: birleşmelerden kazanılan puanları toplar.
+`else` "değilse" demektir.
+
+**İki sonuç birden döndürmek.** Fonksiyon hem yeni satırı hem puanı vermeli. İkisini bir nesneye koyarız:
+`return { row: result, gained }`. `gained` tek başına yazmak `gained: gained`'in kısaltmasıdır.
+
+**Saf fonksiyon (pure function).** `slideRow` bir satır alır, yeni bir satır ve puan döndürür; tahtaya ya da başka hiçbir
+şeye **dokunmaz**. Verilen listeyi de değiştirmez (`filter` zaten yeni bir liste yapar). Saf fonksiyonlar test edilmesi
+ve güvenilmesi en kolay koddur: aynı girdi hep aynı çıktıyı verir. Bu yüzden buradaki kontroller her zor durumu
+doğrudan deneyebiliyor.
 
 # --task--
 
@@ -60,9 +77,30 @@ array it was given.
 
 # --task-tr--
 
-`row`'u sola kaydırmak için `{ row: yeniSatır, gained }` döndüren `function slideRow(row)` yaz: `yeniSatır`, üç kurala
-uyan `SIZE` sayılık yeni bir dizi; `gained` ise birleşen bütün karoların toplamı. Kendisine verilen diziyi
-değiştirmemeli.
+1. `newGame()` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp şu fonksiyonu yaz:
+
+   ```js
+   // Bir satırı sola kaydırır. Saf: yeni bir satır ve kazanılan puanı döndürür, başka hiçbir şeyi değiştirmez.
+   function slideRow(row) {
+     const tiles = row.filter((value) => value !== 0)
+     const result = []
+     let gained = 0
+     for (let i = 0; i < tiles.length; i++) {
+       if (tiles[i] === tiles[i + 1]) {
+         result.push(tiles[i] * 2)
+         gained += tiles[i] * 2
+         i++ // sonraki karo bu birleşmede kullanıldı
+       } else {
+         result.push(tiles[i])
+       }
+     }
+     while (result.length < SIZE) result.push(0)
+     return { row: result, gained }
+   }
+   ```
+
+2. **Çalıştır**'a bas. Tahta öncekiyle aynı görünür; alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa en sık
+   hata `i++` satırını unutmaktır: o zaman `[2, 2, 2, 2]` yanlışlıkla `[4, 4, 4, 2]` olur.
 
 # --tests--
 

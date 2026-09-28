@@ -25,22 +25,50 @@ When the run ends, freeze everything in a new `'over'` state and say so on scree
 
 # --explanation-tr--
 
-Bir kaktüse çarpmak koşuyu bitirmeli. Çarpışma testi tanıdık kutu–kutu kontrolü, tek bir bilinçli farkla: kutular önce
-birkaç piksel **küçültülür**.
+**Bu adımda:** kaktüse çarpınca oyun bitecek. Her şey olduğu yerde donacak ve ortada büyük harflerle "Game Over"
+yazacak. Ama bir köşenin zar zor değmesi çarpma sayılmayacak.
+
+**İki kutu çakışıyor mu?** Koşucu da kaktüs de dikdörtgen. İki dikdörtgen, dört koşulun **hepsi** doğruysa üst
+üste biner:
+
+- koşucunun sol kenarı, kaktüsün sağ kenarından solda (`runner.x < o.x + o.w`),
+- koşucunun sağ kenarı, kaktüsün sol kenarından sağda (`runner.x + runner.w > o.x`),
+- koşucunun üst kenarı, kaktüsün alt kenarından yukarıda (`runner.y < o.y + o.h`),
+- koşucunun alt kenarı, kaktüsün üst kenarından aşağıda (`runner.y + runner.h > o.y`).
+
+Biri bile yanlışsa aralarında boşluk vardır. Dördünü `&&` ("ve") ile bağlarız.
+
+**Oyuncunun lehine küçük bir hile.** Kutuları önce birkaç piksel **küçültürüz** (`MARGIN = 6`): her kenar 6 piksel
+içeri çekilir. Neden? Oyuncu çarpışmayı **gördüğüne** göre değerlendirir; gerçek şekiller de tam dikdörtgen değildir
+(kaktüsün kolları, dinozorun kuyruğu vardır). Köşenin hafifçe değmesi oyuncuya hata gibi gelir: "Ama geçmiştim!".
+Neredeyse bütün aksiyon oyunları çizimden biraz küçük çarpışma kutusu kullanır. Cömert olmak oyunu adil hissettirir.
 
 ```js
-runner.x + MARGIN < o.x + o.w &&
-runner.x + runner.w - MARGIN > o.x &&
-runner.y + MARGIN < o.y + o.h &&
-runner.y + runner.h - MARGIN > o.y
+function hits(o) {
+  return (
+    runner.x + MARGIN < o.x + o.w &&
+    runner.x + runner.w - MARGIN > o.x &&
+    runner.y + MARGIN < o.y + o.h &&
+    runner.y + runner.h - MARGIN > o.y
+  )
+}
 ```
 
-Neden oyuncunun lehine hile yapalım? Çünkü oyuncular çarpışmaları **gördüklerine** göre yargılar ve gerçek şekiller
-nadiren tam dikdörtgendir (kaktüsün kolları, dinozorun kuyruğu vardır). Zar zor değen bir köşe bir hata gibi hissettirir:
-"Onu geçmiştim!". Neredeyse her aksiyon oyunu çizimden biraz küçük çarpışma kutuları kullanır. Burada cömert olmak
-oyunu adil hissettirir ve hiçbir şeye mal olmaz.
+**Parametre.** `hits(o)` fonksiyonunun parantezindeki `o` bir **parametredir**: çağıran kişinin verdiği şeyin
+fonksiyon içindeki geçici adı. `hits(kaktus)` diye çağırınca, içeride `o` o kaktüs olur. `return ( ... )` uzun
+koşulu birkaç satıra bölmek için parantez içine alır; sonuç yine tek bir `true`/`false`'tur.
 
-Koşu bitince her şeyi yeni bir `'over'` durumunda dondur ve bunu ekranda söyle.
+**Herhangi biri çarptı mı?** Dizinin `some` komutu listedeki elemanları tek tek verilen fonksiyona sorar ve **en az
+biri** için `true` gelirse `true` döner:
+
+```js
+if (obstacles.some(hits)) state = 'over'
+```
+
+Yine `hits`'i parantezsiz veriyoruz: "her kaktüs için bunu çağır" diyoruz.
+
+**Üçüncü durum: `'over'`.** Çarpınca `state = 'over'` olur. `update()` zaten "koşmuyorsak dur" dediği için her şey
+kendiliğinden donar. `jump()` de oyun bittiyse hiçbir şey yapmamalı; en başta `return` ile çıkar.
 
 # --task--
 
@@ -51,10 +79,67 @@ Koşu bitince her şeyi yeni bir `'over'` durumunda dondur ve bunu ekranda söyl
 
 # --task-tr--
 
-1. `const MARGIN = 6` ve yukarıdaki küçültülmüş kutu kesişim testini döndüren `function hits(o)` ekle.
-2. `update()` içinde engelleri taşıdıktan sonra: herhangi bir engel koşucuya `hits` ise `state = 'over'` yap.
-3. Oyun bittiğinde `jump()` hiçbir şey yapmamalı.
-4. `'over'` iken ortaya `Game Over` yaz (`'bold 28px sans-serif'`).
+1. `const CUT = -4 ...` satırının hemen **altına** ekle:
+
+   ```js
+   const MARGIN = 6 // forgiving hitboxes: shrink both boxes by this much
+   ```
+
+2. `let state = 'ready' ...` satırının sonundaki yorumu yeni durumu gösterecek şekilde güncelleyebilirsin
+   (isteğe bağlı): `let state = 'ready' // 'ready', 'running' or 'over'`.
+
+3. `jump()` fonksiyonunun en başına, oyun bittiyse çıkan satırı ekle:
+
+   ```js
+   function jump() {
+     if (state === 'over') return // ← yeni
+     state = 'running'
+     if (onGround()) runner.vy = JUMP
+   }
+   ```
+
+4. `spawn()` fonksiyonunun kapanan `}`'sinin altına bir satır boşluk bırakıp çarpışma fonksiyonunu yaz:
+
+   ```js
+   function hits(o) {
+     return (
+       runner.x + MARGIN < o.x + o.w &&
+       runner.x + runner.w - MARGIN > o.x &&
+       runner.y + MARGIN < o.y + o.h &&
+       runner.y + runner.h - MARGIN > o.y
+     )
+   }
+   ```
+
+5. `update()` fonksiyonunda en sondaki `obstacles = obstacles.filter(...)` satırının altına, kapanan `}`'den önce,
+   bir satır boşluk bırakıp şunu ekle:
+
+   ```js
+     if (obstacles.some(hits)) state = 'over'
+   ```
+
+6. `draw()` fonksiyonunun sonundaki yazı bölümünü, iki durumu da gösterecek şekilde değiştir. Kaktüsleri çizen
+   `for` satırından sonrası şöyle olmalı:
+
+   ```js
+     ctx.fillStyle = '#334155'
+     ctx.textAlign = 'center'
+     if (state === 'ready') {                        // ← değişti
+       ctx.font = '16px sans-serif'                  // ← buraya taşındı
+       ctx.fillText('Press Space to start', canvas.width / 2, canvas.height / 2)
+     }
+     if (state === 'over') {                         // ← yeni
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+     }
+   }
+   ```
+
+   Her yazının kendi boyu olduğu için `ctx.font` satırı `if`'lerin içine girdi.
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, Boşluk'la başlat ve bir kaktüse çarp: her şey durmalı ve
+   "Game Over" yazmalı. Zıplayarak kaktüsleri geçebilmelisin. Alttaki kontrollerin hepsi yeşil olmalı. "Zar zor
+   değen köşe" testi kırmızıysa `hits` içindeki `+ MARGIN` ve `- MARGIN` yerlerini karşılaştır.
 
 # --tests--
 

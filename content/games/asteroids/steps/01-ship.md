@@ -27,24 +27,81 @@ glowing-vector look of the 1979 arcade original.
 
 # --explanation-tr--
 
-Şimdiye kadar her oyun dört yönde hareket etti. Buradaki gemi **herhangi bir** açıya bakabilir; bu yüzden oyun
-programcılarının her gün kullandığı o tek trigonometri parçasına ihtiyacın var:
+**Bu adımda:** siyah bir uzayın ortasına, yukarı bakan beyaz çizgili bir üçgen gemi çizeceğiz. Çalıştırınca sağda
+siyah bir alan ve ortasında küçük bir üçgen göreceksin.
 
-> `a` açısındaki (radyan cinsinden) bir yön, `(Math.cos(a), Math.sin(a))` vektörüdür.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan yazılar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
 
-`0` açısı sağı gösterir: `(1, 0)`. Canvas'ta `y` aşağı doğru büyüdüğü için `Math.PI / 2` **aşağıyı**, `-Math.PI / 2`
-**yukarıyı** gösterir. Tam tur `2π`'dir.
+**Canvas (tuval) nedir?** Sayfada 600 piksel eninde, 450 piksel boyunda boş bir resim alanı var. Adı `canvas`,
+kimliği (id) `game`. Oyundaki her şeyi bu alanın üstüne **boyayarak** göstereceğiz: önce kâğıdı bulursun, sonra
+eline fırçayı alırsın.
 
-Merkezden `a` yönünde `r` uzaklıktaki bir noktayı bulmak için yön vektörünü ölçekle:
+```js
+const canvas = document.getElementById('game')   // kâğıdı bul
+const ctx = canvas.getContext('2d')              // fırçayı al
+```
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir: bir kutuya
+  etiket yapıştırmak gibi, sonra hep o adla çağırırsın ve içi değişmez.
+- `document.getElementById('game')` → "sayfada kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `ctx` çizim aracıdır (bağlam, **context**). `ctx.fillStyle = 'white'` fırçanın rengini seçer,
+  `ctx.fillRect(x, y, en, boy)` bir dikdörtgen boyar.
+
+**Konum:** canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Ortası
+`(300, 225)`'tir. Renkler `'white'` gibi adlarla ya da `'#000000'` (siyah) gibi kodlarla yazılır.
+
+**`let` ve nesne.** `let ship` de bir ad koyar ama `const`'tan farkı, içine sonra **başka bir şey konabilmesidir**.
+Gemiyi birkaç bilgiyle birlikte tek bir **nesne** (object) içinde tutarız:
+
+```js
+ship = { x: 300, y: 225, angle: 0 }
+```
+
+Süslü parantez `{ }` bir nesne kurar; içinde `ad: değer` çiftleri virgülle ayrılır. Bu bilgilere `ship.x`,
+`ship.angle` diye nokta ile ulaşırsın. `vx` ve `vy` geminin sağa ve aşağı **hızı** olacak (şimdilik 0).
+
+**Fonksiyon (function)** bir talimat paketine ad vermektir. Tarif yazmak gibi: yazmak onu pişirmez, sadece hazırlar.
+
+```js
+function resetShip() {
+  // buradaki satırlar paketin içi
+}
+resetShip()   // şimdi çalıştır (çağır)
+```
+
+`function ad() { ... }` paketi **tanımlar**, `ad()` ise onu **çağırır**, yani içindekileri yaptırır.
+
+**Açılar ve yön.** Gemi her yöne bakabilmeli. Yönü bir **açı** ile tutarız; JavaScript açıyı derece değil **radyan**
+ile ölçer. `Math.PI` (π, yaklaşık 3,14) yarım turdur, tam tur `2 * Math.PI`'dir.
+
+- Açı `0` → sağa bakar.
+- `Math.PI / 2` → **aşağı** bakar (çünkü `y` aşağı doğru büyür).
+- `-Math.PI / 2` → **yukarı** bakar. Eksi işareti "ters yöne" demek.
+
+Bir açıdan yön bulmak için iki hazır hesap var: `Math.cos(a)` o yönün sağa ne kadar gittiğini, `Math.sin(a)` aşağı ne
+kadar gittiğini verir (her biri -1 ile 1 arasında). Merkezden `a` yönünde `r` piksel ötedeki nokta:
 
 ```js
 x = ship.x + Math.cos(a) * r
 y = ship.y + Math.sin(a) * r
 ```
 
-Gemi, böyle üç noktadan oluşan bir üçgendir: `angle`'da burun, `angle + 2.5` ve `angle - 2.5`'te (iki yana yaklaşık
-143°) iki arka köşe. 1979 arcade orijinalinin parlayan vektör görünümü için onu doldurmak yerine çizgilerden bir **yol**
-olarak çiz ve `stroke()` et.
+`*` çarpma, `+` toplama demektir. Yani "merkezden başla, o yöne `r` adım at".
+
+**Gemi üçgeni** üç böyle noktadır: burun `angle` yönünde, iki arka köşe `angle + 2.5` ve `angle - 2.5` yönünde (iki
+yana yaklaşık 143°). Hepsi merkezden `SHIP_R` (14) piksel uzakta.
+
+**Çizgiyle çizmek.** 1979'daki orijinal oyun gibi içi boş, parlayan çizgiler istiyoruz. Bunun için bir **yol** (path)
+çizeriz, kalemi kâğıttan kaldırmadan:
+
+- `ctx.beginPath()` → yeni bir çizime başla.
+- `ctx.moveTo(x, y)` → kalemi o noktaya götür (çizmeden).
+- `ctx.lineTo(x, y)` → oraya kadar çizgi çek.
+- `ctx.closePath()` → başladığın noktaya geri dönerek şekli kapat.
+- `ctx.stroke()` → çizgileri boya. `strokeStyle` çizgi rengi, `lineWidth` çizgi kalınlığıdır.
 
 # --task--
 
@@ -58,12 +115,75 @@ olarak çiz ve `stroke()` et.
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut, `const SHIP_R = 14` ekle.
-2. `let ship` ve gemiyi canvas'ın ortasına, yukarı bakacak şekilde (`angle: -Math.PI / 2`), `vx: 0, vy: 0` ile koyan
-   `function resetShip()` ekle.
-3. `drawShip()` yaz: burnu `angle`'da, arka köşeleri `angle + 2.5` ve `angle - 2.5`'te, hepsi `SHIP_R` uzaklıkta hesapla;
-   sonra `beginPath()`, buruna `moveTo`, iki köşeye `lineTo`, `closePath()` ve `stroke()`.
-4. `draw()`: siyah arka plan, `strokeStyle = 'white'`, `lineWidth = 2`, sonra gemi. `resetShip()` ve `draw()` çağır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boş bırak ve geminin boyunu yaz:
+
+   ```js
+   const SHIP_R = 14 // the ship's size: distance from its center to its nose
+   ```
+
+3. Bir satır boş bırak, gemiyi tutacak adı ve gemiyi ortaya koyan fonksiyonu yaz:
+
+   ```js
+   let ship
+
+   function resetShip() {
+     ship = { x: canvas.width / 2, y: canvas.height / 2, angle: -Math.PI / 2, vx: 0, vy: 0 }
+   }
+   ```
+
+   `canvas.width / 2` canvas'ın eninin yarısı (300), `canvas.height / 2` boyunun yarısı (225). `/` bölme demektir.
+   Açı `-Math.PI / 2` olduğu için gemi yukarı bakar.
+
+4. Altına gemiyi çizen fonksiyonu yaz. Önce üç köşeyi hesaplar, sonra çizgileri çeker:
+
+   ```js
+   function drawShip() {
+     const tip = { x: ship.x + Math.cos(ship.angle) * SHIP_R, y: ship.y + Math.sin(ship.angle) * SHIP_R }
+     const left = { x: ship.x + Math.cos(ship.angle + 2.5) * SHIP_R, y: ship.y + Math.sin(ship.angle + 2.5) * SHIP_R }
+     const right = { x: ship.x + Math.cos(ship.angle - 2.5) * SHIP_R, y: ship.y + Math.sin(ship.angle - 2.5) * SHIP_R }
+     ctx.beginPath()
+     ctx.moveTo(tip.x, tip.y)
+     ctx.lineTo(left.x, left.y)
+     ctx.lineTo(right.x, right.y)
+     ctx.closePath()
+     ctx.stroke()
+   }
+   ```
+
+   `tip` burun, `left` ve `right` arka köşeler. Her biri `x` ve `y` taşıyan küçük bir nesne.
+
+5. Altına bütün ekranı çizen fonksiyonu yaz: önce siyah arka plan, sonra beyaz 2 piksel çizgi ayarı, sonra gemi:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#000000'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.strokeStyle = 'white'
+     ctx.lineWidth = 2
+
+     drawShip()
+   }
+   ```
+
+6. En alta, bir satır boşluk bırakıp iki fonksiyonu çağır. Şimdiye kadar yazdıkların sadece tarifti; bu iki satır
+   onları çalıştırır:
+
+   ```js
+   resetShip()
+   draw()
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda siyah alanın ortasında yukarı bakan beyaz bir üçgen görmelisin
+   ve alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa en sık hata: büyük/küçük harf (`SHIP_R`, `Math.PI`) ya
+   da eksik bir parantez. Yazdığını yukarıdakilerle harf harf karşılaştır.
 
 # --tests--
 

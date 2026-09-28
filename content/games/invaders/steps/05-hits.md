@@ -23,19 +23,55 @@ same.
 
 # --explanation-tr--
 
-Canlı bir istilacıyla kesişen bir mermi onu yok eder. Bu, her mermiyle her istilacı arasında bir kutu testidir: **iki
-liste üzerinde iç içe döngüler**. Her mermi için kesiştiği ilk canlı istilacıyı `find` ile bul.
+**Bu adımda:** mermiler istilacıları vuracak. Vurulan istilacı kaybolacak, mermi de harcanacak, sol üstte `SCORE 10`
+gibi bir puan yazısı görünecek.
 
-Bir mermi isabet ettiğinde **ikisi de** harcanır: istilacı ölü olarak işaretlenir ve mermi arkasındaki istilacıya
-çarpmaya devam etmemeli. En basit hile, kullanılmış mermiyi ekranın tepesinin dışına taşımaktır; ekran dışı mermileri
-zaten kaldıran `filter` onu atar. İkinci bir silme yolu yazmak yerine var olan bir temizliği yeniden kullanmak kodu kısa
-ve hataya kapalı tutar.
+**Çakışıyorlar mı? Kutu testi.** Mermi de istilacı da birer dikdörtgen. İki dikdörtgen, dört koşulun **hepsi** doğruysa
+üst üste biner:
 
-Üst sıralara ulaşmak daha zordur, bu yüzden daha değerlidirler: `ROW_POINTS[invader.row]`, renklerdeki satıra göre
-arama fikrinin aynısı.
+```js
+function overlaps(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+}
+```
 
-45 istilacı ve birkaç mermiyle her çifti kontrol etmek karede yalnızca yüz kadar test eder; bir bilgisayar için hiçbir
-şey. Binlerce nesnede oyunlar daha akıllı uzamsal yapılara geçer, ama testin fikri aynı kalır.
+- `a` ve `b` fonksiyonun **parametreleridir**: çağırırken verdiğin iki şeyin geçici adları. `overlaps(bullet, invader)`
+  yazınca içeride `a` mermi, `b` istilacı olur.
+- `a.x < b.x + b.w` → "a'nın sol kenarı, b'nin sağ kenarından solda". `a.x + a.w > b.x` → "a'nın sağ kenarı, b'nin sol
+  kenarından sağda". Son ikisi aynı şeyi yukarı-aşağı için söyler. Dördü birden doğruysa kutular kesişir.
+- Fonksiyon bu karşılaştırmanın sonucunu (`true` ya da `false`) `return` ile geri verir.
+
+**İlk eşleşeni bulmak (`find`).** Her mermi için, değdiği ilk canlı istilacıyı ararız:
+
+```js
+const hit = invaders.find((invader) => invader.alive && overlaps(bullet, invader))
+```
+
+`find`, `filter`'a benzer ama liste değil, kurala uyan **ilk elemanı** verir. Hiçbiri uymazsa `undefined` (tanımsız,
+"yok") verir. `if (hit)` bu yüzden "bir şey bulunduysa" diye okunur: bulunan nesne doğru, `undefined` yanlış sayılır.
+
+Bu, iki listenin iç içe dolaşılmasıdır: her mermi için bütün istilacılar denenir. 45 istilacı ve birkaç mermiyle bu
+karede yüz kadar test eder; bilgisayar için hiçbir şey. Binlerce nesne olsa oyunlar daha akıllı yapılar kullanır, ama
+test fikri aynı kalır.
+
+**İkisi de harcanır.** Vuruş olunca istilacı ölü işaretlenir (`hit.alive = false`), mermi de arkadaki istilacıyı
+vurmaya devam etmemeli. En basit numara: mermiyi ekranın üstüne, `y = -100`'e ışınlamak. 2. adımda yazdığın `filter`
+ekrandan çıkanları zaten atıyor; yani ikinci bir silme yolu yazmak gerekmez. Var olan bir temizliği yeniden kullanmak
+kodu kısa ve hataya kapalı tutar. Bunun için vuruş kontrolü `filter` satırından **önce** gelmeli.
+
+**Puan.** Üst sıralara ulaşmak zordur, o yüzden daha değerlidir: `ROW_POINTS[hit.row]`, renklerdeki "sıraya göre
+tablodan bak" fikrinin aynısı. `score += 30` puanı 30 artırır.
+
+**Yazı yazmak.** Fırçayla yazı da boyanır:
+
+```js
+ctx.font = 'bold 16px monospace'   // kalın, 16 piksel, eşit genişlikli harfler
+ctx.textAlign = 'left'             // verdiğin noktadan sağa doğru yaz
+ctx.fillText('SCORE ' + score, 10, 24)
+```
+
+`'SCORE ' + score` bir yazıyla bir sayıyı `+` ile yan yana ekler: `score` 30 ise sonuç `'SCORE 30'` olur. Tırnağın
+içindeki boşluk, kelimeyle sayı arasındaki boşluktur. `10, 24` yazının yeridir.
 
 # --task--
 
@@ -47,10 +83,54 @@ arama fikrinin aynısı.
 
 # --task-tr--
 
-1. `ROW_POINTS = [30, 20, 20, 10, 10]`, `let score = 0` ve bir `overlaps(a, b)` kutu testi ekle.
-2. `update()` içinde mermileri taşıdıktan sonra: her mermi için kesiştiği ilk canlı istilacıyı bul; varsa onu ölü yap,
-   mermiyi `y = -100`'e taşı ve skora `ROW_POINTS[invader.row]` ekle. (Bunu ekran dışı `filter`'ından önce yap.)
-3. `(10, 24)` noktasına sola hizalı, beyaz `'bold 16px monospace'` ile `SCORE 120` (gerçek sayı) yaz.
+1. `const SPACING_Y = 36` satırının altına sıra puanlarını ekle:
+
+   ```js
+   const ROW_POINTS = [30, 20, 20, 10, 10]
+   ```
+
+2. `let lastStep = 0` satırının altına skoru ekle:
+
+   ```js
+   let score = 0
+   ```
+
+3. `const keys = {}` satırının altına, bir boş satır bırakıp kutu testini yaz (`alive` fonksiyonunun üstünde kalacak):
+
+   ```js
+   function overlaps(a, b) {
+     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+   }
+   ```
+
+4. `update()` içinde mermileri taşıyan satırla onları eleyen satırın **arasına** vuruş kontrolünü ekle:
+
+   ```js
+     for (const bullet of bullets) bullet.y -= BULLET_SPEED
+
+     for (const bullet of bullets) { // ← yeni blok
+       const hit = invaders.find((invader) => invader.alive && overlaps(bullet, invader))
+       if (hit) {
+         hit.alive = false
+         bullet.y = -100 // used up; removed below
+         score += ROW_POINTS[hit.row]
+       }
+     }
+     bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0)
+   ```
+
+5. `draw()` fonksiyonunun sonuna, mermileri boyayan satırın altına, bir boş satır bırakıp skoru yazan satırları ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px monospace'
+     ctx.textAlign = 'left'
+     ctx.fillText('SCORE ' + score, 10, 24)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve Boşluk ile ateş et: vurduğun istilacı kaybolmalı, sol üstte
+   `SCORE 10` yazmalı (üst sıralar 20 ve 30 puan). Alttaki kontrollerin hepsi yeşil olmalı. Bir mermi arka arkaya iki
+   istilacıyı vuruyorsa vuruş bloğunu `filter` satırının **üstüne** koyduğundan emin ol.
 
 # --tests--
 

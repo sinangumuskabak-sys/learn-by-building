@@ -26,22 +26,48 @@ the base are ignored, so you cannot shoot the ground.
 
 # --explanation-tr--
 
-Karşılık vermek için gökyüzüne tıklarsın. Bir önleyici üssünden tıkladığın noktaya hızla uçar ve **orada patlar**. Füzeleri
-doğrudan vurmazsın; olacakları yere bir patlama koyarsın. Oyunu ileriye nişan almakla ilgili yapan budur.
+**Bu adımda:** karşılık vereceksin. Gökyüzünde bir yere tıklayınca üssünden yeşil bir önleme füzesi o noktaya fırlayacak
+ve orada **patlayacak**: büyüyüp küçülen, sarı-turuncu yanıp sönen bir top. Yere düşen düşman füzeleri de patlayacak.
 
-Bir patlama yalnızca bir konum ve bir `age`'dir (yaş). Boyutu her karede yaştan hesaplanır: ömrünün ilk yarısında tam yarıçapına
-büyür, ikinci yarısında küçülüp kaybolur:
+**Doğrudan vurmak yok, önünü kesmek var.** Füzeleri doğrudan vurmazsın; onların **geleceği yere** bir patlama
+koyarsın. Oyunu "önünü kestirerek nişan alma" oyunu yapan budur. Önleme füzesi 2. adımdaki `stepTowards()`'u kullanır,
+yalnızca çok daha hızlıdır (`SHOT_SPEED = 7`). Varınca listeden çıkar ve yerine bir patlama eklenir.
+
+**Tıklamanın yeri.** Ekrana dokununca ya da tıklayınca `pointerdown` olayı olur ve verdiğin fonksiyon çalışır.
+`event.clientX` / `event.clientY` tıklamanın **pencere** içindeki yeridir. Canvas sayfanın bir yerinde durur ve
+ekranda küçültülmüş olabilir; `canvas.getBoundingClientRect()` onun pencerede nerede ve ne boyda göründüğünü verir.
+Çeviri:
+
+- `event.clientX - rect.left` → canvas'ın sol kenarından uzaklık (ekran pikseli),
+- `* canvas.width / rect.width` → ekran pikselini canvas pikseline çevirir.
+
+`y` için aynısı. Üssün tepesinin altına yapılan tıklamalar yok sayılır (`if (ty > BASE.y - 10) return`); böylece yere
+ateş edemezsin. `return` fonksiyonu hemen bitirir.
+
+**Patlama = konum + yaş.** Bir patlama yalnızca bir konum ve bir `age`'dir (yaş, kaç karedir yaşadığı). Her karede yaşı
+1 artar; `BLAST_FRAMES` (50) kareye ulaşınca silinir. Boyutu her karede yaşından **hesaplanır**: ömrünün ilk yarısında
+tam yarıçapına büyür, ikinci yarısında küçülüp kaybolur:
 
 ```js
 const t = b.age / BLAST_FRAMES           // ömrü boyunca 0'dan 1'e
 return BLAST * (t < 0.5 ? t * 2 : (1 - t) * 2)
 ```
 
-Bir değeri saklayıp güncellemek yerine yaştan hesaplamak işe yarar bir animasyon hilesidir: patlama adımından sapamaz ve şeklini
-değiştirmek tek bir formülü değiştirmektir.
+`t` ömrün ne kadarının geçtiğidir (0.5 = yarısı). `koşul ? A : B` "doğruysa A, değilse B". İlk yarıda `t * 2` 0'dan
+1'e çıkar, ikinci yarıda `(1 - t) * 2` 1'den 0'a iner; ikisini 32 ile çarpınca yarıçap çıkar. Değeri saklayıp
+güncellemek yerine yaştan hesaplamak kullanışlı bir animasyon hilesidir: patlama şaşıramaz ve biçimini değiştirmek tek
+bir formülü değiştirmektir.
 
-Yere ulaşan füzeler de patlar. Önleyiciler `stepTowards()`'ı daha yüksek bir hızla yeniden kullanır. Üssün tepesinin altına
-yapılan tıklamalar yok sayılır; böylece yere ateş edemezsin.
+**Daire çizmek.**
+
+```js
+ctx.beginPath()
+ctx.arc(x, y, yaricap, 0, Math.PI * 2)   // merkez, yarıçap, tam tur
+ctx.fill()                               // içini boya
+```
+
+**Yanıp sönme: `%`.** `%` bölümden kalanı verir: `7 % 6` → 1, `10 % 6` → 4. Yaş arttıkça `b.age % 6` 0, 1, 2, 3, 4, 5,
+0, 1... diye döner. 3'ten küçükken sarı, değilse turuncu boyarsak patlama her 3 karede renk değiştirir, titrer.
 
 # --task--
 
@@ -56,14 +82,102 @@ yapılan tıklamalar yok sayılır; böylece yere ateş edemezsin.
 
 # --task-tr--
 
-1. `SHOT_SPEED = 7`, `BLAST = 32`, `BLAST_FRAMES = 50`, `shots` ve `blasts` ekle (ikisi de `reset()`'te `[]`).
-2. `fire(tx, ty)` yaz: `BASE.y - 10`'dan aşağıdaki noktaları yok say; değilse `shots`'a `{ x: BASE.x, y: BASE.y, tx, ty }`
-   ekle. Bir `pointerdown` tıklamaya, canvas piksellerinde ateş eder.
-3. Yukarıdaki gibi `radius(b)` yaz.
-4. `update()` içinde: mermileri `SHOT_SPEED` ile ilerlet; varan çıkarılır ve oraya bir patlama `{ x, y, age: 0 }` ekler. Sonra
-   her patlamanın yaşına 1 ekle ve `BLAST_FRAMES` kadar yaşlı olanları çıkar. Yere ulaşan bir füze de bir patlama ekler.
-5. Mermileri üsten `'#a3e635'` çizgiler, patlamaları yarıçapları kadar dolu daireler olarak çiz; titreşsinler diye
-   `age % 6 < 3` iken `'#fde047'`, değilken `'#fb923c'`.
+1. `const CITY_XS = ...` satırının altına üç ayar ekle:
+
+   ```js
+   const SHOT_SPEED = 7
+   const BLAST = 32 // the biggest radius of an explosion
+   const BLAST_FRAMES = 50 // how long an explosion lasts, growing then shrinking
+   ```
+
+2. `let incoming ...` satırının altına iki değişken ekle:
+
+   ```js
+   let shots // your interceptors on their way: { x, y, tx, ty }
+   let blasts // explosions: { x, y, age }
+   ```
+
+3. `reset()` içinde `incoming = []` satırının altına ekle:
+
+   ```js
+     shots = []
+     blasts = []
+   ```
+
+4. `launch()` fonksiyonunun kapanış `}`'inin altına, bir boş satır bırakıp ateş etmeyi ve tıklamayı ekle:
+
+   ```js
+   function fire(tx, ty) {
+     if (ty > BASE.y - 10) return
+     shots.push({ x: BASE.x, y: BASE.y, tx, ty })
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     fire(((event.clientX - rect.left) * canvas.width) / rect.width, ((event.clientY - rect.top) * canvas.height) / rect.height)
+   })
+   ```
+
+5. `stepTowards` fonksiyonunun kapanış `}`'inin altına, `update`'in üstüne `radius`'u ekle:
+
+   ```js
+   // How big an explosion is at its age: it grows for the first half and shrinks in the second.
+   function radius(b) {
+     const t = b.age / BLAST_FRAMES
+     return BLAST * (t < 0.5 ? t * 2 : (1 - t) * 2)
+   }
+   ```
+
+6. `update()` içinde, fırlatma bloğunun (`if (toLaunch > 0) { ... }`) altına ve düşman füzelerini yürüten
+   `for (const m of incoming)` döngüsünün üstüne şunu ekle:
+
+   ```js
+     for (const s of shots) {
+       if (stepTowards(s, SHOT_SPEED)) {
+         s.done = true
+         blasts.push({ x: s.x, y: s.y, age: 0 })
+       }
+     }
+     shots = shots.filter((s) => !s.done)
+
+     for (const b of blasts) b.age += 1
+     blasts = blasts.filter((b) => b.age < BLAST_FRAMES)
+   ```
+
+7. Aynı fonksiyonda, düşman füzesi yere varınca da patlasın:
+
+   ```js
+     for (const m of incoming) {
+       if (stepTowards(m, m.speed)) {
+         m.done = true
+         blasts.push({ x: m.x, y: m.y, age: 0 }) // ← yeni
+         const city = cities.find((c) => c.alive && Math.abs(c.x - m.x) < 20)
+         if (city) city.alive = false
+       }
+     }
+   ```
+
+8. `draw()`'un sonuna, duman izlerini çizen `for` döngüsünün altına önleme füzelerini ve patlamaları ekle:
+
+   ```js
+     ctx.strokeStyle = '#a3e635'
+     for (const s of shots) {
+       ctx.beginPath()
+       ctx.moveTo(BASE.x, BASE.y)
+       ctx.lineTo(s.x, s.y)
+       ctx.stroke()
+     }
+     for (const b of blasts) {
+       ctx.fillStyle = b.age % 6 < 3 ? '#fde047' : '#fb923c'
+       ctx.beginPath()
+       ctx.arc(b.x, b.y, radius(b), 0, Math.PI * 2)
+       ctx.fill()
+     }
+   ```
+
+9. **Çalıştır**'a bas. Gökyüzüne tıkla: üssünden yeşil bir çizgi o noktaya uzanmalı, varınca yanıp sönen bir patlama
+   büyüyüp küçülmeli. Yere düşen kırmızı füzeler de patlamalı. Alttaki kontrollerin hepsi yeşil olmalı. (Patlamalar
+   henüz füzeleri yok etmiyor; o bir sonraki adımda.)
 
 # --tests--
 

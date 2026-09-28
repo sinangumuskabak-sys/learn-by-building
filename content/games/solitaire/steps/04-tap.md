@@ -24,21 +24,48 @@ A press remembers which card was pressed; letting go makes the move. That split 
 
 # --explanation-tr--
 
-Artık kartlar hareket ediyor. `tryMove(from, index, to)`, kurallar izin veriyorsa `index`'teki kartı **ve üstündeki her şeyi** bir
-yığından diğerine taşır:
+**Bu adımda:** kartlar hareket edecek. Açık bir karta tıklayınca oyun onun gidebileceği ilk yeri bulup kartı oraya
+taşıyacak: as bir temele, kırmızı 9 bir siyah 10'un üstüne. Sol üstte `Moves 3` gibi bir hamle sayacı göreceksin.
 
-- bir temele yalnızca `canFound` olan tek bir kart;
-- bir tablo sütununa `canStack` olan bir kart (üstündeki kartlar zaten sıralı oldukları için onunla birlikte gelir);
-- asla desteye ya da atığa.
+**Taşımak: `tryMove(from, index, to)`.** `from` (nereden) yığınındaki `index`. kartı **ve üstündeki her şeyi** `to`
+(nereye) yığınına taşır, kurallar izin veriyorsa:
 
-`piles[from].splice(index)` kartları kaynaktan keser ve döndürür, `push(...cards)` onları hedefe koyar. Sonra bir tablo sütununda kapalı
-bir kart açığa çıktıysa açılır.
+- bir temele (`'f'` ile başlayan) sadece tek kart, o da `canFound` diyorsa;
+- bir sütuna (`'t'`) `canStack` diyorsa (üstteki kartlar da zaten sıralı oldukları için birlikte gelir);
+- desteye ya da açık kartlar yığınına asla.
 
-Her cihazda oynamanın en hızlı yolu bir karta **dokunmak** ve gideceği yeri oyunun bulmasına bırakmaktır. `autoMove` önce temelleri
-(bu neredeyse her zaman en iyi hamledir), sonra tablo sütunlarını dener ve işe yarayan ilkinde durur. `Array.some` tam bunu yapar:
-fonksiyonu her hedef için çağırır ve ilk `true`'da durur.
+Parça parça:
 
-Bir basış hangi karta basıldığını hatırlar; bırakmak hamleyi yapar. Sonraki adım sürüklemeyi bu ayrım üzerine kurar.
+- `piles[from].slice(index)` → `index`'ten sonuna kadar kartların **kopyası** (yığın değişmez). Önce bununla
+  bakarız: aynı yığına taşımak (`from === to`) ya da hiç kart yoksa (`!cards.length`) `false`.
+- `allowed` (izinli) → 3. adımdaki kısa karar `koşul ? a : b` ile: hedef temelse "tek kart **ve** `canFound`",
+  değilse "hedef sütun **ve** `canStack`". Deste ve açık kartlar yığını bu ikisine uymadığı için `false` olur.
+- `piles[from].splice(index)` → kartları kaynaktan **kesip** alır. `push(...kartlar)` → `...` listeyi tek tek kartlara
+  açar ve hepsini hedefin sonuna ekler.
+- Sütunda altından kapalı bir kart çıktıysa (`exposed`, açığa çıkan) onu açarız.
+- `moves += 1` hamle sayısını bir artırır, `return true` "taşındı" der.
+
+**Otomatik yer bulmak: `autoMove`.** Her cihazda en hızlı oynama yolu karta **dokunup** oyunun yerini bulmasıdır. Önce
+temelleri dener (neredeyse her zaman en iyi hamle), sonra sütunları; ilk olanda durur:
+
+```js
+return targets.some((to) => tryMove(from, index, to))
+```
+
+`some` (bazısı) listedeki her hedef için fonksiyonu sırayla çağırır ve ilk `true`'da durur. Tam istediğimiz şey:
+kart bir kez taşınır.
+
+**Bas ve bırak.** Basınca hangi karta basıldığını `drag` değişkenine not ederiz; parmağı kaldırınca (`pointerup`) hamleyi
+yaparız. Bu ayrım bir sonraki adımda sürüklemenin temeli olacak. `pointerup`'ı `document`'e (bütün sayfaya) bağlarız ki
+parmak canvas dışında kalksa bile duyalım.
+
+`pointerdown`'daki kontroller:
+
+- `if (!h) return` → hiçbir şeye basılmadıysa dur. `return flipStock()` → desteyse çevir ve dur.
+- `h.index < 0` (boş yığın) **veya** kart yok **veya** kart kapalıysa (`!...up`) dur. `||` "veya", `!` "değil".
+- Açık kartlar yığını ve temellerde her zaman en üstteki kart alınır.
+
+Destenin çevrilmesi de bir hamle sayılır, bu yüzden `flipStock`'un sonuna da `moves += 1` ekleriz.
 
 # --task--
 
@@ -52,13 +79,91 @@ Bir basış hangi karta basıldığını hatırlar; bırakmak hamleyi yapar. Son
 
 # --task-tr--
 
-1. `moves` ekle (`deal()`'da `0`); desteyi çevirmek de bir hamledir.
-2. `tryMove(from, index, to)`'yu anlatıldığı gibi yaz: izin verilmiyorsa `false` döndür; değilse kartları taşı, açığa çıkan bir tablo
-   kartını aç, `moves`'a 1 ekle ve `true` döndür.
-3. `autoMove(from, index)` yaz: `f0`'dan `f3`'e, sonra `t0`'dan `t6`'ya dene ve işe yarayan ilk hamlede dur.
-4. `drag` ekle. Açık bir kartta `pointerdown`'da (atık ve temeller için her zaman üst kartları) `drag = { from, index }` yap;
-   document'ın `pointerup`'ında onu `autoMove` et ve `drag`'i temizle.
-5. `(LEFT, 24)`'e `Moves 3` çiz (beyaz, `'bold 15px sans-serif'`).
+1. `let piles ...` satırının altına iki değişken ekle:
+
+   ```js
+   let drag // { from, index } between pressing on a card and letting go
+   let moves
+   ```
+
+2. `deal()`'ın sonuna, `piles.stock = deck` satırının altına ikisini sıfırla:
+
+   ```js
+     piles.stock = deck
+     drag = null                  // ← yeni
+     moves = 0                    // ← yeni
+   }
+   ```
+
+3. `flipStock()`'un sonuna, `if`/`else` bloğunun kapanışından sonra, fonksiyonun son `}`'sinden önce bir satır ekle:
+
+   ```js
+       piles.waste = []
+     }
+     moves += 1                   // ← yeni
+   }
+   ```
+
+4. `flipStock()`'un kapanan `}`'sinden sonra bir boş satır bırak ve (`// Which card ...` yorumunun ve `function hit`'in
+   **üstüne**) taşıma fonksiyonlarını yaz. `allowed` satırı uzun ama tek satırdır:
+
+   ```js
+   // Move cards from index onwards of pile `from` to pile `to`, if the rules allow it.
+   function tryMove(from, index, to) {
+     const cards = piles[from].slice(index)
+     if (from === to || !cards.length) return false
+     const allowed = to[0] === 'f' ? cards.length === 1 && canFound(cards[0], piles[to]) : to[0] === 't' && canStack(cards[0], piles[to])
+     if (!allowed) return false
+     piles[to].push(...piles[from].splice(index))
+     const exposed = last(piles[from])
+     if (from[0] === 't' && exposed) exposed.up = true
+     moves += 1
+     return true
+   }
+
+   // A tap sends a card to the best place it can go: a foundation first, then a tableau column.
+   function autoMove(from, index) {
+     const targets = ['f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6']
+     return targets.some((to) => tryMove(from, index, to))
+   }
+   ```
+
+5. `pointerdown` dinleyicisini değiştir: `if (h && h.key === 'stock') flipStock()` satırını sil, yerine aşağıdaki
+   satırları yaz. Hemen altına da `pointerup` dinleyicisini ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const p = toCanvas(event)
+     const h = hit(p.x, p.y)
+     if (!h) return                                                     // ← yeni
+     if (h.key === 'stock') return flipStock()                          // ← değişti
+     const pile = piles[h.key]                                          // ← yeni
+     if (h.index < 0 || !pile[h.index] || !pile[h.index].up) return    // ← yeni
+     if (h.key === 'waste' || h.key[0] === 'f') h.index = pile.length - 1 // only the top card of these
+     drag = { from: h.key, index: h.index }                             // ← yeni
+   })
+
+   document.addEventListener('pointerup', () => {                       // ← yeni
+     if (!drag) return
+     autoMove(drag.from, drag.index)
+     drag = null
+   })
+   ```
+
+6. `draw()`'un sonunda, yığınları çizen `for` döngüsünün kapanışından sonra, fonksiyonun son `}`'sinden önce bir boş
+   satır bırak ve hamle sayacını yaz:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 15px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Moves ' + moves, LEFT, 24)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Açık bir karta tıkla: gidebileceği bir yer varsa oraya taşınmalı ve altından çıkan kapalı kart
+   açılmalı; sol üstteki sayaç artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `push(...` içindeki
+   üç noktayı unutmadığını kontrol et.
 
 # --tests--
 

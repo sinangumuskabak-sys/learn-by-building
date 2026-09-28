@@ -30,16 +30,21 @@ turn.
 
 # --explanation-tr--
 
-İyi bir rakibin zeki olması gerekmez, yalnızca **mantıklı** olması gerekir. Sırayla kontrol edilen birkaç kural zaten iyi bir
-oyun oynar:
+**Bu adımda:** sarı diskleri bilgisayar oynayacak. Sen kırmızı bir disk bırakınca, yarım saniye kadar sonra
+bilgisayar kendi sarı diskini bırakacak. Üstte `Your turn` (sıra sende) ya da `Computer...` (bilgisayar düşünüyor)
+yazacak.
 
-1. Bu hamleyle kazanabiliyorsam onu oyna.
-2. Oyuncu bir sonraki hamlede kazanabilecekse o sütunu engelle.
-3. Oyuncunun kazanacağı bir deliğin hemen **altına** asla oynama: benim diskim ona gereken kareyi verir.
-4. Değilse en çok dörtlü çizginin geçtiği orta sütunları tercih et; oyunlar farklı olsun diye biraz rastgelelikle.
+**Akıllı değil, mantıklı.** İyi bir rakibin çok zeki olması gerekmez, sadece **mantıklı** olması yeter. Sırayla
+bakılan birkaç kural bile iyi oynar:
 
-1'den 3'e kadar olan kuralların hilesi **bir hamleyi deneyip geri almaktır**: tahtaya bir disk koy, `wins4`'e sor, yeniden
-kaldır. Bilgisayar hamleyi gerçek oyunun kullandığı aynı kodla "hayal eder":
+1. Bu hamleyle kazanabiliyorsam, oyna.
+2. Oyuncu bir sonraki hamlede kazanabilecekse, o sütunu kapat.
+3. Oyuncunun kazanacağı bir deliğin hemen **altına** asla oynama: benim diskim ona ihtiyacı olan basamağı verir.
+4. Yoksa orta sütunları tercih et (dörtlülerin en çoğu oradan geçer); oyunlar farklı olsun diye biraz rastgelelik
+   ekle.
+
+**Dene ve geri al.** 1–3. kuralların sırrı, hamleyi **deneyip geri almak**: tahtaya bir disk koy, `wins4`'e sor,
+diski geri kaldır. Bilgisayar hamleyi gerçek oyunun kullandığı kodla "hayal eder":
 
 ```js
 board[row][col] = who
@@ -47,10 +52,28 @@ const result = wins4(row, col) !== null
 board[row][col] = 0
 ```
 
-Bu, gerçek oyun yapay zekâsına doğru ilk adımdır: bir hamlenin neye yol açacağına ileriden bakmak. XOX oyunu bunu minimax ile
-sonuna kadar götürür; burada bir hamle ilerisi, bilgisayarı çoğu oyuncu için yenmesi zor yapmaya yeter.
+`wins4(...) !== null` → "bir dörtlü bulundu mu?" sorusunun evet/hayır (`true`/`false`) cevabı.
 
-Bilgisayar ne olduğunu görebilesin diye hamle yapmadan önce yarım saniye bekler ve yalnızca kendi sıranda disk bırakabilirsin.
+Bu, gerçek oyun yapay zekâsına ilk adımdır: bir hamlenin neye yol açacağına ileriden bakmak. Burada bir hamle
+ileri bakmak bile bilgisayarı çoğu oyuncu için zor yenilir yapar.
+
+**Yeni araçlar.**
+
+- `[...Array(COLS).keys()]` → `[0, 1, 2, 3, 4, 5, 6]`: bütün sütun numaralarının listesi.
+- `dizi.filter(test)` → testi geçen elemanlardan **yeni bir liste** yapar. `open` dolu olmayan sütunlardır,
+  `safe` ise 3. kurala göre güvenli olanlar.
+- `dizi.find(test)` → testi geçen **ilk** eleman; yoksa `undefined` ("yok"). `col !== undefined` → "bulundu mu?"
+  (`0` da geçerli bir sütun olduğu için sadece `if (col)` yazamayız.)
+- `Math.abs(sayı)` → sayının eksi işaretini atar: `Math.abs(-2)` → `2`. `-Math.abs(col - 3)` ortadaki sütun (3)
+  için `0`, kenarlara doğru `-1`, `-2`, `-3`: ortaya en yüksek puan.
+- `Math.random() * 0.5` → 0 ile 0.5 arasında rastgele küçük bir ek: eşit puanlı sütunlar arasında şans karar verir.
+- `-Infinity` → "eksi sonsuz", her sayıdan küçük bir başlangıç; ilk sütun mutlaka "şimdiye kadarki en iyi" olur.
+- `safe.length > 0 ? safe : open` → güvenli sütun varsa onlardan, yoksa (mecburen) açık sütunlardan seç.
+
+**Bekleme.** Bilgisayar hamle yapmadan önce yarım saniye (30 kare) bekler, böylece ne olduğunu görebilirsin.
+`thinking` bu geri sayımdır: sıra bilgisayara geçince 30 olur; `update()` her karede 1 azaltır, `0`'a inince
+(`<=` küçük ya da eşit) bilgisayar oynar. Disk düşerken sayım durur: `update()` düşen diski işledikten sonra
+`return` ile çıkar. Sen de sadece kendi sıranda (`turn === 1`) disk bırakabilirsin.
 
 # --task--
 
@@ -65,14 +88,134 @@ Bilgisayar ne olduğunu görebilesin diye hamle yapmadan önce yarım saniye bek
 
 # --task-tr--
 
-1. Sen 1. oyuncusun (kırmızı), bilgisayar 2. oyuncu (sarı). `thinking` ekle: sıra bilgisayara geçince onu `30` kare yap;
-   `update()` hiçbir şey düşmezken onu geri sayar ve `0`'da `computerMove()` oynar.
-2. `winsWith(col, who)` yaz: `who`'yu o sütuna bırakmak kazandırır mı (dene, kontrol et, geri al).
-3. Yukarıdaki dört kuralla `computerMove()` yaz. 3. kural için bir sütun, bilgisayarın diski oraya düştükten sonra oyuncu aynı
-   sütunda kazanacaksa güvensizdir. 4. kural için her sütunu bir kez `-Math.abs(col - 3) + Math.random() * 0.5` ile puanla ve
-   en iyisini al.
-4. Tıklamalar ve tuşlar yalnızca senin sıranda oynar. Süzülen disk yalnızca senin sıranda görünür ve mesajlar `Your turn`,
-   `Computer...`, `You win! Click to play again` ve `Computer wins. Click to play again` olur.
+1. `let hoverCol = 3` satırının altına düşünme sayacını ekle, `reset()`'in sonuna da sıfırlamasını:
+
+   ```js
+   let thinking // frames until the computer moves
+   ```
+
+   ```js
+     falling = null
+     thinking = 0 // ← yeni
+   }
+   ```
+
+2. `land()` fonksiyonunda, `else` bölümüne bilgisayarın beklemesini ekle:
+
+   ```js
+     } else {
+       turn = 3 - turn
+       if (turn === 2) thinking = 30 // ← yeni
+     }
+   ```
+
+3. `land()` fonksiyonunun altına (`function colAt`'tan önce) bir boş satır bırak ve iki fonksiyonu yaz:
+
+   ```js
+   // Would dropping in this column win for `who`? Try it, look, and take it back.
+   function winsWith(col, who) {
+     const row = dropRow(col)
+     if (row === -1) return false
+     board[row][col] = who
+     const result = wins4(row, col) !== null
+     board[row][col] = 0
+     return result
+   }
+
+   function computerMove() {
+     const open = [...Array(COLS).keys()].filter((col) => dropRow(col) !== -1)
+     // 1. Win if we can. 2. Block the player's win.
+     for (const who of [2, 1]) {
+       const col = open.find((c) => winsWith(c, who))
+       if (col !== undefined) return col
+     }
+     // 3. Do not play right under a square where the player would win.
+     const safe = open.filter((col) => {
+       const row = dropRow(col)
+       if (row === 0) return true
+       board[row][col] = 2
+       const danger = winsWith(col, 1)
+       board[row][col] = 0
+       return !danger
+     })
+     const choices = safe.length > 0 ? safe : open
+     // 4. Prefer the middle, where most lines of four pass; a little randomness breaks ties.
+     let best = choices[0]
+     let bestScore = -Infinity
+     for (const col of choices) {
+       const score = -Math.abs(col - 3) + Math.random() * 0.5
+       if (score > bestScore) {
+         best = col
+         bestScore = score
+       }
+     }
+     return best
+   }
+   ```
+
+   `for (const who of [2, 1])` önce bilgisayar (2) için kazanan sütun arar, sonra oyuncu (1) için: kazanmak
+   engellemekten önce gelir. 3. kuralda bilgisayar diskini koyar, sonra oyuncunun **aynı sütunda, bir üstte**
+   kazanıp kazanamayacağına bakar.
+
+4. `pointerdown` dinleyicisinde son satırı değiştir:
+
+   ```js
+     hoverCol = colAt(event)
+     if (turn === 1) play(hoverCol) // ← değişti
+   })
+   ```
+
+5. `keydown` dinleyicisinde son satırı değiştir:
+
+   ```js
+       if (winner) reset()
+       else if (turn === 1) play(hoverCol) // ← değişti
+   ```
+
+6. `update()` fonksiyonunu şöyle yap:
+
+   ```js
+   function update() {
+     if (falling) {
+       falling.vy += GRAVITY
+       falling.y += falling.vy
+       const bottom = TOP + falling.row * CELL + CELL / 2
+       if (falling.y >= bottom) {
+         falling.y = bottom
+         land()
+       }
+       return // ← yeni
+     }
+     if (!winner && turn === 2) { // ← yeni
+       thinking -= 1 // ← yeni
+       if (thinking <= 0) play(computerMove()) // ← yeni
+     } // ← yeni
+   }
+   ```
+
+7. `draw()` fonksiyonunda bekleyen disk yalnızca senin sıranda ve kırmızı görünsün:
+
+   ```js
+     if (!winner && !falling && turn === 1) disc(hoverCol * CELL + CELL / 2, TOP - CELL / 2, COLORS[1]) // ← değişti
+   ```
+
+8. `draw()` fonksiyonunun sonundaki mesajları değiştir:
+
+   ```js
+     let message = turn === 1 ? 'Your turn' : 'Computer...' // ← değişti
+     if (winner === 1) message = 'You win! Click to play again' // ← değişti
+     if (winner === 2) message = 'Computer wins. Click to play again' // ← değişti
+     if (winner === 'draw') message = 'Draw. Click to play again'
+     ctx.fillText(message, canvas.width / 2, 26)
+   ```
+
+9. İstersen `const COLORS` satırının yorumunu `// player 1 is you, player 2 the computer` yap; yorum kontrolleri
+   etkilemez.
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bir disk bırak: kısa bir süre `Computer...` yazmalı, sonra
+    sarı bir disk düşmeli. Üç kırmızıyı yan yana dizince bilgisayar dördüncüyü kapatmalı. Alttaki kontrollerin
+    hepsi yeşil olmalı. Bilgisayar hiç oynamıyorsa `land()` içindeki `thinking = 30` satırını ve `update()`'teki
+    yeni bölümü kontrol et.
 
 # --tests--
 

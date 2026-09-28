@@ -26,15 +26,20 @@ Write it once as a function and use it for every moving thing: the ship now, bul
 
 # --explanation-tr--
 
-Asteroids'te duvar yoktur: sağ kenardan uç, soldan geri gelirsin; tepeden çık, altta yeniden belirirsin. Uzay, bir
-simidin yüzeyi gibi bir döngüdür.
+**Bu adımda:** ekranın kenarlarını birbirine bağlayacağız. Gemi sağdan çıkınca soldan, yukarıdan çıkınca aşağıdan geri
+gelecek. Çalıştırıp uçunca gemin artık hiç kaybolmayacak.
 
-"Bir döngüde dolaş"ın aracı kalan operatörüdür, `%`. `605 % 600` `5`'tir: sağ kenarı geçmek solun yakını olur. Ama bir
-tuzak var. JavaScript'te `%` sol tarafın **işaretini** korur: `-5 % 600` `595` değil `-5`'tir. **Sol** ya da **üst**
-kenardan uçmak negatif konumlar üretir ve gemi kaybolurdu.
+Asteroids'te duvar yoktur: uzay bir halka gibi kendi etrafında döner, tıpkı eski bir bilgisayar oyununda haritanın bir
+ucundan çıkıp öbür ucundan girmek gibi.
 
-Çözüm klasik bir tek satırlık: kalanı ikinci kez almadan önce boyutu ekle; böylece sonuç her zaman `0` ile `size`
-arasında olur:
+**Kalan işlemi `%`.** `a % b`, "a'yı b'ye böl, **kalanı** ver" demektir. `605 % 600` sonucu `5`'tir: sağ kenarı 5
+piksel geçen gemi, sol kenardan 5 piksel içeride olur. Saat de böyle çalışır: 13 saat, `13 % 12` = 1'dir.
+
+**Tuzak:** JavaScript'te `%` soldaki sayının **işaretini** korur. `-5 % 600` sonucu `595` değil, `-5`'tir. Yani gemi
+sol ya da üst kenardan çıkınca eksi bir konuma gider ve görünmez olur.
+
+Çözüm klasik bir tek satırdır: kalanı al, boyutu ekle, bir kez daha kalanı al. Sonuç her zaman `0` ile boyut
+arasında çıkar:
 
 ```js
 function wrap(value, size) {
@@ -42,7 +47,17 @@ function wrap(value, size) {
 }
 ```
 
-Onu bir kez fonksiyon olarak yaz ve hareket eden her şey için kullan: şimdi gemi, yakında mermiler ve asteroitler.
+Örnek: `wrap(-5, 600)` → `-5 % 600` = `-5`, `+ 600` = `595`, `595 % 600` = `595`. Doğru!
+
+Bunu parça parça okuyalım:
+
+- `function wrap(value, size)` → parantez içindeki `value` ve `size` **parametredir**: fonksiyonu çağırırken
+  verdiğin bilgilerin adları. `wrap(605, 600)` dediğinde içeride `value` 605, `size` 600 olur.
+- `return ...` → "sonucu şu olarak geri ver". Fonksiyonu çağırdığın yerde bu sonuç kullanılır; örneğin
+  `ship.x = wrap(...)` sonucu `ship.x`'e yazar.
+- Parantezler matematikteki gibi önce yapılacak işi gösterir.
+
+Bir kez fonksiyon olarak yazıp hareket eden her şeyde kullanacağız: şimdi gemide, yakında mermilerde ve kayalarda.
 
 # --task--
 
@@ -52,9 +67,28 @@ Onu bir kez fonksiyon olarak yaz ve hareket eden her şey için kullan: şimdi g
 
 # --task-tr--
 
-1. Yukarıdaki gibi `function wrap(value, size)` yaz.
-2. `update()` içinde geminin yeni konumunu dolaştır: `ship.x = wrap(ship.x + ship.vx, canvas.width)`, `y` için de
-   `canvas.height` ile aynısı.
+1. `const keys = {}` satırının altına bir satır boşluk bırakıp `wrap` fonksiyonunu yaz (üstteki yorum satırı
+   isteğe bağlı):
+
+   ```js
+   // Wrap a coordinate around the screen. Plain % keeps the sign in JavaScript (-5 % 600 is -5), so add the size first.
+   function wrap(value, size) {
+     return ((value % size) + size) % size
+   }
+   ```
+
+2. `update()` fonksiyonunun en sonundaki iki satırı değiştir. Gemi artık yeni konumunu `wrap`'ten geçirerek alsın:
+
+   ```js
+     ship.x = wrap(ship.x + ship.vx, canvas.width)   // ← değişti (eskiden ship.x += ship.vx)
+     ship.y = wrap(ship.y + ship.vy, canvas.height)  // ← değişti (eskiden ship.y += ship.vy)
+   }
+   ```
+
+   Yatay konum canvas'ın eniyle (600), dikey konum boyuyla (450) sarılır.
+
+3. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve gemiyi bir kenara doğru uçur: öbür kenardan geri gelmeli.
+   Alttaki kontrollerin hepsi yeşil olmalı. `wrap` kontrolü kırmızıysa parantezleri say: `((value % size) + size) % size`.
 
 # --tests--
 

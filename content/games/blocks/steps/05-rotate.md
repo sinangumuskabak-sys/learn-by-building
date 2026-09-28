@@ -32,7 +32,10 @@ situations.
 
 # --explanation-tr--
 
-Bir parçayı saat yönünde 90° döndürmek zarif bir dizi işi. T'ye ne olduğuna bak:
+**Bu adımda:** yukarı ok (ya da `x` tuşu) ile parçayı saat yönünde 90° döndüreceğiz. Duvara yaslı parça da yana
+kayarak dönebilecek.
+
+**Döndürmek nasıl olur?** T parçasına bak:
 
 ```
 0 3 0        0 3 0
@@ -40,20 +43,38 @@ Bir parçayı saat yönünde 90° döndürmek zarif bir dizi işi. T'ye ne oldu�
 0 0 0        0 3 0
 ```
 
-**İlk sütun, aşağıdan yukarı okunarak**, **ilk satır** olur. İkinci sütun, aşağıdan yukarı, ikinci satır olur, ve böyle
-devam eder. Kodda:
+Soldaki matrisin **ilk sütunu, aşağıdan yukarı okununca** sağdakinin **ilk satırı** olur (0, 3, 0). İkinci sütun
+aşağıdan yukarı → ikinci satır (0, 3, 3). Üçüncü sütun → üçüncü satır. Kodda:
 
 ```js
 shape[0].map((_, col) => shape.map((row) => row[col]).reverse())
 ```
 
-`shape.map((row) => row[col])` `col` sütununu yukarıdan aşağı toplar; `.reverse()` onu aşağıdan yukarıya çevirir. Dıştaki
-`map` bunu her sütun için yapar. Bu yalnızca **kare** matrislerde çalışır; her parçanın baştan kare olmasının nedeni bu.
+İçten dışa parça parça okuyalım:
 
-Döndürme de "önce dene"yi kullanır: dönmüş şekli hesapla ve yalnızca sığarsa tut. Ama duvara yaslanmış bir parça çoğu
-zaman yerinde dönemez ve öylece reddetmek berbat hissettirir. Bu yüzden birkaç **duvar tekmesi** dene: aynı dönüş, 1 ya
-da 2 hücre yana itilmiş. Sığan ilk konum kazanır. Gerçek oyunlar tekme tabloları kullanır; bu basit liste çoğu durumu
-karşılar.
+- `shape.map((row) => row[col])` → her satırdan `col` numaralı sayıyı al; yani `col` sütununu **yukarıdan aşağı** bir
+  liste olarak topla.
+- `.reverse()` → listeyi ters çevir; artık **aşağıdan yukarı**.
+- `shape[0].map((_, col) => ...)` → ilk satırın her elemanı için bir kez, yani **her sütun için** bunu yap ve
+  sonuçları yeni bir listede topla. `map` fonksiyona eleman ile sıra numarasını verir; bize yalnız sıra numarası
+  (`col`) lazım, kullanmadığımız elemana `_` deriz.
+
+`map` her zaman **yeni** bir liste yaptığı için asıl şekil değişmez. Bu yöntem yalnız **kare** matrislerde çalışır;
+bütün parçaları baştan kare yapmamızın sebebi buydu. Dört kez döndürünce parça başladığı hâle döner.
+
+**Döndürürken de önce dene.** Dönmüş şekli hesapla, yalnızca sığıyorsa kullan. Ama duvara dayanmış bir parça çoğu
+zaman yerinde dönemez ve oyunun "hayır" demesi çok kötü hissettirir. O yüzden birkaç **duvar itmesi** (wall kick)
+deneriz: aynı dönüşü 1 ya da 2 hücre yana kaydırarak. Sığan ilk konum kazanır:
+
+```js
+for (const kick of [0, -1, 1, -2, 2]) { ... }
+```
+
+`for (const kick of liste)` listedeki her sayı için içini sırayla bir kez çalıştırır: önce hiç kaydırmadan (0), sonra
+1 sola, 1 sağa, 2 sola, 2 sağa. Sığan bulunduğu an `return true` fonksiyonu bitirir; geri kalanlar denenmez. Hiçbiri
+sığmazsa en sondaki `return false` çalışır. Gerçek oyunlar itme tabloları kullanır; bu basit liste çoğu durumu çözer.
+
+Tuş kontrolünde `event.key === 'ArrowUp' || event.key === 'x'` → `||` "veya": yukarı ok **veya** x tuşu.
 
 # --task--
 
@@ -64,10 +85,48 @@ karşılar.
 
 # --task-tr--
 
-1. `shape`'i değiştirmeden, saat yönünde 90° döndürülmüş **yeni** bir matris döndüren `function rotate(shape)` yaz.
-2. `function tryRotate()` yaz: dönmüş şekli hesapla; `[0, -1, 1, -2, 2]` içindeki her tekme için `piece.x + kick`
-   konumuna sığıyorsa onu tut (`shape` ve `x`'i güncelle) ve `true` döndür. Hiçbiri sığmazsa `false` döndür.
-3. `ArrowUp` ya da `x`'te `tryRotate()` çağır.
+1. `let piece = ...` satırının altına, `function fits` satırından önce döndürme fonksiyonunu yaz (arada birer satır
+   boşluk bırak):
+
+   ```js
+   // Clockwise: the first column, read from the bottom up, becomes the first row.
+   function rotate(shape) {
+     return shape[0].map((_, col) => shape.map((row) => row[col]).reverse())
+   }
+   ```
+
+2. `tryMove` fonksiyonunun kapanış `}`'sinin altına, bir satır boşlukla şunu yaz:
+
+   ```js
+   function tryRotate() {
+     const turned = rotate(piece.shape)
+     // Wall kicks: if the turned piece does not fit, try nudging it sideways.
+     for (const kick of [0, -1, 1, -2, 2]) {
+       if (fits(turned, piece.x + kick, piece.y)) {
+         piece.shape = turned
+         piece.x += kick
+         return true
+       }
+     }
+     return false
+   }
+   ```
+
+3. `keydown` bloğunda, `ArrowRight` satırının altına döndürme satırını ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') tryMove(-1, 0)
+     if (event.key === 'ArrowRight') tryMove(1, 0)
+     if (event.key === 'ArrowUp' || event.key === 'x') tryRotate() // ← yeni
+     if (event.key === 'ArrowDown') tryMove(0, 1)
+     draw()
+   })
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra yukarı oka bas: T her basışta saat yönünde dönmeli.
+   Alttaki kontrollerin hepsi yeşil olmalı. Parça ters yöne dönüyorsa `.reverse()`'ün yerini kontrol et: içteki
+   `map`'in hemen arkasında olmalı.
 
 # --tests--
 

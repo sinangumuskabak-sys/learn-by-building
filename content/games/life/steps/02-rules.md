@@ -29,25 +29,50 @@ neighbour off the board.
 
 # --explanation-tr--
 
-Her nesilde her hücre **8 komşusuna** (yanlar ve köşeler) bakar ve kaçının canlı olduğunu sayar. Sonra:
+**Bu adımda:** dünyaya kuralları vereceğiz. Oyuna tıklayıp **N** tuşuna her bastığında bir sonraki nesil (generation)
+hesaplanacak; desenin değiştiğini ve sol üstte `Generation 1`, `Generation 2`... yazısının arttığını göreceksin.
 
-- **2'den az** canlı komşusu olan canlı bir hücre yalnızlıktan ölür;
-- **2 ya da 3** komşusu olan canlı bir hücre hayatta kalır;
-- **3'ten fazla** komşusu olan canlı bir hücre kalabalıktan ölür;
-- **tam 3** komşusu olan ölü bir hücre canlanır.
+**Dört kural.** Her hücre çevresindeki **8 komşusuna** (sağ, sol, üst, alt ve dört çapraz) bakar ve kaçının canlı
+olduğunu sayar. Sonra:
 
-Bu tek satıra sığar: 3 komşusu varsa ya da 2 komşusu varsa ve şimdi canlıysa, hücre bir sonraki sefer canlıdır.
+- canlı hücrenin **2'den az** canlı komşusu varsa yalnızlıktan ölür;
+- **2 ya da 3** komşusu varsa yaşamaya devam eder;
+- **3'ten fazla** komşusu varsa kalabalıktan ölür;
+- ölü hücrenin **tam 3** komşusu varsa canlanır.
+
+Hepsi tek satıra sığar: "3 komşun varsa, ya da 2 komşun var ve şu an canlıysan, bir sonraki nesilde canlısın."
 
 ```js
 next[r][c] = n === 3 || (n === 2 && grid[r][c] === 1) ? 1 : 0
 ```
 
-Önemli ayrıntı `next`. Bütün hücreler **aynı anda** değişir. Yeni değerleri doğrudan `grid`'e yazsaydık, sonra ziyaret
-ettiğimiz hücreler *zaten* değişmiş komşuları sayardı ve desenler dağılırdı. Bu yüzden yalnızca `grid`'den okur, yalnızca yeni
-bir ızgaraya yazar ve sonunda yer değiştiririz. Buna **çift tamponlama** denir; oyunlar onu ekran için de kullanır.
+Parça parça:
 
-Komşuları saymak için iki küçük döngü `dr` ve `dc`'yi `-1`'den `1`'e götürür; `(0, 0)`'ı (hücrenin kendisini) ve tahtanın
-dışındaki komşuları atlar.
+- `===` "eşit mi?" diye **sorar** (tek `=` ise değer koyar, soru sormaz). Cevap doğru (`true`) ya da yanlıştır (`false`).
+- `||` "**ya da**", `&&` "**ve**" demektir. Parantez içi önce hesaplanır.
+- `? 1 : 0` ilk adımdaki gibi: doğruysa `1`, değilse `0`.
+
+**Neden yeni bir ızgara (`next`)?** Bütün hücreler **aynı anda** değişmeli. Yeni değerleri doğrudan `grid`'e yazsaydık,
+sonra bakılan hücreler zaten değişmiş komşuları sayar, desenler bozulurdu. Bu yüzden hep eski `grid`'den okur, yeni
+`next`'e yazar, en sonda `grid = next` ile değiştiririz. Buna **çift tamponlama** (double buffering) denir. Sınıfta
+herkesin notunu önce kâğıda yazıp sonra tahtaya birden asmak gibi.
+
+**Komşuları saymak.** `countNeighbors(r, c)` fonksiyonu iki **parametre** alır: parantez içindeki `r` ve `c`, fonksiyonu
+çağırırken verdiğin satır ve sütun numaralarıdır (`countNeighbors(10, 10)` gibi). İçinde:
+
+- `let count = 0` bir sayaç açar. `count += 1` "sayaca 1 ekle" demektir.
+- İki döngü `dr` ve `dc`'yi `-1`'den `1`'e götürür (`<=` "küçük ya da eşit"). Böylece bir üst, aynı ve bir alt satırla bir
+  sol, aynı ve bir sağ sütuna bakarız: 3 × 3 = 9 yer.
+- `if (dr === 0 && dc === 0) continue` → ortadaki hücre kendisidir; `continue` "bu turu atla, sıradakine geç" demektir.
+- `nr >= 0 && nr < ROWS && ...` komşu tahtanın içindeyse sayarız. Hücre `1` ya da `0` olduğu için doğrudan ekleriz.
+- `return count` → fonksiyon işi bitince bu sayıyı **geri verir**. `const n = countNeighbors(r, c)` o sayıyı `n`'ye koyar.
+
+**Tuşu dinlemek (olay, event).** Tarayıcı, bir tuşa basıldığında `keydown` adında bir **olay** yayar.
+`document.addEventListener('keydown', (event) => { ... })` "tuşa her basıldığında `{ }` içini çalıştır" demektir.
+`event.key` basılan tuştur (`'n'` ya da `'N'`); `.toLowerCase()` onu küçük harfe çevirir, böylece ikisini birden yakalarız.
+
+**Yazı çizmek.** `ctx.font` yazı tipini, `ctx.textAlign = 'left'` hizayı seçer; `ctx.fillText(yazı, x, y)` yazıyı boyar.
+`'Generation ' + generation` bir yazıyla bir sayıyı yan yana ekler: `'Generation 4'`.
 
 # --task--
 
@@ -59,11 +84,79 @@ dışındaki komşuları atlar.
 
 # --task-tr--
 
-1. `countNeighbors(r, c)` yaz: `(r, c)`'nin çevresindeki 8 hücre arasındaki canlı hücre sayısı; tahtanın dışındakileri atla.
-2. `generation` ekle (`randomize()`'da `0`). `step()` yaz: yukarıdaki kuralla bir `emptyGrid()`'den `next`'i kur, sonra
-   `grid = next` yap ve `generation`'a 1 ekle.
-3. N tuşu `step()`'i çağırır (büyük ya da küçük harf).
-4. `(8, 24)`'e `Generation 4` çiz: beyaz, `'bold 16px sans-serif'`, sola hizalı.
+1. `let grid // grid[row][col]: 1 alive, 0 dead` satırının hemen altına nesil sayacını ekle:
+
+   ```js
+   let generation
+   ```
+
+2. `randomize()` fonksiyonunda sayacı sıfırla. Fonksiyon şöyle olmalı:
+
+   ```js
+   function randomize() {
+     grid = grid.map((row) => row.map(() => (Math.random() < 0.25 ? 1 : 0)))
+     generation = 0 // ← yeni
+   }
+   ```
+
+3. `reset()` fonksiyonunun kapanış `}`'sinin altına bir satır boşluk bırakıp komşu sayan fonksiyonu yaz:
+
+   ```js
+   // Live neighbours among the 8 around (r, c), skipping those off the board.
+   function countNeighbors(r, c) {
+     let count = 0
+     for (let dr = -1; dr <= 1; dr++) {
+       for (let dc = -1; dc <= 1; dc++) {
+         if (dr === 0 && dc === 0) continue
+         const nr = r + dr
+         const nc = c + dc
+         if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) count += grid[nr][nc]
+       }
+     }
+     return count
+   }
+   ```
+
+4. Hemen altına bir nesil ilerleten `step()` fonksiyonunu yaz:
+
+   ```js
+   // Every cell changes at the same moment, so the next generation is built in a new grid.
+   function step() {
+     const next = emptyGrid()
+     for (let r = 0; r < ROWS; r++) {
+       for (let c = 0; c < COLS; c++) {
+         const n = countNeighbors(r, c)
+         // A live cell survives with 2 or 3 neighbours; a dead cell comes alive with exactly 3.
+         next[r][c] = n === 3 || (n === 2 && grid[r][c] === 1) ? 1 : 0
+       }
+     }
+     grid = next
+     generation += 1
+   }
+   ```
+
+5. Altına N tuşunu dinleyen kodu ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key.toLowerCase() === 'n') step()
+   })
+   ```
+
+6. `draw()` fonksiyonunun en sonuna, iki döngünün kapanışından sonra ve fonksiyonun son `}`'sinden önce nesil yazısını
+   ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Generation ' + generation, 8, 24)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra **N**'ye birkaç kez bas: desen değişmeli, `Generation`
+   sayısı artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Planör (glider) kontrolü kırmızıysa, yeni değerleri
+   `grid`'e değil `next`'e yazdığından emin ol.
 
 # --tests--
 

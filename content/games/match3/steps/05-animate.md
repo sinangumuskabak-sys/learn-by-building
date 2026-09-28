@@ -25,22 +25,40 @@ above the board. Every frame each `drop` shrinks by `FALL` pixels until it reach
 
 # --explanation-tr--
 
-Oyun çalışıyor ama anlık: tek tıklama ve tahta çoktan değişmiş. Oyuncuların ne olduğunu **görmesi** gerekir. Bu yüzden son
-adımdaki `while` döngüsü karelere yayılarak oynanan **evrelere** bölünür:
+**Bu adımda:** oyunu gözle takip edilebilir yapacağız. Eşleşen mücevherler bir an beyaz yanıp sönecek, sonra
+kaybolacak; üsttekiler **kayarak** aşağı inecek, yenileri tahtanın üstünden süzülerek düşecek. Her şey yere inene
+kadar tıklamalar beklenecek.
+
+**Sorun.** Oyun çalışıyor ama her şey bir anda oluyor: bir tıklama ve tahta çoktan değişmiş. Oyuncu neyin olduğunu
+**görmeli**. Bir önceki adımdaki `while` döngüsü her şeyi tek karede bitiriyordu; onu karelere yayılan **evrelere**
+bölüyoruz:
 
 | evre | ne olur | sonra |
 |---|---|---|
 | `'idle'` | oyuncuyu bekler | eşleşen bir takas → `'clearing'` |
 | `'clearing'` | eşleşen mücevherler 14 kare yanıp söner | `collapse()` → `'falling'` |
-| `'falling'` | mücevherler yerlerine kayar | yeni eşleşmeler → `'clearing'`, yoksa `'idle'` |
+| `'falling'` | mücevherler yerlerine kayar | yeni eşleşme → `'clearing'`, yoksa `'idle'` |
 
-Bu bir **durum makinesi**: döngü aynı, `update()` fonksiyonu her karede "hangi evredeyiz?" diye sorar. Evre `'idle'` değilse
-tıklamalar yok sayılır; böylece oyuncu bir düşüşün ortasında mücevher takas edemez.
+**Durum makinesi (state machine).** Döngü aynı kalır; yeni `update()` fonksiyonu her karede "hangi evredeyiz?"
+diye sorar ve o evrenin işini biraz ilerletir. `loop()` onu `draw()`'dan önce çağırır. Tıklamalar yalnızca `'idle'`
+evresinde kabul edilir; oyuncu düşüşün ortasında takas yapamaz.
 
-Düşüş bir çizim numarasıdır. Tahta verisi `collapse()`'ta hemen değişir ama her mücevher yeni yerinin kaç piksel **üstünde**
-olduğunu `drop[r][c]`'de hatırlar. İki satır düşen bir mücevher `drop = 96` ile başlar, yeni bir mücevher tahtanın üstünden
-başlar. Her karede her `drop` `0`'a ulaşana kadar `FALL` piksel küçülür ve mücevher `y - drop[r][c]`'de çizilir. Hiçbir
-mücevher hareket etmediğinde düşüş biter.
+**Sayaç.** `timer = 14` ile başlar, her karede bir azalır (`timer -= 1`); 0 olunca yanıp sönme biter. Yanıp sönme:
+`Math.floor(timer / 3) % 2 === 0` birkaç karede bir doğru/yanlış arasında gidip gelir; doğruyken mücevher beyaz
+çizilir. `matched.has(sayı)` "bu hücre kümede var mı?" diye sorar.
+
+**Düşme bir çizim hilesidir.** Tahta verisi `collapse()`'ta bir anda değişir. Ama her mücevher yeni yerinin kaç
+piksel **üstünde** olduğunu `drop[r][c]`'de hatırlar. İki satır düşen bir mücevher `drop = 96` (2 × 48) ile başlar;
+yeni bir mücevher tahtanın üstünden başlar. Her karede her `drop` `FALL` (8) piksel küçülür, 0'a inene kadar;
+mücevher `y - drop[r][c]`'de çizilir. Hiçbir mücevher hareket etmiyorsa düşüş bitmiştir.
+
+- `Math.max(0, drop - FALL)` iki sayının **büyüğünü** verir: `drop` 0'ın altına inmez.
+- `let moving = false` ile başlarız; herhangi bir mücevher hâlâ havadaysa `true` yaparız. Döngü bitince hâlâ
+  `false` ise herkes yere inmiştir.
+- `drop = board.map((row) => row.map(() => 0))` tahta boyutunda, her yeri `0` olan bir ızgara yapar.
+
+Artık sıfırlanan tahtada `matched` ve `chain` fonksiyonlar arasında paylaşıldığı için yukarıda `let` ile
+tanımlanır; `trySwap` içindeki yerel `chain` ve `matched` ortadan kalkar.
 
 # --task--
 
@@ -57,18 +75,140 @@ mücevher hareket etmediğinde düşüş biter.
 
 # --task-tr--
 
-1. `FALL = 8` ekle; ayrıca `phase` (`reset()`'te `'idle'`), `timer`, `matched`, `chain` ve `drop` (`reset()`'te sıfırlardan
-   bir ızgara).
-2. `startClearing()` yaz: `matched = findMatches()` yap, `chain`'e 1 ekle, `matched.size * 10 * chain` puan ver ve
-   `phase = 'clearing'`, `timer = 14` yap. `trySwap`'ta eşleşen bir takas artık `chain = 0` yapar ve `startClearing()`'i
-   çağırır.
-3. `collapse()` artık `matched` hücrelerini kendisi boşaltır, kayan her mücevherin `drop`'unu `(write - r) * SIZE`, her yeni
-   mücevherinkini `(write + 1) * SIZE` yapar ve `phase = 'falling'` yapar.
-4. `draw()`'dan önce çağrılan `update()`'i yaz: `'clearing'`'de `timer`'ı geri say ve `0`'da `collapse()` et; `'falling'`'de
-   her `drop`'u `FALL` kadar küçült (`0`'ın altına değil) ve hiçbiri `0`'ın üstünde değilse, eşleşme varsa `startClearing()`
-   et, yoksa `'idle'`'a dön.
-5. `phase === 'idle'` değilse tıklamaları yok say. Her mücevheri `drop[r][c]` piksel daha yukarıda çiz; `'clearing'`'de
-   `matched` içindeyken ve `Math.floor(timer / 3) % 2 === 0` iken kendi rengi yerine beyaz (`'#ffffff'`) çiz.
+1. `const COLORS = ...` satırının hemen **altına** düşme hızını ekle:
+
+   ```js
+   const FALL = 8 // pixels a gem falls per frame
+   ```
+
+2. `let score` satırının hemen **altına** beş değişken ekle:
+
+   ```js
+   let chain // how many clears in a row this move has caused
+   let phase // 'idle', 'clearing' (matched gems flash) or 'falling'
+   let timer
+   let matched // the cells being cleared
+   let drop // drop[row][col]: how many pixels above its place a gem is still drawn
+   ```
+
+3. `reset()` fonksiyonunun sonuna iki satır ekle:
+
+   ```js
+     score = 0
+     phase = 'idle'                               // ← yeni
+     drop = board.map((row) => row.map(() => 0))  // ← yeni
+   }
+   ```
+
+4. `trySwap()` içinde `// Clear the matches...` yorumundan `return true`'dan önceki `}`'ye kadar olan kısmı
+   (`let chain`, `let matched` ve bütün `while` döngüsü) sil. Fonksiyon şöyle olmalı; altına da `startClearing()`'i
+   yaz:
+
+   ```js
+   function trySwap(a, b) {
+     if (Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return false
+     swap(a, b)
+     if (findMatches().size === 0) {
+       swap(a, b) // no match: the gems go back
+       return false
+     }
+     chain = 0        // ← yeni
+     startClearing()  // ← yeni
+     return true
+   }
+
+   function startClearing() {
+     matched = findMatches()
+     chain += 1
+     score += matched.size * 10 * chain // cascades are worth more and more
+     phase = 'clearing'
+     timer = 14
+   }
+   ```
+
+5. `collapse()` fonksiyonunu tamamen şununla değiştir:
+
+   ```js
+   // Remove the matched gems; everything above falls down to fill the gaps, and new gems drop in from the top.
+   function collapse() {
+     for (const cell of matched) board[Math.floor(cell / N)][cell % N] = -1   // ← yeni
+     for (let c = 0; c < N; c++) {
+       let write = N - 1
+       for (let r = N - 1; r >= 0; r--) {
+         if (board[r][c] < 0) continue
+         board[write][c] = board[r][c]
+         drop[write][c] = (write - r) * SIZE                                  // ← yeni
+         write--
+       }
+       for (let r = write; r >= 0; r--) {                                     // ← değişti
+         board[r][c] = randomGem()
+         drop[r][c] = (write + 1) * SIZE                                      // ← yeni
+       }
+     }
+     phase = 'falling'                                                        // ← yeni
+   }
+   ```
+
+   `write - r` mücevherin kaç satır düştüğü. Yeni mücevherler, boşluk sayısı (`write + 1`) kadar satır yukarıdan
+   başlar.
+
+6. `collapse()`'ın altına `update()` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     if (phase === 'clearing') {
+       timer -= 1
+       if (timer === 0) collapse()
+       return
+     }
+     if (phase === 'falling') {
+       let moving = false
+       for (let r = 0; r < N; r++) {
+         for (let c = 0; c < N; c++) {
+           drop[r][c] = Math.max(0, drop[r][c] - FALL)
+           if (drop[r][c] > 0) moving = true
+         }
+       }
+       if (moving) return
+       // Landed: new matches make a cascade; otherwise the move is over.
+       if (findMatches().size > 0) startClearing()
+       else phase = 'idle'
+     }
+   }
+   ```
+
+7. Tıklama dinleyicisinin ilk satırı olarak ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (phase !== 'idle') return // ← yeni
+     const cell = cellAt(event)
+   ```
+
+8. `draw()` içinde, `if (gem < 0) continue` satırından sonraki mücevher çizimini şöyle değiştir:
+
+   ```js
+         if (gem < 0) continue
+         const flashing = phase === 'clearing' && matched.has(r * N + c) && Math.floor(timer / 3) % 2 === 0 // ← yeni
+         ctx.fillStyle = flashing ? '#ffffff' : COLORS[gem]                                                  // ← değişti
+         ctx.beginPath()
+         ctx.arc(x + SIZE / 2, y + SIZE / 2 - drop[r][c], SIZE / 2 - 6, 0, Math.PI * 2)                     // ← değişti
+         ctx.fill()
+   ```
+
+9. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+10. **Çalıştır**'a bas. Bir üçlü yap: mücevherler beyaz yanıp sönmeli, sonra üsttekiler kayarak inmeli ve yenileri
+    yukarıdan düşmeli. Alttaki kontrollerin hepsi yeşil olmalı. Hiçbir şey düşmüyorsa `loop()` içine `update()`'i
+    eklediğini kontrol et.
 
 # --tests--
 

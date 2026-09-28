@@ -27,23 +27,46 @@ move. This is one more small state machine:
 
 # --explanation-tr--
 
-2048 ne zaman biter? Tahta dolunca değil: dolu bir tahtada hâlâ birleşmeler olabilir. **Hiçbir hamle bir şeyi
-değiştiremiyorsa** biter:
+**Bu adımda:** oyunun sonunu ekleyeceğiz. Hiç hamle kalmayınca tahtanın üstünde "Game Over", 2048'e ulaşınca "You win!"
+(kazandın) yazısı çıkacak. Boşluk tuşu, kaybettiysen yeni oyun başlatacak, kazandıysan oyuna devam ettirecek.
+
+**Oyun ne zaman biter?** Tahta dolunca değil: dolu bir tahtada hâlâ birleşme olabilir. Oyun, **hiçbir hamle bir şeyi
+değiştiremiyorsa** biter. Hamle mümkünse şunlardan biri doğrudur:
 
 - boş bir hücre var, **ya da**
 - iki eşit karo yan yana ya da üst üste duruyor.
 
-İkisi de hiçbir yerde doğru değilse oyuncu sıkışmıştır. Her hücrenin yalnızca sağ ve alt komşusuna bakmak yeter, çünkü
-her komşu çifti birinin "sağ" ya da "alt" çiftidir. Dört yöne birden bakmak aynı işi iki kez yapmak olurdu.
+İkisi de hiçbir yerde doğru değilse oyuncu sıkışmıştır. Her hücrenin yalnızca **sağ** ve **alt** komşusuna bakmak yeter:
+her komşu çift, birinin "sağ" ya da "alt" çiftidir. Dört yöne birden bakmak aynı işi iki kez yapmak olurdu.
 
-2048'e ulaşmak bir galibiyettir, ama oyun 4096'ya ve ötesine devam edebilir. Bu yüzden kazanmak kendi durumudur: oyun
-`'won'`da durur, Boşluk devam ettirir. `keepPlaying` bayrağı bu seçimi hatırlar; böylece kazanma ekranı her hamlede geri
-gelmez. Bir küçük durum makinesi daha:
+`canMove()` her hücreyi dolaşır ve bir hamle bulduğu anda `return true` ile hemen çıkar. Döngü bitmiş ve hiçbir şey
+bulunamamışsa en sondaki `return false` çalışır. Sağ komşuya bakmadan önce `col < SIZE - 1` ile son sütunda
+olmadığımızı kontrol ederiz; son sütunun sağında hücre yoktur. `&&` "ve" demektir: soldaki yanlışsa sağdakine hiç
+bakılmaz.
+
+**Kazanmak ayrı bir durum.** 2048'e ulaşmak kazanmaktır ama oyun 4096'ya ve ötesine devam edebilir. Bu yüzden oyunun bir
+**durumu** (`state`) var: `'playing'` (oynanıyor), `'won'` (kazandın) ya da `'over'` (bitti). `'won'`'da oyun durur,
+Boşluk devam ettirir. `keepPlaying` adlı bir **bayrak** (`true`/`false`) bu seçimi hatırlar; böylece kazanma ekranı her
+hamlede yeniden çıkmaz. Bu küçük bir **durum makinesi**:
 
 ```
-'playing' --2048 yapıldı--> 'won' --Boşluk--> 'playing' (keepPlaying)
+'playing' --2048 yapıldı--> 'won'  --Boşluk--> 'playing' (keepPlaying)
 'playing' --hamle yok-->    'over' --Boşluk--> yeni oyun
 ```
+
+**Yeni araçlar:**
+
+- `board.some((row) => row.includes(2048))` → `some` "en az bir satır için doğru mu?" diye sorar;
+  `row.includes(2048)` "bu satırda 2048 var mı?" demektir. Yani "tahtanın herhangi bir yerinde 2048 var mı?".
+- `else if` → "değilse, **eğer** şuysa". Kazanmadıysa sıkıştın mı diye bakar.
+- `!==` "eşit değil", `!` "değil" demektir. `move()`'un ilk satırı `if (state !== 'playing') return false`: oyun
+  durmuşken oklar hiçbir şey yapmaz.
+- `'rgba(238, 228, 218, 0.75)'` yarı saydam bir renktir; son sayı saydamlıktır (0 görünmez, 1 tam kapalı). Tahtanın
+  üstüne örtü gibi serilir, karolar hafifçe görünmeye devam eder.
+
+Klavye dinleyicisinde bir değişiklik daha var: `draw()` artık her tuşta çağrılıyor, çünkü Boşluk da ekranı değiştiriyor
+(yeni oyun ya da devam). Bu yüzden `if (!direction) return` ile erken çıkmak yerine, yön varsa hamleyi bir `if` içinde
+yaparız ve `draw()` en sonda herkes için çalışır.
 
 # --task--
 
@@ -57,13 +80,98 @@ gelmez. Bir küçük durum makinesi daha:
 
 # --task-tr--
 
-1. Herhangi bir hücre boşsa ya da sağ veya alt komşusuna eşitse `true` döndüren `function canMove()` yaz.
-2. `let state` ve `let keepPlaying` ekle; `newGame()` içinde `'playing'` ve `false` yap.
-3. `move()` içinde: oyun sürmüyorsa hiçbir şey yapma. Başarılı bir hamle ve yeni karodan sonra: `keepPlaying` yanlışsa
-   ve herhangi bir karo `2048` ise `state = 'won'`; değilse `!canMove()` ise `state = 'over'`.
-4. Boşluk (ya da Enter) ile: oyun bittiyse `newGame()` başlat; kazanıldıysa `keepPlaying = true` ile `'playing'`e dön.
-5. Tahtanın üstüne yarı saydam bir katman çiz: `Game Over` / `Press Space to try again` ya da `You win!` /
-   `Press Space to keep going`.
+1. `let score` satırının hemen altına iki değişken ekle:
+
+   ```js
+   let state // 'playing', 'won' ya da 'over'
+   let keepPlaying // oyuncu 2048'den sonra devam etmeyi seçince true
+   ```
+
+2. `newGame()` fonksiyonunda `score = 0` satırının altına iki satır ekle:
+
+   ```js
+     score = 0
+     state = 'playing' // ← yeni
+     keepPlaying = false // ← yeni
+     addTile()
+   ```
+
+3. `slideRow()` fonksiyonunun kapanış `}`'inin altına (`move` fonksiyonundan önce) bir satır boşluk bırakıp şu
+   fonksiyonu yaz:
+
+   ```js
+   // Boş hücre ya da iki eşit komşu (sağa ve alta bakmak her çifti bir kez kapsar).
+   function canMove() {
+     for (let row = 0; row < SIZE; row++) {
+       for (let col = 0; col < SIZE; col++) {
+         const value = board[row][col]
+         if (value === 0) return true
+         if (col < SIZE - 1 && value === board[row][col + 1]) return true
+         if (row < SIZE - 1 && value === board[row + 1][col]) return true
+       }
+     }
+     return false
+   }
+   ```
+
+4. `move()` fonksiyonunda iki yer değişiyor: **en başa** bir satır, `addTile()`'ın altına iki satır. Fonksiyonun başı ve
+   sonu şöyle olmalı (ortadaki `for` döngüsü aynı kalır):
+
+   ```js
+   function move(direction) {
+     if (state !== 'playing') return false // ← yeni
+     const before = JSON.stringify(board)
+     ...
+     if (JSON.stringify(board) === before) return false
+     addTile()
+     if (!keepPlaying && board.some((row) => row.includes(2048))) state = 'won' // ← yeni
+     else if (!canMove()) state = 'over' // ← yeni
+     return true
+   }
+   ```
+
+   (`...` yazma; "burası değişmedi" demek.)
+
+5. Klavye dinleyicisinin tamamını şununla değiştir:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' || event.key === 'Enter') { // ← yeni: bu blok
+       if (state === 'over') newGame()
+       else if (state === 'won') {
+         state = 'playing'
+         keepPlaying = true
+       }
+     }
+     const direction = directions[event.key]
+     if (direction) { // ← değişti
+       event.preventDefault()
+       move(direction)
+     } // ← yeni
+     draw()
+   })
+   ```
+
+   Boşluk tuşunun adı tırnak içinde tek bir boşluktur: `' '`.
+
+6. `draw()` fonksiyonunun **en sonuna**, iki `for` döngüsünün kapanışından sonra ama fonksiyonun son `}`'inden önce
+   bitiş örtüsünü ekle:
+
+   ```js
+     if (state !== 'playing') {
+       ctx.fillStyle = state === 'won' ? 'rgba(237, 194, 46, 0.5)' : 'rgba(238, 228, 218, 0.75)'
+       ctx.fillRect(0, TOP, canvas.width, canvas.width)
+       ctx.fillStyle = state === 'won' ? '#f9f6f2' : '#776e65'
+       ctx.font = 'bold 44px sans-serif'
+       ctx.fillText(state === 'won' ? 'You win!' : 'Game Over', canvas.width / 2, TOP + 170)
+       ctx.font = '18px sans-serif'
+       ctx.fillText(state === 'won' ? 'Press Space to keep going' : 'Press Space to try again', canvas.width / 2, TOP + 220)
+     }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Normal oyunda bir şey değişmez; ama sıkışınca "Game Over" örtüsü
+   çıkmalı ve Boşluk yeni oyun başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `newGame()`'e
+   `state = 'playing'` eklediğine ve `move()`'un ilk satırına bak.
 
 # --tests--
 

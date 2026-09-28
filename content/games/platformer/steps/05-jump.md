@@ -27,25 +27,39 @@ it!" moments. Many of the best-loved platformers quietly bend the rules like thi
 
 # --explanation-tr--
 
-Zıplama, sonsuz koşucudakiyle aynı parçaları kullanır: yerdeyken `vy`'yi `JUMP` yap, tuş erken bırakılırsa kısa bir
-sekme için yukarı hızı kes.
+**Bu adımda:** zıplamayı ekleyeceğiz. Boşluk ya da yukarı ok ile oyuncu yaklaşık dört kare yükseğe zıplayacak; tuşu
+erken bırakırsan kısa bir sıçrama yapacak.
 
-Ama "yalnızca yerdeyken" kuralının ünlü bir sorunu var. Bir kenara doğru koş ve tam kenarda zıplamaya bas. Çoğu zaman
-oyuncu bir iki kare geç kalarak *az önce* boşluğa adım atmıştır ve oyun hayır der. Oyuncuya bu, oyunun onu görmezden
-gelmesi gibi hissettirir.
+**Zıplamak = yukarı doğru hız vermek.** Yerdeyken `vy`'yi `JUMP`'a (`-11.5`) eşitleriz. Eksi hız yukarı demek;
+yerçekimi onu her karede biraz azaltır, sonunda oyuncu durur ve geri düşer. Zaten yazdığımız `moveY` ve yerçekimi gerisini
+halleder.
 
-Çözümün eğlenceli bir adı var: **coyote time**; uçurumdan koşup çıkan ve ancak fark edince düşen çizgi film
-çakalından geliyor. Yerden ayrıldıktan sonra birkaç kare geri saymaya devam et ve bu kareler boyunca da zıplamaya izin
-ver:
+**Kısa sıçrama.** Tuşu erken bırakırsan yukarı hızı `CUT`'a (`-4`) düşürürüz:
+`if (player.vy < CUT) player.vy = CUT`. Hâlâ hızla yükseliyorsan (örneğin `-9`, bu `-4`'ten küçük) hız `-4` olur ve
+zıplama kısalır. Zaten yavaşladıysan dokunulmaz. Böylece oyuncu, tuşu ne kadar tuttuğuyla zıplama yüksekliğini seçer.
+
+**Tuşun kendi kendini tekrarlaması.** Bir tuşu basılı tutunca tarayıcı `keydown`'u tekrar tekrar gönderir. Bu
+tekrarlarda `event.repeat` doğrudur. `!event.repeat` ("tekrar değilse") ile yalnızca ilk basışta zıplarız. Koşuldaki
+parantezlere dikkat: `(boşluk ya da yukarı ok) ve tekrar değil`. `&&` "ve" demektir. Boşluk tuşunun adı tırnak içinde
+tek bir boşluktur: `' '`.
+
+**Coyote time (çakal süresi).** "Sadece yerdeyken zıpla" kuralının ünlü bir sorunu var. Bir kenara koşup tam uçta
+zıplamaya bas: çoğu zaman oyuncu bir iki kare önce kenardan **çoktan** adım atmıştır ve oyun "hayır" der. Oyuncuya bu,
+oyun onu duymamış gibi gelir.
+
+Çözümün adı çizgi filmdeki çakaldan gelir: uçurumdan koşarak çıkar ve ancak aşağı bakınca düşer. Yerden ayrıldıktan
+sonra birkaç kare daha geri sayarız ve bu sürede zıplamaya hâlâ izin veririz:
 
 ```js
-coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)   // yerdeyken doldur, havada boşalt
-...
-if (coyote > 0) { player.vy = JUMP; coyote = 0 }              // kullanmak onu boşaltır: çift zıplama yok
+coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)   // yerdeyken dolar, havada azalır
 ```
 
-Altı kare saniyenin onda biridir: oyuncu için görünmez, ama "Kesin bastım!" anlarının bütün bir türünü ortadan kaldırır.
-En sevilen platform oyunlarının çoğu kuralları böyle sessizce oyuncunun lehine büker.
+`a ? b : c` "a doğruysa b, değilse c" demektir. Yerdeysek sayaç 6'ya dolar; havadaysak her karede 1 azalır ama
+`Math.max(0, ...)` sayesinde 0'ın altına inmez. `jump()` yalnızca `coyote > 0` iken çalışır ve sayacı hemen `0` yapar:
+böylece havada ikinci kez zıplanamaz.
+
+Altı kare saniyenin onda biri: oyuncu fark etmez ama "Ama bastım!" anlarının hepsini ortadan kaldırır. En sevilen
+platform oyunlarının çoğu kuralları sessizce oyuncu lehine böyle esnetir.
 
 # --task--
 
@@ -56,10 +70,59 @@ En sevilen platform oyunlarının çoğu kuralları böyle sessizce oyuncunun le
 
 # --task-tr--
 
-1. `const JUMP = -11.5`, `const CUT = -4`, `const COYOTE = 6` ve `let coyote = 0` ekle.
-2. `update()`'in sonunda yerdeyken `coyote`'yi `COYOTE`'ye doldur, değilse en az `0`'a kadar geri say.
-3. `jump()` (`coyote > 0` iken: `player.vy = JUMP` ve `coyote = 0`) ve `endJump()` (koşucudaki gibi `vy`'yi `CUT`'ta
-   sınırla) yaz. Boşluk ya da `ArrowUp`'ın tekrar olmayan `keydown`'ında `jump()`, `keyup`'ında `endJump()` çağır.
+1. `const FRICTION = 0.8` satırının hemen altına üç sabit ekle:
+
+   ```js
+   const JUMP = -11.5
+   const CUT = -4 // erken bırakınca yukarı hız en fazla bu olur
+   const COYOTE = 6 // kenardan çıktıktan sonra hâlâ zıplayabildiğin kare sayısı
+   ```
+
+2. Oyuncuyu oluşturan `LEVEL.forEach(...)` bloğunun kapanış `})` satırının hemen altına, `const keys = {}`'den önce
+   sayacı ekle:
+
+   ```js
+   let coyote = 0
+   ```
+
+3. `const keys = {}` satırının altına bir satır boşluk bırakıp iki fonksiyonu yaz:
+
+   ```js
+   function jump() {
+     if (coyote > 0) {
+       player.vy = JUMP
+       coyote = 0
+     }
+   }
+
+   function endJump() {
+     if (player.vy < CUT) player.vy = CUT
+   }
+   ```
+
+4. Klavye dinleyicilerine birer satır ekle. İkisi şöyle olmalı:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if ((event.key === ' ' || event.key === 'ArrowUp') && !event.repeat) jump() // ← yeni
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+     if (event.key === ' ' || event.key === 'ArrowUp') endJump() // ← yeni
+   })
+   ```
+
+5. `update()` fonksiyonunun **en sonuna**, `moveY(player)` satırının altına sayacı güncelleyen satırı ekle:
+
+   ```js
+     moveY(player)
+     coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1) // ← yeni
+   }
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra Boşluk'a bas: oyuncu zıplamalı. Kısa basınca alçak, uzun
+   basınca yüksek zıplamalı; havadayken yeniden basmak işe yaramamalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

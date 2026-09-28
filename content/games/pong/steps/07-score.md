@@ -25,21 +25,53 @@ Scores belong to the players, so store them on the paddle objects: `left.score`,
 
 # --explanation-tr--
 
-Top bir raketi geçip sahadan çıkınca sayıyı diğer oyuncu alır. Sonra top ortadan yeniden **servis** edilmelidir.
+**Bu adımda:** skor tutacağız. Top bir raketi geçip sahadan çıkınca karşı oyuncu bir sayı alacak, top ortadan
+yeniden başlayacak. Sahanın üstünde iki büyük skor yazısı göreceksin.
 
-"Topu ortaya koy ve yola çıkar" birden fazla yerde gerekiyor (her sayıdan sonra ve ileride yeni oyun başlarken), o
-yüzden ona bir ad ver: `serve(direction)` fonksiyonu. `direction` sağa göndermek için `1`, sola için `-1`; çarpma
-kodu kısa tutar:
+**Skor kimin?** Oyuncunun. O yüzden her raketin nesnesine bir alan daha ekleriz: `score: 0`. Artık `left.score` ve
+`right.score` diye okuyabiliriz.
+
+**Servis fonksiyonu.** "Topu ortaya koy ve yola çıkar" işi birden fazla yerde gerekiyor (her sayıdan sonra, ileride
+yeni oyun başlarken). Bu yüzden ona bir ad veririz: `serve(direction)`. `direction` (yön) parametresi `1` ise top
+sağa, `-1` ise sola gider. Çarpma işi kısaltır:
 
 ```js
 vx: 4 * direction   // 4 ya da -4
 ```
 
-Biraz rastgelelik servislerin tahmin edilebilir olmasını engeller: `Math.random() < 0.5 ? -3 : 3` eşit olasılıkla
-yukarı ya da aşağı seçer. Bu koşul (üçlü) operatörüdür, `koşul ? doğruysaDeğer : yanlışsaDeğer`; bir değerin
-yazılabildiği her yerde kullanılabilen bir ifade.
+Top nesnesini baştan yeni bir nesneyle değiştiririz. Uzun nesneleri böyle birkaç satıra bölüp yazabilirsin; her
+alandan sonra virgül koyulur:
 
-Skorlar oyunculara aittir, bu yüzden onları raket nesnelerinde tut: `left.score`, `right.score`.
+```js
+ball = {
+  x: canvas.width / 2 - BALL / 2,     // 300 - 5 = 295: tam orta
+  y: canvas.height / 2 - BALL / 2,
+  vx: 4 * direction,
+  vy: Math.random() < 0.5 ? -3 : 3,
+}
+```
+
+**Biraz şans.** `Math.random()` her çağrıldığında 0 ile 1 arasında rastgele bir sayı verir (1 hariç). "0.5'ten küçük
+mü?" sorusu yazı-tura atmak gibidir: yarı yarıya ihtimal.
+
+**Soru işaretli kısa karar: `? :`.** `koşul ? evetse : hayırsa` → koşul doğruysa ilk değeri, değilse ikinciyi
+verir. `Math.random() < 0.5 ? -3 : 3` "yazı gelirse -3 (yukarı), tura gelirse 3 (aşağı)" demektir. Bu, bir değer
+yazılabilen her yere yazılabilir.
+
+**Top dışarıda mı?** Sol kenardan tamamen çıktıysa sağ kenarı bile 0'ın solundadır: `ball.x + BALL < 0`. Sağdan
+çıktıysa sol kenarı 600'ü geçmiştir: `ball.x > canvas.width`. İki durum aynı anda olamayacağı için
+`if ... else if ...` kullanırız: ilki doğru değilse ikincisine bakılır. `+= 1` skoru bir artırır. Top, sayıyı
+kaybeden oyuncuya doğru servis edilir.
+
+**Yazı çizmek.** Fırçayla yazı da yazılır:
+
+```js
+ctx.font = '48px monospace'   // yazı boyu ve türü
+ctx.textAlign = 'center'      // verilen x, yazının ortası olsun
+ctx.fillText('7', 150, 60)    // yazı, x, y
+```
+
+`fillText` yazı ister; skor bir sayı olduğu için `String(left.score)` ile yazıya çeviririz.
 
 # --task--
 
@@ -55,14 +87,57 @@ Skorlar oyunculara aittir, bu yüzden onları raket nesnelerinde tut: `left.scor
 
 # --task-tr--
 
-1. İki rakete de `score: 0` ver.
-2. Topu ortaya (`x: canvas.width / 2 - BALL / 2`, `y: canvas.height / 2 - BALL / 2`) `vx: 4 * direction` ve rastgele
-   `-3` ya da `3` olan bir `vy` ile koyan `function serve(direction)` yaz.
-3. `update()` içinde raket kontrollerinden sonra: top sol kenardan tamamen çıktıysa (`ball.x + BALL < 0`) `right`'a
-   bir sayı ver ve `serve(-1)` çağır. Sağ kenardan tamamen çıktıysa (`ball.x > canvas.width`) `left`'e bir sayı ver ve
-   `serve(1)` çağır. (Top, sayıyı az önce kaybeden oyuncuya doğru gider.)
-4. `draw()` içinde her skoru beyaz `48px monospace` yazıyla, `x = canvas.width / 4` ve `x = canvas.width * 3 / 4`
-   noktalarına ortalayarak, `y = 60`'ta göster.
+1. Raket satırlarına `score: 0` ekle. İki satır şöyle olmalı:
+
+   ```js
+   let left = { x: 20, y: 160, score: 0 }                               // ← değişti
+   let right = { x: canvas.width - 20 - PADDLE_W, y: 160, score: 0 }    // ← değişti
+   ```
+
+2. `clamp` fonksiyonunun kapanan `}`'sinden sonra bir boş satır bırak ve (`function touches`'ın **üstüne**) servis
+   fonksiyonunu yaz:
+
+   ```js
+   function serve(direction) {
+     ball = {
+       x: canvas.width / 2 - BALL / 2,
+       y: canvas.height / 2 - BALL / 2,
+       vx: 4 * direction,
+       vy: Math.random() < 0.5 ? -3 : 3,
+     }
+   }
+   ```
+
+3. `update()` içinde, `if (ball.vx > 0 && touches(right)) bounceOff(right)` satırından sonra, fonksiyonun son
+   `}`'sinden önce bir boş satır bırak ve şunu ekle:
+
+   ```js
+     if (ball.vx > 0 && touches(right)) bounceOff(right)
+
+     if (ball.x + BALL < 0) {              // ← yeni
+       right.score += 1                    // ← yeni
+       serve(-1)                           // ← yeni
+     } else if (ball.x > canvas.width) {   // ← yeni
+       left.score += 1                     // ← yeni
+       serve(1)                            // ← yeni
+     }                                     // ← yeni
+   }
+   ```
+
+4. `draw()` içinde, topu çizen `ctx.fillRect(ball.x, ball.y, BALL, BALL)` satırından sonra bir boş satır bırak ve
+   skorları yazan satırları ekle (fırça hâlâ beyaz):
+
+   ```js
+     ctx.font = '48px monospace'
+     ctx.textAlign = 'center'
+     ctx.fillText(String(left.score), canvas.width / 4, 60)
+     ctx.fillText(String(right.score), (canvas.width * 3) / 4, 60)
+   ```
+
+   `canvas.width / 4` sol yarının ortası (150), `(canvas.width * 3) / 4` sağ yarının ortası (450).
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Topu kaçır: karşı tarafın skoru bir artmalı ve top ortadan
+   yeniden çıkmalı. Alttaki kontrollerin hepsi yeşil olmalı.
 
 # --tests--
 

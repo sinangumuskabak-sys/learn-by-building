@@ -22,18 +22,51 @@ after the move catches every crossing, however fast. (The same idea stops fast b
 
 # --explanation-tr--
 
-Bu oyundaki platformlar **tek yönlüdür**: alttan içlerinden geçerek zıplarsın; seni yalnızca aşağı inerken tutarlar. Başını
-hiç çarpmadan tırmanmanı sağlayan budur.
+**Bu adımda:** ekrana altı yeşil platform koyacağız. Oyuncu alttan içlerinden geçecek, üstlerine düşünce de onlardan
+sekecek.
 
-Yani bir iniş için üç şey aynı anda gerekir:
+**Dizi (array).** Altı platformun her biri bir nesnedir (`{ x, y, w, h }`). Birden çok şeyi sıralı tutmak için
+**dizi** kullanırız: köşeli parantez `[ ]` içinde, virgülle ayrılmış bir liste.
 
-1. oyuncu **düşüyor** (`vy > 0`),
-2. ayaklar bu karede platformun **tepesini geçti**: hareketten önce üstündeydi, sonra tepede ya da altında,
-3. oyuncu yatayda platformun **üstünde**; köşeden sekmesin diye her iki yanda 8 piksellik örtüşme gerekir.
+```js
+const platforms = [
+  { x: 170, y: 500, w: 60, h: 12 },
+  { x: 50, y: 410, w: 60, h: 12 },
+]
+```
 
-"Değiyor mu" yerine "bu karede geçti mi" diye bakmak önemli. Oyuncu bir karede 10 piksel gidebilir ve bir platform yalnızca
-12 piksel kalınlığındadır; hızlı bir düşüş değme anını atlayabilir. Ayakları hareketten önce ve sonra karşılaştırmak, ne
-kadar hızlı olursa olsun her geçişi yakalar. (Aynı fikir hızlı mermilerin duvarlardan geçmesini de engeller.)
+Alışveriş listesi gibi düşün: her satır bir öğe. Sondaki virgül zararsızdır.
+
+**`for ... of` döngüsü.** Listedeki her platform için aynı işi yapmak istiyoruz. Altı kez yazmak yerine:
+
+```js
+for (const p of platforms) {
+  ctx.fillRect(p.x, p.y, p.w, p.h)
+}
+```
+
+"`platforms` listesindeki her öğeyi sırayla `p` diye al ve süslü parantezin içini yap" demektir. İlk turda `p` birinci
+platform, ikinci turda ikinci platform olur, liste bitince döngü de biter. `break` döngüyü o anda **erkenden bitirir**:
+üstüne ineceğimiz platformu bulunca aramaya devam etmeye gerek yok.
+
+**Tek yönlü platformlar.** Platformlar seni yalnızca **aşağı inerken** tutar; yukarı çıkarken içlerinden geçersin. Başını
+hiç çarpmadan tırmanmanı sağlayan budur. Bir iniş için üç şey **aynı anda** doğru olmalı:
+
+1. Oyuncu **düşüyor**: `player.vy > 0`.
+2. Ayaklar bu karede platformun **tepesini geçti**: hareketten önceki alt kenar (`oldBottom`) tepenin üstündeydi
+   (`<= p.y`), hareketten sonraki alt kenar (`bottom`) tepede ya da altında (`>= p.y`).
+3. Oyuncu yatayda platformun **üstünde** ve her iki yanda en az 8 piksel örtüşüyor; böylece köşeye hafifçe değip
+   sekmez.
+
+`&&` "ve" demektir: iki koşulun **ikisi de** doğruysa sonuç doğrudur. `over` adlı sabit, 3. koşulun sonucunu
+(`true` ya da `false`) saklar.
+
+**Neden "değiyor mu" yerine "geçti mi"?** Oyuncu bir karede 10 pikselden fazla gidebilir ama platform yalnızca 12
+piksel kalınlığında. Hızlı düşerken değme anı iki karenin arasına kaçabilir. Ayakların hareketten **önceki** ve
+**sonraki** yerini karşılaştırmak, ne kadar hızlı olursa olsun her geçişi yakalar. (Hızlı mermilerin duvardan geçmesi
+de böyle engellenir.)
+
+Zemin sekişi şimdilik kalıyor; ileride kaldıracağız.
 
 # --task--
 
@@ -45,11 +78,63 @@ kadar hızlı olursa olsun her geçişi yakalar. (Aynı fikir hızlı mermilerin
 
 # --task-tr--
 
-1. Çözümdeki `platforms` dizisini ekle (her biri `{ x, y, w: 60, h: 12 }` olan altı platform).
-2. `update()` içinde fizikten önce `oldBottom = player.y + player.h`'yi, sonra `bottom`'ı hatırla. Oyuncu düşüyorsa
-   `player.x + player.w - 8 > p.x`, `player.x + 8 < p.x + p.w`, `oldBottom <= p.y` ve `bottom >= p.y` olan bir platform
-   ara: oyuncuyu onun üstüne koy ve `vy`'yi `JUMP` yap.
-3. Şimdilik zemin sekişini bundan sonra tut ve platformları `'#16a34a'` ile çiz.
+1. `let player = { ... }` satırının hemen altına platform listesini ekle:
+
+   ```js
+   const platforms = [
+     { x: 170, y: 500, w: 60, h: 12 },
+     { x: 50, y: 410, w: 60, h: 12 },
+     { x: 250, y: 320, w: 60, h: 12 },
+     { x: 120, y: 230, w: 60, h: 12 },
+     { x: 290, y: 140, w: 60, h: 12 },
+     { x: 30, y: 60, w: 60, h: 12 },
+   ]
+   ```
+
+2. `update()` fonksiyonunda kenardan dolanma satırlarının altındaki kısmı şöyle değiştir (başındaki `direction` ve
+   dolanma satırları aynen kalır):
+
+   ```js
+     const oldBottom = player.y + player.h // ← yeni
+     player.vy += GRAVITY
+     player.y += player.vy
+     const bottom = player.y + player.h // ← yeni
+
+     // Platformlar seni yalnızca inerken, ayakların tepelerini bu karede geçince tutar.
+     if (player.vy > 0) {
+       for (const p of platforms) {
+         const over = player.x + player.w - 8 > p.x && player.x + 8 < p.x + p.w
+         if (over && oldBottom <= p.y && bottom >= p.y) {
+           player.y = p.y - player.h
+           player.vy = JUMP
+           break
+         }
+       }
+     }
+
+     // Şimdilik zemin seni yine yukarı sektiriyor.
+     if (player.y + player.h >= FLOOR) {
+       player.y = FLOOR - player.h
+       player.vy = JUMP
+     }
+   }
+   ```
+
+   Yeni `if (player.vy > 0) { ... }` bloğunun tamamı yenidir; zemin `if`'i eskisi gibi en sonda durur.
+
+3. `draw()` fonksiyonunda arka planı boyayan `ctx.fillRect(0, 0, ...)` satırının altına, oyuncuyu çizmeden önce,
+   platformları çizen satırları ekle:
+
+   ```js
+     ctx.fillStyle = '#16a34a'
+     for (const p of platforms) {
+       ctx.fillRect(p.x, p.y, p.w, p.h)
+     }
+   ```
+
+4. **Çalıştır**'a bas. Sağda altı yeşil platform görünmeli; oyuncuyu oklarla bir platformun üstüne getirince ondan
+   sekmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `over` satırındaki `- 8` ve `+ 8`'e, `<=` ile
+   `>=`'nin yerine dikkat et.
 
 # --tests--
 

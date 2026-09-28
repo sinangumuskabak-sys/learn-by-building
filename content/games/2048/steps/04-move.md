@@ -24,21 +24,46 @@ turns it into text you can compare in one go), and only add a tile and redraw wh
 
 # --explanation-tr--
 
-Elinde **sola** kaydıran `slideRow` var. Sağ, yukarı ve aşağı için üç fonksiyon daha mı gerekiyor? Hayır. Tahtaya farklı
-bakarak her yönü "sol"a çevir:
+**Bu adımda:** ok tuşlarıyla oynanabilir hâle getireceğiz. Bir oka basınca bütün karolar o yöne kayacak, eşitler
+birleşecek, yeni bir karo çıkacak ve sol üstte `Score: ...` yazacak.
 
-- **Sağ**: satırı ters çevir, sola kaydır, geri ters çevir. Ters çevrilmiş bir satırı sola kaydırmak, orijinal satırı
-  sağa kaydırmakla aynıdır.
-- **Yukarı**: bir **sütunu** yukarıdan aşağı sanki bir satırmış gibi oku (`board.map((row) => row[col])`), "sola"
-  (yukarıya doğru) kaydır ve sütuna geri yaz.
+**Dört yön için dört fonksiyon mu? Hayır.** `slideRow` yalnızca **sola** kaydırıyor. Her yönü tahtaya farklı bakarak
+"sola"ya çeviririz:
+
+- **Sağ**: satırı ters çevir, sola kaydır, geri ters çevir. Ters çevrilmiş satırı sola kaydırmak, asıl satırı sağa
+  kaydırmakla aynıdır. `[0, 2, 0, 2]` → ters `[2, 0, 2, 0]` → sola `[4, 0, 0, 0]` → ters `[0, 0, 0, 4]`.
+- **Yukarı**: bir **sütunu** yukarıdan aşağıya bir satırmış gibi oku, "sola" (yani yukarıya) kaydır, sütuna geri yaz.
 - **Aşağı**: sütunu oku, ters çevir, kaydır, geri ters çevir.
 
-Test edilmiş tek bir fonksiyon, dört şekilde yeniden kullanılıyor. Küçük değişikliklerle mantık kopyalamak üzere
-olduğunu fark ettiğinde, tek bir kod parçasının işi yapmasını sağlayan böyle bir dönüşüm ara.
+Tek bir test edilmiş fonksiyon, dört farklı kullanım. Küçük değişikliklerle aynı kodu kopyalamak üzereysen, bir kod
+parçasının işi yapmasını sağlayan böyle bir dönüşüm ara.
 
-Bir hamle yalnızca **bir şeyi değiştirdiyse** sayılır. Hiçbir şey sola kayamazken sola basmak yeni bir karo eklememeli;
-yoksa oyuncu işe yaramaz bir yöne basıp duvararak tahtayı doldurabilir. Tahtayı önce ve sonra karşılaştır
-(`JSON.stringify` onu tek seferde karşılaştırabileceğin bir metne çevirir) ve yalnızca farklıysa karo ekle ve yeniden çiz.
+**Yeni araçlar, parça parça:**
+
+- `[...board[i]]` → `...` (yayma, spread) listenin öğelerini yeni bir listenin içine döker: satırın **kopyasını**
+  yapar. Kopya alırız ki ters çevirirken tahtanın kendisi bozulmasın.
+- `board.map((row) => row[i])` → `map` listedeki her öğe için bir hesap yapıp sonuçlardan yeni bir liste kurar. Burada
+  her satırın `i`. öğesini alır; yani `i`. **sütunu** yukarıdan aşağıya okur.
+- `line.reverse()` → listeyi yerinde ters çevirir.
+- `const { row, gained } = slideRow(line)` → dönen nesnenin `row` ve `gained` alanlarını aynı adlı iki sabite koyar
+  (2. adımdaki `[row, col]` parçalamanın nesne hâli).
+- `row.forEach((value, r) => (board[r][i] = value))` → yeni sütunun her değerini tahtada `r`. satırın `i`. hücresine
+  yazar. Ok fonksiyonu tek satır olduğunda `{ }` yerine parantez kullanılabilir.
+- `horizontal ? A : B` → yataysa (sol/sağ) `A`, değilse `B`.
+
+**Hamle bir şeyi değiştirdiyse sayılır.** Hiçbir şey sola kayamıyorken sola basmak yeni karo **eklememeli**; yoksa
+oyuncu boş bir yöne basıp durarak tahtayı doldurabilirdi. Tahtayı hamleden önce ve sonra karşılaştırırız.
+`JSON.stringify(board)` bütün tahtayı tek bir yazıya çevirir (`'[[2,4,0,0],[0,0,0,0],...]'`); iki yazıyı `===` ile tek
+seferde karşılaştırabiliriz. Değişmediyse `return false` ile çıkarız; değiştiyse yeni karo ekleyip `true` döndürürüz.
+
+**Tuşları yönlere çevirmek.** `directions` tablosu tuş adını yöne çevirir: `directions['ArrowLeft']` → `'left'`.
+Tarayıcı bir tuşa basıldığında `keydown` **olayını** gönderir; `document.addEventListener('keydown', (event) => { ... })`
+"tuşa basılınca şunu yap" demektir ve `event.key` basılan tuşun adıdır. Tablo başka bir tuş için `undefined` verir;
+`if (!direction) return` → "yön yoksa (`!` değil) hiçbir şey yapma". `event.preventDefault()` ok tuşlarının sayfayı
+kaydırmasını engeller. Hamleden sonra `draw()` ile tahtayı yeniden çizeriz. (Bu oyunda sürekli dönen bir döngü yok;
+yalnızca bir şey değişince çizeriz.)
+
+**Skor** `let score` ile tutulur, `newGame()`'de sıfırlanır ve her kaydırmada `score += gained` ile artar.
 
 # --task--
 
@@ -53,13 +78,84 @@ yoksa oyuncu işe yaramaz bir yöne basıp duvararak tahtayı doldurabilir. Taht
 
 # --task-tr--
 
-1. `let score = 0` ekle (`newGame()` içinde sıfırla).
-2. `'left'`, `'right'`, `'up'` ve `'down'` için `function move(direction)` yaz: 4 çizginin her biri için (sol/sağ için
-   satırlar, yukarı/aşağı için sütunlar) çizgiyi oku, sağ/aşağı için ters çevir, `slideRow` uygula, geri ters çevir,
-   tahtaya yaz ve `gained`'i `score`'a ekle. Tahta değiştiyse `addTile()` çağır ve `true` döndür; değilse `false`.
-3. `keydown`'da ok tuşlarını yönlere eşle, `move` çağır ve `draw()`.
-4. Üst şeride `Score: 12` (gerçek sayı) yaz: `'#776e65'`, `'bold 22px sans-serif'`, `(GAP, TOP / 2)` noktasına sola
-   hizalı.
+1. `let board` satırının hemen altına skoru ekle:
+
+   ```js
+   let score
+   ```
+
+2. `newGame()` fonksiyonunda `board = Array.from(...)` satırının altına skoru sıfırlayan satırı ekle:
+
+   ```js
+     board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+     score = 0 // ← yeni
+     addTile()
+     addTile()
+   ```
+
+3. `slideRow()` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp hamle fonksiyonunu yaz:
+
+   ```js
+   // Her yön, bir satır ya da sütunda (belki ters çevrilmiş) "sola kaydır"dır.
+   function move(direction) {
+     const before = JSON.stringify(board)
+     const horizontal = direction === 'left' || direction === 'right'
+     const reversed = direction === 'right' || direction === 'down'
+     for (let i = 0; i < SIZE; i++) {
+       const line = horizontal ? [...board[i]] : board.map((row) => row[i])
+       if (reversed) line.reverse()
+       const { row, gained } = slideRow(line)
+       if (reversed) row.reverse()
+       score += gained
+       if (horizontal) board[i] = row
+       else row.forEach((value, r) => (board[r][i] = value))
+     }
+     if (JSON.stringify(board) === before) return false
+     addTile()
+     return true
+   }
+   ```
+
+4. Altına bir satır boşluk bırakıp tuş tablosunu ve klavye dinleyicisini yaz:
+
+   ```js
+   const directions = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }
+
+   document.addEventListener('keydown', (event) => {
+     const direction = directions[event.key]
+     if (!direction) return
+     event.preventDefault()
+     move(direction)
+     draw()
+   })
+   ```
+
+5. `draw()` fonksiyonunun başını şöyle değiştir: tahtanın zeminini çizen satırdan sonra skoru yaz. Eski
+   `ctx.textAlign = 'center'` satırı skorun **altına** iner:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#faf8ef'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#bbada0'
+     ctx.fillRect(0, TOP, canvas.width, canvas.width)
+
+     ctx.fillStyle = '#776e65' // ← yeni
+     ctx.font = 'bold 22px sans-serif' // ← yeni
+     ctx.textAlign = 'left' // ← yeni
+     ctx.textBaseline = 'middle'
+     ctx.fillText('Score: ' + score, GAP, TOP / 2) // ← yeni
+
+     ctx.textAlign = 'center' // ← buraya taşındı
+     for (let row = 0; row < SIZE; row++) {
+   ```
+
+   Fonksiyonun geri kalanı (döngüler) aynı kalır.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra ok tuşlarına bas: karolar kaymalı, eşitler birleşmeli, her
+   geçerli hamlede yeni bir karo çıkmalı ve sol üstteki skor artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+   kalırsa `reversed` satırında `'right'` ve `'down'`'ın, `horizontal` satırında `'left'` ve `'right'`'ın yazıldığına
+   bak.
 
 # --tests--
 

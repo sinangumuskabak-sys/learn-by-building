@@ -33,29 +33,54 @@ characters stick to walls and jitter on floors in countless games.
 
 # --explanation-tr--
 
-Oyuncunun yapacağı her şey aynı soruyu tekrar tekrar soracak: **bu nokta katı bir döşemenin içinde mi?** Onu pikselleri
-döşemeye çeviren tek bir fonksiyonda cevapla, `solidAt(x, y)`:
+**Bu adımda:** oyunun her yerde kullanacağı soruyu cevaplayan fonksiyonları yazacağız: "bu nokta dolu bir karenin
+içinde mi?" Bir de oyuncuyu ekliyoruz: `P` harfinin olduğu yerde, toprağın üstünde duran kırmızı bir dikdörtgen
+göreceksin.
+
+**Piksel → kare.** Bir noktanın hangi karede olduğunu bulmak için pikseli `TILE`'a böler ve aşağı yuvarlarız:
 
 ```js
-const col = Math.floor(x / TILE)
+const col = Math.floor(x / TILE)   // 100 / 32 = 3.125 → 3. sütun
 const row = Math.floor(y / TILE)
 ```
 
-Sonra bölümün **dışında** ne olacağına karar ver, çünkü bir gövde kenarlara ulaşacak:
+`/` bölmedir, `Math.floor(...)` sayının virgülden sonrasını atar (**aşağı yuvarlar**).
 
-- 0. sütunun solu ya da son sütunun sağı: katı, görünmez duvarlar gibi; oyuncu bölümden yürüyüp çıkamaz;
-- 0. satırın üstü: hava (ekranın tepesinin üstüne zıplayabilirsin);
-- son satırın altı: hava; böylece çukurların dibi yoktur ve oyuncu dünyadan düşer.
+**Fonksiyon bir cevap döndürebilir: `return`.** `function solidAt(x, y) { ... }` iki **parametre** alır: çağırırken
+parantez içine verdiğin iki sayı (`solidAt(100, 300)`) fonksiyonun içinde `x` ve `y` adıyla kullanılır. `return`
+fonksiyonu hemen bitirir ve bir sonucu geri verir; burada sonuç `true` (doğru, dolu) ya da `false` (yanlış, boş)
+olur. Bu iki değere **mantıksal değer** (boolean) denir.
 
-Bir gövde (oyuncu, sonra düşmanlar) bir kutudur. Katı bir şeye değiyor mu? **Dört köşesine** bak. Kutu bir döşemeden
-büyük olmadığı sürece bu yeterlidir; çünkü bir döşeme, biri içine düşmeden iki köşenin arasına sığamaz.
+**Bölümün dışı.** Oyuncu kenarlara ulaşacak, orada ne olacağına karar vermeliyiz:
 
-İnce bir ayrıntı: `x = 0`'da duran 24 genişliğindeki bir kutu 0'dan 24'e kadar olan alanı kaplar, **ama 24 dahil
-değil**. 24. piksel artık yanındaki şeye aittir. Yani kutunun sağ kenarı `x + w`'den bir kıl payı küçüktür:
-`x + w - EPS`, `EPS = 0.01` ile. Bu olmadan, zeminin *tam* üstünde duran (alt kenarı zeminin üstüne değen) bir kutu
-zeminin *içinde* sayılırdı. Konumların küsuratı olduğu için (oyuncu 0,5 px'lik adımlarla hareket ediyor) bu kıl payı
-çok küçük olmalı: yerine `- 1` kullanmak, bir gövdenin fark edilmeden yarım piksel zemine batmasına izin verirdi. Bu tür
-kenar hataları, sayısız oyunda karakterlerin duvarlara yapışmasına ve zeminde titremesine yol açar.
+- 0. sütunun solu ya da son sütunun sağı (`col < 0 || col >= COLS`): **dolu**, görünmez duvar gibi. Oyuncu bölümden
+  çıkamaz.
+- 0. satırın üstü: **hava** (ekranın üstüne zıplayabilirsin).
+- son satırın altı: **hava**; yani çukurların dibi yok, düşen oyuncu dünyadan çıkar.
+
+`<` küçük, `>=` büyük ya da eşit demektir.
+
+**Kutunun dört köşesi.** Oyuncu (ileride düşmanlar da) bir kutudur: `{ x, y, w, h }`. Bir yere değip değmediğini
+anlamak için **dört köşesine** bakarız. Kutu bir kareden büyük olmadığı için bu yeter: iki köşenin arasına bir kare
+sığamaz. `overlapsSolid(body)` dört `solidAt` sorusunu `||` (ya da) ile birleştirir: köşelerden **biri** bile doluysa
+sonuç doğrudur.
+
+**Küçük ama önemli ayrıntı: `EPS`.** `x = 0`'da duran 24 piksel genişliğindeki kutu 0'dan 24'e **kadar** yer kaplar ama
+24 hariçtir; 24. piksel yanındakine aittir. Bu yüzden kutunun sağ kenarını `x + w`'den bir tüy kadar içeride alırız:
+`x + w - EPS`, `EPS = 0.01`. Bunu yapmazsak zemine **tam** değen bir kutu zeminin **içinde** sayılırdı. Konumlar kesirli
+olabildiği için (oyuncu yarım piksel yarım piksel hareket edecek) tüy çok ince olmalı: `- 1` kullansaydık kutu fark
+edilmeden yarım piksel zemine gömülebilirdi. Karakterlerin duvara yapışması, zeminde titremesi gibi hatalar hep bu
+kenar ayrıntılarından çıkar.
+
+**Oyuncuyu `P`'de başlatmak.** Her satırda `P` harfini ararız:
+
+- `LEVEL.forEach((line, row) => { ... })` → listedeki her satır için içerdekini yap. `line` satırın yazısı, `row` onun
+  sıra numarasıdır. `(...) => { ... }` kısa yazılmış, adsız bir fonksiyondur (**ok fonksiyonu**).
+- `line.indexOf('P')` → `P`'nin yazıdaki yerini verir; yoksa `-1` verir.
+- `col !== -1` → "`-1` değilse", yani bu satırda `P` varsa. `!==` "eşit değil" demektir.
+
+Oyuncu 24×30 boyunda; karenin içinde ortalansın diye `x`'e 4, zemine otursun diye `y`'ye 2 ekleriz. `let player` önce
+değersiz yazılır (sadece ad ayrılır), değerini `forEach` içinde alır.
 
 # --task--
 
@@ -68,12 +93,64 @@ kenar hataları, sayısız oyunda karakterlerin duvarlara yapışmasına ve zemi
 
 # --task-tr--
 
-1. `function solidAt(x, y)` yaz: 0. sütunun solunda ya da son sütunun sağında `true`, 0. satırın üstünde ya da son
-   satırın altında `false`, aksi hâlde döşeme `'#'` ya da `'B'` mi, onu döndür.
-2. `const EPS = 0.01` ekle ve `body`'nin (`{ x, y, w, h }`) dört köşesini `solidAt` ile kontrol eden, sağ ve alt
-   kenarlar için `x + w - EPS` ve `y + h - EPS` kullanan `function overlapsSolid(body)` yaz.
-3. `LEVEL`'daki `'P'`yi bul ve orada `let player = { x: col * TILE + 4, y: row * TILE + 2, w: 24, h: 30 }` oluştur.
-   `draw()` içinde onu `'#dc2626'` bir dikdörtgen olarak çiz.
+1. `const TILE = 32` satırının hemen altına tüy payını ekle:
+
+   ```js
+   const EPS = 0.01 // bir tüy: sağ ve alt kenar kutunun hemen içinde sayılır
+   ```
+
+2. `const COLORS = ...` satırının altına bir satır boşluk bırakıp oyuncuyu `P`'nin yerinde oluşturan kısmı yaz:
+
+   ```js
+   let player
+   LEVEL.forEach((line, row) => {
+     const col = line.indexOf('P')
+     if (col !== -1) player = { x: col * TILE + 4, y: row * TILE + 2, w: 24, h: 30 }
+   })
+   ```
+
+3. Altına, bir noktanın dolu olup olmadığını söyleyen fonksiyonu yaz:
+
+   ```js
+   function solidAt(x, y) {
+     const col = Math.floor(x / TILE)
+     const row = Math.floor(y / TILE)
+     if (col < 0 || col >= COLS) return true // bölümün iki ucunda görünmez duvar
+     if (row < 0 || row >= ROWS) return false // üstte açık gökyüzü, altta dipsiz çukur
+     const tile = LEVEL[row][col]
+     return tile === '#' || tile === 'B'
+   }
+   ```
+
+   Son satır, `tile` toprak ya da tuğlaysa `true`, değilse `false` döndürür.
+
+4. Altına, bir kutunun dört köşesini kontrol eden fonksiyonu yaz:
+
+   ```js
+   // Kutular bir kareden büyük değil, dört köşeye bakmak yeter.
+   function overlapsSolid(body) {
+     const right = body.x + body.w - EPS
+     const bottom = body.y + body.h - EPS
+     return solidAt(body.x, body.y) || solidAt(right, body.y) || solidAt(body.x, bottom) || solidAt(right, bottom)
+   }
+   ```
+
+5. `draw()` fonksiyonunun sonunda, iki `for` döngüsünün kapanışından sonra ama fonksiyonun son `}`'inden **önce**
+   oyuncuyu çizen satırları ekle:
+
+   ```js
+         }
+       }
+     }
+
+     ctx.fillStyle = '#dc2626' // ← yeni
+     ctx.fillRect(player.x, player.y, player.w, player.h) // ← yeni
+   }
+   ```
+
+6. **Çalıştır**'a bas. Solda, `P`'nin olduğu yerde toprağın üstünde kırmızı bir dikdörtgen görünmeli; alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `solidAt`'teki `true`/`false`'ların yerini ve `- EPS`'leri kontrol
+   et.
 
 # --tests--
 

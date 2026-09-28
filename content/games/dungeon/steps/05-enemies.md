@@ -20,17 +20,44 @@ shows the hit landed; with 1 health an enemy is gone after one hit.
 
 # --explanation-tr--
 
-Girdiğinde her oda `e` karolarında düşmanlarla dolar. Bir düşmanın her karede tek bir uzaklıkla belirlenen iki hâli vardır:
+**Bu adımda:** odalara mor düşmanlar gelecek. Uzaktayken rastgele dolaşacaklar, yaklaşınca üstüne gelecekler.
+Kılıçla vurduğunda düşman pembeye dönüp geri kayacak ve yok olacak.
 
-- **Uzakta** (4 karodan fazla): bir yönde yürüyerek ve arada bir, ya da bir duvara çarpar çarpmaz yeni rastgele bir yön seçerek
-  **dolaşır**. `move()` gövdenin durdurulup durdurulmadığını bildirir; "çarptı" sinyali tam olarak budur.
-- **Yakında**: oyuncuya olan iki uzaklıktan uzun olanı boyunca, dolaşırken olduğundan biraz daha hızlı adım atarak **kovalar**.
+**Düşmanlar haritadaki `e`'lerden doğar.** Bir odaya girince (`enter`), haritada `e` yazan her karoya bir düşman koyarız.
+Her düşman bir nesnedir: yeri (`x`, `y`), yönü (`dir`), yön değiştirmeye kalan süre (`turnIn`), canı (`hp`), geri
+itilme süresi (`knock`) ve geri itilme hızı (`kx`, `ky`). Hepsi `enemies` listesinde durur.
 
-Bu bir düşman için küçük bir **durum makinesidir** ve şimdiden canlı hissettirir: düşmanlar sen yaklaşana kadar ortalıkta dolaşır,
-sonra üstüne gelir.
+**İki ruh hâli, tek bir uzaklık.** Her karede düşmanla oyuncunun ortaları arasındaki uzaklığa bakarız
+(2. adımdaki `Math.hypot`):
 
-Kılıç, kutuları örtüşünce bir düşmana isabet eder. Bir isabet düşmanı birkaç kare geriye kaydırır (**geri itme**); bu isabetin yerine
-ulaştığını gösterir; 1 canla bir düşman tek vuruşta gider.
+- **Uzaksa** (4 karodan fazla) **dolaşır**: bir yöne yürür, arada bir rastgele yeni bir yön seçer; duvara çarparsa hemen seçer.
+- **Yakınsa** **kovalar**: oyuncuya olan yatay ve dikey farktan büyük olanın yönünde, dolaşırkenden biraz hızlı yürür.
+
+Buna küçük bir **durum makinesi** (state machine) denir: düşman bir kurala göre iki davranış arasında geçer. Bu kadarı
+bile onu canlı gösterir.
+
+**"Çarptım" sinyali.** Duvara çarpınca yön değiştirmesi için `move`'un "durdurulup durdurulmadığını" söylemesi
+gerekir. `move`'u değiştiriyoruz: hareketi engellenirse `stopped` `true` olur ve fonksiyon sonunda bunu `return` eder.
+`if ... else` → "engellendiyse `stopped = true` yap, **değilse** yürü".
+
+**Kılıç ne zaman değer?** İki kutu üst üste biniyorsa (`overlap`). Kutu A ile B çakışır, eğer A'nın solu B'nin
+sağından solda, A'nın sağı B'nin solundan sağda, ve aynısı yukarı-aşağı için de doğruysa. Dört karşılaştırma `&&` ile
+bağlanır. `box(e)` bir gövdeyi `{ x, y, w, h }` kutusuna çevirir.
+
+**Geri itme (knockback).** Vurulan düşman 10 kare boyunca oyuncunun baktığı yönde karede 4 piksel kayar. Bu, vuruşun
+isabet ettiğini gösterir. Bu sırada soluk pembe çizilir ve tekrar vurulamaz. Canı 1 olduğu için tek vuruşta biter;
+`enemies.filter((e) => e.hp > 0)` canı kalmayanları listeden atar.
+
+**Yeni küçük şeyler:**
+
+- `Object.values(DIRS)` → nesnedeki değerlerin listesi: dört yön çifti. `Math.floor(Math.random() * 4)` 0, 1, 2 ya da 3'ten
+  birini rastgele verir (`Math.random()` 0 ile 1 arasında rastgele bir sayıdır). Böylece rastgele bir yön seçilir.
+- `40 + Math.floor(Math.random() * 60)` → 40 ile 99 arasında rastgele bir tam sayı.
+- `for (const e of enemies)` → listedeki her düşman için, ona `e` de ve `{ }` içini yap.
+- `-Math.sign(ex)` → `ex` düşmanın oyuncuya göre farkıdır; ters işaret düşmanı oyuncuya **doğru** çevirir.
+- `;[...line].forEach(...)` → baştaki noktalı virgül bir güvenlik önlemidir: köşeli parantezle başlayan satır, bir
+  önceki satırın devamı sanılmasın diye.
+- `update` içindeki `cx` ve `cy`, 3. adımda odadan çıkış için hesapladığımız oyuncunun ortasıdır; burada yine kullanıyoruz.
 
 # --task--
 
@@ -45,14 +72,112 @@ ulaştığını gösterir; 1 canla bir düşman tek vuruşta gider.
 
 # --task-tr--
 
-1. `enter()` ayrıca `enemies`'i yaratır: her `e` karosunda ortalı bir `{ x, y, dir: [1, 0], turnIn: 0, hp: 1, knock: 0, kx: 0, ky: 0 }`.
-   `move()` artık herhangi bir eksende durdurulup durdurulmadığını döndürür.
-2. Her karede her düşman için: geri itiliyorsa `knock`'u geri say ve onu `(kx, ky)` kadar hareket ettir. Değilse, ortası oyuncununkine
-   `4 * T` içindeyse uzun eksen boyunca oyuncuya dön ve `1.1` hareket et; değilse `turnIn`'i geri say, yönünde `1` hareket et ve
-   durdurulduysa ya da `turnIn` bittiyse rastgele bir yön ve 40 ile 99 arası `turnIn` seç.
-3. Kılıç dışarıdayken, geri itilmeyen ve ona örtüşen bir düşman 1 can kaybeder ve oyuncunun yönünde kare başına 4 piksel, 10 kare geri
-   itilir. Canı kalmayan düşmanlar çıkarılır.
-4. Düşmanları `SIZE` kareler olarak çiz: `'#7c3aed'`, geri itilirken `'#fca5a5'`.
+1. `const SIZE = 22 ...` satırının yorumunu güncelle (isteğe bağlı ama çözümle aynı olsun):
+
+   ```js
+   const SIZE = 22 // the player's and the enemies' bodies
+   ```
+
+2. `let player` satırının altına düşman listesini ekle:
+
+   ```js
+   let enemies
+   ```
+
+3. `enter()` fonksiyonunu şöyle genişlet:
+
+   ```js
+   // Load a room: its tiles, and fresh enemies on its e tiles. // ← değişti
+   function enter(rx, ry) {
+     room = { rx, ry }
+     tiles = ROOMS[ry][rx].map((line) => [...line].map((ch) => (ch === 'P' || ch === 'e' ? '.' : ch)))
+     enemies = [] // ← yeni (buradan)
+     ROOMS[ry][rx].forEach((line, row) => {
+       ;[...line].forEach((ch, col) => {
+         if (ch !== 'e') return
+         const x = col * T + (T - SIZE) / 2
+         enemies.push({ x, y: row * T + (T - SIZE) / 2, dir: [1, 0], turnIn: 0, hp: 1, knock: 0, kx: 0, ky: 0 })
+       })
+     }) // ← (buraya kadar)
+   }
+   ```
+
+   `if (ch !== 'e') return` → "bu karakter `e` değilse bu karoyu geç".
+
+4. `move()` fonksiyonunu tamamen şununla değiştir:
+
+   ```js
+   // Move a body, one axis at a time, stopping at walls. Returns true if it was stopped.
+   function move(body, dx, dy) {
+     let stopped = false
+     if (blocked(body.x + dx, body.y)) stopped = true
+     else body.x += dx
+     if (blocked(body.x, body.y + dy)) stopped = true
+     else body.y += dy
+     return stopped
+   }
+   ```
+
+5. `swordBox()` fonksiyonunun kapanış `}`'sinden sonra, `function update()`'in **üstüne** iki yardımcı ekle:
+
+   ```js
+   const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+   const box = (body) => ({ x: body.x, y: body.y, w: SIZE, h: SIZE })
+   ```
+
+6. `update()`'in sonunda, `if (swing > 0) swing -= 1` satırının **altına** (fonksiyonun son `}`'sinden önce) düşmanları
+   yöneten kısmı ekle:
+
+   ```js
+     if (swing > 0) swing -= 1
+     const sword = swing > 0 ? swordBox() : null // ← yeni (buradan)
+
+     for (const e of enemies) {
+       if (e.knock > 0) {
+         // Knocked back: slide away from the sword for a few frames.
+         e.knock -= 1
+         move(e, e.kx, e.ky)
+       } else {
+         const ex = e.x + SIZE / 2 - cx
+         const ey = e.y + SIZE / 2 - cy
+         if (Math.hypot(ex, ey) < 4 * T) {
+           // Close: chase the player along the longer axis.
+           e.dir = Math.abs(ex) > Math.abs(ey) ? [-Math.sign(ex), 0] : [0, -Math.sign(ey)]
+           move(e, e.dir[0] * 1.1, e.dir[1] * 1.1)
+         } else {
+           // Far: wander, turning at random now and then or when a wall is in the way.
+           e.turnIn -= 1
+           const stuck = move(e, e.dir[0], e.dir[1])
+           if (stuck || e.turnIn <= 0) {
+             e.dir = Object.values(DIRS)[Math.floor(Math.random() * 4)]
+             e.turnIn = 40 + Math.floor(Math.random() * 60)
+           }
+         }
+       }
+       if (sword && e.knock === 0 && overlap(sword, box(e))) {
+         e.hp -= 1
+         e.knock = 10
+         e.kx = player.dir[0] * 4
+         e.ky = player.dir[1] * 4
+       }
+     }
+     enemies = enemies.filter((e) => e.hp > 0) // ← (buraya kadar)
+   }
+   ```
+
+7. `draw()` içinde, karoları çizen `tiles.forEach(...)` bloğunun kapanış `})`'sinden sonra, oyuncuyu çizen
+   `ctx.fillStyle = '#16a34a'` satırının **üstüne** düşmanları ekle:
+
+   ```js
+     for (const e of enemies) {
+       ctx.fillStyle = e.knock > 0 ? '#fca5a5' : '#7c3aed'
+       ctx.fillRect(e.x, e.y, SIZE, SIZE)
+     }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk odada mor bir düşman dolaşmalı; yaklaşınca sana gelmeli.
+   Ona dönüp Boşluk'a bas: pembeleşip kaybolmalı. Alttaki kontrollerin hepsi yeşil olmalı. "Duvara çarptı" kontrolü
+   kırmızıysa `move`'un en sonda `return stopped` yaptığından emin ol.
 
 # --tests--
 

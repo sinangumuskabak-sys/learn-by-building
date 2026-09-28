@@ -24,20 +24,40 @@ On a phone, holding the left or right third of the screen steers (and accelerate
 
 # --explanation-tr--
 
-Araba ekranın ortasında kalır; direksiyon **kamerayı** yana taşır ve yol öbür yöne kayar. Bu yüzden oyuncunun yol üzerindeki
-konumu, `playerX` (`-1` sol kenar, `1` sağ kenar), izdüşürmeden önce her noktadan çıkarılır:
+**Bu adımda:** sağ ve sol oklarla direksiyon çevireceksin. Araba ekranın ortasında kalacak ama yol yana kayacak;
+yoldan çıkarsan çimen seni yavaşlatacak.
+
+**Araba değil, kamera kayar.** Araba hep ekranın altında ortada durur. Direksiyon çevirince aslında **kamerayı**
+yana kaydırırız, yol da ters yöne gider. Arabanın yoldaki yan konumunu `playerX` adlı bir sayıda tutacağız:
+`0` yolun ortası, `-1` sol kenar, `1` sağ kenar. Her noktayı ekrana çevirirken (`project`) yan konumdan
+`playerX * ROAD` kadar çıkarırız:
 
 ```js
 project(-playerX * ROAD, -CAMERA_HEIGHT, z)
 ```
 
-Yakındaki parçalar ekranda daha geniş olduğu için aynı yana kayma yakındaki yolu çok, uzaktakini neredeyse hiç kaydırmaz; gerçek bir
-arabadan tam da böyle görünür.
+Yakın parçalar ekranda geniş olduğu için aynı kayma yakın yolu çok, uzak yolu çok az oynatır. Gerçek bir arabadan
+bakınca da tam böyle görünür.
 
-Gerçek arabalar dururken dönmez; bu yüzden direksiyon hızla ölçeklenir. Ve çimen yavaştır: yolun dışında araba en yüksek hızının üçte
-birinden fazlasını tutamaz. Oyuncu biraz çimene çıkabilir ama yoldan uzaklaşamaz.
+**Duran araba dönmez.** Direksiyonun etkisini hızla çarparız. `ratio = speed / MAX_SPEED` hızın en yüksek hıza oranıdır:
+dururken `0`, tam hızda `1`. Bu oranı hız değişmeden **önce** hesaplıyoruz, o yüzden `update`'in en başına yazılır.
 
-Telefonda ekranın sol ya da sağ üçte birini basılı tutmak yönlendirir (ve hızlandırır da).
+**Çimen yavaştır.** Yoldan çıkınca (`playerX` -1'den küçük ya da 1'den büyük) araba en yüksek hızının üçte birinden
+fazlasını koruyamaz. Biraz çimene girebilirsin ama yoldan çok uzaklaşamazsın: `playerX` -2.5 ile 2.5 arasında tutulur.
+
+**Yeni şeyler:**
+
+- `Math.abs(x)` bir sayının işaretsiz hâlidir: `Math.abs(-1.5)` → `1.5`. Böylece "sağa ya da sola 1'den fazla mı?"
+  tek soruda sorulur.
+- `&&` "ve" demektir: `offRoad && speed > MAX_SPEED / 3` → "yoldan çıktı **ve** hızı üçte birden fazla".
+- `(keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)` → sağ basılıysa `1`, sol basılıysa `-1`, ikisi de ya da hiçbiri
+  basılı değilse `0`. Bu sayıya `steer` (yön) diyoruz.
+- `keys.ArrowUp = keys.ArrowLeft = keys.ArrowRight = false` → üçüne birden `false` koyar.
+
+**Telefonda:** ekranın sol üçte birine dokunmak sola, sağ üçte birine dokunmak sağa çevirir (ve gaz da verir).
+Parmağın nerede olduğunu şöyle buluruz: `canvas.getBoundingClientRect()` canvas'ın sayfadaki yerini ve enini verir,
+`event.clientX` parmağın yatay konumudur. `(parmak - sol kenar) / en` 0 ile 1 arasında bir sayı olur; 3 ile
+çarpınca `third` 0 ile 3 arasında olur. `third < 1` sol üçte bir, `third >= 2` sağ üçte birdir.
 
 # --task--
 
@@ -50,12 +70,77 @@ Telefonda ekranın sol ya da sağ üçte birini basılı tutmak yönlendirir (ve
 
 # --task-tr--
 
-1. `playerX` ekle (`reset()`'te `0`). `update()` içinde, hız değişmeden önceki `ratio = speed / MAX_SPEED` ile: sol ve sağ oklarla
-   kare başına `0.04 × ratio` yönlendir ve `playerX`'i `-2.5` ile `2.5` arasında tut.
-2. Yolun dışında (`Math.abs(playerX) > 1`), `MAX_SPEED / 3`'ten hızlı bir araba kare başına `2.5` daha kaybeder.
-3. Her yol noktasını yatayda `-playerX * ROAD` ile izdüşür.
-4. `pointerdown`'da `ArrowUp`'ı, sol üçte bir için `ArrowLeft`'i ya da sağ üçte bir için `ArrowRight`'ı da basılı tut;
-   `pointerup` ve `pointercancel`'da üçünü de bırak.
+1. `let position ...` satırının hemen altına yan konumu ekle:
+
+   ```js
+   let playerX // -1 is the left edge of the road, 1 the right edge
+   ```
+
+2. `reset()` içinde `position = 0` satırının altına ekle:
+
+   ```js
+   function reset() {
+     buildTrack()
+     position = 0
+     playerX = 0 // ← yeni
+     speed = 0
+   }
+   ```
+
+3. Dokunma kısmını değiştir. `// Touch: hold anywhere to accelerate.` satırından `stopTouch` fonksiyonunun kapanış
+   `}`'sine kadar olan kısmı sil ve yerine şunu yaz:
+
+   ```js
+   // Touch: hold the left or right third to steer; the car accelerates on its own while you touch.
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const third = ((event.clientX - rect.left) / rect.width) * 3
+     keys.ArrowUp = true
+     if (third < 1) keys.ArrowLeft = true
+     if (third >= 2) keys.ArrowRight = true
+   })
+   function stopTouch() {
+     keys.ArrowUp = keys.ArrowLeft = keys.ArrowRight = false
+   }
+   ```
+
+   Altındaki iki `canvas.addEventListener('pointerup' ...)` ve `('pointercancel' ...)` satırı aynen kalır.
+
+4. `update()` fonksiyonunu şöyle değiştir (yeni satırlar işaretli):
+
+   ```js
+   function update() {
+     const ratio = speed / MAX_SPEED // ← yeni
+
+     if (keys.ArrowUp) speed += 1.2
+     else if (keys.ArrowDown) speed -= 3
+     else speed -= 0.4
+     const offRoad = Math.abs(playerX) > 1 // ← yeni
+     if (offRoad && speed > MAX_SPEED / 3) speed -= 2.5 // grass slows you down  ← yeni
+     speed = Math.max(0, Math.min(MAX_SPEED, speed))
+
+     // Steering works better the faster you go.  ← yeni (bu dört satır)
+     const steer = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)
+     playerX += steer * 0.04 * ratio
+     playerX = Math.max(-2.5, Math.min(2.5, playerX))
+
+     position += speed
+     if (position >= trackLength) position -= trackLength
+   }
+   ```
+
+   Çimen satırında `// ← yeni` yazmana gerek yok; işaretler sadece sana yol göstermek için.
+
+5. `draw()` içindeki ilk `for` döngüsünde `near` ve `far` satırlarındaki ilk `0`'ı `-playerX * ROAD` yap:
+
+   ```js
+       const near = project(-playerX * ROAD, -CAMERA_HEIGHT, z) // ← değişti
+       const far = project(-playerX * ROAD, -CAMERA_HEIGHT, z + SEG) // ← değişti
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Yukarı okla hızlan, sağ-sol oklarla yolu kaydır; yoldan çıkınca
+   hızın 100 km/h civarına düşmeli. Alttaki kontrollerin hepsi yeşil olmalı. Dururken direksiyon dönüyorsa
+   `ratio` satırını `update`'in en başına yazdığından emin ol.
 
 # --tests--
 

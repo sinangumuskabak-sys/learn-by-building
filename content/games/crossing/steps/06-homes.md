@@ -25,22 +25,56 @@ tempo changes. A cap (`Math.min(2, ...)`) keeps late levels possible.
 
 # --explanation-tr--
 
-Karşı kıyıya varmak yetmez: kurbağa **bir eve** konmalıdır. Kıyıda dört ev yuvası var; gerisi çalı ve bir çalıya (ya da
-zaten kurbağası olan bir eve) konmak bir cana mal olur. Bu, nehri gerçek bir bulmacaya çevirir: seni doğru yere taşıyan
-kütüğü seçmen gerekir.
+**Bu adımda:** karşı kıyıya dört ev ekleyeceğiz. En üst yeşil şeritte dört mavi kare (ev) görünecek. Kurbağa bir
+eve ulaşınca ev açık yeşil bir kurbağayla dolacak ve yeni kurbağa alttan başlayacak. Dört ev dolunca bölüm atlanacak
+ve her şey biraz hızlanacak. Sağ üstte `Level 1   Lives: 3` yazacak.
 
-Evler yalnızca dört sütun numarası, artı eşleşen bir true/false dizisidir:
+**Kıyıya varmak yetmez.** Kurbağanın bir **eve** konması gerekiyor. Karşı kıyıda dört ev yeri var; geri kalanı
+çalılık. Çalıya (ya da içinde zaten kurbağa olan bir eve) konmak bir cana mal olur. Bu, nehri gerçek bir bulmacaya
+çevirir: seni doğru yere taşıyacak kütüğü seçmelisin.
+
+**Evler = dört sütun numarası.** Evleri sadece hangi sütunda olduklarıyla tutarız, bir de her ev için "dolu mu?"
+diyen bir doğru/yanlış listesiyle:
 
 ```js
-const HOMES = [1, 4, 7, 10]
-filled = HOMES.map(() => false)   // [false, false, false, false]
-const i = HOMES.indexOf(frog.x)   // kurbağa bir evin önünde değilse -1
+const HOMES = [1, 4, 7, 10]         // evlerin sütunları
+filled = HOMES.map(() => false)     // [false, false, false, false]
+const i = HOMES.indexOf(frog.x)     // kurbağa hangi evin önünde? değilse -1
 ```
 
-Satır 0'da şerit yok; bu yüzden geçen adımdaki yuvarlama bu kontrolden önce kurbağayı zaten bir sütuna hizalar. Dört ev
-de dolunca bölüm artar, evler boşalır ve her şey dörtte bir hızlanır. Her hızı tek bir `pace` sayısıyla çarpmak bir oyunu
-zorlaştırmanın basit ve çok yaygın bir yoludur: bölüm tasarımı aynı kalır, yalnızca tempo değişir. Bir tavan
-(`Math.min(2, ...)`) geç bölümleri oynanabilir tutar.
+- `map` bir listenin her elemanı için küçük fonksiyonu çalıştırıp cevaplardan **yeni bir liste** yapar. Burada
+  fonksiyon hiçbir şeye bakmadan `false` verdiği için dört tane `false` çıkar. (`() =>` parametresi olmayan bir ok
+  fonksiyonudur.)
+- `indexOf(değer)` değerin listede **kaçıncı sırada** olduğunu verir (sayma 0'dan başlar); yoksa `-1` verir.
+  `HOMES.indexOf(7)` → `2`, `HOMES.indexOf(5)` → `-1`.
+- `filled[i]` listenin `i`'nci elemanıdır: o ev dolu mu?
+
+Satır 0'da şerit olmadığı için, geçen adımdaki yuvarlama bu kontrolden önce kurbağayı zaten bir sütuna oturtmuş
+olur. Kütükten 6,7'de atlayan kurbağa 7'ye yuvarlanır.
+
+**Hepsi dolu mu?** `filled.every(Boolean)` → "listedeki her eleman doğru mu?" `every` her elemanı sırayla verilen
+fonksiyona sorar; `Boolean` bir değeri doğruya ya da yanlışa çeviren hazır bir fonksiyondur. Dört ev de doluysa
+cevap doğrudur.
+
+**Hızlanan bölümler.** Dört ev dolunca bölüm (`level`) artar, evler boşalır ve her şey dörtte bir hızlanır. Bütün
+hızları tek bir `pace` (tempo) sayısıyla çarpmak bir oyunu zorlaştırmanın basit ve çok yaygın bir yoludur: bölüm
+tasarımı aynı kalır, sadece tempo değişir.
+
+```js
+const pace = Math.min(2, 1 + (level - 1) * 0.25)
+```
+
+1. bölümde `1`, 2.'de `1.25`, 3.'de `1.5`... `Math.min(2, ...)` iki sayıdan küçüğünü verdiği için tempo asla 2'yi
+(iki kat hız) geçmez; ileri bölümler de oynanabilir kalır.
+
+**`forEach` ile elemanı ve sırasını birlikte almak.** Evleri çizerken her evin hem sütununa hem sırasına (dolu mu
+diye `filled`'e bakmak için) ihtiyacımız var:
+
+```js
+HOMES.forEach((col, i) => { ... })
+```
+
+`forEach` her eleman için fonksiyonu çağırır ve ona elemanı (`col`) ve sıra numarasını (`i`) verir.
 
 # --task--
 
@@ -54,12 +88,101 @@ zorlaştırmanın basit ve çok yaygın bir yoludur: bölüm tasarımı aynı ka
 
 # --task-tr--
 
-1. `HOMES = [1, 4, 7, 10]`, `let level` ve `let filled` ekle; `reset()` `level = 1` ve dört `false` ayarlar.
-2. `hop()`'un sonunda kurbağa satır 0'daysa `reachHome()` çağır. `reachHome()`: `frog.x` bir ev değilse ya da o ev
-   doluysa `die()`. Değilse onu doldur ve yeni bir kurbağa başlat; her ev doluysa `level`'a 1 ekle ve evleri boşalt.
-3. `update()` içinde hem şeritler hem de kütükte taşınma için `pace = Math.min(2, 1 + (level - 1) * 0.25)` kullan.
-4. Her evi satır 0'da bir `'#1e3a8a'` döşeme olarak, doluysa içinde bir `'#86efac'` kurbağayla (8 piksel içeriden)
-   çiz. Bölümü canlardan önce göster: `Level 2   Lives: 3`.
+1. `// Rows from the top: ...` yorum satırının hemen altına (`// speed is in tiles ...` satırından önce) evleri
+   ekle:
+
+   ```js
+   const HOMES = [1, 4, 7, 10] // columns of the home slots in row 0
+   ```
+
+2. `let state // 'playing' or 'over'` satırının altına:
+
+   ```js
+   let level
+   let filled // one true/false per home
+   ```
+
+3. `reset()` fonksiyonuna, `state = 'playing'` satırının altına iki satır ekle:
+
+   ```js
+   function reset() {
+     lives = 3
+     state = 'playing'
+     level = 1                          // ← yeni
+     filled = HOMES.map(() => false)    // ← yeni
+     for (const lane of LANES) lane.offset = 0
+     newFrog()
+   }
+   ```
+
+4. `hop()` fonksiyonunun sonuna, kıyıya varınca evi kontrol eden satırı ekle ve fonksiyonun hemen altına
+   `reachHome()`'u yaz:
+
+   ```js
+     if (!lane || !lane.log) frog.x = Math.round(frog.x)
+     if (frog.y === 0) reachHome()   // ← yeni
+   }
+
+   function reachHome() {
+     const i = HOMES.indexOf(frog.x)
+     if (i === -1 || filled[i]) {
+       die()
+       return
+     }
+     filled[i] = true
+     if (filled.every(Boolean)) {
+       level += 1
+       filled = HOMES.map(() => false)
+     }
+     newFrog()
+   }
+   ```
+
+   Okuyalım: kurbağa bir evin önünde değilse **veya** o ev doluysa öl. Değilse evi doldur; dördü de dolduysa bölümü
+   artır ve evleri boşalt. Her durumda yeni kurbağa alttan başlar.
+
+5. `update()` fonksiyonunda şeritleri kaydıran `for (const lane of LANES) lane.offset += lane.speed` satırını şu üç
+   satırla değiştir:
+
+   ```js
+     // Each level is a quarter faster, up to twice the starting speed.
+     const pace = Math.min(2, 1 + (level - 1) * 0.25)
+     for (const lane of LANES) lane.offset += lane.speed * pace
+   ```
+
+6. Yine `update()`'in sonlarında, kütüğün kurbağayı taşıdığı `frog.x += lane.speed` satırını şöyle değiştir:
+
+   ```js
+     frog.x += lane.speed * pace   // ← değişti
+   ```
+
+7. `draw()` fonksiyonunda, satırları çizen `for (let row = 0; ...)` döngüsünün kapanış `}`'inin hemen altına evleri
+   çiz:
+
+   ```js
+     HOMES.forEach((col, i) => {
+       ctx.fillStyle = '#1e3a8a'
+       ctx.fillRect(col * TILE, TOP, TILE, TILE)
+       if (filled[i]) {
+         ctx.fillStyle = '#86efac'
+         ctx.fillRect(col * TILE + 8, TOP + 8, TILE - 16, TILE - 16)
+       }
+     })
+   ```
+
+   Her ev satır 0'da mavi bir döşemedir; doluysa içine her kenardan 8 piksel küçük açık yeşil bir kurbağa çizilir.
+
+8. Yine `draw()`'da can yazısını bölümü de gösterecek şekilde değiştir:
+
+   ```js
+     ctx.fillText('Level ' + level + '   Lives: ' + lives, canvas.width - 10, 27)   // ← değişti
+   ```
+
+   `'   Lives: '`'ın başında **üç** boşluk var.
+
+9. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Üst kıyıda dört mavi ev görmelisin. Oynamak için önce oyuna tıkla ve
+   bir eve ulaş: ev dolmalı, yeni kurbağa alttan başlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+   kalırsa `Level 2   Lives: 3` yazısındaki boşlukları ve `pace`'in iki yerde de kullanıldığını kontrol et.
 
 # --tests--
 

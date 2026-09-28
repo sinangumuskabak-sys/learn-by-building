@@ -23,20 +23,32 @@ and levels.
 
 # --explanation-tr--
 
-Bitirilen bir labirent aynı biçimde baştan başlamamalı: her bölümde hayaletler **hızlanır**, güç yemleri **kısalır**. Bunu
-iki küçük formül yapar; her birinin oyunun mümkün kalması için bir sınırı vardır:
+**Bu adımda:** oyunu tamamlayacağız. Her yeni bölümde hayaletler hızlanacak, büyük yemlerin etkisi kısalacak. En iyi
+skorun da kaydedilip sol üstte puanının yanında (`Best`) görünecek.
+
+**Bölümle zorlaşmak.** Temizlenen labirent aynen yeniden başlamamalı. İki küçük formül bunu yapar; her birinin bir sınırı
+var ki oyun oynanabilir kalsın:
 
 ```js
-Math.max(8, 10 - level)                       // döşeme başına hayalet karesi: 9, sonra 8, asla oyuncudan hızlı değil
-Math.max(120, 420 - 60 * (level - 1))         // korku kareleri: 7 sn, 6 sn, 5 sn ... asla 2 sn'nin altında değil
+Math.max(8, 10 - level)                 // hayaletin bir kareyi geçtiği kare: 9, sonra 8, asla oyuncudan hızlı değil
+Math.max(120, 420 - 60 * (level - 1))   // korku süresi: 7 sn, 6 sn, 5 sn ... asla 2 sn'nin altında değil
 ```
 
-Bir **taban** olarak `Math.max` akılda tutmaya değer bir kalıptır: bir değerin bölümle küçülmesini ama oyunun bozulacağı
-noktayı geçmemesini sağlar.
+`Math.max(a, b)` iki sayıdan **büyüğünü** verir. Burada bir **taban** gibi çalışır: 1. bölümde `10 - 1` = 9 ve 8'den
+büyük, 9 kullanılır; 5. bölümde `10 - 5` = 5 ama 8'den küçük, 8 kullanılır. Yani değer bölümle küçülür ama oyunun
+bozulacağı noktanın altına asla inmez. Hatırlamaya değer bir kalıp. Oyuncu bir kareyi 8 karede geçtiği için hayalet
+hiçbir zaman ondan hızlı olmaz.
 
-Son olarak en iyi skor `localStorage`'da tutulur ve skorun yanında gösterilir. Bununla oyun tamamlandı: metinden bir
-labirent, akıcı ızgara hareketi, önceden verilen dönüşler, dağılma ve kovalamalı dört hayalet kişiliği, güç yemleri, canlar
-ve bölümler.
+**En iyi skor.** `localStorage` tarayıcının küçük defteridir; sayfa kapansa bile içindekini unutmaz.
+
+- `localStorage.getItem('maze-best')` → `'maze-best'` adıyla yazılanı oku (hiç yazılmamışsa `null`, boş).
+- `Number(...)` → okunan yazıyı sayıya çevirir; `|| 0` → "boş ya da geçersizse 0 kullan".
+- `localStorage.setItem('maze-best', best)` → deftere yaz.
+
+Oyun bittiğinde (`state = 'over'`) puan rekordan büyükse (`score > best`) rekor güncellenir ve kaydedilir.
+
+Bununla oyun tamam: yazıdan labirent, akıcı ızgara hareketi, tamponlanmış dönüşler, dağılma ve kovalamalı dört hayalet
+kişiliği, güç yemleri, canlar ve bölümler.
 
 # --task--
 
@@ -48,11 +60,55 @@ ve bölümler.
 
 # --task-tr--
 
-1. `ghostFrames`: korkmuş bir hayalet yine `16` ister, değilse `Math.max(8, 10 - level)`.
-2. `frighten`: `scaredFor = Math.max(120, 420 - 60 * (level - 1))`.
-3. `let best = Number(localStorage.getItem('maze-best')) || 0` ekle. Oyun daha yüksek bir skorla bittiğinde onu
-   `'maze-best'` altında kaydet.
-4. Sol üste `Score: 120  Best: 3400` yaz.
+1. `let chain ...` satırının hemen altına en iyi skoru okuyan satırı ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('maze-best')) || 0
+   ```
+
+2. `ghostFrames` fonksiyonunun son satırını değiştir:
+
+   ```js
+   function ghostFrames(g) {
+     if (g.scared) return 16
+     return Math.max(8, 10 - level) // ← değişti (eskiden return 9)
+   }
+   ```
+
+3. `frighten` fonksiyonunun ilk satırını değiştir:
+
+   ```js
+     scaredFor = Math.max(120, 420 - 60 * (level - 1)) // ← değişti (eskiden 420)
+   ```
+
+4. `caught` fonksiyonunun sonuna, `state = 'over'` satırından sonra rekoru kaydeden satırları ekle:
+
+   ```js
+   function caught() {
+     lives -= 1
+     if (lives > 0) {
+       placeActors()
+       return
+     }
+     state = 'over'
+     if (score > best) {                        // ← yeni
+       best = score
+       localStorage.setItem('maze-best', best)
+     }
+   }
+   ```
+
+5. `draw()` içinde `ctx.fillText('Score: ' + score, 10, 27)` satırını rekoru da yazacak şekilde değiştir:
+
+   ```js
+     ctx.fillText('Score: ' + score + '  Best: ' + best, 10, 27) // ← değişti
+   ```
+
+   `'  Best: '` başında **iki** boşluk var: sonuç `Score: 0  Best: 0` gibi.
+
+6. **Çalıştır**'a bas. Sol üstte `Score: 0  Best: 0` görünmeli. Oynamak için önce oyuna tıkla; canların bitince puanın
+   rekor olarak kaydedilmeli ve boşlukla yeni oyuna geçince `Best`'te görünmeli. Alttaki kontrollerin hepsi yeşil
+   olmalı. Kırmızı kalırsa `Math.max` içindeki sayılara ve `'maze-best'` adının yazılışına bak.
 
 # --tests--
 

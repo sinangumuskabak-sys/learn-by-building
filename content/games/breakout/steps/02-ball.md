@@ -25,22 +25,71 @@ Starting again goes in a function, `resetBall()`, because more code will need it
 
 # --explanation-tr--
 
-Bu sefer top bir **daire**, yani konumu **merkezi**dir ve kenarları bir yarıçap uzaktadır:
+**Bu adımda:** beyaz, yuvarlak bir top ekleyeceğiz. Top ortadan çapraz yukarı fırlayacak, sol, sağ ve üst
+duvarlardan sekecek. Alttan düşerse ortadan yeniden başlayacak. (Raketten sekmeyi bir sonraki adımda ekleyeceğiz,
+şimdilik raketin içinden geçer.)
+
+**Hareket: konum + hız.** Top her karede biraz yer değiştirir. Bunun için iki çift sayı tutarız:
+
+- **konum**: `ball.x`, `ball.y` (top nerede?)
+- **hız**: `ball.vx`, `ball.vy` (her karede x ve y ne kadar değişiyor?)
+
+```js
+ball.x += ball.vx   // += "üstüne ekle": x'e yatay hızı ekle
+ball.y += ball.vy   // y'ye dikey hızı ekle
+```
+
+`vx: 3, vy: -4` her karede 3 piksel sağa, 4 piksel **yukarı** demektir (`y` aşağı doğru büyüdüğü için eksi
+yukarıdır).
+
+**Top bir daire: konumu merkezidir.** Raket bir dikdörtgendi; onun `x`'i **sol kenarıydı**. Topun `x`, `y`'si ise
+**merkezidir**, kenarları merkezden bir yarıçap (`BALL_R`) uzaktadır:
 
 ```
 sol kenar = ball.x - BALL_R        sağ kenar = ball.x + BALL_R
 üst kenar = ball.y - BALL_R        alt kenar = ball.y + BALL_R
 ```
 
-"Konum köşedir" (dikdörtgenler) ile "konum merkezdir" (daireler) ayrımını karıştırmak birçok çarpışma hatasının
-arkasındadır; hangisiyle uğraştığını hep kendine sor.
+"Konum köşe mi, merkez mi?" karışıklığı pek çok çarpışma hatasının kaynağıdır; her seferinde hangisiyle
+uğraştığını sor.
 
-Top sol, sağ ve üst duvarlardan ilgili hızı çevirerek seker ve takılmasın diye duvarların içine geri konur. Üst duvar
-için çevirmek yerine hızı `Math.abs(ball.vy)` ile **aşağı** bakmaya zorla. Bu, sonraki karede hâlâ duvarın içinde
-olsa bile onu asla yanlış yöne göndermez.
+**Daire çizmek.** Canvas'ta hazır "daire boya" komutu yok; önce şekli tarif eder, sonra boyarız:
 
-Alt taraf açık. Şimdilik dışarı düşen top ortadan yeniden başlıyor; can kaybetmek sonra gelecek. Yeniden başlatmak
-bir fonksiyona gider, `resetBall()`, çünkü başka kodlar da ona ihtiyaç duyacak.
+```js
+ctx.beginPath()                                   // yeni bir şekle başla
+ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2)   // merkez, yarıçap, tam tur
+ctx.fill()                                        // boya
+```
+
+Açılar radyanla verilir; `0`'dan `Math.PI * 2`'ye (2π) kadar "tam bir tur" demektir.
+
+**Karar vermek: `if`.** `if (koşul) { ... }` "eğer koşul doğruysa süslü parantezin içini yap, değilse atla" demektir.
+Koşullarda `<` "küçük mü?", `>` "büyük mü?", `||` ise "**veya**" demektir.
+
+**Duvardan sekmek.**
+
+- **Sol/sağ:** sol kenar 0'ın soluna **veya** sağ kenar canvas'ın sağına geçtiyse yatay hızı ters çevir:
+  `ball.vx = -ball.vx` (3 ise -3, -3 ise 3 olur). Sonra topu `clamp` ile duvarların içine geri koy ki duvarda
+  sıkışıp kalmasın.
+- **Üst:** burada ters çevirmek yerine hızı **aşağıyı gösterecek** şekilde zorlarız: `Math.abs(sayı)` sayının
+  eksisini atar (`Math.abs(-4)` → `4`). Böylece top bir sonraki karede hâlâ duvarın içinde olsa bile yanlış yöne
+  gidemez.
+- **Alt:** açık. Top tamamen alttan çıkınca (üst kenarı bile canvas'ın dibinden aşağıdaysa) şimdilik ortadan yeniden
+  başlar. Can kaybetmek sonra gelecek.
+
+**Yeniden başlatmayı bir fonksiyona koyalım.** Topu başa koyan satırı `resetBall()` (topu sıfırla) fonksiyonuna
+yazarız, çünkü onu hem oyunun başında hem top düşünce, ileride başka yerlerde de çağıracağız.
+
+```js
+let ball            // şimdilik boş (değeri yok)
+
+function resetBall() {
+  ball = { x: 240, y: 200, vx: 3, vy: -4 }
+}
+```
+
+`let ball` değer verilmeden tanımlanır; değerini `resetBall()` verir. Değişken en üstte tanımlı olmalı ki bütün
+fonksiyonlar onu görebilsin.
 
 # --task--
 
@@ -55,14 +104,77 @@ bir fonksiyona gider, `resetBall()`, çünkü başka kodlar da ona ihtiyaç duya
 
 # --task-tr--
 
-1. `const BALL_R = 7`, `let ball` ve `ball = { x: 240, y: 200, vx: 3, vy: -4 }` yapan `function resetBall()` ekle.
-   Açılışta onu bir kez çağır.
-2. Topu hızı kadar taşıyan `function update()` yaz, sonra:
-   - sol/sağ: bir kenar duvarı geçerse `vx`'i çevir ve `ball.x`'i `BALL_R` ile `canvas.width - BALL_R` arasında
-     sınırla;
-   - üst: `ball.y - BALL_R < 0` ise `vy`'yi `Math.abs(ball.vy)`, `ball.y`'yi `BALL_R` yap;
-   - alt: top tamamen canvas'ın altındaysa (`ball.y - BALL_R > canvas.height`) `resetBall()` çağır.
-3. Döngüde çizmeden önce `update()` çağır ve topu `'#f8fafc'` bir daire olarak çiz.
+1. `const PADDLE_Y = 370` satırının altına topun yarıçapını ekle:
+
+   ```js
+   const BALL_R = 7
+   ```
+
+2. `let paddle = { x: 200 }` satırının altına:
+
+   ```js
+   let ball
+   ```
+
+3. `clamp()` fonksiyonunun kapanış `}`'inden sonra bir boş satır bırak ve topu başa koyan fonksiyonu yaz:
+
+   ```js
+   function resetBall() {
+     ball = { x: 240, y: 200, vx: 3, vy: -4 }
+   }
+   ```
+
+4. `canvas.addEventListener('pointermove', ...)` kodunun kapanış `})`'inden sonra, `function draw()`'dan **önce**,
+   topu hareket ettiren fonksiyonu yaz:
+
+   ```js
+   function update() {
+     ball.x += ball.vx
+     ball.y += ball.vy
+
+     if (ball.x - BALL_R < 0 || ball.x + BALL_R > canvas.width) {
+       ball.vx = -ball.vx
+       ball.x = clamp(ball.x, BALL_R, canvas.width - BALL_R)
+     }
+     if (ball.y - BALL_R < 0) {
+       ball.vy = Math.abs(ball.vy)
+       ball.y = BALL_R
+     }
+     if (ball.y - BALL_R > canvas.height) resetBall()
+   }
+   ```
+
+   Üç `if` sırayla: yan duvarlar, tavan, alttan düşme. Son `if` tek komutluk olduğu için `{ }` gerekmez.
+
+5. `draw()` fonksiyonunda, raketi çizen `ctx.fillRect(paddle.x, ...)` satırının altına topu çizen satırları ekle:
+
+   ```js
+     ctx.fillStyle = '#f8fafc'
+     ctx.beginPath()
+     ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2)
+     ctx.fill()
+   ```
+
+6. `loop()` fonksiyonunda `draw()`'dan **önce** `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update()   // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. En alttaki `requestAnimationFrame(loop)` satırının **üstüne** topu ilk kez yerleştiren çağrıyı ekle:
+
+   ```js
+   resetBall()
+   requestAnimationFrame(loop)
+   ```
+
+8. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Top ortadan çıkıp duvarlardan sekmeli, alttan düşünce ortadan yeniden
+   başlamalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: `resetBall()` çağrısını unutmadığından
+   ve `update()`'te `<` ve `>` işaretlerinin yönünden emin ol.
 
 # --tests--
 

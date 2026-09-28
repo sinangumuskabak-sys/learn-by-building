@@ -22,19 +22,55 @@ that one line of code.
 
 # --explanation-tr--
 
-Bir tıklama işaretçinin altındaki hücreyi açar. Onu bulmak, XOX'taki gibi doğrudan bir hesaptır: tıklamayı canvas
-piksellerine ölçekle, sonra sütun için `Math.floor(x / CELL)`, satır için `Math.floor((y - TOP) / CELL)`. Üst şeritteki
-ya da tahtanın dışındaki tıklamalar `undefined` verir.
+**Bu adımda:** hücrelere tıklayınca açılmalarını sağlayacağız. İlk tıklamada mayınlar yerleşir; açılan hücre açık
+griye döner ve çevresinde mayın varsa renkli bir sayı gösterir. Mayına tıklarsan bütün mayınlar 💣 olarak görünür ve
+üstte **Boom!** yazar.
 
-Kurallar `reveal(cell)`'in içinde yaşar:
+**Oyunun durumu.** `let state` oyunun hangi aşamada olduğunu bir yazıyla tutar: `'ready'` (henüz ilk tıklama
+yapılmadı), `'playing'` (oynanıyor), `'lost'` (kaybedildi). `newGame()` her yeni oyunda onu `'ready'` yapar.
 
-- **ilk** açış mayınları o hücrenin çevresine yerleştirir ve oyunu başlatır (`'ready'` → `'playing'`);
-- bir mayın oyunu kaybettirir: bütün mayınlar gösterilir ve artık hücre açılamaz;
-- diğer her şey açılır ve sayısını gösterir, `0` ise hiçbir şey göstermez.
+**Tıklamayı dinlemek (olay, event).** Tarayıcı fare tıklaması gibi olayları haber verebilir:
 
-Renkli sayılar süs değil, tasarımın parçasıdır: her sayının kendi rengi vardır (1 mavi, 2 yeşil, 3 kırmızı...);
-deneyimli oyuncular rakamları okumadan tahtayı bir bakışta okur. Bir arama listesi, `NUMBER_COLORS[count]`, bunu tek
-satırda tutar.
+```js
+canvas.addEventListener('click', (event) => {
+  ...
+})
+```
+
+"Canvas'a tıklandığında bu fonksiyonu çalıştır" demektir. Fonksiyon hemen çalışmaz; her tıklamada tarayıcı onu
+çağırır ve tıklamanın bilgilerini `event` adıyla verir. `event.clientX` ve `event.clientY` farenin ekrandaki yeridir.
+
+**Tıklanan hücreyi bulmak: `cellAt(event)`.**
+
+- `canvas.getBoundingClientRect()` canvas'ın ekranda nerede ve hangi boyutta durduğunu verir (`left`, `top`, `width`,
+  `height`). Canvas ekranda küçültülmüş ya da büyütülmüş olabilir; o yüzden fare konumundan canvas'ın sol üst
+  köşesini çıkarıp `canvas.width / rect.width` oranıyla çarparak **canvas pikseline** çeviririz.
+- `Math.floor(x / CELL)` → x'i 40'a bölüp aşağı yuvarlarsak sütun numarasını buluruz (ör. 130 / 40 = 3,25 → 3).
+  Satır için önce üst şeridin 40 pikselini çıkarırız: `Math.floor((y - TOP) / CELL)`.
+- `||` "veya" demektir. Satır ya da sütun tahtanın dışındaysa `return undefined` ile "hücre yok" cevabı döner.
+  `return` fonksiyonu **o anda bitirir**; alttaki satırlar çalışmaz.
+
+Tıklama fonksiyonunda `if (cell) reveal(cell)` "bir hücre bulunduysa aç" demektir; `undefined` "yok" sayılır.
+
+**Kurallar: `reveal(start)`.**
+
+- Hücre zaten açıksa `return` ile hiçbir şey yapmadan çıkar.
+- Durum `'ready'` ise bu **ilk tıklamadır**: mayınları bu hücrenin çevresi hariç yerleştir, durumu `'playing'` yap.
+- Hücre mayınsa `lose()` çağrılır: durum `'lost'` olur ve bütün mayınlı hücreler açılır.
+- Değilse hücre açılır: `start.revealed = true`.
+
+**Çizim.** Artık her hücre için karar veririz: açık mı, kapalı mı? `if (...) { ... } else { ... }` "doğruysa
+birinciyi, değilse ikinciyi yap" demektir. `else if` ikinci bir koşul ekler.
+
+- `cell.mine ? '#fca5a5' : '#e2e8f0'` → **kısa if** (üçlü işleç): "mayınsa kırmızımsı, değilse açık gri".
+- `ctx.fillText(yazı, x, y)` canvas'a yazı yazar. `ctx.font` yazı tipini ve boyunu, `ctx.textAlign = 'center'` ve
+  `ctx.textBaseline = 'middle'` yazının verilen noktaya **ortalanmasını** sağlar. Hücrenin ortası
+  `x + CELL / 2` (`/` bölme).
+- `String(cell.count)` sayıyı yazıya çevirir (`3` → `'3'`), çünkü `fillText` yazı ister.
+
+**Renkli sayılar.** Her sayının kendi rengi vardır (1 mavi, 2 yeşil, 3 kırmızı...); deneyimli oyuncular tahtayı
+rakamları okumadan renginden tanır. `NUMBER_COLORS` bir renk listesidir; `NUMBER_COLORS[3]` 3'ün rengidir. Sayı 0
+olamayacağı için (0'da yazı yazmayız) ilk eleman `null`, yani "boş"tur.
 
 # --task--
 
@@ -48,13 +84,110 @@ satırda tutar.
 
 # --task-tr--
 
-1. Çözümdeki `NUMBER_COLORS`'ı ve `let state`'i (`newGame()` içinde `'ready'`) ekle.
-2. Bir tıklamanın altındaki hücreyi (canvas piksellerine ölçekleyerek) ya da `undefined` döndüren `cellAt(event)` yaz.
-3. `reveal(start)` yaz: zaten açık hücreleri atla; ilk açışta `placeMines(start)` çağır ve `'playing'`e geç; mayınsa
-   `lose()` çağır (`state = 'lost'` ve her mayını aç); değilse açık olarak işaretle.
-4. `click`'te, oyun kaybedilmediyse işaretçinin altındaki hücreyi aç.
-5. Açık hücreleri `'#e2e8f0'` ile çiz (mayınları `'#fca5a5'` ve bir `💣` ile); sayısı 0'dan büyükse `NUMBER_COLORS[count]`
-   ile yaz. Kaybedince tepeye `Boom!` yaz.
+1. `const MINES = 10` satırının altına renk listesini ekle:
+
+   ```js
+   const NUMBER_COLORS = [null, '#2563eb', '#16a34a', '#dc2626', '#7c3aed', '#b45309', '#0891b2', '#111827', '#6b7280']
+   ```
+
+2. `let grid` satırının altına durumu tutacak değişkeni ekle:
+
+   ```js
+   let state // 'ready' (before the first click), 'playing' or 'lost'
+   ```
+
+3. `newGame()` fonksiyonunun içinde, kapanış `}`'sinden önce durumu sıfırlayan satırı ekle:
+
+   ```js
+   function newGame() {
+     grid = Array.from({ length: SIZE }, (_, row) =>
+       Array.from({ length: SIZE }, (_, col) => ({ row, col, mine: false, count: 0, revealed: false })),
+     )
+     state = 'ready' // ← yeni
+   }
+   ```
+
+4. `placeMines` fonksiyonunun kapanış `}`'sinin altına, `function draw()` satırından önce şu dört parçayı sırayla yaz:
+
+   ```js
+   function reveal(start) {
+     if (start.revealed) return
+     if (state === 'ready') {
+       placeMines(start)
+       state = 'playing'
+     }
+     if (start.mine) {
+       lose()
+       return
+     }
+     start.revealed = true
+   }
+
+   function lose() {
+     state = 'lost'
+     for (const cell of grid.flat()) if (cell.mine) cell.revealed = true
+   }
+
+   function cellAt(event) {
+     // The canvas may be displayed at a different size than its own pixels, so scale the pointer.
+     const rect = canvas.getBoundingClientRect()
+     const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+     const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+     const col = Math.floor(x / CELL)
+     const row = Math.floor((y - TOP) / CELL)
+     if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return undefined
+     return grid[row][col]
+   }
+
+   canvas.addEventListener('click', (event) => {
+     if (state === 'lost') return
+     const cell = cellAt(event)
+     if (cell) reveal(cell)
+   })
+   ```
+
+5. `draw()` fonksiyonunun tamamını sil ve yerine bunu yaz (canvas'ı boyayan ilk iki satır aynı kaldı):
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e293b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.font = 'bold 22px sans-serif'
+     ctx.textAlign = 'center'
+     ctx.textBaseline = 'middle'
+     for (const cell of grid.flat()) {
+       const x = cell.col * CELL
+       const y = TOP + cell.row * CELL
+       if (cell.revealed) {
+         ctx.fillStyle = cell.mine ? '#fca5a5' : '#e2e8f0'
+         ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+         if (cell.mine) ctx.fillText('💣', x + CELL / 2, y + CELL / 2 + 1)
+         else if (cell.count > 0) {
+           ctx.fillStyle = NUMBER_COLORS[cell.count]
+           ctx.fillText(String(cell.count), x + CELL / 2, y + CELL / 2 + 1)
+         }
+       } else {
+         ctx.fillStyle = '#94a3b8'
+         ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+       }
+     }
+
+     ctx.font = 'bold 18px monospace'
+
+     if (state === 'lost') {
+       ctx.textAlign = 'center'
+       ctx.fillStyle = '#f87171'
+       ctx.fillText('Boom!', canvas.width / 2, TOP / 2)
+     }
+   }
+   ```
+
+   `💣` bir emojidir; kopyalayıp yapıştırabilirsin.
+
+6. **Çalıştır**'a bas ve bir hücreye tıkla. Hücre açılmalı, bazı hücrelerde renkli sayılar görünmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Tıklama hiçbir şey yapmıyorsa `addEventListener` satırındaki `'click'` yazısını
+   kontrol et.
 
 # --tests--
 

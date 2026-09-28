@@ -36,33 +36,62 @@ reads those fields instead of the loop counters.
 
 # --explanation-tr--
 
-Deste, her sembolün iki kez bulunduğu **karıştırılmış** bir listedir. İnternet şu tek satırla dolu:
+**Bu adımda:** 8 meyveyi ikişer kez içeren bir deste yapıp **adil** biçimde karıştıracağız ve her kartı kendi
+bilgisini taşıyan bir "kayıt" haline getireceğiz. Sağda görüntü değişmeyecek (kartlar hâlâ kapalı), ama kartların
+altında artık karışık meyveler var.
+
+**Dizi (array) nedir?** Sıralı bir liste. Köşeli parantezle yazılır, elemanlar virgülle ayrılır:
 
 ```js
-deck.sort(() => Math.random() - 0.5)   // yapma
+const SYMBOLS = ['🍎', '🍌', '🍇']
+SYMBOLS[0]        // '🍎'  (sayma 0'dan başlar!)
+SYMBOLS.length    // 3    (eleman sayısı)
 ```
 
-Rastgele görünür ama **yanlıdır**: `sort` tutarlı bir karşılaştırma bekler; cevaplar rastgele olunca bazı sıralar
-diğerlerinden gözle görülür biçimde daha sık çıkar. Bir kart oyununda bu, oyuncuların eşlerin genelde nereye düştüğünü
-öğrenebileceği demektir.
+`[...SYMBOLS, ...SYMBOLS]` içindeki üç nokta (`...`, **spread**) "bu listenin elemanlarını buraya dök" demektir;
+böylece her meyveden iki tane olan 16'lık bir liste çıkar.
 
-Doğru algoritma **Fisher–Yates karıştırması**dır. Son konumdan ilkine doğru yürü; her `i` konumunda onu `0` ile `i`
-arasındaki rastgele bir konumla takas et:
+**Fonksiyon (function) nedir?** Bir işe ad verip sonra istediğin zaman çalıştırmaktır. Tarif yazmak (tanımlamak)
+ile yemeği pişirmek (çağırmak) ayrı şeylerdir:
 
 ```js
-for (let i = items.length - 1; i > 0; i--) {
-  const j = Math.floor(Math.random() * (i + 1))   // 0 … i
-  ;[items[i], items[j]] = [items[j], items[i]]    // takas
+function double(n) {   // tanımla: n bir parametre, yani fonksiyona verilen değer
+  return n * 2         // return: sonucu geri ver ve fonksiyondan çık
 }
+double(5)              // çağır: sonuç 10
 ```
 
-Olası sıraların her biri tam olarak eşit olasılıklıdır ve tek bir geçiş yeter. Çok benzeyen bir hataya dikkat: her
-konumu **tüm** dizideki (`0 … length - 1`) rastgele bir konumla takas etmek aynı görünür ama o da yanlıdır. `i` azaldıkça
-rastgele aralık da daralmalı. Takas, dizi ayrıştırma kullanır; baştaki
-`;` JavaScript'in satırı bir öncekine yapıştırmasını engeller.
+**Rastgelelik.** `Math.random()` 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir. `Math.floor(sayı)`
+aşağı yuvarlar: `Math.floor(3.7)` → `3`. İkisi birlikte: `Math.floor(Math.random() * 5)` → 0, 1, 2, 3 ya da 4.
 
-Her kart; sembolünü, ızgaradaki yerini ve açık olup olmadığını bilen bir nesneye dönüşür. Çizim kodu döngü sayaçları
-yerine bu alanları okur.
+**Adil karıştırma.** İnternette `deck.sort(() => Math.random() - 0.5)` gibi tek satırlık bir yöntem çok görülür ama
+**yanlıdır**: bazı sıralar diğerlerinden sık çıkar, oyuncu eşlerin nereye düştüğünü öğrenebilir. Doğrusu
+**Fisher–Yates**: sondan başa yürü; her `i` konumunu `0` ile `i` arasındaki rastgele bir `j` konumuyla **takas et**.
+
+- `for (let i = items.length - 1; i > 0; i--)` → `i` sondan başlar, `i--` her turda 1 azaltır.
+- `const j = Math.floor(Math.random() * (i + 1))` → 0 ile `i` arasında rastgele bir sayı.
+- `;[items[i], items[j]] = [items[j], items[i]]` → iki elemanın yerini değiştirir. Baştaki `;`, bu satırın bir
+  öncekine yapışmasını engeller; unutma.
+
+Dikkat: `j`'yi bütün diziden (`0 … length - 1`) seçmek de yanlıdır; aralık `i` ile birlikte daralmalı.
+
+**Nesne (object) nedir?** Birden çok bilgiyi adlarıyla bir arada tutan kayıt: `{ col: 2, row: 1 }`. İçindeki bilgiye
+**alan** denir ve nokta ile okunur: `card.col`. `faceUp: false` gibi `true`/`false` değerlere **mantıksal değer**
+(boolean) denir: "açık mı? hayır". `{ symbol }` kısaltmadır, `{ symbol: symbol }` demektir.
+
+**`map` ve ok fonksiyonu.** `deck.map((symbol, index) => ({ ... }))` destedeki her eleman için parantez içindeki
+küçük fonksiyonu çalıştırır ve sonuçlardan yeni bir dizi yapar. `=>` (ok) kısa fonksiyon yazımıdır: soldakiler
+parametreler (`symbol` = meyve, `index` = sırası 0…15), sağdaki sonuçtur. Nesneyi `( )` içine alırız ki süslü
+parantez gövde sanılmasın. `index % SIZE` bölümden kalandır (`6 % 4` → `2`): sütunu verir; `Math.floor(index / SIZE)`
+satırı verir.
+
+**Çizimi bir fonksiyona almak.** Artık kartlar değişecek, tahtayı tekrar tekrar çizmemiz gerekecek; bu yüzden çizim
+kodu `draw()` fonksiyonuna taşınıyor. İçinde yeni şeyler:
+
+- `for (const card of cards) { ... }` → dizideki her kart için bir kez çalışır; o turda kartın adı `card`.
+- `if (card.faceUp) { ... } else { ... }` → **koşul**: kart açıksa ilk bloğu, değilse `else` bloğunu çalıştır.
+- `ctx.font`, `ctx.textAlign = 'center'`, `ctx.textBaseline = 'middle'` yazının boyunu ve verilen noktaya göre
+  ortalanmasını ayarlar; `ctx.fillText(yazı, x, y)` yazıyı çizer. `CARD / 2` 85'in yarısı (`/` bölme).
 
 # --task--
 
@@ -76,13 +105,95 @@ yerine bu alanları okur.
 
 # --task-tr--
 
-1. `const SYMBOLS = ['🍎', '🍌', '🍇', '🍒', '🥝', '🍋', '🍉', '🍑']` ekle.
-2. Diziyi Fisher–Yates ile **yerinde** karıştırıp döndüren `function shuffle(items)` yaz.
-3. `let cards` ve `function newGame()` ekle: `[...SYMBOLS, ...SYMBOLS]`'u karıştır ve 16 kart nesnesine çevir:
-   `{ symbol, col: index % SIZE, row: Math.floor(index / SIZE), faceUp: false, matched: false }`. Açılışta çağır.
-4. Önceki adımdaki formüllerle `cardX(card)` ve `cardY(card)` yaz; arka planı, sonra her kartı boyayan bir `draw()`
-   yaz: kapalıysa eskisi gibi, açıksa ortasına sembolü çizilmiş (`'44px sans-serif'`, yatay ve dikeyde ortalı)
-   `'#f8fafc'` bir kare olarak. `draw()`'u çağır.
+1. `const TOP = 40` satırının **altındaki her şeyi sil** (arka planı boyayan iki satır ve iki döngü). Bunlar birazdan
+   `draw()`'un içinde geri gelecek.
+
+2. `const TOP = 40` satırının hemen altına meyve listesini ekle. Emojileri yazmak zorsa buradan kopyalayıp yapıştır:
+
+   ```js
+   const SYMBOLS = ['🍎', '🍌', '🍇', '🍒', '🥝', '🍋', '🍉', '🍑']
+   ```
+
+3. Bir satır boşluk bırak ve kartları tutacak değişkeni ekle (şimdilik boş):
+
+   ```js
+   let cards
+   ```
+
+4. Altına karıştırma fonksiyonunu yaz:
+
+   ```js
+   // Fisher–Yates: every order is equally likely.
+   function shuffle(items) {
+     for (let i = items.length - 1; i > 0; i--) {
+       const j = Math.floor(Math.random() * (i + 1))
+       ;[items[i], items[j]] = [items[j], items[i]]
+     }
+     return items
+   }
+   ```
+
+5. Altına yeni oyunu hazırlayan fonksiyonu yaz:
+
+   ```js
+   function newGame() {
+     const deck = shuffle([...SYMBOLS, ...SYMBOLS])
+     cards = deck.map((symbol, index) => ({
+       symbol,
+       col: index % SIZE,
+       row: Math.floor(index / SIZE),
+       faceUp: false,
+       matched: false,
+     }))
+   }
+   ```
+
+6. Altına bir kartın sol ve üst kenarını hesaplayan iki küçük fonksiyon ekle (1. adımdaki formüller):
+
+   ```js
+   function cardX(card) {
+     return GAP + card.col * (CARD + GAP)
+   }
+
+   function cardY(card) {
+     return TOP + GAP + card.row * (CARD + GAP)
+   }
+   ```
+
+7. Altına çizim fonksiyonunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e1b4b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.font = '44px sans-serif'
+     ctx.textAlign = 'center'
+     ctx.textBaseline = 'middle'
+     for (const card of cards) {
+       const x = cardX(card)
+       const y = cardY(card)
+       if (card.faceUp) {
+         ctx.fillStyle = '#f8fafc'
+         ctx.fillRect(x, y, CARD, CARD)
+         ctx.fillText(card.symbol, x + CARD / 2, y + CARD / 2)
+       } else {
+         ctx.fillStyle = '#6366f1'
+         ctx.fillRect(x, y, CARD, CARD)
+       }
+     }
+   }
+   ```
+
+8. En alta, iki fonksiyonu **çağıran** iki satırı ekle (tanımlamak yetmez, çalıştırmak da gerekir):
+
+   ```js
+   newGame()
+   draw()
+   ```
+
+9. **Çalıştır**'a bas. Sağda yine 16 kapalı mor kart görmelisin ve alttaki kontrollerin hepsi yeşil olmalı.
+   Karıştırma kontrolü kırmızıysa `i + 1`'deki `+ 1`'i ve `i > 0` koşulunu kontrol et.
 
 # --tests--
 

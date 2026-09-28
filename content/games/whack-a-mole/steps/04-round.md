@@ -28,25 +28,39 @@ one `start()` function.
 
 # --explanation-tr--
 
-Şu an oyun hiç bitmiyor ve oyuncu hazır olmadan başlıyor. Ona bir biçim ver: ilk tıklamayla başlayan ve 30 saniye
-süren bir **tur**.
+**Bu adımda:** oyuna bir başı ve sonu olan **tur** ekleyeceğiz. Açılışta ortada `Click to start` yazar; tıklayınca
+30 saniyelik tur başlar ve sağ üstte `Time: 30`'dan geri sayım görünür. Süre bitince `Time's up!` ve skorun çıkar;
+bir tıklama yeni tur başlatır.
 
-Aynı zaman damgası fikri turun tamamı için de işe yarar: başladığında **ne zaman biteceğini** hatırla:
+**Turun sonunu saklamak.** Köstebeklerde kullandığımız "ne zamana kadar?" fikri bütün tur için de işler. Tur
+başlarken **ne zaman biteceğini** hatırlarız:
 
 ```js
-endsAt = now + ROUND   // ROUND = 30000 ms
+endsAt = now + ROUND   // ROUND = 30000 ms, yani 30 saniye
 ```
 
-O zaman "ne kadar kaldı?" `endsAt - now`, "bitti mi?" de `now >= endsAt` olur. Tam saniye göstermek için `Math.ceil`
-ile **yukarı** yuvarla; böylece son saniye boyunca ekranda `0` değil `1` yazar:
+Sonra "ne kadar kaldı?" `endsAt - now`, "bitti mi?" ise `now >= endsAt` olur. Kalanı tam saniye göstermek için
+1000'e böleriz ve `Math.ceil` ile **yukarı** yuvarlarız; böylece son saniyede ekranda `0` değil `1` yazar:
 
 ```
 kalan 29 400 ms  →  "30"      kalan 400 ms  →  "1"
 ```
 
-Durumlar tanıdık üçlü: `'ready'` (tıklama bekliyor), `'playing'`, `'over'` (sonucu göster; bir sonraki tıklama yeniden
-başlatır). Bir tur başlatmak ihtiyaç duyduğu her şeyi sıfırlar: skor, süre, takvim ve bütün köstebekler aşağıda; hepsi
-tek bir `start()` fonksiyonunda.
+**Üç durum.** Oyunun hangi aşamada olduğunu `state` değişkeninde bir yazı olarak tutarız: `'ready'` (tıklama
+bekleniyor), `'playing'` (oynanıyor), `'over'` (bitti, sonucu göster; sonraki tıklama yeniden başlatır). `===`
+"eşit mi?", `!==` "eşit değil mi?" demektir.
+
+**Her şeyi sıfırlayan tek fonksiyon.** `start()` bir turun ihtiyacı olan her şeyi baştan kurar: durum, skor, bitiş
+zamanı, ilk köstebeğin zamanı ve bütün köstebeklerin inmesi. `for (const hole of holes) hole.upUntil = 0` → her delik
+için tek satırlık bir döngü; tek komut olduğu için süslü parantez gerekmez.
+
+**`return` ile erken çıkış.** `if (state !== 'playing') return` → "oyun sürmüyorsa fonksiyondan hemen çık, aşağıyı
+çalıştırma". Tıklamada da aynısı: oyun sürmüyorsa `start()` de ve çık; vurma kodu çalışmasın.
+
+**Yazıları hizalamak.** `ctx.textAlign = 'right'` yazının **sağ ucunu** verilen noktaya koyar (sağ kenardan 12
+piksel içeride durur); `'center'` ortasını koyar. `"Time's up!"` yazısında kesme işareti (`'`) olduğu için bu yazıyı
+**çift tırnakla** yazarız; yoksa bilgisayar yazının orada bittiğini sanar. `'rgba(0, 0, 0, 0.6)'` yarı saydam siyahtır
+(son sayı saydamlık: 0 görünmez, 1 tam dolu); yazıların arkasına bir şerit çeker.
 
 # --task--
 
@@ -61,15 +75,80 @@ tek bir `start()` fonksiyonunda.
 
 # --task-tr--
 
-1. `const ROUND = 30000`, `let state = 'ready'` ve `let endsAt = 0` ekle.
-2. `function start()` yaz: `state = 'playing'`, `score = 0`, `endsAt = now + ROUND`, `nextPop = now` yap ve bütün
-   köstebekleri indir (`upUntil = 0`).
-3. `pointerdown` işleyicisinde: oyun sürmüyorsa `start()` çağır ve orada dur; değilse eskisi gibi vur.
-4. `update()` içinde: oyun sürmüyorsa hiçbir şey yapma. `now >= endsAt` ise `state = 'over'` yap, bütün köstebekleri
-   indir ve dur.
-5. Oyun sürerken kalan saniyeyi, `Math.ceil((endsAt - now) / 1000)`, `(canvas.width - 12, 28)` noktasına sağa hizalı
-   `Time: 30` olarak çiz. Hazırken ortada `Click to start`; bitince `Time's up!`, `Score: 12` ve `Click to play again`
-   göster.
+1. `const HOLE_R = 40` satırının hemen altına ekle:
+
+   ```js
+   const ROUND = 30000 // a round lasts 30 seconds
+   ```
+
+2. `let score = 0` satırının hemen altına ekle:
+
+   ```js
+   let state = 'ready' // 'ready', 'playing' or 'over'
+   let endsAt = 0
+   ```
+
+3. `holeAt` fonksiyonunun kapanış `}`'sinden sonra, `canvas.addEventListener('pointerdown', ...` satırından önce
+   `start`'ı ekle:
+
+   ```js
+   function start() {
+     state = 'playing'
+     score = 0
+     endsAt = now + ROUND
+     nextPop = now
+     for (const hole of holes) hole.upUntil = 0
+   }
+
+   ```
+
+4. `pointerdown` dinleyicisinin **en başına**, `(event) => {` satırının hemen altına ekle:
+
+   ```js
+     if (state !== 'playing') {
+       start()
+       return
+     }
+   ```
+
+5. `update()` fonksiyonunun **en başına**, `function update() {` satırının hemen altına ekle:
+
+   ```js
+     if (state !== 'playing') return
+     if (now >= endsAt) {
+       state = 'over'
+       for (const hole of holes) hole.upUntil = 0
+       return
+     }
+   ```
+
+6. `draw()` içinde `ctx.fillText('Score: ' + score, 12, 28)` satırının altına, fonksiyonun kapanış `}`'sinden önce
+   şunu ekle:
+
+   ```js
+     if (state === 'playing') {
+       ctx.textAlign = 'right'
+       ctx.fillText('Time: ' + Math.ceil((endsAt - now) / 1000), canvas.width - 12, 28)
+     }
+
+     ctx.textAlign = 'center'
+     if (state === 'ready') ctx.fillText('Click to start', canvas.width / 2, canvas.height / 2)
+     if (state === 'over') {
+       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+       ctx.fillRect(0, 150, canvas.width, 130)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 30px sans-serif'
+       ctx.fillText("Time's up!", canvas.width / 2, 190)
+       ctx.font = '20px sans-serif'
+       ctx.fillText('Score: ' + score, canvas.width / 2, 225)
+       ctx.font = '16px sans-serif'
+       ctx.fillText('Click to play again', canvas.width / 2, 260)
+     }
+   ```
+
+7. **Çalıştır**'a bas. Ortada `Click to start` görmelisin ve hiç köstebek çıkmamalı. Oynamak için oyuna tıkla: tur
+   başlar, sağ üstte süre geri sayar; 30 saniye sonra `Time's up!` çıkar. Alttaki kontrollerin hepsi yeşil olmalı.
+   Süre kontrolü kırmızıysa `Math.floor` değil `Math.ceil` yazdığından emin ol.
 
 # --tests--
 

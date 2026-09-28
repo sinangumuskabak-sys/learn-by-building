@@ -29,12 +29,58 @@ as drawing every cell.
 
 # --explanation-tr--
 
-2048'de her hücre düz bir sayıydı. Mayın Tarlası'ndaki bir hücrenin aynı anda birkaç şeyi hatırlaması gerekir: altında
-mayın var mı, çevresinde kaç mayın var, açıldı mı, bayrak kondu mu. Bu yüzden her hücre bir **nesnedir** ve tahta
-nesnelerden oluşan 2 boyutlu bir dizidir.
+**Bu adımda:** Mayın Tarlası'nın tahtasını çizeceğiz. Sağda, üstte boş bir şerit ve altında 9 satır, 9 sütunluk
+gri karelerden bir ızgara göreceksin.
 
-`Array.from` onu düzgünce kurar. İkinci argümanı her yuvanın **indeksiyle** çağrılır; böylece her hücre nerede olduğunu
-saklayabilir:
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan kısımlar
+**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) nedir?** Sayfada 360 piksel eninde, 400 piksel boyunda boş bir resim alanı var. Adı `canvas`,
+kimliği (id) `game`. Oyundaki her şeyi bu alanın üstüne **boyayarak** göstereceğiz. Önce kâğıdı buluruz, sonra
+fırçayı alırız:
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir: bir
+  kutuya etiket yapıştırmak gibi, sonra hep o etiketle çağırırsın. Sabitin içeriği bir daha değiştirilmez.
+- `document.getElementById('game')` → "sayfada kimliği `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `ctx` bizim **fırçamız** (çizim bağlamı, context). `ctx.fillStyle = '#94a3b8'` fırçaya renk sürer,
+  `ctx.fillRect(x, y, en, boy)` o renkle bir dikdörtgen boyar. Renkler `'#1e293b'` gibi kodlarla yazılır:
+  `'#1e293b'` koyu lacivert, `'#94a3b8'` açık gri.
+
+**Konum:** Canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür.
+
+**Sabitler:** `SIZE = 9` (bir kenarda 9 hücre), `CELL = 40` (bir hücre 40 piksel), `TOP = 40` (en üstte mayın
+sayacı ve saat için 40 piksellik boş şerit). Sayıları bir kez ad vererek yazarsak, sonra her yerde adıyla kullanırız.
+
+**Değişken (`let`):** `let grid` "adı `grid` olan bir kutu aç, içi şimdilik boş" demektir. `const`'tan farkı, `let`
+ile açılan kutunun içine sonradan başka şey koyabilmendir. Her yeni oyunda tahtayı yeniden kuracağımız için `let`.
+
+**Fonksiyon nedir?** Bir işi yapan, adı olan bir talimat paketidir. Tarif kartı gibi: önce kartı yazarsın
+(**tanımlamak**), sonra ne zaman istersen "şu tarifi yap" dersin (**çağırmak**).
+
+```js
+function newGame() {   // tanımlama: süslü parantezin içi tarifin adımları
+  ...
+}
+newGame()              // çağırma: şimdi yap
+```
+
+**Nesne (object):** Birkaç bilgiyi tek pakette tutar. `{ row: 3, col: 7 }` "satırı 3, sütunu 7 olan şey" demektir;
+içindeki bilgiye nokta ile ulaşırsın: `cell.row`. Mayın Tarlası'nda her hücre çok şey hatırlayacak (mayın var mı,
+açıldı mı, bayrak var mı), o yüzden her hücre bir nesne olacak. `{ row, col }` kısa yazımdır; `{ row: row, col: col }`
+ile aynıdır.
+
+**Dizi (array):** Sıralı bir listedir: `[5, 8, 2]`. Sıra numarası (index) **0'dan** başlar: `liste[0]` ilk eleman.
+Tahtamız **dizilerden oluşan bir dizi**: 9 satır, her satır da 9 hücreden oluşan bir dizi. `grid[3][7]` "3 numaralı
+satırın 7 numaralı hücresi" demektir.
+
+**Izgarayı kuran kod:**
 
 ```js
 grid = Array.from({ length: SIZE }, (_, row) =>
@@ -42,13 +88,25 @@ grid = Array.from({ length: SIZE }, (_, row) =>
 )
 ```
 
-(`_`, kullanmadığın bir parametre için yaygın bir addır; burada boş yuvanın değeri.)
+Bunu parça parça okuyalım:
 
-`row` ve `col`'ü hücrenin kendisinde saklamanın faydası yakında görülecek: fonksiyonlara bir **hücre** verilebilir ve
-koordinatları ayrıca taşımadan onun nerede durduğunu bilirler.
+- `Array.from({ length: SIZE }, ...)` → "9 elemanlı bir dizi yap; her elemanı virgülden sonraki küçük fonksiyonla
+  üret".
+- `(_, row) => ...` → **ok fonksiyonu** (arrow function): kısa yazılmış bir fonksiyondur. Parantezin içi girdiler
+  (**parametre**), `=>`'nin sağı ürettiği sonuç. `Array.from` bu fonksiyona her eleman için sırayla 0, 1, 2 ... 8
+  sıra numarasını verir, biz ona `row` diyoruz. `_` ise kullanmadığımız ilk girdiye verilen yaygın bir addır.
+- İçteki `Array.from` aynı şeyi sütunlar için yapar ve her hücre için `({ row, col })` nesnesini üretir. Nesnenin
+  etrafındaki normal parantez, süslü parantezin "fonksiyon gövdesi" sanılmaması için gereklidir.
 
-`grid.flat()` 2 boyutlu diziyi 81 hücrenin hepsinden oluşan tek uzun bir listeye çevirir; konumun önemli olmadığı her
-durumda, örneğin her hücreyi çizerken, işe yarar.
+Böylece her hücre **nerede olduğunu kendisi bilir**; bu ileride çok işimize yarayacak.
+
+**Hepsini çizmek:** `grid.flat()` iç içe diziyi 81 hücrelik tek uzun listeye düzleştirir. `for (const cell of ...)`
+**döngüsü** bu listedeki her hücre için süslü parantezin içini bir kez çalıştırır; her turda o anki hücrenin adı
+`cell` olur. Hücrenin yeri: sütun × 40 sağa, satır × 40 aşağıya (üstteki 40'lık şeridin altından). Her kenardan 1
+piksel boşluk bırakıp `CELL - 2` = 38 piksellik kare boyarız ki kareler arasında ince çizgi kalsın.
+
+**Oyun döngüsü:** `requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki yenilemede `loop`'u çalıştır" der.
+`loop` de önce çizer, sonra aynı isteği tekrarlar; böylece ekran saniyede yaklaşık 60 kez yeniden çizilir.
 
 # --task--
 
@@ -60,11 +118,63 @@ durumda, örneğin her hücreyi çizerken, işe yarar.
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut; `SIZE = 9`, `CELL = 40` ve `TOP = 40` ekle.
-2. `let grid` ve `Array.from` ile `{ row, col }` nesnelerinden `SIZE` × `SIZE` bir ızgara kuran `function newGame()`
-   ekle. Açılışta çağır.
-3. `draw()`: canvas'ı `'#1e293b'` ile, her hücreyi de `(col * CELL + 1, TOP + row * CELL + 1)` noktasında `CELL - 2`
-   boyutunda `'#94a3b8'` ile doldur. Bir `requestAnimationFrame` döngüsünde çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırakıp üç sabiti ekle:
+
+   ```js
+   const SIZE = 9
+   const CELL = 40
+   const TOP = 40 // room for the mine counter and the timer
+   ```
+
+3. Altına tahtayı tutacak değişkeni ve tahtayı kuran fonksiyonu yaz:
+
+   ```js
+   let grid
+
+   function newGame() {
+     grid = Array.from({ length: SIZE }, (_, row) =>
+       Array.from({ length: SIZE }, (_, col) => ({ row, col })),
+     )
+   }
+   ```
+
+4. Altına çizim fonksiyonunu yaz. Önce bütün canvas'ı koyu renge boyar, sonra her hücreyi gri bir kare olarak çizer:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#1e293b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#94a3b8'
+     for (const cell of grid.flat()) {
+       ctx.fillRect(cell.col * CELL + 1, TOP + cell.row * CELL + 1, CELL - 2, CELL - 2)
+     }
+   }
+   ```
+
+5. Altına oyun döngüsünü ve en sona da açılışta çalışacak iki çağrıyı ekle:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+   `newGame()` tahtayı kurar, `requestAnimationFrame(loop)` çizimi başlatır.
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda, üstte koyu bir şerit ve altında 9×9 gri kare görmelisin;
+   alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa parantezleri say: her `(` ve `{` bir kez kapanmalı.
 
 # --tests--
 

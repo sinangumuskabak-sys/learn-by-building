@@ -20,17 +20,40 @@ the final grade in the next steps are all worked out from them and the timing.
 
 # --explanation-tr--
 
-"Vuruş" yeterli değildir: oyuncular **ne kadar iyi** vurduklarını bilmek ister. Bu yüzden pencere ikiye bölünür:
+**Bu adımda:** vuruşları puanlayacağız. Tam zamanında basarsan sarı "Perfect", biraz kaçırırsan yeşil "Good" çıkacak;
+hiç basmadığın ve geçip giden notalar için kırmızı "Miss" yazacak. Sol üstteki sayaç `2 perfect  1 good  0 missed`
+gibi üçünü birden gösterecek.
 
-- `PERFECT = 4` kare içinde (yaklaşık saniyenin on beşte biri): **Kusursuz** (Perfect);
-- `GOOD = 9` kare içinde: **İyi** (Good).
+**"Vurdun" yetmez.** Oyuncu **ne kadar iyi** vurduğunu bilmek ister. Bu yüzden 2. adımdaki tek pencereyi ikiye
+böleriz:
 
-Ve vurulmadan kayıp giden bir nota bir **Iska**dır (Miss). Her karede, vurulmamış ve `GOOD` kareden daha geçmişte kalan her nota
-ıskalanmış olarak işaretlenir. Karşılaştırmaya dikkat et: tam `GOOD` kare geç kalmışken hâlâ vurulabilir; yani ancak ondan bir kare
-sonra ıska olur.
+- `PERFECT = 4` kare içinde (saniyenin yaklaşık on beşte biri): **Perfect** (kusursuz);
+- `GOOD = 9` kare içinde: **Good** (iyi).
 
-Üç sayı, `judged.perfect`, `judged.good` ve `judged.miss`, bir performansın bütün hikâyesidir; sonraki adımlardaki puan, kombo ve son not
-hep onlardan ve zamanlamadan hesaplanır.
+`WINDOW` artık gerekmez; onun yerini `GOOD` alır. `<=` "küçük veya eşit" demektir:
+
+```js
+if (off <= PERFECT) {
+  // kusursuz say
+} else {
+  // iyi say
+}
+```
+
+`if (...) { ... } else { ... }` → koşul doğruysa ilk blok, değilse `else` ("yoksa") bloğu çalışır. Buraya ancak
+`off > GOOD` olmadığı için geldik, yani `else` 5 ile 9 kare arasını kapsar.
+
+**Üç sayaç tek nesnede.** `hits` yerine üç sayıyı bir **nesnede** tutarız:
+`judged = { perfect: 0, good: 0, miss: 0 }`. İçlerinden biri `judged.good += 1` ile artırılır. Bu üç sayı bir
+performansın bütün hikâyesidir; sonraki adımlardaki kombo ve not bunlardan hesaplanacak.
+
+**Iska (Miss).** Vurulmadan geçip giden nota bir ıskadır. Her karede `update()` bütün notalara bakar: vurulmamış
+(`!n.hit`, `!` "değil") **ve** (`&&`) zamanı `GOOD` kareden fazla geçmişse ıska sayılır. `frame - n.time` notanın kaç
+kare geç kaldığıdır. Dikkat: tam `GOOD` kare geçteyken hâlâ vurulabilir (`>` "büyüktür", eşit değil), o yüzden ıska
+bundan bir kare sonra olur. Iskalanan notayı `hit = true` yaparız ki bir daha sayılmasın ve çizilmesin.
+
+**Yazıyı parçalardan kurmak.** `judged.perfect + ' perfect  ' + ...` sayılarla yazıları `+` ile uç uca ekler. Kelimeler
+arasında **iki** boşluk var: `'2 perfect  1 good  0 missed'`.
 
 # --task--
 
@@ -42,12 +65,69 @@ hep onlardan ve zamanlamadan hesaplanır.
 
 # --task-tr--
 
-1. `WINDOW`'u `PERFECT = 4` ve `GOOD = 9` ile, `hits`'i `judged = { perfect: 0, good: 0, miss: 0 }` ile değiştir.
-2. `press`'te `PERFECT` içindeki bir nota kusursuz (`judge('Perfect', '#fde047')`), `GOOD` içindeki iyi (`judge('Good', '#86efac')`)
-   sayılır; `GOOD`'un ötesinde hiçbir şey olmaz.
-3. `update()`'te vurulmamış ve `GOOD` kareden fazla geç kalmış her notayı vurulmuş işaretle, bir ıska say ve `judge('Miss', '#f87171')`
-   et.
-4. `(12, 24)`'e `2 perfect  1 good  0 missed` çiz.
+1. `const WINDOW = 9 ...` satırını sil ve yerine iki sabit yaz:
+
+   ```js
+   const PERFECT = 4 // frames either side of the exact moment
+   const GOOD = 9
+   ```
+
+2. `let hits` satırını değiştir:
+
+   ```js
+   let judged // counts: { perfect, good, miss }          // ← değişti
+   ```
+
+3. `reset()` içindeki `hits = 0` satırını değiştir:
+
+   ```js
+     judged = { perfect: 0, good: 0, miss: 0 }            // ← değişti
+   ```
+
+4. `press()` fonksiyonunun sonunu değiştir. `if (off > WINDOW)` satırındaki `WINDOW`'u `GOOD` yap; `hits += 1` ve
+   `judge('Hit', ...)` satırlarını sil, yerlerine `if`/`else` yaz. Fonksiyonun sonu şöyle olmalı:
+
+   ```js
+     const off = Math.abs(closest.time - frame)
+     if (off > GOOD) return // too early: nothing happens, and the note is still there   // ← değişti
+     closest.hit = true
+     if (off <= PERFECT) {                                 // ← yeni
+       judged.perfect += 1                                 // ← yeni
+       judge('Perfect', '#fde047')                         // ← yeni
+     } else {                                              // ← yeni
+       judged.good += 1                                    // ← yeni
+       judge('Good', '#86efac')                            // ← yeni
+     }                                                     // ← yeni
+   }
+   ```
+
+5. `update()` içinde, `frame += 1` satırının altına ıskaları bulan kodu ekle:
+
+   ```js
+   function update() {
+     lit = lit.map((n) => Math.max(0, n - 1))
+     if (feedback && --feedback.time === 0) feedback = null
+     frame += 1
+     // A note that has gone past the window without being hit is a miss.
+     for (const n of notes) {                              // ← yeni
+       if (!n.hit && frame - n.time > GOOD) {              // ← yeni
+         n.hit = true                                      // ← yeni
+         judged.miss += 1                                  // ← yeni
+         judge('Miss', '#f87171')                          // ← yeni
+       }                                                   // ← yeni
+     }                                                     // ← yeni
+   }
+   ```
+
+6. `draw()`'un son satırındaki `ctx.fillText('Hits ' + hits, 12, 24)` satırını değiştir:
+
+   ```js
+     ctx.fillText(judged.perfect + ' perfect  ' + judged.good + ' good  ' + judged.miss + ' missed', 12, 24)   // ← değişti
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Tam zamanında basınca "Perfect", biraz geç basınca "Good",
+   hiç basmayınca "Miss" görmelisin; sol üstteki sayılar artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+   kalırsa kodda `hits` ya da `WINDOW` kalıp kalmadığına bak.
 
 # --tests--
 

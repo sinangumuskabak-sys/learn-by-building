@@ -24,22 +24,33 @@ Tricks like these are how early 3D games looked good on very slow computers: no 
 
 # --explanation-tr--
 
-Duvar başına tek bir düz renkle köşeler kaybolur: bir köşede buluşan iki duvar aynı renktir; birinin nerede bittiğini
-anlayamazsın. İki ucuz hile resme derinlik verir:
+**Bu adımda:** duvarlara ışık ve gölge vereceğiz. Köşeler belirginleşecek (bazı yüzler daha koyu olacak) ve uzaktaki
+koridorlar karanlığa karışacak; görüntü çok daha derin görünecek.
 
-- **Yüz gölgelendirmesi.** Kuzeye ya da güneye bakan duvarlar (`side === 'y'`) %70 parlaklıkta çizilir. Köşeler hemen
-  görünür olur; sanki ışık bir yönden geliyormuş gibi.
-- **Mesafe sisi.** Her şey mesafeyle, en az %25'e kadar koyulaşır: `1 - dist / 12`. Uzak koridorlar karanlığa karışır; bu da
-  mesafeleri tahmin etmeyi kolaylaştırır ve haritanın aslında ne kadar küçük olduğunu gizler.
+**Sorun:** her duvarın tek düz rengi olunca köşeler kaybolur. Köşede buluşan iki duvar aynı renkte olduğu için
+birinin nerede bitip ötekinin nerede başladığını göremezsin. İki ucuz hile görüntüye derinlik verir:
 
-İkisi de kırmızı, yeşil ve mavi değerleri üzerinde yalnızca bir çarpandır. Çarp, yuvarla ve `'rgb(...)'` metnini kur:
+- **Yüz gölgesi.** Kuzeye ya da güneye bakan duvarlar (`side === 'y'`, yani ışının yatay çizgiye çarptığı yüzler)
+  %70 parlaklıkla çizilir. Işık tek bir yönden geliyormuş gibi köşeler hemen görünür olur.
+- **Uzaklık sisi.** Her şey uzaklaştıkça kararır, en az %25'e kadar: `1 - dist / 12`. Uzaklık 0 iken 1 (tam
+  parlak), 6 iken 0.5, 9'dan sonra 0.25'te kalır. Uzak koridorlar karanlıkta kaybolur; bu hem uzaklığı tahmin
+  etmeyi kolaylaştırır hem de haritanın aslında ne kadar küçük olduğunu gizler.
+
+İkisi de kırmızı, yeşil ve mavi değerlerini çarptığımız tek bir sayıdır (`light`, ışık):
 
 ```js
 const light = (hit.side === 'y' ? 0.7 : 1) * Math.max(0.25, 1 - dist / 12)
 ```
 
-Erken 3B oyunlar çok yavaş bilgisayarlarda böyle hilelerle iyi göründü: gerçek ışıklandırma yok, yalnızca sütun başına bir
-sayı.
+`Math.max(0.25, ...)` iki sayıdan büyüğünü seçer; böylece ışık 0.25'in altına inmez. Rengin her parçasını `light`
+ile çarparız, `Math.round` ile en yakın tam sayıya yuvarlarız (`Math.round(104.6)` → `105`; renk değerleri tam sayı
+olmalı) ve `'rgb(...)'` yazısını kurarız.
+
+**`return` ile değer döndüren fonksiyon.** `shade(hit, dist)` bir renk yazısı hesaplar ve `return` ile geri verir.
+Çağıran yer bu cevabı doğrudan kullanır: `ctx.fillStyle = shade(hit, dist)`.
+
+Eski 3D oyunlar çok yavaş bilgisayarlarda böyle hilelerle güzel görünürdü: gerçek bir ışıklandırma yok, sütun başına
+tek bir sayı.
 
 # --task--
 
@@ -49,9 +60,43 @@ sayı.
 
 # --task-tr--
 
-1. `'rgb(r, g, b)'` döndüren `shade(hit, dist)` yaz: duvarın rengi çarpı yukarıdaki `light`, her parça `Math.round` ile
-   yuvarlanmış.
-2. Her sütunu düzeltilmiş mesafeyle `shade(hit, dist)` kullanarak çiz.
+1. `draw()` fonksiyonunun **hemen üstüne** (`function draw() {` satırından önce) gölge fonksiyonunu yaz:
+
+   ```js
+   function shade(hit, dist) {
+     // Walls facing north or south are a little darker, and everything fades with distance.
+     const light = (hit.side === 'y' ? 0.7 : 1) * Math.max(0.25, 1 - dist / 12)
+     const [r, g, b] = COLORS[hit.tile]
+     return 'rgb(' + Math.round(r * light) + ', ' + Math.round(g * light) + ', ' + Math.round(b * light) + ')'
+   }
+
+   ```
+
+2. `draw()`'daki sütun döngüsünde şu iki satırı sil:
+
+   ```js
+       const [r, g, b] = COLORS[hit.tile]
+       ctx.fillStyle = 'rgb(' + r + ', ' + g + ', ' + b + ')'
+   ```
+
+   ve yerine tek satır yaz. Döngü şöyle olmalı:
+
+   ```js
+     for (let i = 0; i < RAYS; i++) {
+       const angle = player.angle - FOV / 2 + (FOV * (i + 0.5)) / RAYS
+       const hit = castRay(angle)
+       // The distance straight ahead, not along the ray: otherwise flat walls bulge (the fish-eye effect).
+       const dist = hit.dist * Math.cos(angle - player.angle)
+       const h = Math.min(H * 3, PROJECTION / dist)
+       ctx.fillStyle = shade(hit, dist) // ← değişti
+       ctx.fillRect(i * COLUMN, (H - h) / 2, COLUMN, h)
+     }
+   ```
+
+   `shade`'e düzeltilmiş uzaklık `dist`'i veriyoruz, `hit.dist`'i değil.
+
+3. **Çalıştır**'a bas. Duvarlar uzaklaştıkça kararmalı ve köşelerde bir yüz ötekinden koyu görünmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Renk kontrolü kırmızıysa `'rgb('` ve `', '` içindeki boşlukları karşılaştır.
 
 # --tests--
 

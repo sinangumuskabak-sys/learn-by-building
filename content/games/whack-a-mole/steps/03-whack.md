@@ -25,21 +25,46 @@ down, which feels more responsive in a reaction game, and it works for touch too
 
 # --explanation-tr--
 
-Tıklama bir deliğin üstünde mi? Delikler daire; bir nokta, **merkeze uzaklığı** en çok yarıçap kadarsa dairenin
-içindedir. Pisagor'a göre uzaklık `√(dx² + dy²)`'dir. Kareleri karşılaştırmak karekök almadan aynı cevabı verir:
+**Bu adımda:** köstebeklere vurabileceksin. Yukarıdaki bir köstebeğe tıklayınca hemen kaybolur ve sol üstteki
+`Score:` 1 artar. Boş bir deliğe tıklamak hiçbir şey yapmaz.
+
+**Tıklama bir deliğin üstünde mi?** Delikler daire. Bir nokta, dairenin **merkezine uzaklığı** yarıçaptan büyük
+değilse dairenin içindedir. Uzaklık, Pisagor'la `√(dx² + dy²)`'dir (`dx` yatay fark, `dy` dikey fark). Karekök almak
+yerine iki tarafın karesini karşılaştırırız, cevap aynı çıkar:
 
 ```js
 const dx = x - hole.x
 const dy = y - hole.y
-dx * dx + dy * dy <= HOLE_R * HOLE_R   // dairenin içinde (ya da kenarında)
+dx * dx + dy * dy <= HOLE_R * HOLE_R   // dairenin içinde (ya da tam kenarında)
 ```
 
-Kare bir isabet alanı da çalışırdı ama her deliğin etrafındaki boş köşelere yapılan tıklamaları da sayardı. İsabet
-alanını oyuncunun gördüğü şekle uydur.
+`<=` "küçük ya da eşit" demektir. Kare bir alan da işe yarardı ama deliğin çevresindeki boş köşelere yapılan
+tıklamaları da sayardı. Tıklama alanı, oyuncunun gördüğü şekle uymalı.
 
-Bir tıklama köstebeği yukarıda olan bir deliğe düşünce: bir puan ekle ve `upUntil`'i `0` yaparak köstebeği **hemen**
-sakla. Boş bir deliğe tıklamak hiçbir şey yapmaz. `click` yerine `pointerdown` kullan: tuşa basıldığı anda tetiklenir,
-bu da bir refleks oyununda daha çabuk tepki veriyor hissettirir; dokunmatikte de çalışır.
+**`find` ile aramak.** `holes.find((hole) => { ... })` delikleri sırayla gezer ve ok fonksiyonu `true` döndüren
+**ilk** deliği verir; hiçbiri tutmazsa `undefined` ("hiçbir şey") verir. Ok fonksiyonunun gövdesi birkaç satırsa
+`{ }` içine yazılır ve sonuç `return` ile verilir.
+
+**Olay (event) dinlemek.** Tıklama gibi kullanıcı hareketlerine **olay** denir. "Şu olunca şunu yap" deriz:
+
+```js
+canvas.addEventListener('pointerdown', (event) => {
+  // canvas'a basıldığı anda burası çalışır
+})
+```
+
+`'click'` yerine `'pointerdown'` kullanırız: tuş **basıldığı anda** gelir (bırakılmayı beklemez), refleks oyununda
+daha çabuk hissettirir; parmakla dokunmada da çalışır. `event.clientX` ve `event.clientY` farenin ekrandaki
+konumudur. Canvas ekranda farklı boyda gösterilebildiği için bu konumu canvas piksellerine çeviririz:
+`canvas.getBoundingClientRect()` canvas'ın ekrandaki yerini ve boyunu verir; önce sol/üst kenarı çıkarır, sonra
+ölçekle çarparız. Bu iki satırı her canvas oyununda aynen kullanırsın.
+
+**Vuruş.** `if (hole && isUp(hole))` → "delik bulunduysa **ve** (`&&`) içinde köstebek varsa". O zaman
+`score += 1` (skoru 1 artır; `score = score + 1`'in kısası) ve `hole.upUntil = 0` (köstebeği hemen indir; 0 her zaman
+geçmişte kaldığı için `isUp` artık `false` der).
+
+**Skoru yazmak.** `ctx.font` yazı tipini, `ctx.textAlign = 'left'` hizalamayı ayarlar; `ctx.fillText(yazı, x, y)`
+yazıyı çizer. `'Score: ' + score` yazı ile sayıyı birleştirir: `'Score: 3'`.
 
 # --task--
 
@@ -52,11 +77,49 @@ bu da bir refleks oyununda daha çabuk tepki veriyor hissettirir; dokunmatikte d
 
 # --task-tr--
 
-1. `let score = 0` ekle.
-2. Dairesi `(x, y)` canvas noktasını içeren deliği ya da `undefined` döndüren `function holeAt(x, y)` yaz.
-3. Canvas üzerindeki `pointerdown`'da: canvas piksellerine çevir (konum ve ölçek), deliği bul; içinde köstebek
-   yukarıdaysa bir puan ekle ve `upUntil`'ini `0` yap.
-4. Üst şeride `Score: 3` (gerçek sayı) yaz: beyaz, `'bold 20px sans-serif'`, `(12, 28)` noktasına sola hizalı.
+1. `let nextPop = 0` satırının hemen altına ekle:
+
+   ```js
+   let score = 0
+   ```
+
+2. `isUp` fonksiyonunun kapanış `}`'sinden sonra, `function update()`'ten önce bir satır boşluk bırakıp şunları ekle:
+
+   ```js
+   function holeAt(x, y) {
+     return holes.find((hole) => {
+       const dx = x - hole.x
+       const dy = y - hole.y
+       return dx * dx + dy * dy <= HOLE_R * HOLE_R
+     })
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     // The canvas may be displayed at a different size than its own pixels, so scale the pointer.
+     const rect = canvas.getBoundingClientRect()
+     const x = (event.clientX - rect.left) * (canvas.width / rect.width)
+     const y = (event.clientY - rect.top) * (canvas.height / rect.height)
+     const hole = holeAt(x, y)
+     if (hole && isUp(hole)) {
+       score += 1
+       hole.upUntil = 0
+     }
+   })
+   ```
+
+3. `draw()` fonksiyonunun sonunda, delik döngüsünü kapatan `}`'den sonra ve fonksiyonun kapanış `}`'sinden önce bir
+   satır boşluk bırakıp skoru çiz:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 20px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score: ' + score, 12, 28)
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: çıkan köstebeklere tıkla. Vurduğun köstebek hemen kaybolmalı ve
+   sol üstteki `Score:` artmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kenar kontrolü kırmızıysa `<=`'yi (`<` değil)
+   kontrol et.
 
 # --tests--
 

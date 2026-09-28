@@ -17,14 +17,43 @@ sideways shift, scaled cars and laps against the clock. These are the same ideas
 
 # --explanation-tr--
 
-Bir yarışın bir bitişi vardır. `position` pistin sonunu her geçip başa sardığında bir tur tamamlanır: süresi şimdiye kadarki en iyi
-turla karşılaştırılır ve üçüncü turdan sonra yarış biter.
+**Bu adımda:** yarışa bir bitiş ekleyeceğiz. Sağ üstte `Lap 1/3  12.4  Best 25.0` gibi tur sayısı, bu turun süresi
+ve en iyi turun yazacak. Üç tur bitince ortada `Finished!` çıkacak; Boşluk tuşuyla yeniden yarışabileceksin.
 
-Tur sayacı kareleri sayar ve onları bir ondalıkla saniye olarak gösterir. En iyi tur `localStorage`'da kare sayısı olarak saklanır ve
-**daha az** daha iyi olduğu için henüz rekor yoksa ya da daha küçükse yeni bir süre rekordur.
+**Tur ne zaman biter?** 2. adımdan beri `position` pistin sonunu geçince başa sarıyordu. İşte o an bir tur bitmiştir.
+O anda üç iş yaparız: turun süresini en iyi turla karşılaştırırız, sonra ya yarışı bitiririz (son turdaysak) ya da
+yeni turu sıfırdan başlatırız.
 
-Bu yarışı tamamlar: perspektif izdüşümü, uzaktan yakına boyama, kamerayı yönlendirmek, büyüyen bir yana kaymadan yapılan virajlar,
-ölçeklenen arabalar ve zamana karşı turlar. Seksenlerin atari makineleri tam da bu fikirlerle çalışıyordu.
+**Süreyi kare sayarak ölçeriz.** Oyun saniyede 60 kare çizer. `lapTime` her karede 1 artar; ekrana yazarken 60'a
+bölüp saniyeye çeviririz. `(sayı).toFixed(1)` sayıyı virgülden sonra tek basamakla yazıya çevirir: `12.4`.
+
+**Durum (state).** Oyunun şu an ne yaptığını bir yazıyla tutarız: `'racing'` (yarışıyor) ya da `'finished'` (bitti).
+Yarış bitince `update` hiçbir şey yapmaz, araba durur:
+
+```js
+if (state !== 'racing') return
+```
+
+`!==` "eşit değil mi?" demektir. Bir fonksiyonun içinde `return`, "burada dur, gerisini yapma" anlamına da gelir.
+
+**Rekoru saklamak: `localStorage`.** Tarayıcının küçük bir defteri gibidir; sayfayı kapatıp açsan da içindekiler kalır.
+
+```js
+localStorage.setItem('racer-best', best)          // deftere yaz
+localStorage.getItem('racer-best')                // defterden oku (yazı olarak gelir)
+```
+
+`Number(...)` yazıyı sayıya çevirir. Defterde hiçbir şey yoksa sonuç sayı olmaz; `|| 0` "o zaman 0 al" demektir
+(`||` "ya da" anlamındadır). Yani `best` 0 ise "henüz rekor yok" demek.
+
+**Az olan iyidir.** Süre ne kadar kısaysa o kadar iyi. Bu yüzden yeni süre, rekor hiç yoksa (`best === 0`) **ya da**
+eskisinden küçükse (`lapTime < best`) yeni rekor olur.
+
+**Yazıda koşullu parça:** `(best ? '  Best ' + seconds(best) : '')` → rekor varsa "Best ..." kısmını ekle, yoksa boş yazı ekle.
+`ctx.textAlign = 'right'` yazıyı verilen noktanın soluna, `'center'` ortasına hizalar.
+
+Böylece yarış oyunu tamam: perspektif, uzaktan yakına boyama, kamerayı kaydırarak direksiyon, artan kaymayla yapılan
+virajlar, uzaklığa göre küçülen arabalar ve saate karşı turlar. Seksenlerin atari makineleri de tam bu fikirlerle çalışıyordu.
 
 # --task--
 
@@ -36,11 +65,103 @@ Bu yarışı tamamlar: perspektif izdüşümü, uzaktan yakına boyama, kameray�
 
 # --task-tr--
 
-1. `LAPS = 3`, `lap` (`1`), `lapTime` (`0`), `state` (`'racing'`) ve `best` (`localStorage` `'racer-best'`'ten) ekle.
-2. `update()` yalnızca yarışırken çalışır ve `lapTime`'a 1 ekler. `position` başa sarınca: tur süresi ilkse ya da daha hızlıysa en iyi
-   olur (kaydedilir), sonra ya yarış `'finished'` olur (`LAPS`. turdan sonra) ya da sonraki tur 0'dan başlar.
-3. Sağ üste `Lap 2/3  12.4  Best 25.0` çiz (en iyi yalnızca bir tane olunca). Bitince ortaya `Finished!` (kalın 28px) ve
-   `Press Space to race again` (kalın 16px) çiz; Boşluk ya da dokunuş yeni bir yarış başlatır.
+1. `const MAX_SPEED = 120 ...` satırının altına tur sayısını ekle:
+
+   ```js
+   const LAPS = 3
+   ```
+
+2. `let cars` satırının altına yeni değişkenleri ekle:
+
+   ```js
+   let lap
+   let lapTime // frames
+   let state // 'racing' or 'finished'
+   let best = Number(localStorage.getItem('racer-best')) || 0
+   ```
+
+3. `reset()` içinde `speed = 0` satırının altına (ve `cars = []` satırının üstüne) şunları ekle:
+
+   ```js
+     lap = 1
+     lapTime = 0
+     state = 'racing'
+   ```
+
+4. `keydown` olayının içine, `preventDefault` satırının altına yeniden başlatma satırını ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow')) event.preventDefault()
+     if (event.key === ' ' && state === 'finished') reset() // ← yeni
+   })
+   ```
+
+   `' '` Boşluk tuşunun adıdır (tırnakların arasında bir boşluk var).
+
+5. `pointerdown` olayının içinde en başa, `const rect = ...` satırının **üstüne** şunu ekle:
+
+   ```js
+     if (state === 'finished') {
+       reset()
+       return
+     }
+   ```
+
+   Yarış bittiyse ekrana dokunmak yeni yarışı başlatır, direksiyon kısmına hiç geçilmez.
+
+6. `update()` fonksiyonunun en başına, `const ratio = ...` satırının **üstüne** iki satır ekle:
+
+   ```js
+   function update() {
+     if (state !== 'racing') return // ← yeni
+     lapTime += 1 // ← yeni
+     const ratio = speed / MAX_SPEED
+   ```
+
+7. `update()`'in sonundaki `if (position >= trackLength) position -= trackLength` satırını sil ve yerine şunu yaz:
+
+   ```js
+     if (position >= trackLength) {
+       position -= trackLength
+       if (best === 0 || lapTime < best) {
+         best = lapTime
+         localStorage.setItem('racer-best', best)
+       }
+       if (lap === LAPS) state = 'finished'
+       else {
+         lap += 1
+         lapTime = 0
+       }
+     }
+   ```
+
+8. `draw()`'un sonunda hız yazısını çizen kısmı şöyle genişlet (yeni satırlar işaretli):
+
+   ```js
+     const seconds = (f) => (f / 60).toFixed(1) // ← yeni
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText(Math.round((speed / MAX_SPEED) * 300) + ' km/h', 10, 22)
+     ctx.textAlign = 'right' // ← yeni (buradan aşağısı)
+     ctx.fillText('Lap ' + lap + '/' + LAPS + '  ' + seconds(lapTime) + (best ? '  Best ' + seconds(best) : ''), W - 10, 22)
+     if (state === 'finished') {
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 28px sans-serif'
+       ctx.fillText('Finished!', W / 2, H / 2 - 30)
+       ctx.font = 'bold 16px sans-serif'
+       ctx.fillText('Press Space to race again', W / 2, H / 2 - 6)
+     }
+   }
+   ```
+
+   Dikkat: `'Lap '`'ten sonra bir, `'  '` ve `'  Best '` içinde **iki** boşluk var. Kontroller yazıyı harfi harfine arar.
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ üstte tur ve süre görünmeli; bir tur bitince en iyi süre
+   eklenmeli, üçüncü turdan sonra `Finished!` çıkmalı ve Boşluk yeni yarışı başlatmalı. Alttaki kontrollerin hepsi
+   yeşil olmalı. Yazı kontrolü kırmızıysa boşlukları say.
 
 # --tests--
 

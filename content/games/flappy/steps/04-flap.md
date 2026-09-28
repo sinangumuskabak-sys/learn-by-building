@@ -24,21 +24,61 @@ from every input. One behavior, many triggers.
 
 # --explanation-tr--
 
-Kanat çırpmak kuşu birkaç piksel yukarı itmez. **Hızı** sabit bir yukarı hıza **ayarlar**:
+**Bu adımda:** kuşu uçuracağız. Boşluk tuşuna, Yukarı ok tuşuna basınca ya da oyuna tıklayınca kuş yukarı
+sıçrayacak, sonra yerçekimiyle yavaşlayıp yine düşecek.
+
+**Kanat çırpmak hızı ayarlar.** Kanat çırpış kuşu birkaç piksel yukarı itmez; hızını sabit bir **yukarı** hıza
+**ayarlar**:
 
 ```js
-bird.vy = FLAP   // FLAP = -8: negatif yukarı demek, çünkü y aşağı doğru büyür
+bird.vy = FLAP   // FLAP = -8
 ```
 
-Sonra yerçekimi her zamanki gibi devralır: `-8, -7.5, -7, ...` Kuş hızla yükselir, yavaşlar, tepede bir an durur ve
-yeniden düşer. O yumuşak kavis, önceki adımda yazdığın iki satırdan bedavaya çıkar. "Yukarı çık, sonra yavaşla" diye
-bir şey programlaman hiç gerekmez.
+Neden eksi? Çünkü canvas'ta `y` aşağı doğru büyür; yukarı gitmek için `y` **küçülmeli**, yani hız eksi olmalı.
 
-Neden *eklemek* değil de *ayarlamak*? Kanat çırpış `-8` ekleseydi, hızla düşerken çırpmak pek işe yaramaz, iki kez
-çırpmak da kuşu uzaya fırlatırdı. Ayarlamak her çırpışı aynı hissettirir; oyunu adil yapan da budur.
+Burada `=` işareti "eşittir" değil, "**içine koy**" demektir: `bird.vy`'nin eski değeri ne olursa olsun, artık
+`-8` olur. (Geçen adımdaki `+=` ise "üstüne ekle" idi.)
 
-Oyuncular Boşluk, Yukarı ok ya da oyuna tıklayarak/dokunarak kanat çırpacak. Çırpmayı bir fonksiyona koy ve her
-girdiden onu çağır. Tek davranış, birçok tetikleyici.
+Sonrasını yerçekimi halleder: hız her karede 0,5 artar: `-8, -7.5, -7, ...` Kuş hızla yükselir, yavaşlar, tepede
+bir an durur ve yine düşer. Bu güzel yay geçen adımda yazdığın iki satırdan kendiliğinden çıkıyor.
+
+Neden eklemek değil de ayarlamak? Eğer çırpış hıza `-8` **ekleseydi**, hızla düşerken çırpmak pek işe yaramazdı,
+art arda iki kez çırpmak ise kuşu uzaya fırlatırdı. Ayarlamak her çırpışı aynı hissettirir; oyunu adil yapan budur.
+
+**Olaylar (events): "şu olunca şunu yap".** Tarayıcı, bir tuşa basıldığında ya da ekrana tıklandığında bir **olay**
+yayınlar. Biz de o olayı dinleyip ne yapılacağını söyleriz:
+
+```js
+canvas.addEventListener('pointerdown', flap)
+```
+
+- `addEventListener` → "bir olay dinleyicisi ekle", yani "şu olunca haber ver".
+- `'pointerdown'` → olayın adı: canvas'a fareyle tıklanması ya da parmakla dokunulması.
+- `flap` → o olay olunca çalışacak fonksiyon. Parantezsiz yazılır: "şimdi çalıştır" değil, "olunca sen
+  çalıştır" diyoruz.
+
+Tuşlar için olay `'keydown'` (bir tuşa basıldı) ve onu sadece canvas'ı değil bütün sayfayı (`document`) dinleriz:
+
+```js
+document.addEventListener('keydown', (event) => {
+  if (event.key === ' ' || event.key === 'ArrowUp') flap()
+})
+```
+
+Parça parça:
+
+- `(event) => { ... }` → adı olmayan, oracıkta yazılmış kısa bir fonksiyon (**ok fonksiyonu**, arrow function).
+  Tarayıcı onu çağırırken içine olayla ilgili bilgileri `event` adıyla verir. Parantez içindeki bu ada
+  **parametre** denir.
+- `event.key` → basılan tuşun adı. Boşluk tuşu için `' '` (tırnak içinde bir boşluk), Yukarı ok için `'ArrowUp'`.
+- `if (koşul) komut` → "**eğer** koşul doğruysa komutu yap, değilse atla".
+- `===` → "birbirine eşit mi?" diye sorar. (Tek `=` "içine koy" demekti; soru sormak için üç eşittir kullanılır.)
+- `||` → "**veya**". Solundaki ya da sağındaki doğruysa bütün koşul doğru olur.
+
+Yani: "bir tuşa basıldığında, eğer basılan tuş Boşluk veya Yukarı ok ise `flap()`'i çalıştır."
+
+Çırpma işini tek bir `flap()` fonksiyonuna koyup her girişten onu çağırıyoruz: bir davranış, birçok tetikleyici.
+Böylece çırpmayı değiştirmek istediğinde tek bir yeri değiştirirsin.
 
 # --task--
 
@@ -48,10 +88,35 @@ girdiden onu çağır. Tek davranış, birçok tetikleyici.
 
 # --task-tr--
 
-1. `const FLAP = -8` ekle.
-2. `bird.vy`'yi `FLAP` yapan `function flap()` yaz.
-3. `flap()`'i tuş `' '` (Boşluk) ya da `'ArrowUp'` olduğunda `keydown`'da, ayrıca canvas üzerindeki `pointerdown`'da
-   çağır.
+1. `const GRAVITY = 0.5 ...` satırının hemen altına kanat çırpma hızını ekle:
+
+   ```js
+   const FLAP = -8 // the bird's speed right after a flap (negative = up)
+   ```
+
+2. `let bird = ...` satırının altına bir boş satır bırak ve `flap()` fonksiyonunu yaz:
+
+   ```js
+   function flap() {
+     bird.vy = FLAP
+   }
+   ```
+
+3. `flap()` fonksiyonunun kapanış `}`'inden sonra, `function update()`'ten **önce**, girişleri dinleyen satırları
+   ekle:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === ' ' || event.key === 'ArrowUp') flap()
+   })
+   canvas.addEventListener('pointerdown', flap)
+   ```
+
+   Parantezleri say: ilk komut `})` ile biter.
+
+4. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Oynamak için önce oyuna tıkla, sonra Boşluk'a bas: kuş yukarı
+   sıçramalı, sonra yeniden düşmeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: `' '` tırnaklarının
+   arasında tam bir boşluk olduğundan ve `'ArrowUp'`'ın büyük harflerinden emin ol.
 
 # --tests--
 

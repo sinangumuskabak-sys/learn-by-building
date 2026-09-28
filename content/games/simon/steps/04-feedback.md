@@ -24,21 +24,40 @@ ghost speed in the maze game.
 
 # --explanation-tr--
 
-İki küçük değişiklik oyunu çok daha iyi hissettirir.
+**Bu adımda:** iki küçük değişiklik oyunu çok daha iyi hissettirecek. Bir tuşa bastığında o tuş kısa bir an
+parlayacak. Dizi uzadıkça da gösteri hızlanacak.
 
-**Geri bildirim.** Bir tuşa bastığında, tıpkı bilgisayar gösterirkenki gibi yanmalı. Bu basışın yerine ulaştığını doğrular ve
-oyuncunun cevabını tekrarladığı diziye benzetir. Yakma zaten tek bir fonksiyon (`light(pad, frames)`) olduğu için basmak yalnızca
-bir satır daha ister.
+**Geri bildirim.** Bir tuşa bastığında, tıpkı bilgisayar gösterirken olduğu gibi yanmalı. Bu, basışın yerine
+ulaştığını onaylar ve oyuncunun cevabı tekrarladığı diziye benzer. Tuş yakmak zaten tek bir fonksiyon olduğu için
+(`light(pad, frames)`, 2. adım) basışa sadece bir satır eklemek yeter. `PRESS_FRAMES = 12` → basılan tuş 12 kare
+(yaklaşık beşte bir saniye) yanar. Doğru da basılsa yanlış da, tuş yanar.
 
-**Hız.** Her tuşu yarım saniye göstermek başta iyidir ama onuncu turda sıkıcıdır. Dizi uzadıkça gösteriyi hızlandır, ama asla bir
-oyuncunun izleyebileceğinden hızlı olmasın:
+**Hız.** Her tuşu yarım saniye göstermek başta iyidir ama onuncu turda sıkıcı olur. Dizi uzadıkça gösteriyi
+hızlandırırız, ama oyuncunun takip edemeyeceği kadar değil:
 
 ```js
-Math.max(12, 30 - sequence.length * 2)   // 1. turda 28 kare, 9. turdan itibaren 12
+Math.max(12, 30 - sequence.length * 2)   // 1. turda 28 kare, 9. turdan sonra hep 12
 ```
 
-Oyuncunun ilerlemesiyle büyüyen ve asla imkânsız olmasın diye bir tabanı olan zorluk, labirent oyunundaki hayalet hızıyla aynı
-fikirdir.
+Bunu parça parça okuyalım:
+
+- `sequence.length * 2` → tur numarasının iki katı. `30 -` bunu 30'dan çıkarır: tur ilerledikçe sayı küçülür.
+- `Math.max(a, b)` → iki sayıdan **büyük** olanı verir. `Math.max(12, ...)` "ama asla 12'nin altına inme"
+  demektir: bir **taban**.
+
+Oyuncunun ilerlemesiyle artan ama tabanı olan bir zorluk, çoğu oyunu eğlenceli tutan fikirdir.
+
+**Sabit değil, fonksiyon.** Süre artık tura göre değiştiği için sabit bir `SHOW_FRAMES` yerine her seferinde
+hesaplayan bir fonksiyon kullanırız:
+
+```js
+function showFrames() {
+  return Math.max(12, 30 - sequence.length * 2)
+}
+```
+
+`return` hesaplanan sayıyı geri verir; `showFrames()` yazılan yerde o sayı kullanılır. Değer döndüren bir
+fonksiyon, yazıldığı yerde bir sayı gibi davranır.
 
 # --task--
 
@@ -47,9 +66,44 @@ fikirdir.
 
 # --task-tr--
 
-1. `PRESS_FRAMES = 12` ekle. `press()` basılan tuşu (oyuncunun sırasında, doğru ya da yanlış) `PRESS_FRAMES` boyunca yakar.
-2. `SHOW_FRAMES`'i yukarıdaki gibi bir `showFrames()` fonksiyonuyla değiştir; her tuşun ne kadar gösterildiği ve sonrasındaki
-   duraklama için kullanılsın.
+1. `const SHOW_FRAMES = 30 ...` satırını sil ve yerine basış süresini yaz:
+
+   ```js
+   const PRESS_FRAMES = 12 // how long a pad the player pressed stays lit
+   ```
+
+2. `nextRound()` fonksiyonunun altına (`function light`'tan önce) bir boş satır bırak ve gösteri süresini
+   hesaplayan fonksiyonu yaz:
+
+   ```js
+   // Longer sequences are shown faster, down to a limit.
+   function showFrames() {
+     return Math.max(12, 30 - sequence.length * 2)
+   }
+   ```
+
+3. `press()` fonksiyonunda, ilk satırın hemen altına tuşu yakan satırı ekle:
+
+   ```js
+   function press(pad) {
+     if (state !== 'input') return
+     light(pad, PRESS_FRAMES) // ← yeni
+     if (pad !== sequence[inputAt]) {
+     // ... geri kalanı aynı
+   ```
+
+4. `update()` fonksiyonunun son üç satırında `SHOW_FRAMES`'i `showFrames()` ile değiştir:
+
+   ```js
+     light(sequence[showAt], showFrames()) // ← değişti
+     showAt += 1
+     timer = showFrames() + 8 // ← değişti
+   }
+   ```
+
+5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bastığın tuş kısa bir an parlamalı; birkaç tur sonra
+   gösterinin hızlandığını fark etmelisin. Alttaki kontrollerin hepsi yeşil olmalı. Hata alırsan kodda hâlâ
+   `SHOW_FRAMES` kalmış olabilir; artık öyle bir sabit yok.
 
 # --tests--
 

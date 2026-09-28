@@ -22,20 +22,59 @@ function. Nothing moves yet, but the structure is ready for it.
 
 # --explanation-tr--
 
-Kuş bir daire. Canvas'ta `fillCircle` yok; daireler **yol** (path) ile çizilir. Önce şekli tarif eder, sonra
-doldurursun:
+**Bu adımda:** gökyüzünün üstüne kuşumuzu, sarı bir daire olarak çizeceğiz. Çalıştırınca mavi alanın sol tarafında,
+ortaya yakın bir yerde altın sarısı küçük bir top göreceksin.
+
+**Kuşun bilgilerini bir yerde tutalım: nesne (object).** Kuşun nerede olduğunu ve ne kadar büyük olduğunu
+bilmemiz gerekiyor. Bu üç bilgiyi tek bir pakette toplarız:
+
+```js
+let bird = { x: 100, y: 300, r: 14 }
+```
+
+Bunu parça parça okuyalım:
+
+- `let bird =` → "buna `bird` (kuş) diyeceğim". `let` de `const` gibi bir ad verir, ama farkı şu: `let` ile
+  adlandırılan şeyin (buna **değişken** denir) içindeki değer sonradan **değiştirilebilir**. Kuş hareket edeceği
+  için `let` kullanıyoruz.
+- `{ ... }` → süslü parantezler bir **nesne** oluşturur: etiketli bilgilerden oluşan bir kart gibi.
+- `x: 100` → "`x` adlı alanın değeri 100". Alanlar virgülle ayrılır. Burada `x` soldan uzaklık, `y` yukarıdan
+  uzaklık, `r` ise dairenin **yarıçapı** (merkezden kenara uzaklık).
+
+Nesnenin bir alanına nokta ile ulaşırsın: `bird.x` "kuşun x'i" demektir, değeri 100'dür.
+
+**Daire nasıl çizilir?** Canvas'ta hazır bir "daire boya" komutu yok. Daireyi önce **tarif eder**, sonra
+**boyarız**. Buna **yol** (path) denir:
 
 ```js
 ctx.beginPath()                          // yeni bir şekle başla
-ctx.arc(x, y, yarıçap, 0, Math.PI * 2)   // (x, y) etrafında tam bir daire
-ctx.fill()                               // fillStyle ile boya
+ctx.arc(x, y, yarıçap, 0, Math.PI * 2)   // (x, y) etrafında tam bir daire tarif et
+ctx.fill()                               // o şekli fillStyle rengiyle boya
 ```
 
-Açılar **radyan** cinsindendir: tam tur 360 değil `2π`'dir (`Math.PI * 2`). `beginPath()`'i unutmak klasik bir
-hatadır: yeni daire önceki şekle eklenir ve ikisi birlikte doldurulur.
+`arc` bir yay çizer; son iki sayı yayın nereden başlayıp nerede bittiğini söyleyen açılardır. Açılar derece değil
+**radyan** ile verilir: tam tur 360 değil `2π`'dir. `Math.PI` hazır π sayısıdır (3,14...), `*` çarpma işaretidir;
+yani `0`'dan `Math.PI * 2`'ye kadar demek "tam bir tur" demektir.
 
-Kuşu **durum** olarak, konumunu ve boyutunu tutan bir nesne olarak sakla ve `draw()` fonksiyonu içinde o nesneden
-çiz. Henüz hiçbir şey hareket etmiyor ama yapı buna hazır.
+`beginPath()`'i unutmak sık yapılan bir hatadır: yeni daire bir önceki şekle eklenir ve ikisi birlikte boyanır.
+
+**Fonksiyon (function) nedir?** Birkaç komutu bir ad altında toplamaktır, bir yemek tarifi gibi. Tarifi yazmak
+yemeği pişirmez; tarifi **uygulamak** gerekir:
+
+```js
+function draw() {
+  // buradaki satırlar tarifin adımları
+}
+
+draw()   // tarifi uygula: içindeki satırları şimdi çalıştır
+```
+
+- `function draw()` → "`draw` (çiz) adında bir tarif tanımlıyorum". Buna fonksiyonu **tanımlamak** denir.
+- `{` ile `}` arası → tarifin adımları. İçerideki satırları iki boşluk içeriden yazarız ki okunsun.
+- `draw()` → adın sonundaki `()` "şimdi çalıştır" demektir. Buna fonksiyonu **çağırmak** denir.
+
+Gökyüzünü ve kuşu `draw()`'un içine koyuyoruz, çünkü ileride kuş hareket edince her şeyi tekrar tekrar çizmemiz
+gerekecek; o zaman sadece `draw()` demek yetecek. Önce gökyüzü, sonra kuş: sonra boyanan üstte görünür.
 
 # --task--
 
@@ -46,10 +85,41 @@ Kuşu **durum** olarak, konumunu ve boyutunu tutan bir nesne olarak sakla ve `dr
 
 # --task-tr--
 
-1. `let bird = { x: 100, y: 300, r: 14 }` ekle (`r` yarıçap).
-2. Gökyüzünü, sonra kuşu `bird.x`, `bird.y` noktasında `bird.r` yarıçaplı `'gold'` bir daire olarak boyayan
-   `function draw()` yaz.
-3. `draw()`'u çağır (açıkta kalan gökyüzü boyama satırlarının yerine).
+1. `const ctx = canvas.getContext('2d')` satırının altına bir boş satır bırak ve kuşu ekle:
+
+   ```js
+   let bird = { x: 100, y: 300, r: 14 }
+   ```
+
+2. Şimdi 1. adımda yazdığın iki gökyüzü satırını (`ctx.fillStyle = '#70c5ce'` ve `ctx.fillRect(...)`) bir
+   `draw()` fonksiyonunun içine al ve altına kuşu çizen satırları ekle. Yani `let bird ...` satırının altındaki
+   her şeyi silip yerine şunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#70c5ce'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'gold'                            // ← yeni
+     ctx.beginPath()                                   // ← yeni
+     ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2)   // ← yeni
+     ctx.fill()                                        // ← yeni
+   }
+   ```
+
+   `// ← yeni` yazan yorumları yazman gerekmez, sadece hangi satırların yeni olduğunu gösteriyor.
+
+3. Fonksiyonun kapanış `}`'inden sonra bir boş satır bırak ve en alta fonksiyonu çağıran satırı yaz:
+
+   ```js
+   draw()
+   ```
+
+   Bu olmazsa tarif yazılmış ama hiç uygulanmamış olur ve ekranda hiçbir şey çıkmaz.
+
+4. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Mavi gökyüzünün solunda sarı bir daire görmelisin ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa: gökyüzü satırlarının hem fonksiyonun içinde hem dışında
+   kalmadığından ve `ctx.fill()` satırını unutmadığından emin ol.
 
 # --tests--
 

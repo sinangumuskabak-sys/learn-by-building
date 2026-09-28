@@ -29,11 +29,15 @@ the phase first, so you cannot hit after busting or deal in the middle of a roun
 
 # --explanation-tr--
 
-Amaç, 21'i geçmeden krupiyeninkinden 21'e daha yakın bir el. Sayı kartları kendi sayılarını, J, Q ve K 10 sayar.
+**Bu adımda:** ellerin toplamını sayacağız ve kart çekebileceksin. Kartların üstünde `Dealer 17`, `You 19` gibi
+toplamlar görünecek. **H** tuşu yeni kart çeker; 21'i geçersen ortada sarı "Bust!" (battın) yazar, o zaman **N**
+ya da **Boşluk** yeni el dağıtır.
 
-İlginç olan **as**tır: 11 ya da 1 sayar, hangisi daha iyiyse. A + 7, 18'dir; ama A + 7 + 9, 27 olurdu, bu yüzden as 1'e düşer
-ve el 17 olur. Her birleşimi denemek yavaş ve karmaşık olurdu. Onun yerine basit bir numara işe yarar: önce her ası 11 say ve
-toplam 21'in üstündeyken ve hâlâ 11 sayılan bir as varken 10 çıkar:
+**Kural.** Amaç 21'i geçmeden krupiyeden 21'e daha yakın olmak. Sayı kartları kendi sayısı kadar, J, Q ve K 10
+sayılır. **As** ise 11 ya da 1'dir, hangisi işine yararsa. A + 7 = 18; ama A + 7 + 9 = 27 olurdu, o yüzden as 1'e
+düşer ve el 17 olur.
+
+**Basit hile.** Önce her ası 11 say. Sonra toplam 21'i geçtiği **sürece** ve hâlâ 11 sayılan as varsa 10 çıkar:
 
 ```js
 while (total > 21 && aces > 0) {
@@ -42,13 +46,44 @@ while (total > 21 && aces > 0) {
 }
 ```
 
-Bu her zaman en iyi toplamı verir, çünkü bir ası 11 saymak seni batırmadıkça asla zarar vermez.
+`while (koşul) { ... }` koşul doğru olduğu sürece içini **tekrar tekrar** yapar; koşul yanlış olunca durur. `-=`
+"şu kadar azalt" demek. Bu yöntem hep en iyi toplamı verir: bir ası 11 saymak ancak seni batırıyorsa zarar verir.
 
-**Kart çek** (H) bir kart daha alır. 21'in üstü **batmak**tır: el biter ve kaybedersin. Şimdilik bir elin bitmesinin tek yolu
-bu, bu yüzden N ancak ondan sonra yeni bir el dağıtır; durmak sırada.
+**Toplamı hesaplamak, parça parça:**
 
-Bir el küçük bir durum makinesidir: sen oynayabilirken `phase` `'player'`, el bittiğinde `'done'`'dır. Her tuş önce evreye
-bakar; böylece battıktan sonra kart çekemez ya da bir elin ortasında dağıtamazsın.
+```js
+for (const { rank } of hand) {
+  if (rank === 'A') {
+    total += 11
+    aces += 1
+  } else total += ['J', 'Q', 'K'].includes(rank) ? 10 : Number(rank)
+}
+```
+
+- `const { rank } of hand` → eldeki her kartın yalnızca `rank` alanını al ve ona `rank` de.
+- `if (...) { ... } else ...` → koşul doğruysa ilk kısım, **değilse** `else`'den sonraki kısım çalışır.
+- `['J', 'Q', 'K'].includes(rank)` → "bu listede `rank` var mı?" (`true`/`false`).
+- `Number('7')` yazıyı sayıya çevirir → `7`. (`'7'` bir yazı; toplama yapmak için sayı gerek.)
+- `return total` sonucu fonksiyonu çağırana geri verir.
+
+**Oyunun evresi (phase).** Bir el küçük bir durum makinesidir: `phase` sen oynayabilirken `'player'`, el bitince
+`'done'`. Her tuş önce evreye bakar: batınca kart çekemezsin, el ortasında yeniden dağıtamazsın. `message` ekranda
+yazacak sonucu tutar (`''` boş yazı = mesaj yok).
+
+**Tuşları düğmelere çevirmek.** Birkaç tuşu bir sözlük nesnesiyle düğme adlarına bağlarız:
+
+```js
+const keys = { h: 'Hit', n: 'Deal', ' ': 'Deal' }
+const button = keys[event.key.toLowerCase()]
+```
+
+`event.key` basılan tuş, `.toLowerCase()` onu küçük harfe çevirir (H de h de çalışsın). `keys['h']` → `'Hit'`.
+Listede olmayan tuş için sonuç boş (`undefined`) olur; `if (!button) return` ("düğme yoksa çık"; `!` "değil")
+onları atlar. `event.preventDefault()` tarayıcının o tuşla kendi yaptığı işi (ör. Boşluk'la sayfayı kaydırmak)
+engeller. Tuşlar doğrudan iş yapmaz, `press('Hit')` gibi bir düğmeye basar; sonraki adımlarda ekrandaki gerçek
+düğmeler de aynı `press`'i kullanacak.
+
+`else if` zincirlemektir: "ilk koşul değilse, şu koşula bak".
 
 # --task--
 
@@ -63,14 +98,102 @@ bakar; böylece battıktan sonra kart çekemez ya da bir elin ortasında dağıt
 
 # --task-tr--
 
-1. `handValue(hand)` yaz: J, Q ve K 10, aslar 11 sayar; sonra toplam 21'in üstündeyken her as için 10 çıkar.
-2. `phase` ve `message` ekle. `deal()`, `phase = 'player'` ve `message = ''` yapar.
-3. `hit()` yaz: yalnızca `'player'`'da, `player`'a bir kart ekle; 21'in üstünde `phase = 'done'` ve `message = 'Bust!'` yapan
-   `finish()`'i çağır.
-4. `press(button)` yaz: `'Hit'` kart çeker, `'Deal'` yalnızca `phase === 'done'` iken dağıtır. H (Hit), N ve Boşluk (Deal)
-   tuşları onlara basar (`preventDefault()`).
-5. `(20, DEALER_Y - 10)`'a `Dealer 17` ve `(20, PLAYER_Y - 10)`'a `You 19` çiz (beyaz, `'bold 16px sans-serif'`); mesajı da
-   `'#fde047'` renginde, `'bold 22px sans-serif'` ile `y = 212`'de ortalı çiz.
+1. `let dealer` satırının hemen **altına** iki değişken ekle:
+
+   ```js
+   let phase // 'player' (your turn) or 'done' (the round is over)
+   let message
+   ```
+
+2. `const nextCard = () => deck.pop()` satırının altına bir satır boşluk bırakıp toplam hesaplayan fonksiyonu yaz:
+
+   ```js
+   // Aces count 11, unless that would bust the hand: then they count 1.
+   function handValue(hand) {
+     let total = 0
+     let aces = 0
+     for (const { rank } of hand) {
+       if (rank === 'A') {
+         total += 11
+         aces += 1
+       } else total += ['J', 'Q', 'K'].includes(rank) ? 10 : Number(rank)
+     }
+     while (total > 21 && aces > 0) {
+       total -= 10
+       aces -= 1
+     }
+     return total
+   }
+   ```
+
+3. `deal()` fonksiyonunun sonuna iki satır ekle, altına da `hit()` ve `finish()` fonksiyonlarını yaz:
+
+   ```js
+   function deal() {
+     if (deck.length < 15) newDeck()
+     player = [nextCard(), nextCard()]
+     dealer = [nextCard(), nextCard()]
+     message = ''     // ← yeni
+     phase = 'player' // ← yeni
+   }
+
+   function hit() {
+     if (phase !== 'player') return
+     player.push(nextCard())
+     if (handValue(player) > 21) finish()
+   }
+
+   function finish() {
+     phase = 'done'
+     message = 'Bust!'
+   }
+   ```
+
+   `!==` "eşit değil" demek: senin sıran değilse `hit()` hiçbir şey yapmadan çıkar.
+
+4. `reset()` fonksiyonunun kapanan `}`'sinin altına düğme ve klavye kodunu yaz:
+
+   ```js
+   function press(button) {
+     if (button === 'Hit') hit()
+     else if (button === 'Deal' && phase === 'done') deal()
+   }
+
+   document.addEventListener('keydown', (event) => {
+     const keys = { h: 'Hit', n: 'Deal', ' ': 'Deal' }
+     const button = keys[event.key.toLowerCase()]
+     if (!button) return
+     event.preventDefault()
+     press(button)
+   })
+   ```
+
+   `addEventListener('keydown', ...)` "bir tuşa basılınca şu fonksiyonu çalıştır" der; tarayıcı tuş bilgisini
+   `event` içinde verir.
+
+5. `draw()` fonksiyonunda `drawHand(player, PLAYER_Y, false)` satırının altına, kapanan `}`'den önce toplamları ve
+   mesajı çizen satırları ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Dealer ' + handValue(dealer), 20, DEALER_Y - 10)
+     ctx.fillText('You ' + handValue(player), 20, PLAYER_Y - 10)
+
+     if (message) {
+       ctx.fillStyle = '#fde047'
+       ctx.font = 'bold 22px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText(message, canvas.width / 2, 212)
+     }
+   ```
+
+   `'You ' + 19` yazı ile sayıyı birleştirir → `'You 19'`. `if (message)` mesaj boş değilse doğrudur.
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. H ile kart çek; 21'i geçince "Bust!" yazmalı, sonra N ya da
+   Boşluk yeni el dağıtmalı. Alttaki kontrollerin hepsi yeşil olmalı. Aslı eller yanlış sayılıyorsa `while`
+   satırındaki `&&` ve `aces -= 1`'i kontrol et.
 
 # --tests--
 

@@ -22,18 +22,43 @@ Every missile destroyed is worth 25 points.
 
 # --explanation-tr--
 
-Bir füze bir patlamanın içindeyken yok edilir: patlamanın merkezine uzaklığı patlamanın **şu anki** yarıçapından fazla değildir.
-Patlamalar büyüyüp küçüldüğü için bir füze hâlâ büyüyen birinin içine uçabilir ya da sönmekte olan birinin yanından kayıp
-geçebilir.
+**Bu adımda:** patlamaların füzeleri yok edecek ve yok edilen füze de patlayacak. İyi yerleştirilmiş tek bir atış,
+yan yana uçan füzeleri **zincirleme** patlatabilecek. Sol üstte `Score 25` gibi bir puan göreceksin.
 
-Yok edilen bir füze **o da patlar** ve bu yeni patlama yanında uçan füzeleri yakalayabilir. Bir gruba iyi yerleştirilmiş tek bir
-atış bir zincir başlatabilir. Oyunun en tatmin edici anıdır ve tek bir satıra mal olur: yok edilen füze kendi patlamasını ekler.
+**Patlamanın içinde mi?** Bir füze, patlamanın merkezine uzaklığı patlamanın **şu anki** yarıçapından büyük değilse
+yok olur. Uzaklığı 2. adımdaki `Math.hypot` ile, yarıçapı 3. adımdaki `radius(b)` ile buluruz:
 
-Füzeleri yalnızca senin patlamaların (ve başlattıkları zincirler) yok etmeli. Yere çarpan bir füze de patlar ama komşularını
-silip sana puan kazandırmamalı. Bu yüzden patlamalar bir `own` bayrağı alır: önleyiciler ve zincirler için `true`, yere
-çarpmalar için `false`.
+```js
+Math.hypot(m.x - b.x, m.y - b.y) <= radius(b)
+```
 
-Yok edilen her füze 25 puan değerindedir.
+Patlamalar büyüyüp küçüldüğü için bir füze hâlâ büyüyen bir patlamanın içine uçabilir ya da sönmekte olanın yanından
+sıyrılabilir.
+
+**Herhangi biri yeter: `some`.** `blasts.some((b) => ...)` "patlamalardan **en az biri** için bu doğru mu?" diye sorar;
+cevap `true` ya da `false`'tur. Böylece tek satırda bütün patlamalara bakarız.
+
+**Zincirleme reaksiyon.** Yok edilen füze **o da patlar** ve bu yeni patlama yanında uçan füzeleri yakalayabilir. Bir
+gruba isabet eden tek iyi atış bir zincir başlatır. Oyunun en keyifli anıdır ve maliyeti tek satırdır: yok edilen füze
+kendi patlamasını ekler.
+
+**Kimin patlaması?** Füzeleri yalnızca **senin** patlamaların (ve başlattıkları zincirler) yok etmeli. Yere çarpan bir
+füze de patlar, ama komşularını silip sana puan kazandırmamalı. Bu yüzden patlamalara bir `own` ("senin") işareti
+ekleriz: önleme füzeleri ve zincirler için `true`, yere çarpmalar için `false`. Kontrolde `b.own &&` "yalnızca senin
+patlamaların" demektir.
+
+**`continue`.** Döngünün içinde `continue` "bu elemanla işin bitti, sıradakine geç" demektir. Yok edilen füze artık
+hedefine yürümemeli; bu yüzden puanı ve patlamayı ekledikten sonra `continue` ile atlarız.
+
+**Puan ve yazı.** Her yok edilen füze 25 puandır: `score += 25` (`+=` "şu kadar artır"). Puanı ekrana yazmak için:
+
+```js
+ctx.font = 'bold 16px sans-serif'   // kalın, 16 piksel yazı
+ctx.textAlign = 'left'              // verdiğin noktadan sağa doğru yaz
+ctx.fillText('Score ' + score, 10, 22)
+```
+
+`'Score ' + score` yazıyla sayıyı yan yana ekler: `'Score 25'`.
 
 # --task--
 
@@ -44,10 +69,56 @@ Yok edilen her füze 25 puan değerindedir.
 
 # --task-tr--
 
-1. Patlamalar önleyicilerden `own: true`, yere çarpmalardan `own: false` alır.
-2. Her füzeyi ilerletmeden önce herhangi bir kendi patlamanın içinde mi diye bak (`Math.hypot` uzaklığı en fazla `radius(b)`).
-   İçindeyse çıkarılır, 25 puan kazandırır ve konumuna kendi bir patlama ekler.
-3. `score` ekle (`reset()`'te `0`) ve sol üste `Score 25` çiz (beyaz, `'bold 16px sans-serif'`, `y = 22`).
+1. `let blasts` satırının yorumunu güncelle ve `let launchIn` satırının altına `score`'u ekle:
+
+   ```js
+   let blasts // explosions: { x, y, age, own }: own ones destroy missiles, impacts on the ground do not
+   ```
+
+   ```js
+   let score
+   ```
+
+2. `reset()` içinde `blasts = []` satırının altına `score = 0` ekle.
+
+3. `update()` içinde önleme füzesinin patlamasına `own: true` ekle:
+
+   ```js
+         blasts.push({ x: s.x, y: s.y, age: 0, own: true }) // ← değişti
+   ```
+
+4. Aynı fonksiyonda düşman füzelerini yürüten döngüyü şöyle yap:
+
+   ```js
+     for (const m of incoming) {
+       // Caught by an explosion: it explodes too, which can catch the missiles next to it.
+       if (blasts.some((b) => b.own && Math.hypot(m.x - b.x, m.y - b.y) <= radius(b))) { // ← yeni blok
+         m.done = true
+         score += 25
+         blasts.push({ x: m.x, y: m.y, age: 0, own: true })
+         continue
+       }
+       if (stepTowards(m, m.speed)) {
+         m.done = true
+         blasts.push({ x: m.x, y: m.y, age: 0, own: false }) // ← değişti
+         const city = cities.find((c) => c.alive && Math.abs(c.x - m.x) < 20)
+         if (city) city.alive = false
+       }
+     }
+   ```
+
+5. `draw()`'un sonuna, patlamaları çizen döngünün altına, bir boş satır bırakıp puanı ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Score ' + score, 10, 22)
+   ```
+
+6. **Çalıştır**'a bas. Sol üstte `Score 0` yazmalı. Gelen bir füzenin önüne tıkla: patlamaya giren füze patlamalı, puan
+   25 artmalı. Yan yana iki füzeyi yakalarsan zincir görürsün. Alttaki kontrollerin hepsi yeşil olmalı. Yere çarpan
+   füzeler komşularını yok ediyorsa `own: false`'u unutmuş olabilirsin.
 
 # --tests--
 

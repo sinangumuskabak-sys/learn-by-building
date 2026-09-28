@@ -28,26 +28,39 @@ because the player's challenge is *timing*, not outsmarting it.
 
 # --explanation-tr--
 
-Düşmanlar, altınlar gibi bölümdeki `e`'lerden yapılır. Ve burada `moveX` ile `moveY` üzerinde yaptığın iş karşılığını
-verir: onlar yalnızca oyuncuyu değil **herhangi** bir gövdeyi alır. Bir düşman tam olarak aynı fonksiyonlarla
-yerçekimiyle düşer, döşemelerin üstünde durur ve duvarlara çarpar. Fiziği bir kez yaz, hareket eden her şey için
-yeniden kullan.
+**Bu adımda:** bölümdeki `e` harflerini kahverengi düşmanlara çevireceğiz. Düşmanlar yürüyecek, duvara çarpınca ve
+platformun kenarına gelince geri dönecek. (Şimdilik oyuncu içlerinden geçebilir; üstlerine basmak sonraki adımda.)
 
-Klasik yürüyen düşmanın iki kuralı var:
+**Düşmanlar da plandan kurulur.** Altınlar gibi, bölüm taranırken her `e` için bir düşman nesnesi oluşturup
+`enemies` listesine ekleriz. Düşmanın yeni bir alanı var: `dir` (yön), `1` sağa, `-1` sola demek. Hepsi sola bakarak
+başlar.
 
-1. Kendi yönünde yürü (`dir` `1` ya da `-1`). `moveX` bir duvar bildirirse (`true`), geri dön.
-2. Kenarlardan düşme. Hareketten sonra **ön ayağının hemen önündeki** zemine bak:
+**Bir kez yaz, her yerde kullan.** `moveX` ve `moveY`'yi yazarken içlerinde hep `body` dedik, `player` değil. Şimdi
+bunun faydasını görüyoruz: bu fonksiyonlar **her** kutuyla çalışır. Düşman da aynı fonksiyonlarla yerçekimiyle düşer,
+karelerin üstünde durur ve duvarlara çarpar. Fiziği bir kez yazıp hareket eden her şeyde kullanırız.
+
+**Yürüyen düşmanın iki kuralı:**
+
+1. Yönüne doğru yürü (`vx = dir`, yani karede 1 piksel). `moveX` bir duvara çarptığını söylerse (`true` döndürürse)
+   geri dön: `dir = -dir`. 4. adımda `moveX`'in neden `true`/`false` döndürdüğünü şimdi görüyorsun.
+2. Kenardan düşme. Hareketten sonra **ön ayağın hemen önündeki** zemine bak:
 
 ```js
 const aheadX = enemy.dir > 0 ? enemy.x + enemy.w : enemy.x - 1   // ön kenarın bir adım ötesi
-if (!solidAt(aheadX, enemy.y + enemy.h)) enemy.dir = -enemy.dir  // üstünde duracak bir şey yok mu? dön
+if (!solidAt(aheadX, enemy.y + enemy.h)) enemy.dir = -enemy.dir  // basacak yer yok mu? dön
 ```
 
-`enemy.y + enemy.h` ayakların hemen **altındaki** ilk pikseldir; zeminin olması gereken yer. Bu tek yoklama yürüyenlere
-karakterlerini verir: her çukura yürümek yerine platformlarda devriye gezerler.
+Sağa gidiyorsa ön kenar sağ kenardır (`x + w`), sola gidiyorsa sol kenarın bir piksel solu (`x - 1`).
+`enemy.y + enemy.h` ayakların hemen **altındaki** ilk pikseldir; zemin tam orada olmalı. `!solidAt(...)` "orası dolu
+değilse" demektir. Bu kontrolü yalnızca düşman yerdeyken (`enemy.grounded`) yaparız; havada düşerken dönmesinin anlamı
+yok.
 
-Bu, olabilecek en basit **yapay zekâ**: iki kural ve hiç plan yok. Yine de bir bölümü ilginç kılmaya yeter, çünkü
-oyuncunun işi onu alt etmek değil, *zamanlamak*.
+Bu tek yoklama yürüyenlere karakterini verir: her çukura dalmak yerine platformlarında devriye gezerler. Bu, olabilecek
+en basit **yapay zekâ** (AI): iki kural, hiç plan yok. Yine de bölümü ilginç yapmaya yeter, çünkü oyuncunun işi düşmanı
+alt etmek değil, **zamanlamayı** tutturmaktır.
+
+`for (const enemy of enemies) updateEnemy(enemy)` → tek satırlık döngülerde süslü parantez gerekmez: listedeki her
+düşman için `updateEnemy` çağrılır.
 
 # --task--
 
@@ -62,14 +75,57 @@ oyuncunun işi onu alt etmek değil, *zamanlamak*.
 
 # --task-tr--
 
-1. Bölüm taramasında her `'e'` için `const enemies = []`'a
-   `{ x: col * TILE + 2, y: row * TILE + 4, w: 28, h: 28, vx: 0, vy: 0, dir: -1 }` düşmanını ekle.
-2. `function updateEnemy(enemy)` yaz: `vx`'i `dir` yap ve `moveX` çağır, duvara çarptıysa geri dön; yerçekimi uygula
-   (`MAX_FALL` ile sınırlı) ve `moveY` çağır; sonra yerdeyse ön ayağın hemen önünde katı döşeme yoksa geri dön
-   (yukarıya bak). `update()` içinde oyuncudan sonra her düşman için çağır.
-3. Düşmanları dünyada `'#7c2d12'` dikdörtgenler olarak çiz.
+1. `const coins = []` satırının hemen altına düşman listesini ekle:
 
-(Oyuncu şimdilik içlerinden geçebiliyor. Ezmek sırada.)
+   ```js
+   const enemies = []
+   ```
+
+2. Bölümü tarayan döngüde, `if (line[col] === 'o') ...` satırının hemen altına düşmanları oluşturan satırı ekle:
+
+   ```js
+       if (line[col] === 'o') coins.push({ x: x + 8, y: y + 8, w: 16, h: 16, taken: false })
+       if (line[col] === 'e') enemies.push({ x: x + 2, y: y + 4, w: 28, h: 28, vx: 0, vy: 0, dir: -1 }) // ← yeni
+   ```
+
+3. `moveY` fonksiyonunun kapanış `}`'inin altına, `function update()`'ten **önce**, düşmanı yöneten fonksiyonu yaz:
+
+   ```js
+   function updateEnemy(enemy) {
+     enemy.vx = enemy.dir
+     if (moveX(enemy)) enemy.dir = -enemy.dir
+     enemy.vy = Math.min(MAX_FALL, enemy.vy + GRAVITY)
+     moveY(enemy)
+     // Kenarda geri dön: ön ayağın hemen önünde zemin var mı?
+     if (enemy.grounded) {
+       const aheadX = enemy.dir > 0 ? enemy.x + enemy.w : enemy.x - 1
+       if (!solidAt(aheadX, enemy.y + enemy.h)) enemy.dir = -enemy.dir
+     }
+   }
+   ```
+
+4. `update()` fonksiyonunda `coyote = ...` satırının altına, altın döngüsünden **önce** her düşmanı hareket ettiren
+   satırı ekle:
+
+   ```js
+     coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)
+
+     for (const enemy of enemies) updateEnemy(enemy) // ← yeni
+
+     for (const coin of coins) {
+   ```
+
+5. `draw()` fonksiyonunda altınları çizen döngünün altına, oyuncuyu çizen `ctx.fillStyle = '#dc2626'` satırından
+   **önce** düşmanları çizen iki satırı ekle:
+
+   ```js
+     ctx.fillStyle = '#7c2d12'
+     for (const enemy of enemies) ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h)
+   ```
+
+6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve sağa ilerle: kahverengi düşmanlar sağa sola yürümeli, duvarda ve
+   platform kenarında dönmeli, çukura düşmemeli. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `aheadX`
+   satırındaki `x + w` ve `x - 1`'in yerlerine bak.
 
 # --tests--
 

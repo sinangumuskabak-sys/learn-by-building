@@ -19,16 +19,71 @@ the check quick. `for (;;)` is a loop with no condition, left with `return` as s
 
 # --explanation-tr--
 
-Amiral Battı iki 10'a 10 denizde oynanır: ateş ettiğin, gemileri gizli düşman denizi ve altta küçük, kendi filonu görebildiğin
-senin denizin. Her filonun 5, 4, 3, 3 ve 2 uzunluğunda gemileri vardır.
+**Bu adımda:** Amiral Battı'nın iki denizini çizeceğiz. Üstte büyük, lacivert, 10×10 kareli düşman denizi (gemileri
+gizli), altta küçük bir deniz: senin donanman, gemilerin gri karelerle görünür. Her çalıştırmada gemiler rastgele yere
+dizilir.
 
-Bir gemi, kapladığı karelerin bir listesidir. `shipCells(r, c, length, down)`, `(r, c)`'den başlayıp sağa ya da aşağı giden bir gemi
-için bu listeyi kurar.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur. `//` ile başlayan kısımlar **yorumdur**: bilgisayar atlar.
 
-**Bir filoyu rastgele yerleştirmek** klasik küçük bir algoritmadır: her gemi için rastgele bir yön ve denize sığdığı rastgele bir
-başlangıç seç ve daha önce yerleştirilmiş bir gemiyle örtüşmediğini kontrol et. Örtüşüyorsa yeniden dene. `taken` karelerinden bir
-ızgara kontrolü hızlandırır. `for (;;)` koşulsuz bir döngüdür ve bir yer işe yarar yaramaz `return` ile çıkılır. 10'a 10 bir denizde ve
-yalnızca 17 gemi karesiyle birkaç denemede her zaman boş bir yer bulunur.
+**Canvas ve fırça.** Sayfada 420×620 piksellik boş bir resim alanı (`canvas`) var; her şeyi onun üstüne boyarız.
+
+```js
+const canvas = document.getElementById('game')   // kimliği 'game' olan alanı bul
+const ctx = canvas.getContext('2d')              // onun fırçasını al
+```
+
+`const ad = ...` bir şeye **sabit** bir ad (etiket) verir. Nokta (`.`) "bunun içindeki" demektir, tırnak içi **yazıdır**.
+Fırçayla renk seçilir (`ctx.fillStyle = '#1e3a8a'`) ve dikdörtgen boyanır (`ctx.fillRect(x, y, en, boy)`). Sol üst
+köşe `(0, 0)`; `x` sağa, `y` **aşağı** doğru büyür. `ctx.fillText('yazı', x, y)` de yazı boyar.
+
+**Nesne ve dizi.** `{ x: 30, y: 50 }` bir **nesnedir**: bilgileri adlarıyla tutan bir paket (`SEA.x` → 30). `[5, 4, 3]`
+bir **dizidir** (liste); elemanlar sıra numarasıyla okunur ve sayma **0'dan başlar**: `SHIPS[0]` → 5.
+
+**Deniz = liste içinde liste.** 10×10'luk deniz 10 satırlık bir listedir; her satır da 10 karelik bir liste.
+`deniz[2][5]` → 2. satırın 5. karesi (ikisi de 0'dan sayılır). Kare konumlarını hep **(satır, sütun)** yani `(r, c)`
+diye yazacağız. Bu tabloyu üreten küçük fonksiyon:
+
+```js
+const grid = (value) => Array.from({ length: N }, () => Array(N).fill(value))
+```
+
+- `(value) => ...` bir **fonksiyondur** (ok `=>` "şunu ver" diye okunur). `grid(false)` yazınca çalışır, `value`
+  yerine `false` geçer. Tek satırlık ok fonksiyonu sonucunu kendiliğinden geri verir.
+- `Array(N).fill(value)` → N elemanlı, hepsi `value` olan bir satır.
+- `Array.from({ length: N }, () => ...)` → N kez verilen fonksiyonu çalıştırıp sonuçlardan liste yapar: 10 ayrı satır.
+
+**Bir gemi = kapladığı karelerin listesi.** Örneğin `[[2, 3], [2, 4], [2, 5]]` 2. satırda yan yana üç kare.
+
+```js
+const shipCells = (r, c, length, down) => Array.from({ length }, (_, i) => (down ? [r + i, c] : [r, c + i]))
+```
+
+- `(r, c, length, down)` fonksiyonun **parametreleri**: çağırırken verdiğin değerlerin içerideki adları.
+- `{ length }`, `{ length: length }`in kısaltmasıdır.
+- `(_, i)` → `Array.from` fonksiyona sıra numarasını da verir: `i` 0, 1, 2... Kullanmadığımız ilk değere `_` deriz.
+- `koşul ? A : B` → "doğruysa A, değilse B". Gemi aşağı (`down`) gidiyorsa satır artar, yoksa sütun.
+
+**Donanmayı rastgele dizmek** klasik küçük bir algoritmadır. Her gemi için: rastgele yön ve denize sığan rastgele bir
+başlangıç seç; önceki bir gemiyle çakışıyorsa **yeniden dene**. Dolu kareleri `taken` (alındı) tablosunda işaretleriz.
+
+- `Math.random()` 0 ile 1 arasında rastgele sayı verir. `Math.random() < 0.5` yarı yarıya `true` (aşağı) olur.
+- `Math.floor(Math.random() * 6)` → 0 ile 5 arasında rastgele bir tam sayı (`floor` aşağı yuvarlar). Aşağı giden 5'lik
+  gemi 10 satıra sığsın diye başlangıç satırı `N - length + 1` = 6 seçenekten seçilir.
+- `SHIPS.map((length) => { ... })` → her gemi uzunluğu için içerideki kodu çalıştırıp sonuçlarından (gemilerden) liste
+  yapar.
+- `for (;;) { ... }` koşulsuz, **sonsuz** bir döngüdür; `return` ile çıkılır. `continue` "bu turu bırak, baştan dene"
+  demektir. 100 karelik denizde gemiler yalnızca 17 kare tuttuğu için birkaç denemede boş yer bulunur.
+- `cells.some(([cr, cc]) => taken[cr][cc])` → "karelerden **en az biri** dolu mu?". `[cr, cc]` yazmak, gelen iki
+  elemanlı listeyi açıp adlarını vermektir: ilki satır, ikincisi sütun.
+
+**Çizmek.** `drawSea` iç içe iki `for` döngüsüyle her kareyi boyar. `for (let r = 0; r < N; r++)` "r 0'dan başlasın,
+N'den küçükken devam et, her turda 1 artsın (`++`)" demektir. Kareleri `size - 2` boyunda ve 1 piksel içeriden
+çizeriz; aralarında ince çizgiler kalır. `showShips` doğruysa **ve** (`&&`) kare bir gemiye aitse gri boyanır.
+`===` iki değerin eşit olup olmadığını sorar.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "sonraki ekran yenilemesinde `loop`'u çalıştır" der; `loop`
+kendini yeniden çağırdığı için ekran saniyede 60 kez yeniden boyanır. En sonda `reset()` donanmaları bir kez dizer.
 
 # --task--
 
@@ -42,13 +97,121 @@ yalnızca 17 gemi karesiyle birkaç denemede her zaman boş bir yer bulunur.
 
 # --task-tr--
 
-1. `N = 10`, `SHIPS = [5, 4, 3, 3, 2]`, `BIG = 36`, `SMALL = 20`, `SEA = { x: 30, y: 50 }` ve `HOME = { x: 30, y: 440 }` ekle.
-2. `grid(value)` (`value` ile dolu `N`'ye `N` bir dizi) ve `shipCells(r, c, length, down)` yaz.
-3. `placeFleet()` yaz: `SHIPS`'teki her uzunluk için örtüşmeden sığan birini bulana kadar rastgele yerleşimleri yeniden dene ve
-   gemileri `{ cells }` olarak döndür. `reset()`, `enemyFleet` ve `myFleet`'i yerleştirir.
-4. `drawSea(origin, size, fleet, showShips)` yaz: her kare `'#1e3a8a'` (kenarlarından 1 piksel içeride), ya da `showShips` iken bir
-   gemi karesi için `'#64748b'`. Düşman denizini `BIG` karelerle ve gemiler gizli, seninkini `SMALL` karelerle ve gemiler görünür
-   olarak, çözümdeki başlıklarla çiz.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı al:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir boş satır bırakıp ayarları ekle:
+
+   ```js
+   const N = 10
+   const SHIPS = [5, 4, 3, 3, 2]
+   const BIG = 36 // cell size of the enemy's sea, where you shoot
+   const SMALL = 20 // cell size of your own sea
+   const SEA = { x: 30, y: 50 }
+   const HOME = { x: 30, y: 440 }
+   ```
+
+3. Bir boş satır bırakıp iki donanmanın değişkenlerini ekle (değerleri `reset()`'te verilecek; `let` sonradan
+   değişebilen ad demektir):
+
+   ```js
+   let enemyFleet // ships: { cells: [[r, c], ...] }
+   let myFleet
+   ```
+
+4. Bir boş satır bırakıp iki yardımcı fonksiyonu yaz:
+
+   ```js
+   const grid = (value) => Array.from({ length: N }, () => Array(N).fill(value))
+   const shipCells = (r, c, length, down) => Array.from({ length }, (_, i) => (down ? [r + i, c] : [r, c + i]))
+   ```
+
+5. Altına donanmayı rastgele dizen fonksiyonu ve `reset`'i yaz:
+
+   ```js
+   // A random fleet: each ship tries random spots until it fits on the sea without overlapping another.
+   function placeFleet() {
+     const taken = grid(false)
+     return SHIPS.map((length) => {
+       for (;;) {
+         const down = Math.random() < 0.5
+         const r = Math.floor(Math.random() * (down ? N - length + 1 : N))
+         const c = Math.floor(Math.random() * (down ? N : N - length + 1))
+         const cells = shipCells(r, c, length, down)
+         if (cells.some(([cr, cc]) => taken[cr][cc])) continue
+         for (const [cr, cc] of cells) taken[cr][cc] = true
+         return { cells }
+       }
+     })
+   }
+
+   function reset() {
+     enemyFleet = placeFleet()
+     myFleet = placeFleet()
+   }
+   ```
+
+   `for (const [cr, cc] of cells)` geminin her karesini sırayla dolaşır ve `taken`'da doldu diye işaretler.
+
+6. Altına bir denizi çizen fonksiyonu yaz:
+
+   ```js
+   function drawSea(origin, size, fleet, showShips) {
+     for (let r = 0; r < N; r++) {
+       for (let c = 0; c < N; c++) {
+         const x = origin.x + c * size
+         const y = origin.y + r * size
+         ctx.fillStyle = '#1e3a8a'
+         if (showShips && fleet.some((s) => s.cells.some(([sr, sc]) => sr === r && sc === c))) ctx.fillStyle = '#64748b'
+         ctx.fillRect(x + 1, y + 1, size - 2, size - 2)
+       }
+     }
+   }
+   ```
+
+7. Altına bütün ekranı çizen `draw`'u yaz: koyu arka plan, başlık ve düşman denizi (gemiler gizli), sonra senin
+   başlığın ve küçük denizin (gemiler görünür):
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 16px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('The enemy fleet is hidden here', SEA.x, 34)
+     drawSea(SEA, BIG, enemyFleet, false)
+
+     ctx.fillStyle = 'white'
+     ctx.font = 'bold 14px sans-serif'
+     ctx.fillText('Your fleet', HOME.x, HOME.y - 10)
+     drawSea(HOME, SMALL, myFleet, true)
+   }
+   ```
+
+   `ctx.font` yazının kalınlığını, boyunu ve yazı tipini seçer; `ctx.textAlign = 'left'` yazıyı verilen noktadan
+   sağa doğru yazar.
+
+8. En alta döngüyü ekle, donanmaları diz ve başlat:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+9. **Çalıştır**'a bas. Üstte büyük lacivert bir deniz, altta gri gemileri görünen küçük bir deniz görmelisin. Her
+   çalıştırmada gemilerin yeri değişir. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa parantezleri say:
+   her `(` ve `{` için bir `)` ve `}` olmalı.
 
 # --tests--
 

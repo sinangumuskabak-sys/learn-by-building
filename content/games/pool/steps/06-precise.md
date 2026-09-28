@@ -32,29 +32,47 @@ Finally, the fewest shots you ever needed to clear the table is your best.
 
 # --explanation-tr--
 
-Bir topa sert ve açılı vur, **yanlış yöne** gidebilir. Neden? 16 güçte bir top karede 16 piksel hareket eder. İki topun
-değdiğini fark ettiğimizde birçok piksel üst üste binmiş olabilirler ve `collide`'da her şeye karar veren merkezler arası çizgi,
-artık ilk değdikleri andaki çizgi değildir.
+**Bu adımda:** fiziği daha hassas yapacağız ve vuruşu önceden göstereceğiz. Nişan alırken beyaz topun ilk değeceği yerde
+içi boş bir "hayalet top" ve vurulan topun gideceği yönü gösteren bir çizgi göreceksin. Sağ üstte en iyi skorun
+(`Best`) yazacak.
 
-Çözüm **daha küçük adımlarla** hareket etmektir: her kareyi, her biri `hız / SUB` kadar hareket edip çarpışmalara bakan `SUB`
-adıma böl. Hızlı, sıyırarak bir vuruşta vurulan topun yönünün ne kadar saptığı şöyle:
+**Neden bazen yanlış yöne gidiyor?** Bir topa sert ve açılı vurursan, vurulan top bazen **yanlış yöne** gider. 16
+güçte top her karede 16 piksel ilerler. İki topun değdiğini fark ettiğimizde birçok piksel iç içe geçmiş olabilirler;
+`collide`'da her şeye karar veren "merkezden merkeze çizgi" artık ilk değdikleri andaki çizgi değildir.
+
+**Çözüm: daha küçük adımlar.** Her kareyi `SUB` (8) küçük adıma böleriz; her adımda top hızının sadece 8'de biri kadar
+ilerler ve çarpışma kontrol edilir. Hızlı, sıyırarak bir vuruşta vurulan topun yönündeki hata:
 
 | karede adım | yön | hata |
 |---|---|---|
-| 1 | 1,35 rad | 0,62 |
-| 4 | 0,85 rad | 0,12 |
-| 8 | 0,77 rad | 0,04 |
-| tam | 0,73 rad | 0 |
+| 1 | 1.35 rad | 0.62 |
+| 4 | 0.85 rad | 0.12 |
+| 8 | 0.77 rad | 0.04 |
+| kesin | 0.73 rad | 0 |
 
-Sekiz adım gerçeğe yeterince yakın ve hâlâ ucuz. Sürtünme karede bir kez kalır; böylece toplar yine aynı mesafeye yuvarlanır.
+8 adım gerçeğe yeterince yakın ve hâlâ ucuz. Sürtünme karede bir kez uygulanmaya devam eder, böylece toplar yine aynı
+mesafeye kadar yuvarlanır.
 
-Fizik bu kadar hassasken vuruşu **önceden görebiliriz**. **Hayalet top**, isteka topunun başka bir topa ilk değdiğinde olacağı
-yerdir. Her top için nişan çizgisi boyunca ne kadar ileride (`t`, bir iç çarpım) ve yana ne kadar uzakta (`side`) olduğunu ölç.
-Yana uzaklık `2R`'den azsa isteka topu ona çarpar, `t`'ye varmadan `sqrt(4R² − side²)` önce. En yakın çarpma kazanır. Vurulan
-top hayaletin merkezinden kendi merkezine giden çizgi boyunca gittiği için onu da çizebiliriz. Gerçek oyuncular tam olarak bunu
-hayal eder.
+**Hayalet top (ghost ball).** Fizik bu kadar kesinleşince vuruşu **önceden** hesaplayabiliriz. Hayalet top, beyaz
+topun başka bir topa **ilk değdiği** anda duracağı yerdir. Her top için:
 
-Son olarak, masayı temizlemek için gereken en az vuruş en iyindir.
+- `t` → o top nişan çizgisi boyunca ne kadar ileride (`dx * ux + dy * uy`; `ux`, `uy` nişan yönü).
+- `side` → çizginin **yanına** ne kadar uzak (uzaklığın karesi olarak: toplam uzaklığın karesi eksi `t`'nin karesi).
+- `t <= 0` ise top arkada kalıyor; `side >= 4R²` ise çizgiden çok uzak, beyaz top ona hiç değmez. Bunları `continue`
+  ile atlarız.
+- Değecekse, beyaz top `t`'ye varmadan `√(4R² − side)` önce değer: `hit = t - Math.sqrt(R * R * 4 - side)`.
+  `Math.sqrt` karekök alır.
+
+En yakın `hit` kazanır. `first` başta `null`'dır ("henüz hiçbir şey yok"). `if (!first || hit < first.hit)` →
+"henüz bulunmadıysa **ya da** bu daha yakınsa, bunu sakla". Hiçbir topa değmiyorsa sonuç `null` olur.
+
+Vurulan top, hayaletin merkezinden kendi merkezine giden çizgi boyunca gider; bunu da çizeriz. Gerçek oyuncular kafalarında
+tam olarak bunu hayal eder.
+
+**En iyi skor.** Bu oyunda **en az** vuruş en iyisidir. `localStorage` tarayıcının küçük defteridir; sayfa kapansa da
+unutmaz. `localStorage.getItem('pool-best')` okur, `setItem` yazar, `Number(...) || 0` okunanı sayıya çevirir (yoksa 0).
+Kaydetme koşulu: `best === 0 || shots < best` → "daha önce rekor yoksa **ya da** bu sefer daha az vuruş". Yazarken
+`best || '-'` → rekor 0 ise (yoksa) `-` göster.
 
 # --task--
 
@@ -69,14 +87,111 @@ Son olarak, masayı temizlemek için gereken en az vuruş en iyindir.
 
 # --task-tr--
 
-1. `SUB = 8` ekle. `step()` her topu `vx / SUB` ve `vy / SUB` kadar hareket ettirir ve `update()` onu karede `SUB` kez çağırır.
-2. `ghost()` yaz: isteka topu dışındaki her top için `t` = `(top − isteka)`'nın nişan yönüyle iç çarpımı ve
-   `side` = `|top − isteka|² − t²`; `t <= 0` ya da `side >= 4R²` ise atla. En yakın `{ hit, ball, x, y }`'yi döndür; burada
-   `hit = t - sqrt(4R² - side)` ve `(x, y)` nişan boyunca `hit` kadar ilerletilmiş isteka topudur; yoksa `null`.
-3. Nişan alırken, varsa nişan çizgisini hayalet topta bitir, orada `R` yarıçaplı bir daire çiz ve vurulan topun merkezinden
-   `(top − hayalet)`'in 3 katı ileri giden bir çizgi çiz.
-4. Masa temizlendiğinde `best`'i (en az vuruş) `localStorage`'da `'pool-best'` adıyla tut ve `(RIGHT, 22)`'ye sağa hizalı
-   `Best 12` (ya da `Best -`) çiz.
+1. `const MAX_POWER = 16` satırının hemen altına adım sayısını ekle:
+
+   ```js
+   const SUB = 8 // physics steps per frame, so fast balls cannot jump through each other
+   ```
+
+2. `let state` satırının hemen altına en iyi skoru okuyan satırı ekle:
+
+   ```js
+   let best = Number(localStorage.getItem('pool-best')) || 0
+   ```
+
+3. `step()`'in başındaki iki hareket satırını hızın 8'de biriyle ilerleyecek şekilde değiştir:
+
+   ```js
+   function step() {
+     for (const b of balls) {
+       b.x += b.vx / SUB // ← değişti
+       b.y += b.vy / SUB // ← değişti
+   ```
+
+4. `update()` içinde tek başına duran `step()` satırını 8 kez çağıran döngüyle değiştir:
+
+   ```js
+     if (state !== 'rolling') return
+     for (let i = 0; i < SUB; i++) step() // ← değişti
+   ```
+
+5. `update()`'in son satırını (`state = balls.length === 1 ? 'won' : 'aiming'`) rekoru da kaydeden hâliyle değiştir:
+
+   ```js
+     if (moving) return
+     if (!balls.includes(cue)) respot()
+     if (balls.length === 1) {               // ← değişti
+       state = 'won'
+       if (best === 0 || shots < best) {
+         best = shots
+         localStorage.setItem('pool-best', best)
+       }
+     } else state = 'aiming'
+   }
+   ```
+
+6. `pointerup` dinleyicisinin kapanış `})`'inden sonra, `function draw()`'dan önce hayalet topu bulan fonksiyonu yaz:
+
+   ```js
+   // Where the cue ball will first touch another ball along the aim: the "ghost ball".
+   function ghost() {
+     const ux = Math.cos(aim)
+     const uy = Math.sin(aim)
+     let first = null
+     for (const b of balls) {
+       if (b === cue) continue
+       const dx = b.x - cue.x
+       const dy = b.y - cue.y
+       const t = dx * ux + dy * uy // how far along the aim line the ball is
+       const side = dx * dx + dy * dy - t * t // squared distance from the line
+       if (t <= 0 || side >= R * R * 4) continue
+       const hit = t - Math.sqrt(R * R * 4 - side)
+       if (!first || hit < first.hit) first = { hit, ball: b, x: cue.x + ux * hit, y: cue.y + uy * hit }
+     }
+     return first
+   }
+   ```
+
+7. `draw()` içindeki `if (state === 'aiming') { ... }` bloğunu şu hâle getir:
+
+   ```js
+     if (state === 'aiming') {
+       const g = ghost()                                                          // ← yeni
+       const length = g ? g.hit : 400                                             // ← yeni
+       ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+       ctx.lineWidth = 1
+       ctx.beginPath()
+       ctx.moveTo(cue.x, cue.y)
+       ctx.lineTo(cue.x + Math.cos(aim) * length, cue.y + Math.sin(aim) * length) // ← değişti (400 yerine length)
+       ctx.stroke()
+       if (g) {                                                                   // ← yeni
+         ctx.beginPath()
+         ctx.arc(g.x, g.y, R, 0, Math.PI * 2)
+         ctx.stroke()
+         // The ball that is hit goes off along the line from the ghost ball through its centre.
+         const dx = g.ball.x - g.x
+         const dy = g.ball.y - g.y
+         ctx.beginPath()
+         ctx.moveTo(g.ball.x, g.ball.y)
+         ctx.lineTo(g.ball.x + dx * 3, g.ball.y + dy * 3)
+         ctx.stroke()
+       }
+     }
+   ```
+
+   `g ? g.hit : 400` → hayalet top varsa çizgi ona kadar, yoksa eskisi gibi 400 piksel.
+
+8. `draw()`'un sonunda, `ctx.fillText('Shots ' + ...)` satırından sonra, `if (state === 'won')`'dan önce en iyi skoru
+   sağa yaslı yaz:
+
+   ```js
+     ctx.textAlign = 'right'                        // ← yeni
+     ctx.fillText('Best ' + (best || '-'), RIGHT, 22) // ← yeni
+   ```
+
+9. **Çalıştır**'a bas. Nişan çizgisi 1 numaralı topun önünde bitmeli; orada içi boş beyaz bir daire ve 1 numaradan
+   çıkan kısa bir yön çizgisi görmelisin. Sağ üstte `Best -` yazmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı
+   kalırsa `ghost` içindeki `t <= 0 || side >= R * R * 4` satırına ve `SUB` ile bölme satırlarına bak.
 
 # --tests--
 

@@ -19,15 +19,46 @@ button reads **Pause**.
 
 # --explanation-tr--
 
-Ünlü desenler **metin** olarak paylaşılır: satır başına bir satır, canlı bir hücre için `O`, ölü biri için `.`.
-`stamp(pattern, row, col)`'umuz böyle bir resmi ızgaraya kopyalar ve bu dünyadaki her şey gibi kenarlarda başa sarar.
+**Bu adımda:** ünlü **planör topunu** (glider gun) ekleyeceğiz ve ekranın altına beş düğme koyacağız: Play, Step, Random,
+Clear, Gun. **Gun**'a basınca sağda sürekli yeni planörler fırlatan bir makine göreceksin.
 
-Hepsinin en ünlüsü, Bill Gosper'ın 1970'te bulduğu **Gosper planör topudur**. Conway sonsuza dek büyüyen bir desen için ödül
-koymuştu ve cevap buydu: ileri geri sekip her 30 nesilde yeni bir planör fırlatan 36 hücre. Nüfusu büyümeyi hiç bırakmaz; en
-azından planörler dünyayı dolaşıp topa çarpana kadar.
+**Desenler yazı olarak paylaşılır.** Her satır bir yazıdır: `O` canlı hücre, `.` ölü hücre. Bir desen de bu yazılardan
+oluşan bir listedir:
 
-Telefonda tuş yoktur, bu yüzden oyun bir düğme sırası alır: Play, Step, Random, Clear ve Gun. Klavyeyle aynı `press`'i
-çağırırlar; yani "Play"in ne yaptığına karar veren hâlâ tek bir yer vardır. Dünya çalışırken Play düğmesi **Pause** yazar.
+```js
+['.O.',
+ '..O',
+ 'OOO']   // bir planör
+```
+
+**Yazının harflerine bakmak.** Bir yazı da bir liste gibi davranır: `'.O.'[1]` → `'O'` (sayma 0'dan başlar),
+`'.O.'.length` → 3 (kaç harf olduğu).
+
+**`stamp(pattern, row, col)`** deseni ızgaraya "damga gibi basar"; desenin sol üst köşesi `(row, col)`'a gelir.
+
+```js
+pattern.forEach((line, r) => { ... })
+```
+
+`forEach` listenin **her elemanı için** `{ }` içini çalıştırır. `line` o anki satır yazısı, `r` onun sırası (0, 1, 2...).
+İçerideki `for` döngüsü satırın her harfine bakar; harf `'O'` ise `(row + r, col + c)` hücresini `1` yapar. Dünya başa
+sardığı için (3. adım) burada da `% ROWS` ve `% COLS` kullanırız.
+
+**Gosper'ın planör topu.** Conway, sonsuza kadar büyüyen bir desen bulana ödül vermişti. Bill Gosper 1970'te buldu:
+36 hücre, ileri geri gidip her 30 nesilde bir yeni planör fırlatır.
+
+**Ekran düğmeleri.** Telefonda klavye yok, bu yüzden düğmeler gerekiyor. Beş düğmenin adı bir listede durur:
+`BUTTONS`. Canvas 480 piksel geniş, 5 düğme var: her birine `BUTTON_W = 480 / 5` = 96 piksel düşer.
+`BUTTONS.length` listenin eleman sayısıdır (5).
+
+- Çizerken `BUTTONS.forEach((label, i) => ...)` her düğme için `i * BUTTON_W` konumundan başlayan bir kutu çizer. Her
+  yandan 4 piksel içeri çekeriz (`+ 4`, `- 8`) ki düğmeler arasında boşluk kalsın.
+- `ctx.textAlign = 'center'` yazıyı verdiğin `x`'e **ortalar**; `x` de kutunun ortasıdır: `i * BUTTON_W + BUTTON_W / 2`.
+- `label === 'Play' && playing ? 'Pause' : label` → "bu Play düğmesiyse ve dünya çalışıyorsa `Pause` yaz, değilse
+  kendi adını".
+- Tıklanan nokta `BAR_Y`'nin altındaysa (`point.y >= BAR_Y`) hangi düğme olduğunu `Math.floor(point.x / BUTTON_W)` bulur:
+  `x = 150` → `150 / 96` = 1.56 → 1 → `BUTTONS[1]` = `'Step'`. Sonra klavyeyle aynı `press` çağrılır. Böylece "Play ne
+  yapar?" sorusunun cevabı hâlâ tek bir yerde durur.
 
 # --task--
 
@@ -55,27 +86,94 @@ const GUN = [
 
 # --task-tr--
 
-1. `GUN` desenini (sabitlerin altına) ekle ve `stamp(pattern, row, col)` yaz: `r` satırında, `c` karakterindeki her `'O'`,
-   `%` ile başa sarılan `(row + r, col + c)` hücresini canlandırır.
-2. `press('Gun')` dünyayı temizler ve `GUN`'ı `(4, 4)`'e basar; G tuşu ona basar.
-3. `BAR_Y = TOP + ROWS * CELL + 12`, `BUTTONS = ['Play', 'Step', 'Random', 'Clear', 'Gun']` ve
-   `BUTTON_W = canvas.width / BUTTONS.length` ekle. Her düğmeyi kenarlarından 4 piksel içeride, 36 yüksekliğinde `'#334155'`
-   bir dikdörtgen olarak ve etiketini beyazla çiz (oynarken `'Play'` yerine `'Pause'`).
-4. `BAR_Y`'de ya da altında bir `pointerdown` altındaki düğmeye basar.
+1. `const TOP = 36` satırının altına düğme sabitlerini ekle:
 
-```js
-const GUN = [
-  '........................O...........',
-  '......................O.O...........',
-  '............OO......OO............OO',
-  '...........O...O....OO............OO',
-  'OO........O.....O...OO..............',
-  'OO........O...O.OO....O.O...........',
-  '..........O.....O.......O...........',
-  '...........O...O....................',
-  '............OO......................',
-]
-```
+   ```js
+   const BAR_Y = TOP + ROWS * CELL + 12 // the row of buttons
+   const BUTTONS = ['Play', 'Step', 'Random', 'Clear', 'Gun']
+   const BUTTON_W = canvas.width / BUTTONS.length
+   ```
+
+2. `const SPEED = 6 ...` satırının altına bir satır boşluk bırakıp deseni ekle (harfleri tek tek yazmak yerine buradan
+   kopyalayabilirsin):
+
+   ```js
+   // Patterns drawn as text: O is a live cell.
+   const GUN = [
+     '........................O...........',
+     '......................O.O...........',
+     '............OO......OO............OO',
+     '...........O...O....OO............OO',
+     'OO........O.....O...OO..............',
+     'OO........O...O.OO....O.O...........',
+     '..........O.....O.......O...........',
+     '...........O...O....................',
+     '............OO......................',
+   ]
+   ```
+
+3. `clear()` fonksiyonunun kapanış `}`'sinin altına `stamp`'i yaz:
+
+   ```js
+   // Copy a text pattern onto the grid with its top left corner at (row, col).
+   function stamp(pattern, row, col) {
+     pattern.forEach((line, r) => {
+       for (let c = 0; c < line.length; c++) if (line[c] === 'O') grid[(row + r) % ROWS][(col + c) % COLS] = 1
+     })
+   }
+   ```
+
+4. `press()` fonksiyonunun sonuna Gun düğmesini ekle:
+
+   ```js
+     } else if (button === 'Random') randomize()
+     else if (button === 'Clear') clear()
+     else if (button === 'Gun') { // ← yeni
+       clear()                    // ← yeni
+       stamp(GUN, 4, 4)           // ← yeni
+     }                            // ← yeni
+   }
+   ```
+
+5. `keydown` tablosuna G'yi ekle:
+
+   ```js
+     const keys = { ' ': 'Play', n: 'Step', r: 'Random', c: 'Clear', g: 'Gun' } // ← değişti
+   ```
+
+6. `pointerdown` dinleyicisinin başını değiştir: önce nokta düğme sırasında mı diye bak. Dinleyici şöyle olmalı:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     const point = toCanvas(event)                      // ← yeni
+     if (point.y >= BAR_Y) {                            // ← yeni
+       press(BUTTONS[Math.floor(point.x / BUTTON_W)])   // ← yeni
+       return                                           // ← yeni
+     }                                                  // ← yeni
+     const cell = cellAt(point)                         // ← değişti
+     if (!cell) return
+     painting = grid[cell.r][cell.c] ? 0 : 1
+     grid[cell.r][cell.c] = painting
+   })
+   ```
+
+7. `draw()` içinde, hücreleri çizen iki döngünün kapanışından sonra ve `ctx.fillStyle = 'white'` satırından önce düğmeleri
+   çiz:
+
+   ```js
+     BUTTONS.forEach((label, i) => {
+       ctx.fillStyle = '#334155'
+       ctx.fillRect(i * BUTTON_W + 4, BAR_Y, BUTTON_W - 8, 36)
+       ctx.fillStyle = 'white'
+       ctx.font = 'bold 16px sans-serif'
+       ctx.textAlign = 'center'
+       ctx.fillText(label === 'Play' && playing ? 'Pause' : label, i * BUTTON_W + BUTTON_W / 2, BAR_Y + 24)
+     })
+   ```
+
+8. **Çalıştır**'a bas. Altta beş düğme görmelisin. **Gun**'a, sonra **Play**'e bas: topun sağ alta doğru planörler
+   fırlattığını görmelisin ve Play düğmesi **Pause** yazmalı. Alttaki kontrollerin hepsi yeşil olmalı. Gun kontrolü
+   kırmızıysa desen satırlarını buradan yeniden kopyala: tek bir nokta eksiği deseni bozar.
 
 # --tests--
 

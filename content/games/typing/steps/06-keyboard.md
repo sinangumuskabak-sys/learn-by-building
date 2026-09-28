@@ -18,15 +18,46 @@ while their fingers learn where the letters are, and it helps you notice when yo
 
 # --explanation-tr--
 
-Telefonda klavye yoktur, bu yüzden bir tane çizeriz: üç **QWERTY** satırı, `'qwertyuiop'`, `'asdfghjkl'` ve `'zxcvbnm'`, her
-biri üstündekinin altında ortalı. Satırları metin olarak tutmak düzeni kod değil veri yapar: `ROWS[row][i]` harftir,
-`keyRect(row, i)` de nereye gittiğini hesaplar.
+**Bu adımda:** ekranın altına bir klavye çizeceğiz. Telefonda gerçek klavye olmadığı için harflere dokunarak yazabileceksin.
+Ayrıca hedef kelimenin **sıradaki harfinin tuşu sarı yanacak**; parmakların harflerin yerini böyle öğrenecek.
 
-Bir tuşa dokunmak gerçek klavyeyle aynı `type(key)`'i çağırır; böylece her kural (kilitlenme, hatalar, puan) ikisinde de aynı
-biçimde işler.
+**Klavyeyi veri olarak tutmak.** Klavyenin üç sırası (QWERTY düzeni) üç yazıdan oluşan bir listedir:
 
-Klavye aynı zamanda **öğretir**: hedefin sıradaki harfinin tuşu sarı yanar. Yeni başlayanlar parmakları harflerin yerini
-öğrenirken ışığı takip edebilir; ayrıca yanlış kelimeye kilitlendiğini fark etmene yardım eder.
+```js
+const ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+```
+
+`ROWS[1]` ikinci sıradır (`'asdfghjkl'`), `ROWS[1][0]` onun ilk harfi (`'a'`). Düzeni değiştirmek istersen yalnızca bu
+listeyi değiştirirsin, çizim kodu aynı kalır.
+
+**Tuş nereye gelir? `keyRect(row, i)`.** `row` sıra numarası, `i` o sıradaki tuşun numarası. Fonksiyon tuşun sol üst
+köşesini `{ x, y }` nesnesi olarak **geri verir** (`return`).
+
+- Tuşlar `KEY_W` = 44 piksel geniş ve aralarında 3 piksel boşluk var; yani her tuş bir öncekinden `KEY_W + 3` = 47 piksel
+  sağda: `x = left + i * 47`.
+- Sıralar `KEY_H` = 34 piksel yüksek ve aralarında 7 piksel var: `y = KEYS_Y + row * (KEY_H + 7)`.
+- `left` sırayı **ortalar**. Sıranın toplam genişliği `harf sayısı × 47 - 3`'tür (son tuştan sonra boşluk yok). Canvas
+  genişliğinden bunu çıkarıp ikiye bölersek iki yanda eşit boşluk kalır. Kodda `(canvas.width - uzunluk * 47 + 3) / 2`.
+  İlk sıra için: `(480 - 470 + 3) / 2` = 6.5.
+
+**Dokunulan tuşu bulmak.** `pointerdown` olayı ekrana dokunulduğunda (ya da fareyle tıklandığında) gelir. Olay yeri
+**sayfaya göre** verir (`event.clientX`); `canvas.getBoundingClientRect()` canvas'ın sayfadaki kutusunu verir. Farkı alıp
+ölçekleyerek canvas içindeki `x` ve `y`'yi buluruz (canvas ekranda büyütülmüş ya da küçültülmüş olabilir).
+
+Sonra her tuşa bakarız: nokta tuşun kutusunun içinde mi?
+
+```js
+x >= k.x && x < k.x + KEY_W && y >= k.y && y < k.y + KEY_H
+```
+
+Dördü birden doğruysa (`&&` "ve") o tuşun harfiyle `type` çağrılır. Gerçek klavye de aynı `type`'ı çağırdığı için kilitlenme,
+hata ve puan kuralları ikisinde de aynı çalışır. Oyun bittiyse dokunuş `reset()` ile yeni oyun başlatır.
+
+`ROWS.forEach((keys, row) => { ... })` listenin her elemanı için `{ }` içini çalıştırır: `keys` o sıranın harfleri,
+`row` sıranın numarası. İçteki `for` döngüsü o sıradaki her harfi gezer.
+
+**Yol gösteren ışık.** `const next = target && target.text[typed] === keys[i]` → "bir hedef var **ve** onun sıradaki
+harfi bu tuş". Doğruysa tuş sarı (`'#facc15'`) ve harfi koyu, değilse tuş koyu mavi ve harfi açık renk çizilir.
 
 # --task--
 
@@ -39,12 +70,68 @@ Klavye aynı zamanda **öğretir**: hedefin sıradaki harfinin tuşu sarı yanar
 
 # --task-tr--
 
-1. `ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']`, `KEY_W = 44`, `KEY_H = 34` ve `KEYS_Y = 350` ekle.
-2. `keyRect(row, i)` yaz: tuşlar 3 piksel, satırlar `KEYS_Y`'den 7 piksel aralıklı, her satır ortalı.
-3. `pointerdown`'da: oyun bittiyse `reset()`; değilse işaretçinin altındaki tuşun harfini `type` et.
-4. Her tuşu `KEY_W`'ye `KEY_H` bir dikdörtgen olarak çiz: `'#e2e8f0'` harfli `'#1e293b'`, ya da hedefin sıradaki harfiyse
-   `'#020617'` harfli `'#facc15'` (`'bold 18px sans-serif'`, ortalı, `k.y + 23`). Oyun bitti satırı
-   `Press Enter or tap to play again` olur.
+1. `const FONT = 'bold 20px monospace'` satırının altına klavye ayarlarını ekle:
+
+   ```js
+   const ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+   const KEY_W = 44
+   const KEY_H = 34
+   const KEYS_Y = 350
+   ```
+
+2. `keydown` dinleyicisinin kapanışı olan `})` satırının altına şunları yaz:
+
+   ```js
+   // The on-screen keyboard, one row under another, each row centered.
+   function keyRect(row, i) {
+     const left = (canvas.width - ROWS[row].length * (KEY_W + 3) + 3) / 2
+     return { x: left + i * (KEY_W + 3), y: KEYS_Y + row * (KEY_H + 7) }
+   }
+
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const y = ((event.clientY - rect.top) * canvas.height) / rect.height
+     if (state === 'over') return reset()
+     ROWS.forEach((keys, row) => {
+       for (let i = 0; i < keys.length; i++) {
+         const k = keyRect(row, i)
+         if (x >= k.x && x < k.x + KEY_W && y >= k.y && y < k.y + KEY_H) type(keys[i])
+       }
+     })
+   })
+   ```
+
+   `for (let i = 0; i < keys.length; i++)` → "`i` 0'dan başlasın, harf sayısından küçük olduğu sürece tekrarla, her turda
+   1 artsın".
+
+3. `draw()`'da oyun bitti panelinin son yazısını değiştir:
+
+   ```js
+       ctx.fillText('Press Enter or tap to play again', canvas.width / 2, 205) // ← değişti
+     }
+   ```
+
+4. Aynı yerde, panelin `if`'ini kapatan `}`'den sonra ve `draw()`'un son `}`'sinden önce klavyeyi çiz:
+
+   ```js
+     ctx.textAlign = 'center'
+     ctx.font = 'bold 18px sans-serif'
+     ROWS.forEach((keys, row) => {
+       for (let i = 0; i < keys.length; i++) {
+         const k = keyRect(row, i)
+         const next = target && target.text[typed] === keys[i]
+         ctx.fillStyle = next ? '#facc15' : '#1e293b'
+         ctx.fillRect(k.x, k.y, KEY_W, KEY_H)
+         ctx.fillStyle = next ? '#020617' : '#e2e8f0'
+         ctx.fillText(keys[i], k.x + KEY_W / 2, k.y + 23)
+       }
+     })
+   ```
+
+5. **Çalıştır**'a bas. Altta üç sıralı bir klavye görmelisin. Düşen bir kelimenin ilk harfine dokun: kelimenin sıradaki
+   harfinin tuşu sarı yanmalı. Alttaki kontrollerin hepsi yeşil olmalı. Sarı tuş kontrolü kırmızıysa `keyRect`'teki
+   `+ 3` ve `+ 7` sayılarını kontrol et.
 
 # --tests--
 

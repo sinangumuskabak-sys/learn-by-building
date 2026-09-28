@@ -25,21 +25,61 @@ be drawn as a line from the start to where it is now.
 
 # --explanation-tr--
 
-Düşman füzeleri tepede rastgele bir noktada başlar ve yerdeki bir hedefe dümdüz uçar: hâlâ ayakta olan bir şehre ya da senin
-üssüne. Bu oyundaki her füze ve her önleyici aynı şeyi yapar, "bir noktaya belirli bir hızla ilerle"; bu yüzden küçük bir
-fonksiyona değer:
+**Bu adımda:** düşman füzeleri gelecek. Ekranın üstünden kırmızı duman izleri bırakan füzeler yavaşça aşağı süzülecek;
+bir şehre ulaşan füze o şehri enkaza çevirecek.
+
+**Rastgele başlangıç ve hedef.** `Math.random()` 0 ile 1 arasında rastgele bir sayı verir; `Math.random() * canvas.width`
+0 ile 480 arasında rastgele bir `x`'tir. Listeden rastgele eleman seçmek için `Math.floor` ile aşağı yuvarlarız:
+`targets[Math.floor(Math.random() * targets.length)]`. (`.length` listenin eleman sayısıdır; sıra numaraları 0'dan
+başladığı için sonuç her zaman geçerli bir sıradır.)
+
+Hedefler: hâlâ ayakta olan şehirlerin `x`'leri ve üssün `x`'i.
+
+```js
+const targets = cities.filter((c) => c.alive).map((c) => c.x).concat(BASE.x)
+```
+
+`filter` kurala uyanları (canlı şehirleri) tutar, `map` her şehrin yerine onun `x`'ini koyar, `concat` listenin sonuna
+bir eleman daha ekleyip yeni bir liste verir. Yeni füze `incoming` listesine `push` ile eklenir. Füze nereden başladığını
+(`sx, sy`), şimdi nerede olduğunu (`x, y`) ve nereye gittiğini (`tx, ty`) hatırlar.
+
+**Bir noktaya doğru gitmek.** Bu oyundaki her füze aynı şeyi yapar: "belli bir hızla bir noktaya doğru ilerle". Bu yüzden
+küçük bir fonksiyona değer:
 
 ```js
 const distance = Math.hypot(dx, dy)
-m.x += (dx / distance) * speed   // (dx, dy) bölü uzunluğu, 1 uzunluğunda bir yöndür
+m.x += (dx / distance) * speed
 m.y += (dy / distance) * speed
 ```
 
-Hedefe giden oku uzunluğuna bölmek bir **birim vektör** verir: salt bir yön. Onu hızla çarpmak tam o büyüklükte bir adım
-verir. Hedef bir adımdan yakınsa füze onun üstüne oturur ve fonksiyon vardığını söyler.
+- `dx` ve `dy` hedefe kadar yatayda ve dikeyde ne kadar yol kaldığıdır (`hedef - şimdiki`).
+- `Math.hypot(dx, dy)` iki noktanın arasındaki dümdüz uzaklıktır (okuldaki Pisagor: `√(dx² + dy²)`).
+- Hedefe giden oku kendi uzunluğuna bölmek, uzunluğu 1 olan bir ok verir: **birim vektör**, yani saf bir yön. Onu hızla
+  çarpınca tam o büyüklükte bir adım çıkar. Hedef 30 piksel sağda, 40 piksel aşağıdaysa uzaklık 50'dir; hız 1 ile adım
+  `(0.6, 0.8)` olur.
 
-Varan bir füze nişan aldığı şehri yok eder. Her füze nereden başladığını hatırlar; böylece duman izi başlangıçtan şu an olduğu
-yere bir çizgi olarak çizilebilir.
+Hedef bir adımdan yakınsa (`distance <= speed`, `<=` "küçük ya da eşit") füze hedefe **oturtulur** ve fonksiyon `true`
+("vardım") döndürür; yoksa adım atılır ve `false` döner.
+
+**Geri sayım.** Oyun döngüsü saniyede ~60 kez çalışır; her çalışma bir **kare**dir. `launchIn` bir sonraki fırlatmaya
+kaç kare kaldığıdır: her karede 1 azalır (`-=`), 0'a inince bir füze fırlatılır ve 60 kare (bir saniye) beklenir.
+`toLaunch` dalgada kaç füze kaldığıdır.
+
+**Varınca.** Varan füzeyi `m.done = true` diye işaretleriz (nesneye sonradan yeni bir alan eklenebilir). Hedefin 20
+piksel yakınındaki canlı şehir yıkılır: `Math.abs` bir sayının eksisiz hâlidir (uzaklık), `find` kurala uyan ilk şehri
+verir, yoksa `undefined` verir; `if (city)` "bulunduysa" demektir. En sonda `filter((m) => !m.done)` işaretlileri atar
+(`!` "değil").
+
+**Çizgi çizmek.** Füzenin duman izi, başladığı yerden şu anki yerine bir çizgidir:
+
+```js
+ctx.beginPath()          // yeni çizgiye başla
+ctx.moveTo(m.sx, m.sy)   // kalemi başlangıca koy
+ctx.lineTo(m.x, m.y)     // şimdiki yere kadar çek
+ctx.stroke()             // çizgiyi boya
+```
+
+Çizginin rengi `ctx.strokeStyle`, kalınlığı `ctx.lineWidth`'tir.
 
 # --task--
 
@@ -53,13 +93,104 @@ yere bir çizgi olarak çizilebilir.
 
 # --task-tr--
 
-1. `incoming`, `toLaunch` ve `launchIn` ekle; `reset()` onları `[]`, `20` ve `30` yapar.
-2. `launch()` yaz: üst kenarda rastgele bir `x`'te başlayan, yaşayan şehirlerin `x`'leri ve `BASE.x` arasından rastgele birine
-   `ty = GROUND` ile nişan alan bir füze `{ sx, sy, x, y, tx, ty, speed: 0.8 }`.
-3. Yukarıdaki gibi, varınca `true` döndüren `stepTowards(m, speed)` yaz.
-4. `update()` içinde: fırlatılacak füze kaldıkça `launchIn`'i geri say; `0`'da birini fırlat ve 60 kare bekle. Her füzeyi
-   ilerlet; varan çıkarılır ve 20 piksel yakınındaki yaşayan bir şehri yok eder.
-5. Her füzeyi başladığı yerden olduğu yere 2 piksel kalınlığında `'#f87171'` bir çizgi olarak çiz.
+1. `let cities` satırının altına üç değişken ekle:
+
+   ```js
+   let incoming // enemy missiles: { sx, sy, x, y, tx, ty, speed }
+   let toLaunch // enemy missiles still to come
+   let launchIn
+   ```
+
+2. `reset()`'i şöyle yap:
+
+   ```js
+   function reset() {
+     cities = CITY_XS.map((x) => ({ x, alive: true }))
+     incoming = [] // ← yeni
+     toLaunch = 20 // ← yeni
+     launchIn = 30 // ← yeni
+   }
+   ```
+
+3. `reset()`'in altına, bir boş satır bırakıp füze fırlatan ve bir noktayı hedefe yürüten fonksiyonları yaz:
+
+   ```js
+   // A new enemy missile from a random point at the top towards a random living city (or the base).
+   function launch() {
+     const sx = Math.random() * canvas.width
+     const sy = 0
+     const targets = cities.filter((c) => c.alive).map((c) => c.x).concat(BASE.x)
+     const tx = targets[Math.floor(Math.random() * targets.length)]
+     incoming.push({ sx, sy, x: sx, y: sy, tx, ty: GROUND, speed: 0.8 })
+   }
+
+   // Move a point `speed` pixels towards its target; true when it has arrived.
+   function stepTowards(m, speed) {
+     const dx = m.tx - m.x
+     const dy = m.ty - m.y
+     const distance = Math.hypot(dx, dy)
+     if (distance <= speed) {
+       m.x = m.tx
+       m.y = m.ty
+       return true
+     }
+     m.x += (dx / distance) * speed
+     m.y += (dy / distance) * speed
+     return false
+   }
+   ```
+
+4. Altına her karede hesabı yapan `update`'i yaz:
+
+   ```js
+   function update() {
+     if (toLaunch > 0) {
+       launchIn -= 1
+       if (launchIn <= 0) {
+         launch()
+         toLaunch -= 1
+         launchIn = 60
+       }
+     }
+
+     for (const m of incoming) {
+       if (stepTowards(m, m.speed)) {
+         m.done = true
+         const city = cities.find((c) => c.alive && Math.abs(c.x - m.x) < 20)
+         if (city) city.alive = false
+       }
+     }
+     incoming = incoming.filter((m) => !m.done)
+   }
+   ```
+
+5. `draw()`'un sonuna, üssü boyayan `ctx.fillRect(BASE.x - 12, ...)` satırının altına, bir boş satır bırakıp duman
+   izlerini ekle:
+
+   ```js
+     ctx.lineWidth = 2
+     ctx.strokeStyle = '#f87171'
+     for (const m of incoming) {
+       ctx.beginPath()
+       ctx.moveTo(m.sx, m.sy)
+       ctx.lineTo(m.x, m.y)
+       ctx.stroke()
+     }
+   ```
+
+6. `loop()` içinde `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Yarım saniye sonra üstten ilk kırmızı iz inmeye başlamalı, sonra her saniye bir yenisi gelmeli.
+   Bir şehre ulaşan füze o şehri gri enkaza çevirmeli. Alttaki kontrollerin hepsi yeşil olmalı. Hiçbir şey hareket
+   etmiyorsa `loop()`'a `update()` eklemeyi unutmuş olabilirsin.
 
 # --tests--
 

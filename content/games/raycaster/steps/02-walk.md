@@ -25,22 +25,43 @@ For now nothing stops you: you can walk straight through the walls. That comes n
 
 # --explanation-tr--
 
-Birinci şahıs bir oyunda ok tuşları seni haritada yukarı, aşağı, sola ve sağa taşımaz. **Sol ve sağ seni döndürür**,
-**yukarı ve aşağı** da hangi yöne bakıyorsan o yönde ileri ve geri **yürütür**:
+**Bu adımda:** haritada dönüp yürüyeceğiz. Sol/Sağ ok sarı oyuncuyu döndürecek, Yukarı/Aşağı ok baktığı yöne ileri
+geri yürütecek. Şimdilik duvarların içinden geçebileceksin; onu bir sonraki adımda düzelteceğiz.
+
+**Birinci şahıs kontrolü.** Birinci şahıs oyunlarda oklar seni haritada yukarı-aşağı-sola-sağa götürmez. **Sol ve
+sağ seni döndürür**, **yukarı ve aşağı** ise hangi yöne bakıyorsan o yöne **ileri ve geri yürütür**:
 
 ```js
 player.angle += TURN                          // biraz dön
-player.x += Math.cos(player.angle) * MOVE     // açı boyunca yürü
+player.x += Math.cos(player.angle) * MOVE     // baktığın yöne yürü
 player.y += Math.sin(player.angle) * MOVE
 ```
 
-`cos` ve `sin`'in önemi budur: "ileri" bir adımı, her açı için yana ve aşağı parçalarına ayırırlar. Geri yürümek, işareti
-ters aynı adımdır.
+`+=` "üstüne ekle", `-=` "çıkar" demektir. `cos` ve `sin` bu yüzden önemli: bir "ileri" adımını, her açı için yana
+ve aşağı parçalarına ayırırlar. Geri yürümek aynı adımın eksi işaretlisidir.
 
-Hareket akıcıdır; bu yüzden tuşlar **basılı tutulur** ve aynı `keys` nesnesi birçok oyuncunun tercih ettiği WASD tuşlarını da
-alır. Telefonda ekranın sol üçte birini basılı tutmak sola, sağ üçte birini sağa döndürür, ortası yürütür.
+**Tuşlar basılı tutulur.** Hareket akıcı olsun diye hangi tuşların **şu an basılı** olduğunu bir nesnede tutarız:
+`keys`. Tuşa basılınca (`keydown` olayı) `keys[tuş] = true`, bırakılınca (`keyup`) `false` yaparız. Her karede
+`update()` bu nesneye bakar. Aynı nesne WASD tuşlarını da alır (`w` ileri, `s` geri, `a` sol, `d` sağ).
 
-Şimdilik seni hiçbir şey durdurmuyor: duvarların içinden dümdüz geçebilirsin. Sırada o var.
+**Yeni parçalar:**
+
+- **Olay (event):** `document.addEventListener('keydown', (event) => { ... })` "bir tuşa basılınca bu kodu çalıştır"
+  der. `event.key` basılan tuşun adıdır: `'ArrowUp'`, `'a'` gibi.
+- `keys[event.key] = true`: köşeli parantezle, adı bir değişkende duran alana yazmak. Tuş `'w'` ise bu
+  `keys.w = true` ile aynıdır. `true`/`false` evet/hayır değerleridir.
+- `event.key.startsWith('Arrow')`: tuşun adı `'Arrow'` ile mi başlıyor? Oklarda `event.preventDefault()` tarayıcının
+  sayfayı kaydırmasını engeller.
+- **`if (koşul) ...`**: koşul doğruysa yap. `||` "veya": `keys.ArrowLeft || keys.a` iki tuştan biri basılıysa doğru.
+  `!==` "eşit değil".
+- `forward` bir sayıdır: ileri tuşu `1`, geri tuşu `-1`, hiçbiri ya da ikisi birden `0` verir. Adımı bununla
+  çarparız; böylece ileri ve geri tek satırda olur.
+- **Parametreli fonksiyon:** `function move(dx, dy)` çağrılırken verilen iki sayıyı `dx` ve `dy` adıyla kullanır.
+
+**Telefonda:** ekranın sol üçte birini basılı tutmak sola döndürür, sağ üçte biri sağa, ortası yürütür. Dokunulan
+yerin canvas'taki oranını (`0` sol kenar, `1` sağ kenar) 3 ile çarparız: 1'den küçükse sol, 2'den küçükse orta,
+değilse sağ. `pointerdown` parmak (ya da fare) değince, `pointerup` kalkınca, `pointercancel` dokunuş kesilince
+gelir.
 
 # --task--
 
@@ -54,13 +75,80 @@ alır. Telefonda ekranın sol üçte birini basılı tutmak sola, sağ üçte bi
 
 # --task-tr--
 
-1. `MOVE = 0.05` (kare başına döşeme), `TURN = 0.04` (kare başına radyan) ve `keydown` ile `keyup`'ın doldurduğu bir `keys`
-   nesnesi ekle (ok tuşları için `preventDefault()`).
-2. Oyuncunun konumuna ekleyen `move(dx, dy)` ve `update()` yaz: `ArrowLeft` ya da `a` `-TURN` kadar, `ArrowRight` ya da `d`
-   `TURN` kadar döndürür; `ArrowUp` ya da `w` açı boyunca `MOVE` kadar ileri, `ArrowDown` ya da `s` geri yürütür. Her karede
-   çağır.
-3. Canvas'taki `pointerdown`'da canvas'ın hangi üçte birine dokunulduğuna göre `ArrowLeft`, `ArrowUp` ya da `ArrowRight`'ı
-   basılı tut; `pointerup` ve `pointercancel`'da üçünü de bırak.
+1. `const MINI = 24 ...` satırının **üstüne** iki sabit ekle:
+
+   ```js
+   const MOVE = 0.05 // tiles per frame
+   const TURN = 0.04 // radians per frame
+   ```
+
+2. `let player` satırının altına basılı tuşları tutacak boş nesneyi ekle:
+
+   ```js
+   const keys = {}
+   ```
+
+3. `reset()` fonksiyonunun kapanış `}`'inin altına bir satır boşluk bırakıp şunları yaz:
+
+   ```js
+   // For now nothing stops the player.
+   function move(dx, dy) {
+     player.x += dx
+     player.y += dy
+   }
+
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key.startsWith('Arrow')) event.preventDefault()
+   })
+   document.addEventListener('keyup', (event) => {
+     keys[event.key] = false
+   })
+   ```
+
+4. Altına dokunma kodunu yaz:
+
+   ```js
+   // Touch: hold the left third to turn left, the right third to turn right, the middle to walk.
+   canvas.addEventListener('pointerdown', (event) => {
+     const rect = canvas.getBoundingClientRect()
+     const third = ((event.clientX - rect.left) / rect.width) * 3
+     keys[third < 1 ? 'ArrowLeft' : third < 2 ? 'ArrowUp' : 'ArrowRight'] = true
+   })
+   function stopTouch() {
+     keys.ArrowLeft = false
+     keys.ArrowUp = false
+     keys.ArrowRight = false
+   }
+   canvas.addEventListener('pointerup', stopTouch)
+   canvas.addEventListener('pointercancel', stopTouch)
+   ```
+
+   `getBoundingClientRect()` canvas'ın ekrandaki yerini ve enini verir; `event.clientX` dokunuşun ekrandaki x'idir.
+
+5. Altına her karede tuşlara bakan `update()` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     if (keys.ArrowLeft || keys.a) player.angle -= TURN
+     if (keys.ArrowRight || keys.d) player.angle += TURN
+     const forward = (keys.ArrowUp || keys.w ? 1 : 0) - (keys.ArrowDown || keys.s ? 1 : 0)
+     if (forward !== 0) move(Math.cos(player.angle) * MOVE * forward, Math.sin(player.angle) * MOVE * forward)
+   }
+   ```
+
+6. En alttaki `loop()` fonksiyonunda `draw()`'dan önce `update()`'i çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla: oklarla (ya da WASD ile) dönüp yürüyebilmelisin. Alttaki
+   kontrollerin hepsi yeşil olmalı. Oyuncu durmadan kayıyorsa `keyup` kısmını kontrol et.
 
 # --tests--
 

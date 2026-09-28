@@ -29,25 +29,46 @@ This handles pinned pieces, moving into check and answering a check, all with on
 
 # --explanation-tr--
 
-Satrancı satranç yapan tek kural: **kendi şahını asla şahta bırakamazsın.** Taşın desenine uyan bir hamle ancak ondan sonra
-şahın saldırı altında değilse **yasaldır**.
+**Bu adımda:** satranca asıl kuralını ekleyeceğiz: **kendi şahını asla tehdit altında (şahta) bırakamazsın.** Artık
+bir taşa tıklayınca sadece gerçekten oynanabilecek (yasal) hamlelerin noktaları çıkacak; örneğin şahını açıkta
+bırakacak bir taşın noktaları kaybolacak.
 
-Önce "bu kare saldırı altında mı?". Rakibin bütün hamlelerini üretmek yerine **kareden dışarı bak**: bir at sıçraması ötede rakip
-bir at var mı? Dümdüz kayınca ilk taş rakip bir kale ya da vezir mi? Çaprazda bir fil ya da vezir mi? Bir adım çapraz ileride
-(rakip tarafından) bir piyon mu? Yanında şah mı? Bu, tersten kullanılan hamle desenleridir.
+**Yasal hamle nedir?** Taşın desenine uyan bir hamle, ancak ondan sonra kendi şahın saldırı altında değilse
+**yasaldır** (legal). Şimdiye kadar ürettiğimiz hamlelere "desene uyan" (pseudo) hamleler diyoruz.
 
-Sonra yasallık için hile, **her hamleyi deneyip geri almaktır**:
+**Önce: "bu kare saldırı altında mı?"** Rakibin bütün hamlelerini üretmek yerine **kareden dışarı doğru bakarız**:
+
+- Bir at sıçraması uzakta rakip at var mı?
+- Düz kayınca rastlanan ilk taş rakip kale ya da vezir mi?
+- Çapraz kayınca rastlanan ilk taş rakip fil ya da vezir mi?
+- Bir çapraz adım ötede (rakibin tarafından) piyon var mı? Beyaz piyon yukarı saldırır; bu yüzden karenin bir satır
+  **altında** durur.
+- Hemen yanında rakip şah var mı?
+
+Bu, hamle desenlerinin **tersten** kullanılmasıdır.
+
+**Sonra: dene ve geri al.** Yasallık için hile, her hamleyi **oynayıp geri almaktır**:
 
 ```js
-const undo = makeMove(m)      // tahtada oyna
+const undo = makeMove(m)      // hamleyi tahtada oyna
 const safe = !inCheck(color)  // şahım şimdi saldırı altında mı?
 undoMove(undo)                // her şeyi tam olarak geri koy
 ```
 
-`makeMove` hamleyi geri almak için gereken her şeyi (hareket eden taşı, alınanı) döndürür. Bir hamleyi tam olarak geri
-alabilmek, bilgisayar oyuncusunun ileriyi düşünmek için de ihtiyaç duyacağı şeydir.
+`makeMove` hamleyi geri almak için gereken her şeyi döndürür: hamlenin kendisi, oynayan taş ve yenen taş (yoksa `''`).
+Bir hamleyi tam olarak geri alabilmek, ileride bilgisayar oyuncusunun ileriyi düşünmesi için de gerekecek.
 
-Bu; açmazdaki taşları, şahın içine gitmeyi ve bir şaha cevap vermeyi tek bir kuralla halleder.
+Bu tek kural; açmaz (pin) durumundaki taşları, şahın kendini tehdide sokmasını ve şah çekildiğinde cevap vermeyi hep
+birlikte halleder.
+
+**Yeni parçalar:**
+
+- `for (const [list, kind] of [[KNIGHT, 'N'], [KING, 'K']])`: iki çift üzerinden döner; ilk turda `list` at
+  sıçramaları ve `kind` `'N'`, ikinci turda şahınkiler ve `'K'`. Aynı kontrolü iki kez yazmamak için.
+- `by + 'P'`: rengi ve türü birleştirip taş yazısını kurar (`'b' + 'P'` → `'bP'`).
+- `findKing` tahtayı gezip şahın karesini `[r, c]` olarak döndürür.
+- `{ m, piece, captured: board[tr][tc] }`: `{ m: m, piece: piece, ... }` kısaltması.
+- `legalMoves()` `filter` ile, içindeki fonksiyon `true` döndüren hamleleri tutar.
 
 # --task--
 
@@ -60,12 +81,105 @@ Bu; açmazdaki taşları, şahın içine gitmeyi ve bir şaha cevap vermeyi tek 
 
 # --task-tr--
 
-1. Anlatıldığı gibi `(r, c)`'den dışarı bakarak `attacked(r, c, by)` (beyaz piyon yukarı saldırır; bu yüzden karenin bir satır
-   **altında** durur), `findKing(color)` ve `inCheck(color)` yaz.
-2. `makeMove(m)` (taşı taşı, terfi ettir, `turn`'ü değiştir, `{ m, piece, captured }` döndür) ve tahtayı ve `turn`'ü geri
-   yükleyen `undoMove(undo)` yaz.
-3. `legalMoves()` yaz: sırası olan tarafın kendi şahını şahta bırakmayan sözde hamleleri. `play()` `makeMove` kullanır ve bir taşı
-   seçmek yalnızca yasal hamlelerini gösterir.
+1. `pseudoMoves`'un üstündeki yorumu değiştir:
+
+   ```js
+   // Every move that follows the pieces' patterns, without checking whether it leaves the king in check.
+   ```
+
+2. `play(m)` fonksiyonunun **tamamını** (`function play(m) {` satırından kapanış `}`'ine kadar) sil ve yerine şunların
+   hepsini yaz:
+
+   ```js
+   // Is the square (r, c) attacked by a piece of color `by`? Look outwards from the square for each kind of attacker.
+   function attacked(r, c, by) {
+     const pawnRow = r + (by === 'w' ? 1 : -1) // a white pawn attacks upwards, so it stands one row below
+     for (const dc of [-1, 1]) {
+       if (inside(pawnRow, c + dc) && board[pawnRow][c + dc] === by + 'P') return true
+     }
+     for (const [list, kind] of [[KNIGHT, 'N'], [KING, 'K']]) {
+       for (const [dr, dc] of list) {
+         if (inside(r + dr, c + dc) && board[r + dr][c + dc] === by + kind) return true
+       }
+     }
+     for (const [dirs, kind] of [[STRAIGHT, 'R'], [DIAGONAL, 'B']]) {
+       for (const [dr, dc] of dirs) {
+         let tr = r + dr
+         let tc = c + dc
+         while (inside(tr, tc)) {
+           const piece = board[tr][tc]
+           if (piece) {
+             if (piece === by + kind || piece === by + 'Q') return true
+             break
+           }
+           tr += dr
+           tc += dc
+         }
+       }
+     }
+     return false
+   }
+
+   function findKing(color) {
+     for (let r = 0; r < 8; r++) {
+       for (let c = 0; c < 8; c++) if (board[r][c] === color + 'K') return [r, c]
+     }
+   }
+
+   function inCheck(color) {
+     const [r, c] = findKing(color)
+     return attacked(r, c, other(color))
+   }
+
+   // Play a move on the board, and return what is needed to take it back.
+   function makeMove(m) {
+     const [fr, fc] = m.from
+     const [tr, tc] = m.to
+     const piece = board[fr][fc]
+     const undo = { m, piece, captured: board[tr][tc] }
+     board[tr][tc] = m.promo ? piece[0] + m.promo : piece
+     board[fr][fc] = ''
+     turn = other(turn)
+     return undo
+   }
+
+   function undoMove(undo) {
+     const [fr, fc] = undo.m.from
+     const [tr, tc] = undo.m.to
+     board[fr][fc] = undo.piece
+     board[tr][tc] = undo.captured
+     turn = other(turn)
+   }
+
+   // The moves the side to play can really make: try each one, and keep it if its own king is not left in check.
+   function legalMoves() {
+     const color = turn
+     return pseudoMoves(color).filter((m) => {
+       const undo = makeMove(m)
+       const safe = !inCheck(color)
+       undoMove(undo)
+       return safe
+     })
+   }
+
+   function play(m) {
+     makeMove(m)
+     selected = null
+     targets = []
+   }
+   ```
+
+   Eski `play()`'in tahtayı değiştiren kısmı artık `makeMove`'da; yeni `play()` onu çağırıp seçimi temizler.
+
+3. `clickSquare` içinde hedefleri bulan satırı değiştir:
+
+   ```js
+       targets = legalMoves().filter((m) => same(m.from, selected)) // ← değişti
+   ```
+
+4. **Çalıştır**'a bas. Oyun eskisi gibi oynanmalı, ama şahını tehlikeye atan hamlelerin noktası çıkmamalı. Alttaki
+   kontrollerin hepsi yeşil olmalı. "Geri alma" kontrolü kırmızıysa `undoMove`'da `turn = other(turn)` satırını
+   unutmuş olabilirsin.
 
 # --tests--
 

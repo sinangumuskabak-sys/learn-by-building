@@ -25,22 +25,79 @@ pixels into the ground on each bounce.
 
 # --explanation-tr--
 
-Bu oyunda asla "zıpla"ya basmazsın. Oyuncu her yere indiğinde **kendiliğinden seker**; senin tek yaptığın yönlendirmek.
-Bu da fiziği oyunun kalbi yapar ve fizik yalnızca üç satırdır:
+**Bu adımda:** turuncu bir kareyi (oyuncuyu) yere düşürüp durmadan zıplatacağız. Sağdaki açık renkli alanın altında
+turuncu kare hep aynı yüksekliğe sekip duracak.
 
-```js
-player.vy += GRAVITY   // yerçekimi hızı her karede biraz değiştirir
-player.y += player.vy  // hız konumu değiştirir
-if (landed) player.vy = JUMP   // bir sekiş sabit bir yukarı hızla başlar
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan yazılar **yorumdur**:
+bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) nedir?** Sayfada 400 piksel eninde, 600 piksel boyunda boş bir resim alanı var:
+
+```html
+<canvas id="game" width="400" height="600"></canvas>
 ```
 
-Her sekiş aynı hızla başladığı için her sekiş **aynı yüksekliğe** çıkar. Bunu hesaplayabilirsin bile: hız her karede
-`GRAVITY` kadar küçülür ve sıfıra iner; yani yükseliş yaklaşık `JUMP² / (2 × GRAVITY)` = `121 / 0.7` ≈ 172 pikseldir
-(oyun tam karelerle ilerlediği için biraz daha az, 167). Sonra bu sayı platformların birbirinden ne kadar uzak
-olabileceğine karar verecek; böylece oyun hep mümkün kalır.
+Oyundaki her şeyi bu alanın üstüne **boyayarak** göstereceğiz. Önce kâğıdı buluruz, sonra fırçayı alırız:
 
-Oyuncu zemine değdiğinde sekmeden önce onu tam olarak zeminin **üstüne** koy. Yoksa her sekişte birkaç piksel zemine
-gömülürdü.
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir: bir
+  kutuya etiket yapıştırmak gibi, sonra hep o adla çağırırsın ve değeri değişmez.
+- `document.getElementById('game')` → "sayfada kimliği (id) `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `canvas.getContext('2d')` → canvas'ın çizim aracını (bağlam, **context**) verir. `ctx` artık senin fırçan.
+
+**Nasıl çizilir?** Önce renk seçilir, sonra dikdörtgen boyanır:
+
+```js
+ctx.fillStyle = 'orange'      // fırçaya turuncu boya sür
+ctx.fillRect(10, 20, 50, 30)  // dikdörtgen: x, y, genişlik, yükseklik
+```
+
+Canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Renkler `'#f59e0b'`
+gibi kodlarla da yazılabilir (bu bir turuncu).
+
+**Sayı sabitleri.** `const GRAVITY = 0.35` gibi satırlar bir sayıya ad verir. Böylece kodda anlamsız `0.35` yerine
+"yerçekimi" yazarız. Ondalık sayılarda virgül değil **nokta** kullanılır.
+
+**Nesne (object) ve `let`.** Oyuncunun birkaç bilgisi var: konumu (`x`, `y`), eni (`w`), boyu (`h`) ve dikey hızı
+(`vy`). Bunları süslü parantezle tek bir paket yaparız:
+
+```js
+let player = { x: 180, y: 460, w: 40, h: 40, vy: 0 }
+```
+
+Her `ad: değer` çiftine **alan** denir. Bir alana nokta ile ulaşırsın: `player.y` "oyuncunun y'si" demektir. `let`,
+`const` gibidir ama sonradan değişebilecek şeyler için kullanılır.
+
+**Fonksiyon (function).** Bir fonksiyon, adı olan bir talimat paketidir. `function update() { ... }` yazmak paketi
+**tanımlar** (tarif defterine yazmak gibi); `update()` yazmak onu **çağırır**, yani içindeki satırları o anda çalıştırır.
+Süslü parantezler `{ }` paketin başını ve sonunu gösterir.
+
+**Fizik üç satırdır.** Bu oyunda "zıpla" tuşu yok; oyuncu yere her değdiğinde **kendiliğinden seker**:
+
+- `player.vy += GRAVITY` → `+=` "üstüne ekle" demektir. Yerçekimi her karede hızı biraz artırır (aşağı doğru).
+- `player.y += player.vy` → hız, konumu değiştirir. `vy` pozitifse aşağı, negatifse yukarı gider.
+- Yere değince `player.vy = JUMP` → `JUMP` `-11` olduğu için oyuncu hızla yukarı fırlar. Sonra yerçekimi onu yavaşlatır,
+  durdurur ve geri indirir.
+
+**`if` (eğer).** `if (koşul) { ... }` "koşul doğruysa süslü parantezin içini yap, değilse atla" demektir. `>=`
+"büyük ya da eşit" demektir. Oyuncunun **alt kenarı** `player.y + player.h`'dir (üst kenar + boy). Bu değer `FLOOR`'a
+(600, canvas'ın dibi) ulaştıysa oyuncu yere değmiş demektir. O zaman önce onu **tam zeminin üstüne** koyarız
+(`y = 600 - 40 = 560`); yoksa her sekişte biraz daha yere gömülürdü.
+
+Her sekiş aynı hızla başladığı için hep **aynı yüksekliğe** çıkar: yaklaşık `JUMP² / (2 × GRAVITY)` = `121 / 0.7` ≈ 172
+piksel (oyun kare kare ilerlediği için gerçekte 167). Bu sayı ileride platformların arasının ne kadar olabileceğini
+belirleyecek; böylece oyun hep oynanabilir kalır.
+
+**Oyun döngüsü.** Hareketi görmek için ekranı saniyede yaklaşık 60 kez yeniden çizmeliyiz. `requestAnimationFrame(loop)`
+tarayıcıya "bir sonraki karede `loop`'u çalıştır" der. `loop` de her seferinde önce `update()` (hesapla), sonra `draw()`
+(çiz) yapar ve kendini yeniden sıraya koyar. Böylece durmadan dönen bir döngü olur. `draw()` her karede önce bütün
+arka planı boyar; yoksa eski kareler silinmez ve iz kalırdı.
 
 # --task--
 
@@ -52,11 +109,69 @@ gömülürdü.
 
 # --task-tr--
 
-1. `GRAVITY = 0.35`, `JUMP = -11`, `FLOOR = 600` ve `let player = { x: 180, y: 460, w: 40, h: 40, vy: 0 }` ekle.
-2. `update()` yaz: `player.vy`'ye `GRAVITY` ekle, `player.y`'ye `player.vy` ekle; oyuncunun altı (`y + h`) `FLOOR`'a
-   ulaştıysa onu zeminin üstüne koy ve `vy`'yi `JUMP` yap.
-3. `draw()` yaz: `'#f8fafc'` bir arka plan ve oyuncu için `'#f59e0b'` bir dikdörtgen.
-4. Her karede `requestAnimationFrame` ile `update()` ve `draw()` çağır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve oyunun sayılarını ekle (sondaki yorumları yazmasan da olur):
+
+   ```js
+   const GRAVITY = 0.35
+   const JUMP = -11 // her sekiş bu hızla başlar (eksi = yukarı)
+   const FLOOR = 600 // canvas'ın dibi
+   ```
+
+3. Altına oyuncuyu ekle:
+
+   ```js
+   let player = { x: 180, y: 460, w: 40, h: 40, vy: 0 }
+   ```
+
+4. Altına fiziği hesaplayan `update` fonksiyonunu yaz:
+
+   ```js
+   function update() {
+     player.vy += GRAVITY
+     player.y += player.vy
+     // Yere değmek bir sonraki sekişi başlatır.
+     if (player.y + player.h >= FLOOR) {
+       player.y = FLOOR - player.h
+       player.vy = JUMP
+     }
+   }
+   ```
+
+5. Altına her şeyi çizen `draw` fonksiyonunu yaz. İlk iki satır arka planı açık renge boyar, son iki satır oyuncuyu
+   turuncu bir kare olarak çizer:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#f8fafc'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#f59e0b'
+     ctx.fillRect(player.x, player.y, player.w, player.h)
+   }
+   ```
+
+6. En alta oyun döngüsünü ekle ve onu başlat:
+
+   ```js
+   function loop() {
+     update()
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda turuncu kare aşağı düşüp yerden durmadan sekmeli ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa en sık hata: `JUMP`'ın başındaki eksiyi unutmak ya da `if`
+   satırında `>=` yerine başka bir şey yazmak. Yazdığını harf harf karşılaştır.
 
 # --tests--
 

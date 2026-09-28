@@ -31,28 +31,71 @@ The ground is at `canvas.height`. The bird touches it when its *bottom edge*, `b
 
 # --explanation-tr--
 
-Şu an kuş sayfa açılır açılmaz düşmeye başlıyor ve yere çarpınca hiçbir şey olmuyor. Gerçek bir oyunun **evreleri**
-vardır ve aynı girdi her evrede başka bir şey demektir:
+**Bu adımda:** oyuna üç aşama ekleyeceğiz: başta kuş ortada bekleyecek ve ekranda `Press Space to start` yazacak;
+ilk çırpışta oyun başlayacak; kuş yere ya da tavana değince her şey donacak ve `Game Over` yazısı çıkacak.
 
-| durum | ne olur | kanat çırpmak... |
+**Şu anki sorun.** Sayfa açılır açılmaz kuş düşmeye başlıyor ve yere çarpınca hiçbir şey olmuyor. Gerçek bir oyunun
+**aşamaları** vardır ve aynı tuş her aşamada başka bir anlama gelir:
+
+| durum | ne olur | bir çırpış... |
 |---|---|---|
-| `'ready'` | kuş ortada bekler | oyunu başlatır |
-| `'playing'` | yerçekimi, borular, skor | kanat çırpar |
-| `'over'` | her şey donar | (sonra: yeniden başlatır) |
+| `'ready'` (hazır) | kuş ortada bekler | oyunu başlatır |
+| `'playing'` (oyunda) | yerçekimi, borular, skor | kanat çırpar |
+| `'over'` (bitti) | her şey donar | (sonra: yeniden başlatır) |
 
-Birbiriyle çelişebilecek bir yığın boolean (`started`, `gameOver`, `paused`...) yerine, her zaman bu değerlerden tam
-olarak biri olan **tek** bir değişken tut. Buna **durum makinesi** denir ve öğreneceğin en kullanışlı kalıplardan
-biridir: menüler, düşmanlar, ağ istekleri ve ödeme sayfaları hep durum makinesidir.
+Bunun için "başladı mı?", "bitti mi?" gibi birbiriyle çelişebilecek bir sürü değişken yerine, her an bu üç
+değerden **tam olarak birini** tutan **tek** bir değişken kullanırız:
 
 ```js
-let state = 'ready'
+let state = 'ready' // 'ready', 'playing' or 'over'
+```
+
+Buna **durum makinesi** (state machine) denir. Çok işe yarayan bir fikirdir: menüler, düşmanlar, bir alışveriş
+sitesinin ödeme sayfası hep böyle çalışır.
+
+**`return`: "burada dur, fonksiyondan çık".** Bir fonksiyonun içinde `return`'e gelindiğinde fonksiyonun geri
+kalanı çalışmaz:
+
+```js
 function update() {
-  if (state !== 'playing') return   // oynamıyorsak hiçbir şey hareket etmez
+  if (state !== 'playing') return   // oyunda değilsek hiçbir şey hareket etmesin
   ...
 }
 ```
 
-Zemin `canvas.height` hizasında. Kuş, *alt kenarı* `bird.y + bird.r` o çizgiye ulaşınca zemine değer.
+`!==` "eşit **değil** mi?" diye sorar (`===`'in tersi). Yani: "durum `'playing'` değilse hemen çık."
+
+**Yere değdi mi?** Zemin, canvas'ın en alt çizgisi, yani `y = canvas.height` (600). `bird.y` dairenin
+**merkezidir**; kuşun alt kenarı merkezden bir yarıçap aşağıda: `bird.y + bird.r`. Üst kenarı da `bird.y - bird.r`.
+
+```js
+const hitGround = bird.y + bird.r >= canvas.height
+const hitSky = bird.y - bird.r <= 0
+if (hitGround || hitSky) state = 'over'
+```
+
+- `>=` "büyük veya eşit mi?", `<=` "küçük veya eşit mi?" diye sorar.
+- Böyle bir sorunun cevabı bir sayı değil, **doğru** (`true`) ya da **yanlış** (`false`)'tur. Cevabı bir ada
+  koyabiliriz: `hitGround` (yere çarptı) ve `hitSky` (gökyüzüne çarptı). Kod böyle daha kolay okunur.
+- Bunlar `update()`'in içinde yazılan sabitlerdir; her karede yeniden hesaplanırlar.
+
+**Ekrana yazı yazmak.** Fırçayla yazı da boyanabilir:
+
+```js
+ctx.font = 'bold 36px sans-serif'   // yazı tipi: kalın, 36 piksel
+ctx.textAlign = 'center'            // verilen noktayı yazının ortası say
+ctx.fillText('Game Over', 200, 300) // yazıyı (200, 300) noktasına boya
+```
+
+`canvas.width / 2` canvas'ın eninin yarısı, yani yatayda tam orta (`/` bölme işaretidir).
+
+**Süslü parantezli `if`.** Koşul doğruysa birden fazla satır çalışacaksa onları `{ }` içine alırız:
+
+```js
+if (state === 'ready') {
+  // bu satırların hepsi sadece durum 'ready' iken çalışır
+}
+```
 
 # --task--
 
@@ -66,12 +109,60 @@ Zemin `canvas.height` hizasında. Kuş, *alt kenarı* `bird.y + bird.r` o çizgi
 
 # --task-tr--
 
-1. `let state = 'ready'` ekle.
-2. `flap()` içinde: durum `'over'` ise hiçbir şey yapma. Değilse durumu `'playing'` yap ve kanat çırp.
-3. `update()` içinde: durum `'playing'` değilse hemen dön. Hareketten sonra kuşun alt kenarı (`bird.y + bird.r`)
-   `canvas.height`'a ya da üst kenarı (`bird.y - bird.r`) `0`'a ulaşırsa durumu `'over'` yap.
-4. `draw()` içinde kuştan sonra, beyaz ve ortalanmış yazıyla: `'ready'` iken `Press Space to start`, `'over'` iken
-   `Game Over` göster.
+1. `let bird = ...` satırının hemen altına durum değişkenini ekle:
+
+   ```js
+   let state = 'ready' // 'ready', 'playing' or 'over'
+   ```
+
+2. `flap()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function flap() {
+     if (state === 'over') return   // ← yeni
+     state = 'playing'              // ← yeni
+     bird.vy = FLAP
+   }
+   ```
+
+   Oyun bittiyse çırpış hiçbir şey yapmaz; değilse oyunu başlatır (ya da sürdürür) ve kuşu sıçratır.
+
+3. `update()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return   // ← yeni
+     bird.vy += GRAVITY
+     bird.y += bird.vy
+
+     const hitGround = bird.y + bird.r >= canvas.height   // ← yeni
+     const hitSky = bird.y - bird.r <= 0                  // ← yeni
+     if (hitGround || hitSky) state = 'over'              // ← yeni
+   }
+   ```
+
+4. `draw()` fonksiyonunda, kuşu çizen `ctx.fill()` satırının altına (fonksiyonun kapanış `}`'inden önce) yazıları
+   ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.textAlign = 'center'
+     if (state === 'ready') {
+       ctx.font = '22px sans-serif'
+       ctx.fillText('Press Space to start', canvas.width / 2, canvas.height / 2 + 80)
+     }
+     if (state === 'over') {
+       ctx.font = 'bold 36px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+     }
+   ```
+
+   Başlangıç yazısı ortanın 80 piksel altına konuyor ki kuşun üstüne binmesin.
+
+5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Kuş ortada beklemeli ve `Press Space to start` yazmalı. Oynamak için
+   önce oyuna tıkla, sonra Boşluk'a bas; kuşu düşürürsen `Game Over` çıkmalı ve kuş donmalı. Alttaki kontrollerin
+   hepsi yeşil olmalı. Kırmızı kalırsa yazıları harf harf karşılaştır: `Press Space to start` ve `Game Over`
+   birebir aynı olmalı.
 
 # --tests--
 

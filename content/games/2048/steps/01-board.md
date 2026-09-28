@@ -25,22 +25,70 @@ their cell, with smaller text for bigger numbers so that `1024` still fits.
 
 # --explanation-tr--
 
-2048, 4×4'lük bir ızgarada oynanır ve bu kez verinin doğal biçimi **2 boyutlu bir dizidir**: her satırı bir sayı dizisi
-olan satırlar dizisi. `0` boş hücre demek.
+**Bu adımda:** 2048'in 4×4'lük tahtasını çizeceğiz. Sağda krem bir zemin, üstte skor için boş bir şerit ve altında
+kahverengimsi bir kare içinde 16 boş hücre göreceksin.
+
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan yazılar **yorumdur**:
+bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas (tuval) ve fırça.** Sayfada 400 piksel eninde, 460 piksel boyunda bir resim alanı (`canvas`) var. Her şeyi onun
+üstüne boyayacağız:
+
+```js
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+```
+
+- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile ad verilen şeye **sabit** denir: bir kutuya
+  etiket yapıştırmak gibi, sonra hep o adla çağırırsın.
+- `document.getElementById('game')` → "sayfada kimliği (id) `game` olanı bul". Nokta (`.`) "bunun içindeki şu komut"
+  demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `canvas.getContext('2d')` → çizim aracını (bağlam, **context**) verir. `ctx` artık senin fırçan.
+
+Çizmek iki hareket: `ctx.fillStyle = '#faf8ef'` ile renk seç (renkler `#` ile başlayan kodlarla yazılır),
+`ctx.fillRect(x, y, genişlik, yükseklik)` ile dikdörtgen boya. Canvas'ın **sol üst köşesi** `(0, 0)`'dır; `x` sağa,
+`y` **aşağı** doğru büyür.
+
+**Sayılarla hesap.** `const CELL = (canvas.width - GAP * (SIZE + 1)) / SIZE` → `*` çarpma, `/` bölme, parantez önce
+hesaplanır. 400 pikselden 5 boşluk (5 × 12 = 60) çıkarılır, kalan 340 dört hücreye bölünür: her hücre 85 piksel.
+`TOP = 60` tahtanın üstünde skor için bırakılan şerit.
+
+**İki boyutlu dizi (2D array).** **Dizi**, köşeli parantez `[ ]` içinde virgülle ayrılmış bir listedir. 2048'de tahta
+bir **satırlar listesi**, her satır da bir **sayılar listesi**dir. `0` boş hücre demek:
 
 ```js
 let board = [
   [0, 2, 0, 0],   // board[0] en üst satır
-  [0, 0, 4, 0],   // board[1][2] 4'tür: 1. satır, 2. sütun
+  [0, 0, 4, 0],   // board[1][2] = 4: 1. satır, 2. sütun
   ...
 ]
 ```
 
-`board[row][col]` bir hücreyi okur: önce satır, sonra sütun. Resim gibi okunur; bu da kuralları satır ve sütunlardan söz
-eden ızgara oyunları için 2 boyutlu dizileri hoş yapar (2048'in kurallarının hepsi satırlar ve sütunlarla ilgili).
+Sayma **0'dan başlar**: ilk satır `board[0]`, ikinci satır `board[1]`. `board[satır][sütun]` bir hücreyi okur: önce
+satırı, sonra sütunu seçersin. Tıpkı resme bakar gibi okunur. `let`, `const` gibi ad verir ama sonradan değişebilen
+şeyler içindir; tahta oyun boyunca değişecek.
 
-Her değerin kendi rengi var; sayıya göre anahtarlanan bir arama tablosundan: `COLORS[value]`. Sayılar hücrelerinin
-ortasına çizilir; büyük sayılar için yazı küçülür ki `1024` da sığsın.
+**Fonksiyon.** `function cellX(col) { return ... }` bir talimat paketi **tanımlar**. `col` bir **parametredir**:
+`cellX(3)` diye çağırınca içeride `col` 3 olur. `return` sonucu geri verir. `cellX(3)` = `12 + 3 × 97 = 303`: 3.
+sütunun sol kenarı. `draw()` diye yazmak ise bir fonksiyonu **çağırır**, yani içini o anda çalıştırır.
+
+**Renk tablosu.** `COLORS` bir **nesnedir**: süslü parantez içinde `ad: değer` çiftleri. Burada adlar sayılar:
+`COLORS[8]` 8'in rengini verir.
+
+**Her hücreyi dolaşmak: iç içe `for`.** `for (let row = 0; row < SIZE; row++) { ... }` → `row` 0'dan başlar, 4'ten küçük
+olduğu sürece içini yapar, her turdan sonra `row++` ile 1 artar. İçindeki ikinci döngü sütunları dolaşır; böylece 16
+hücrenin hepsine birer kez bakılır.
+
+**Kısa "eğer": `a ? b : c`.** "`a` doğruysa `b`, değilse `c`". `value === 0 ? '#cdc1b4' : COLORS[value]` → hücre
+boşsa (`===` "eşit mi?" demektir) boş hücre rengi, değilse sayının rengi. Sondaki `|| '#3c3a32'` "tabloda yoksa bu koyu
+rengi kullan" demektir (2048'den büyük sayılar için). Yazı boyu için iki tane art arda kullanılır: 100'den küçükse 40,
+değilse 1000'den küçükse 34, değilse 26. Böylece `1024` bile hücreye sığar.
+
+**Sayıyı ortalamak.** `ctx.textAlign = 'center'` ve `ctx.textBaseline = 'middle'` ile yazı, verilen noktanın tam
+ortasına yazılır. Hücrenin ortası: sol kenar + `CELL / 2`. `String(value)` sayıyı yazıya çevirir,
+`ctx.fillText(yazı, x, y)` onu boyar. `'bold ' + 40 + 'px sans-serif'` yazıları birleştirir: `'bold 40px sans-serif'`.
+`!==` "eşit değil", `<=` "küçük ya da eşit" demektir.
 
 # --task--
 
@@ -55,14 +103,97 @@ ortasına çizilir; büyük sayılar için yazı küçülür ki `1024` da sığs
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut. `SIZE = 4`, `GAP = 12`,
-   `CELL = (canvas.width - GAP * (SIZE + 1)) / SIZE` (yani 85), `TOP = 60`, çözümdeki `COLORS` tablosunu ve sıfırlardan
-   oluşan 4×4'lük bir dizi olan `let board`'u ekle.
-2. `cellX(col)` = `GAP + col * (CELL + GAP)` ve `cellY(row)` = `TOP + GAP + row * (CELL + GAP)` yaz.
-3. `draw()` yaz: canvas'ı `'#faf8ef'` ile doldur, tahta arka planını `(0, TOP)`'tan canvas genişliğinde bir kare olarak
-   `'#bbada0'` ile çiz, sonra her hücreyi: boşsa `'#cdc1b4'`, değilse `COLORS[value]`. Boş olmayan hücrelere sayıyı
-   ortalayarak çiz: 2 ve 4 için `'#776e65'`, daha büyükler için `'#f9f6f2'`; 100'ün altında `bold 40px`, 1000'in
-   altında `bold 34px`, diğerlerinde `bold 26px`. `draw()`'u çağır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan iki satırı yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve tahtanın ölçülerini ve renk tablosunu ekle:
+
+   ```js
+   const SIZE = 4
+   const GAP = 12
+   const CELL = (canvas.width - GAP * (SIZE + 1)) / SIZE // 85
+   const TOP = 60 // tahtanın üstünde skor için yer
+   const COLORS = {
+     2: '#eee4da',
+     4: '#ede0c8',
+     8: '#f2b179',
+     16: '#f59563',
+     32: '#f67c5f',
+     64: '#f65e3b',
+     128: '#edcf72',
+     256: '#edcc61',
+     512: '#edc850',
+     1024: '#edc53f',
+     2048: '#edc22e',
+   }
+   ```
+
+3. Bir satır boşluk bırak ve boş tahtayı yaz:
+
+   ```js
+   let board = [
+     [0, 0, 0, 0],
+     [0, 0, 0, 0],
+     [0, 0, 0, 0],
+     [0, 0, 0, 0],
+   ]
+   ```
+
+4. Altına, bir sütunun ve bir satırın piksel konumunu veren iki fonksiyonu yaz:
+
+   ```js
+   function cellX(col) {
+     return GAP + col * (CELL + GAP)
+   }
+
+   function cellY(row) {
+     return TOP + GAP + row * (CELL + GAP)
+   }
+   ```
+
+5. Altına çizim fonksiyonunu yaz. Önce arka planı ve tahtanın zeminini boyar, sonra 16 hücreyi ve içlerindeki sayıları
+   çizer:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#faf8ef'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.fillStyle = '#bbada0'
+     ctx.fillRect(0, TOP, canvas.width, canvas.width)
+
+     ctx.textAlign = 'center'
+     ctx.textBaseline = 'middle'
+     for (let row = 0; row < SIZE; row++) {
+       for (let col = 0; col < SIZE; col++) {
+         const value = board[row][col]
+         ctx.fillStyle = value === 0 ? '#cdc1b4' : COLORS[value] || '#3c3a32'
+         ctx.fillRect(cellX(col), cellY(row), CELL, CELL)
+         if (value !== 0) {
+           ctx.fillStyle = value <= 4 ? '#776e65' : '#f9f6f2'
+           ctx.font = 'bold ' + (value < 100 ? 40 : value < 1000 ? 34 : 26) + 'px sans-serif'
+           ctx.fillText(String(value), cellX(col) + CELL / 2, cellY(row) + CELL / 2)
+         }
+       }
+     }
+   }
+   ```
+
+   Tahtanın zemini `canvas.width` eninde **ve** boyunda bir karedir (400×400); bu yüzden `fillRect`'e iki kez
+   `canvas.width` veriyoruz.
+
+6. En alta fonksiyonu çağıran satırı ekle:
+
+   ```js
+   draw()
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda üstte krem bir şerit ve altında 16 boş, açık renkli hücreli bir
+   tahta görünmeli; alttaki kontrollerin hepsi yeşil olmalı. Henüz sayı yok, çünkü tahta sıfırlarla dolu. Kırmızı
+   kalırsa `'bold '` içindeki boşluğa ve `'px sans-serif'` yazımına dikkat et.
 
 # --tests--
 

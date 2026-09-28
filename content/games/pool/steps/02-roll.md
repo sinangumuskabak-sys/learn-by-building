@@ -29,26 +29,50 @@ cue ball shows the aim.
 
 # --explanation-tr--
 
-Bir vuruş isteka topuna bir **hız** verir: bir yönde (`aim`, bir açı) bir sürat (`power`). Trigonometri açıyı, konumun
-ihtiyaç duyduğu iki parçaya çevirir:
+**Bu adımda:** isteka topuna vuracağız. Sol/sağ oklarla nişanı döndürecek, boşlukla vuracaksın. Top ince bir nişan
+çizgisi boyunca gidecek, bantlardan sekecek, yavaşlayıp duracak. Sol üstte kaç vuruş yaptığın yazacak.
+
+**Açıdan yön.** Vuruş isteka topuna bir **hız** verir: bir büyüklük (`power`) ve bir yön (`aim`, bir açı).
+JavaScript açıyı derece değil **radyan** ile ölçer: `Math.PI` (π, yaklaşık 3,14) yarım tur, `Math.PI * 2` tam tur.
+Açı `0` sağa, `Math.PI / 2` **aşağı** bakar (çünkü canvas'ta `y` aşağı doğru büyür).
+
+Bir açının sağa ne kadar gittiğini `Math.cos(açı)`, aşağı ne kadar gittiğini `Math.sin(açı)` verir (her biri -1 ile
+1 arasında). Bunları güçle çarparak iki hız parçasını buluruz:
 
 ```js
 cue.vx = Math.cos(aim) * power
 cue.vy = Math.sin(aim) * power
 ```
 
-`0` açısı sağı, `Math.PI / 2` **aşağıyı** gösterir (canvas'ın y ekseni aşağı doğru büyür) ve ok tuşları her basışta nişanı
-biraz döndürür.
+`aim = 0`, `power = 8` ise `vx = 8`, `vy = 0`: top her karede 8 piksel sağa gider.
 
-Her karede her top hızı kadar hareket eder, sonra **sürtünme** süratin yalnızca %98,5'ini bırakır. Her karede aynı sayıyla
-çarpmak topu yumuşakça yavaşlatır: başta hızlı, sonda nazikçe. Çok küçük bir süratin altında onu tam sıfır yaparız; yoksa hiç
-tam durmadan sonsuza dek sürünürdü.
+**Sürtünme.** Her karede her top hızı kadar yer değiştirir (`b.x += b.vx`, `+=` "üstüne ekle"), sonra hızının sadece
+%98.5'i kalır (`b.vx *= FRICTION`, `*=` "şununla çarp"). Hep aynı sayıyla çarpmak topu yumuşakça yavaşlatır: başta
+hızlı, sonda nazik. Hız çok küçülünce (`< 0.05`) tam **sıfır** yaparız; yoksa top sonsuza kadar sürünürdü.
+`Math.hypot(vx, vy)` iki hız parçasından toplam hızı (Pisagor ile) hesaplar. `b.vx = b.vy = 0` ikisine birden 0 koyar.
 
-Bir **bant** topu yansıtır: sol kenarı geçince onu kenara geri koy ve `vx`'i ters çevir. Gerçek bantlar biraz enerji emer, bu
-yüzden sekme yalnızca %80'ini (`BOUNCE`) korur.
+**Bant (cushion).** Top sol kenarı geçerse onu kenara geri koyar ve `vx`'in işaretini çeviririz (`-` ile): sağa değil
+sola gidiyorsa artık sağa gider. Gerçek bantlar biraz enerji yutar; bu yüzden hızın %80'i kalır (`BOUNCE`).
 
-Bir şey hareket ettiği sürece oyun `'rolling'`'dir ve bekler; bütün toplar durunca yeniden `'aiming'` olur. İsteka topundan
-çıkan ince bir çizgi nişanı gösterir.
+```js
+if (b.x < LEFT + R) [b.x, b.vx] = [LEFT + R, -b.vx * BOUNCE]
+```
+
+Köşeli parantezli bu yazım iki değeri bir arada koyar: `b.x`'e `LEFT + R`, `b.vx`'e `-b.vx * BOUNCE`. Kenar
+`LEFT + R`'dir, çünkü topun **merkezi** kenardan bir yarıçap içeride durmalı.
+
+**Durum (state).** Bir şey hareket ederken oyun `'rolling'` (yuvarlanıyor) durumundadır ve bekler; hepsi durunca
+tekrar `'aiming'` (nişan alma) olur. `if (state !== 'aiming') return` → "nişan almıyorsak fonksiyondan hemen çık".
+`!==` "eşit değil", `return` "burada bitir" demektir. `if (!moving)` → `!` "değil": "hareket eden yoksa".
+
+**Tuşlar.** `document.addEventListener('keydown', (event) => { ... })` → "bir tuşa basıldığında şu işi yap".
+`(event) => { ... }` kısa yazılmış bir fonksiyondur; `event.key` basılan tuşun adıdır (`'ArrowLeft'`, `' '` boşluk).
+`else if` "değilse, şu mu?" diye zincirler. Bu üç tuştan biri değilse `else return` ile çıkarız; biriyse
+`event.preventDefault()` tarayıcının o tuşla kendi işini yapmasını (sayfayı kaydırmak gibi) engeller.
+
+**Nişan çizgisi.** `moveTo` kalemi topa götürür, `lineTo` 400 piksel ötedeki noktaya çizgi çeker, `stroke()` çizer.
+`'rgba(255, 255, 255, 0.6)'` %60 opak beyazdır (son sayı saydamlık). `'Shots ' + shots` → `+` yazıları yan yana ekler:
+`'Shots 0'`.
 
 # --task--
 
@@ -66,16 +90,123 @@ Bir şey hareket ettiği sürece oyun `'rolling'`'dir ve bekler; bütün toplar 
 
 # --task-tr--
 
-1. `FRICTION = 0.985`, `BOUNCE = 0.8` ve `aim`, `power`, `shots` ve `state` ekle (`reset()`'te `0`, `8`, `0` ve `'aiming'`).
-2. `shoot()` yaz: yalnızca `'aiming'` iken isteka topunun hızını `aim` ve `power`'dan ayarla, `shots`'a 1 ekle ve `'rolling'`
-   yap.
-3. `step()` yaz: her topu hızı kadar hareket ettir ve her bantta onu kenara geri koy (`LEFT + R` gibi) ve hızın o parçasını
-   `BOUNCE` ile çarparak ters çevir.
-4. `draw()`'dan önce çağrılan `update()`'i yaz: `'rolling'` iken `step()` et, her hızı `FRICTION` ile çarp, `0.05`'ten yavaş
-   bir topu tam sıfır yap ve hiçbir şey hareket etmiyorsa `'aiming'`'e dön.
-5. Sol ve Sağ `aim`'i `0.035` değiştirir; Boşluk vurur (bu tuşlarda `preventDefault()`).
-6. Nişan alırken isteka topundan nişan boyunca 400 piksel bir çizgi çiz (`'rgba(255, 255, 255, 0.6)'`, kalınlık 1).
-   `(LEFT, 22)`'ye beyaz, `'bold 16px sans-serif'` ile `Shots 0` çiz.
+1. `const COLORS = ...` satırının hemen altına iki ayar ekle:
+
+   ```js
+   const FRICTION = 0.985 // speed kept each frame
+   const BOUNCE = 0.8 // speed kept when hitting a cushion
+   ```
+
+2. `let cue` satırının hemen altına dört ad ekle:
+
+   ```js
+   let aim // angle of the shot, in radians
+   let power
+   let shots
+   let state // 'aiming' or 'rolling'
+   ```
+
+3. `reset` fonksiyonunu şöyle genişlet:
+
+   ```js
+   function reset() {
+     rack()
+     aim = 0          // ← yeni
+     power = 8        // ← yeni
+     shots = 0        // ← yeni
+     state = 'aiming' // ← yeni
+   }
+   ```
+
+4. `reset`'in kapanış `}`'inden sonra, `function draw()`'dan önce üç fonksiyon yaz: vuruş, bir adım hareket ve her
+   karedeki güncelleme.
+
+   ```js
+   function shoot() {
+     if (state !== 'aiming') return
+     cue.vx = Math.cos(aim) * power
+     cue.vy = Math.sin(aim) * power
+     shots += 1
+     state = 'rolling'
+   }
+
+   function step() {
+     for (const b of balls) {
+       b.x += b.vx
+       b.y += b.vy
+       // Cushions: reflect the velocity and lose a little speed.
+       if (b.x < LEFT + R) [b.x, b.vx] = [LEFT + R, -b.vx * BOUNCE]
+       if (b.x > RIGHT - R) [b.x, b.vx] = [RIGHT - R, -b.vx * BOUNCE]
+       if (b.y < TOP + R) [b.y, b.vy] = [TOP + R, -b.vy * BOUNCE]
+       if (b.y > BOTTOM - R) [b.y, b.vy] = [BOTTOM - R, -b.vy * BOUNCE]
+     }
+   }
+
+   function update() {
+     if (state !== 'rolling') return
+     step()
+     let moving = false
+     for (const b of balls) {
+       b.vx *= FRICTION
+       b.vy *= FRICTION
+       if (Math.hypot(b.vx, b.vy) < 0.05) b.vx = b.vy = 0
+       else moving = true
+     }
+     if (!moving) state = 'aiming'
+   }
+   ```
+
+5. Altına tuşları dinleyen satırları yaz:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     if (event.key === 'ArrowLeft') aim -= 0.035
+     else if (event.key === 'ArrowRight') aim += 0.035
+     else if (event.key === ' ') shoot()
+     else return
+     event.preventDefault()
+   })
+   ```
+
+6. `draw()` içinde yeşil çuhayı boyayan `ctx.fillRect(LEFT, TOP, ...)` satırından sonra, `for (const b of balls)`
+   döngüsünden önce nişan çizgisini ekle:
+
+   ```js
+     if (state === 'aiming') {                                              // ← yeni
+       ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+       ctx.lineWidth = 1
+       ctx.beginPath()
+       ctx.moveTo(cue.x, cue.y)
+       ctx.lineTo(cue.x + Math.cos(aim) * 400, cue.y + Math.sin(aim) * 400)
+       ctx.stroke()
+     }
+   ```
+
+7. `draw()`'un en sonunda, topları çizen döngünün kapanış `}`'inden sonra ve fonksiyonun kapanış `}`'inden önce
+   vuruş sayısını yaz:
+
+   ```js
+     ctx.fillStyle = 'white'                 // ← yeni
+     ctx.font = 'bold 16px sans-serif'       // ← yeni
+     ctx.textAlign = 'left'                  // ← yeni
+     ctx.fillText('Shots ' + shots, LEFT, 22) // ← yeni
+   }
+   ```
+
+8. `loop` fonksiyonunda `draw()`'dan önce `update()` çağır:
+
+   ```js
+   function loop() {
+     update() // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Oklarla çizgiyi döndür, boşlukla vur: beyaz top çizgi boyunca
+   gitmeli, bantlardan sekip durmalı ve sol üstte `Shots 1` yazmalı (diğer toplarla henüz çarpışmaz, içlerinden geçer).
+   Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `step` içindeki dört satırda `+ R` / `- R` ve eksi
+   işaretlerine bak.
 
 # --tests--
 

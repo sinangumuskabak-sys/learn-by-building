@@ -26,23 +26,53 @@ The faint lines in the background are fixed to the world, so you can see the cli
 
 # --explanation-tr--
 
-Sonsuza kadar tırmanmak için oyunun iki fikre ihtiyacı var.
+**Bu adımda:** zemini kaldırıp sonsuz bir tırmanış yapacağız. Oyuncu yükseldikçe ekran (kamera) onu yukarı izleyecek,
+yukarıda hep yeni platformlar belirecek. Aşağı düşersen "Game Over" yazısı çıkacak; Boşluk tuşu (ya da dokunmak) yeniden
+başlatacak.
 
-**Bir kamera.** Oyuncu ve platformlar artık uzun bir **dünyada** yaşıyor ve `cameraY`, ekranın tepesinde gösterilen dünya
-y'sidir. Her şey `y - cameraY`'ta çizilir. Oyuncu ekranın tepesinden 200 pikselden yukarı çıktığında kamera onu izler:
-`cameraY = player.y - 200`. Kamera asla aşağı inmez; bu yüzden düşmek tehlikelidir: oyuncu ekranın altından düştüğü an oyun
-biter.
+**Dünya ve kamera.** Artık oyuncu ve platformlar, ekrandan çok daha uzun bir **dünyada** yaşıyor. Ekran bu dünyaya
+bakan bir pencere gibi. `cameraY`, ekranın en üstünde görünen dünya yüksekliğidir. Her şeyi `y - cameraY` konumunda
+çizeriz. Örnek: kamera `-300`'deyse, dünyada `-100`'deki platform ekranda `-100 - (-300) = 200`'de görünür. Yukarı
+çıktıkça `y` eksiye doğru küçülür (hatırla: `y` aşağı doğru büyür).
 
-**Sonsuz platformlar.** Sabit bir liste yerine `fillPlatforms()`, ekranın hemen üstündeki alan dolana kadar en yüksek
-platformun üstüne platform eklemeye devam eder; ekranın çok altında kalan platformlar atılır. Ne kadar yükseğe tırmanırsan
-tırman, aynı anda yalnızca on beş kadar platform vardır.
+Oyuncu ekranın tepesinden 200 pikselden daha yukarı çıkınca kamera onu izler: `cameraY = player.y - 200`. Kamera
+**hiç aşağı inmez**; bu yüzden düşmek tehlikelidir. Oyuncu ekranın altından çıkarsa oyun biter.
 
-Rastgelelik ancak **adil** olduğunda eğlencelidir. Bir sekiş yaklaşık 167 piksel yükselir; bu yüzden bir sonraki platforma
-boşluk hiçbir zaman `MAX_GAP = 110`'dan fazla olmaz: üretilen her bölüm tırmanılabilir. Boşluk rastgeledir ama aralığı 0
-ile 1 arasındaki bir `difficulty()` ile büyür: başta boşluklar 45 ile 71 piksel arasındadır, 10000 piksel yukarıda 110'a
-ulaşabilir. Bu **prosedürel üretimdir**: sonucun mümkün olduğunu garanti eden kurallar ve o kuralların içinde rastgelelik.
+**Durum (state).** Oyun ya `'playing'` (oynanıyor) ya da `'over'` (bitti) durumunda. Bunu `state` adlı bir yazıda
+tutarız. `!==` "eşit değil mi?" demektir. `update()`'in ilk satırı `if (state !== 'playing') return` olur:
+**`return`** fonksiyonu o anda bitirir, altındaki satırlar çalışmaz. Yani oyun bitince hiçbir şey hareket etmez.
 
-Arka plandaki silik çizgiler dünyaya sabittir; böylece yakında platform olmasa da tırmanışı görürsün.
+**Başa dönmek: `reset()`.** Oyunu hem başlangıçta hem "yeniden oyna"da aynı hâle getirmek için bütün başlangıç
+değerlerini tek bir fonksiyona koyarız. Bu yüzden en üstte `let player` gibi satırları **değersiz** yazarız (sadece adı
+ayırırız); değerleri `reset()` verir. `reset()`'i döngüden önce bir kez çağırmayı unutma.
+
+**Sonsuz platformlar.** Sabit liste yerine `fillPlatforms()`, en yüksek platformun (`highest`) üstüne yenilerini
+ekler, ta ki ekranın biraz yukarısı dolana kadar. Bunun için **`while` döngüsü** kullanırız: "koşul doğru olduğu sürece
+tekrar et". Yeni platformu listenin sonuna `platforms.push(...)` ekler. Ekranın çok altında kalan platformları da
+`filter` ile atarız:
+
+```js
+platforms = platforms.filter((p) => p.y < cameraY + canvas.height + 20)
+```
+
+`filter`, listedeki her öğeye bu soruyu sorar ve yalnızca "evet" diyenlerle yeni bir liste yapar. Böylece ne kadar
+yükselirsen yüksel, aynı anda yaklaşık 15 platform olur.
+
+**Adil rastgelelik.** `Math.random()` her çağrıldığında 0 ile 1 arasında (1 hariç) rastgele bir ondalık sayı verir.
+`Math.min(a, b)` ikisinden küçüğünü verir. Bir sekiş yaklaşık 167 piksel yükseldiği için iki platform arası hiçbir
+zaman `MAX_GAP = 110`'u geçmez: her seviye tırmanılabilir. Boşluk rastgeledir ama üst sınırı `difficulty()` ile büyür.
+`difficulty` başta 0'dır, 10000 piksel tırmanınca 1 olur. Başta boşluklar 45 ile 71 arası, yukarıda 110'a kadar. Buna
+**prosedürel üretim** denir: sonucun mümkün olmasını garanti eden kurallar ve o kuralların içinde rastgelelik.
+`difficulty(y)` bir sonuç **döndürür** (`return`): `const d = difficulty(highest)` yazınca o sonuç `d`'ye konur.
+
+**Arka plan çizgileri.** Dünyaya sabitlenmiş soluk çizgiler, platform yokken bile tırmandığını görmeni sağlar. Bunu
+sayan bir **`for` döngüsü** çizer: `for (başlangıç; koşul; her turdan sonra)`. `y += 40` "40 ekle" demektir. `%` bölmeden
+**kalanı** verir (`45 % 40` = `5`); ilk çizginin yeri `((-cameraY % 40) + 40) % 40` ile bulunur, böylece çizgiler kamera
+kaydıkça dünya ile birlikte kayar.
+
+**Yazı yazmak.** `ctx.font = 'bold 32px sans-serif'` yazı tipini, `ctx.textAlign = 'center'` hizalamayı seçer,
+`ctx.fillText('Game Over', x, y)` yazıyı o noktaya boyar. `'rgba(248, 250, 252, 0.85)'` yarı saydam bir renktir (son
+sayı saydamlık: 0 görünmez, 1 tam kapalı).
 
 # --task--
 
@@ -62,19 +92,149 @@ Arka plandaki silik çizgiler dünyaya sabittir; böylece yakında platform olma
 
 # --task-tr--
 
-1. `FLOOR`'u ve sabit platformları kaldır. `START_Y = 500`, `MAX_GAP = 110` ve `let player`, `platforms`, `cameraY`, `highest`
-   ile `state` ekle.
-2. `reset()` yaz: oyuncu `{ x: 180, y: START_Y - 40, w: 40, h: 40, vy: 0 }`'da, bir platform
-   `{ x: 170, y: START_Y, w: 60, h: 12 }`, `cameraY = 0`, `highest = START_Y`, `'playing'` durumu, sonra `fillPlatforms()`.
-   Döngüden önce ve oyun bittiğinde Boşluk'ta (ya da dokunuşta) çağır.
-3. `difficulty(y)` yaz: `Math.min(1, (START_Y - y) / 10000)`. `fillPlatforms()` yaz: `highest > cameraY - 100` olduğu sürece
-   `d = difficulty(highest)` ile `gap = 45 + Math.random() * (MAX_GAP - 45) * (0.4 + 0.6 * d)` seç, `highest`'ı o kadar
-   yukarı taşı ve oraya `0` ile `canvas.width - 60` arasında rastgele bir `x`'te 60'a 12 bir platform ekle.
-4. `update()`'in sonunda (oynanmıyorsa hiçbir şey yapmaz): `player.y < cameraY + 200` iken kamerayı yukarı taşı,
-   `fillPlatforms()` çağır, yalnızca `p.y < cameraY + canvas.height + 20` olan platformları tut ve
-   `player.y > cameraY + canvas.height` olunca oyunu bitir.
-5. Her şeyi `y - cameraY`'ta çiz; her 40 dünya pikselinde 1 piksel yüksekliğinde `'#e2e8f0'` çizgiler (ilki
-   `((-cameraY % 40) + 40) % 40`'ta) ve eskisi gibi Game Over ekranı.
+Bu adımda birçok yer değişiyor; sırayla git.
+
+1. Sabitlerde `const FLOOR = 600 ...` satırını **sil** ve yerine şu satırları yaz:
+
+   ```js
+   const START_Y = 500 // ilk platformun dünya y'si
+   // Bir sekiş yaklaşık JUMP * JUMP / (2 * GRAVITY) = 172 piksel yükselir; boşluk bunun epey altında kalmalı.
+   const MAX_GAP = 110
+   ```
+
+2. `let player = { ... }` satırını ve altındaki `const platforms = [ ... ]` listesinin **tamamını** (kapanış `]` dahil)
+   sil. Yerlerine şunu yaz (`const keys = {}` satırı altta kalsın):
+
+   ```js
+   let player
+   let platforms
+   let cameraY // ekranın tepesinde görünen dünya y'si: kamera
+   let highest // şimdiye kadarki en yüksek platformun dünya y'si
+   let state // 'playing' ya da 'over'
+   ```
+
+3. `const keys = {}` satırının hemen altına üç fonksiyonu ekle:
+
+   ```js
+   function reset() {
+     player = { x: 180, y: START_Y - 40, w: 40, h: 40, vy: 0 }
+     platforms = [{ x: 170, y: START_Y, w: 60, h: 12 }]
+     cameraY = 0
+     highest = START_Y
+     state = 'playing'
+     fillPlatforms()
+   }
+
+   // Başta 0, 10000 piksel tırmanınca 1.
+   function difficulty(y) {
+     return Math.min(1, (START_Y - y) / 10000)
+   }
+
+   // Ekran (ve biraz fazlası) dolana kadar en yüksek platformun üstüne platform ekle.
+   function fillPlatforms() {
+     while (highest > cameraY - 100) {
+       const d = difficulty(highest)
+       const gap = 45 + Math.random() * (MAX_GAP - 45) * (0.4 + 0.6 * d)
+       highest -= gap
+       platforms.push({ x: Math.random() * (canvas.width - 60), y: highest, w: 60, h: 12 })
+     }
+   }
+   ```
+
+4. `keydown` dinleyicisinde `preventDefault()` satırının altına, oyun bitmişken Boşluk ile yeniden başlatan satırı ekle
+   (Boşluk tuşunun adı tırnak içinde tek bir boşluktur: `' '`):
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') event.preventDefault()
+     if (event.key === ' ' && state === 'over') reset() // ← yeni
+   })
+   ```
+
+5. `pointerdown` dinleyicisinin **en başına** oyun bitmişse dokunuşla yeniden başlatan kısmı ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'over') { // ← yeni
+       reset() // ← yeni
+       return // ← yeni
+     } // ← yeni
+     const rect = canvas.getBoundingClientRect()
+     const left = event.clientX - rect.left < rect.width / 2
+     keys[left ? 'ArrowLeft' : 'ArrowRight'] = true
+   })
+   ```
+
+6. `update()` fonksiyonunun **ilk satırı** olarak şunu ekle, sonra bir boş satır bırak:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+
+     const direction = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)
+   ```
+
+7. Yine `update()`'te, en sondaki zemin bloğunu, yani `if (player.y + player.h >= FLOOR) {` ile başlayan bloğu (içindeki iki
+   satır ve kapanış `}` dahil) ve üstündeki yorum satırını **sil**. Yerine, fonksiyonun kapanış `}`'inden önce şunları yaz:
+
+   ```js
+     // Kamera yalnızca yukarı gider ve oyuncuyu ekranın üst kısmında tutar.
+     if (player.y < cameraY + 200) cameraY = player.y - 200
+     fillPlatforms()
+     platforms = platforms.filter((p) => p.y < cameraY + canvas.height + 20)
+
+     if (player.y > cameraY + canvas.height) {
+       state = 'over'
+     }
+   }
+   ```
+
+8. `draw()` fonksiyonunun tamamını şununla değiştir. Değişenler: çizgiler, her `y`'den `cameraY` çıkarılması ve sondaki
+   Game Over ekranı:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#f8fafc'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     // Dünyaya sabit soluk çizgiler: platform yokken de tırmandığını görürsün.
+     ctx.fillStyle = '#e2e8f0'
+     for (let y = ((-cameraY % 40) + 40) % 40; y < canvas.height; y += 40) ctx.fillRect(0, y, canvas.width, 1)
+
+     ctx.fillStyle = '#16a34a'
+     for (const p of platforms) {
+       ctx.fillRect(p.x, p.y - cameraY, p.w, p.h) // ← değişti
+     }
+
+     ctx.fillStyle = '#f59e0b'
+     ctx.fillRect(player.x, player.y - cameraY, player.w, player.h) // ← değişti
+     if (player.x < 0) ctx.fillRect(player.x + canvas.width, player.y - cameraY, player.w, player.h) // ← değişti
+     if (player.x + player.w > canvas.width) ctx.fillRect(player.x - canvas.width, player.y - cameraY, player.w, player.h) // ← değişti
+
+     if (state === 'over') { // ← yeni: bu bloğun tamamı
+       ctx.fillStyle = 'rgba(248, 250, 252, 0.85)'
+       ctx.fillRect(0, 0, canvas.width, canvas.height)
+       ctx.fillStyle = '#0f172a'
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 32px sans-serif'
+       ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2)
+       ctx.font = '18px sans-serif'
+       ctx.fillText('Press Space to play again', canvas.width / 2, canvas.height / 2 + 32)
+     }
+   }
+   ```
+
+9. En alttaki `requestAnimationFrame(loop)` satırının **hemen üstüne** oyunu hazırlayan çağrıyı ekle:
+
+   ```js
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+10. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Yükseldikçe platformlar aşağı kaymalı ve yukarıda yenileri
+    çıkmalı; düşersen "Game Over" görünmeli, Boşluk yeniden başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı.
+    Kırmızı kalırsa en sık hata `reset()` çağrısını unutmak ya da bir `y - cameraY`'yi atlamaktır.
 
 # --tests--
 

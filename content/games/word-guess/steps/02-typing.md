@@ -26,22 +26,51 @@ The letters are drawn big and upper case in the first row, and tiles that have a
 
 # --explanation-tr--
 
-Yazmak büyüyüp küçülen bir metindir. Bir harf tuşu (yer oldukça) sona ekler, Backspace son harfi siler:
+**Bu adımda:** klavyeden harf yazabileceksin. Yazdığın harfler ilk satırda büyük harflerle görünecek, `Backspace` son
+harfi silecek. Beş harften fazlası sığmayacak.
+
+**Yazılan kelime bir yazıdır.** Yazılanları `current` adlı bir **değişkende** (`let`) tutarız. Boş yazı `''` (iki
+tırnak arası hiçbir şey). Harf eklemek ve silmek:
 
 ```js
-current += key                 // 'cr' + 'a' -> 'cra'
+current += key                 // 'cr' + 'a' -> 'cra'   (+= "sonuna ekle")
 current = current.slice(0, -1) // 'cra' -> 'cr'
 ```
 
-`slice(0, -1)` "baştan son karaktere kadar, sonuncusu hariç" demektir. Negatif konumlar sondan sayar; bu hem metinler hem
-diziler için işe yarar.
+`slice(0, -1)` "baştan başla, son karaktere kadar al (sonuncu hariç)" demektir. Eksi sayılar sondan sayar.
+`current.length` yazının kaç harf olduğunu verir. `current[0]` ilk harfi verir (sayma 0'dan başlar); o konumda harf
+yoksa sonuç `undefined`, yani "yok" olur.
 
-Klavye her türden tuş gönderir; bu yüzden neyin harf sayıldığı konusunda katı ol: `a` ile `z` arasında tam olarak bir karakter,
-bir **düzenli ifadeyle** sınanır: `/^[a-z]$/`. `^` ve `$` "metnin tamamı" demektir; böylece `'Shift'` ya da `'F5'` araya
-sızmaz. Shift ya da Caps Lock ile `A`'ya basmak `'A'` verir; bu yüzden tek karakterler önce küçük harfe çevrilir. Ctrl+R gibi
-kısayollar yine çalışsın diye Ctrl, Cmd ya da Alt ile basılan tuşlara dokunulmaz.
+**`if` ve `else if`.** `if (koşul) komut` → koşul doğruysa komutu çalıştır. `else if (başka koşul) komut` → ilki
+yanlışsa bunu dene. `===` "**eşit mi?**", `<` "küçük mü?", `&&` "**ve**", `||` "**veya**" demektir.
 
-Harfler ilk satıra büyük ve büyük harfle çizilir ve harfi olan döşemeler daha parlak bir çerçeve alır.
+**Sadece harfleri kabul et.** Klavye her türlü tuş gönderir (`'Shift'`, `'F5'`, `'1'`...). Harf olup olmadığını bir
+**düzenli ifade** (regular expression) ile sınarız: `/^[a-z]$/`. İki eğik çizgi arasındaki kalıp şu demek: `[a-z]`
+"a'dan z'ye bir harf", `^` ve `$` "yazının tamamı". Yani yazı **tam olarak tek bir küçük harf** olmalı.
+`/^[a-z]$/.test(key)` bunu sınar ve `true`/`false` verir.
+
+**Klavye olayı.** Bir tuşa basılınca tarayıcı `keydown` **olayını** (event) gönderir. Onu dinleriz:
+
+```js
+document.addEventListener('keydown', (event) => {
+  // her tuşa basılınca burası çalışır; basılan tuş: event.key
+})
+```
+
+`(event) => { ... }` kısa yazılmış bir fonksiyondur (**ok fonksiyonu**). Bu dinleyicide:
+
+- `event.ctrlKey || event.metaKey || event.altKey` → Ctrl, Cmd ya da Alt basılıysa `return` ile çık; böylece Ctrl+R
+  gibi kısayollar bozulmaz.
+- Shift ya da Caps Lock ile `A` basınca `'A'` gelir. `event.key.length === 1 ? event.key.toLowerCase() : event.key`
+  → "tek karakterse küçük harfe çevir, değilse (örneğin `'Backspace'`) olduğu gibi bırak". `? :` kısa bir `if`'tir.
+- `event.preventDefault()` → tarayıcının o tuşla kendi yapacağı şeyi (örneğin sayfayı kaydırmak) engeller.
+
+**Harfleri çizmek.** Şimdilik bütün harfler ilk satıra gider: `const letters = row === 0 ? current : ''`. Kutuda
+harf varsa (`letters[i]`) çerçeve daha açık renk olur ve harf `toUpperCase()` ile büyütülerek kutunun ortasına
+yazılır. `ctx.textAlign = 'center'` ve `ctx.textBaseline = 'middle'` yazıyı verilen noktaya göre ortalar;
+`ctx.fillText(yazı, x, y)` yazıyı çizer.
+
+**`reset()`** oyunun başlangıç durumunu kuran fonksiyon. Şimdilik sadece `current`'ı boşaltıyor; ileride büyüyecek.
 
 # --task--
 
@@ -54,12 +83,68 @@ Harfler ilk satıra büyük ve büyük harfle çizilir ve harfi olan döşemeler
 
 # --task-tr--
 
-1. `current` ekle (`reset()`'te `''`) ve `type(key)` yaz: `'Backspace'` son harfi siler; `a`–`z` arası tek bir harf, 5'ten az
-   yazıldıysa eklenir.
-2. `keydown`'da Ctrl, Cmd (`metaKey`) ya da Alt ile basılan tuşları yok say. Tek karakterli tuşları küçük harfe çevir.
-   `Backspace` ya da bir harf için `preventDefault()` yap ve onu `type()` et.
-3. Yazılan harfleri ilk satıra çiz: beyaz, `'bold 28px sans-serif'`, büyük harf, döşemelerinde ortalı (`textAlign` `'center'`,
-   `textBaseline` `'middle'`, `y + SIZE / 2 + 1`'de). Harfi olan döşemeler `'#a1a1aa'` bir çerçeve alır.
+1. `const TOP = 12` satırının altına bir satır boşluk bırak ve şunları ekle:
+
+   ```js
+   let current // the letters typed so far
+
+   function reset() {
+     current = ''
+   }
+
+   function type(key) {
+     if (key === 'Backspace') current = current.slice(0, -1)
+     else if (/^[a-z]$/.test(key) && current.length < 5) current += key
+   }
+
+   document.addEventListener('keydown', (event) => {
+     if (event.ctrlKey || event.metaKey || event.altKey) return
+     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key
+     if (key === 'Backspace' || /^[a-z]$/.test(key)) {
+       event.preventDefault()
+       type(key)
+     }
+   })
+   ```
+
+2. `draw()` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#18181b'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+     ctx.textAlign = 'center'     // ← yeni
+     ctx.textBaseline = 'middle'  // ← yeni
+
+     for (let row = 0; row < TRIES; row++) {
+       // For now every letter goes in the first row.
+       const letters = row === 0 ? current : ''  // ← yeni
+       for (let i = 0; i < 5; i++) {
+         const x = LEFT + i * (SIZE + GAP)
+         const y = TOP + row * (SIZE + GAP)
+         ctx.strokeStyle = letters[i] ? '#a1a1aa' : '#3f3f46'  // ← değişti
+         ctx.lineWidth = 2
+         ctx.strokeRect(x + 1, y + 1, SIZE - 2, SIZE - 2)
+         if (letters[i]) {                                       // ← yeni
+           ctx.fillStyle = 'white'                               // ← yeni
+           ctx.font = 'bold 28px sans-serif'                     // ← yeni
+           ctx.fillText(letters[i].toUpperCase(), x + SIZE / 2, y + SIZE / 2 + 1)  // ← yeni
+         }                                                       // ← yeni
+       }
+     }
+   }
+   ```
+
+3. En alttaki `requestAnimationFrame(loop)` satırının **üstüne** `reset()` ekle. Dosyanın sonu şöyle olmalı:
+
+   ```js
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla, sonra birkaç harf yaz: harfler ilk satırda büyük harfle
+   görünmeli, `Backspace` silmeli, beşten fazlası eklenmemeli. Alttaki kontrollerin hepsi yeşil olmalı. Hiçbir harf
+   çıkmıyorsa `reset()` satırını unutmuş olabilirsin.
 
 # --tests--
 

@@ -36,33 +36,47 @@ is called **culling**, and it is how huge levels stay fast.
 
 # --explanation-tr--
 
-Bölüm 2048 piksel genişliğinde; ekran 640'ını gösteriyor. Sağa koş, oyuncu ekrandan çıkar. Bir **kameraya** ihtiyacın
-var: dünyaya açılan ve oyuncuyu takip eden bir pencere.
+**Bu adımda:** bir kamera ekleyeceğiz. Sağa koştukça ekran oyuncuyu izleyecek; oyuncu ekranın ortasında kalacak, bölüm
+de yana kayacak. Artık bölümün sonuna kadar gidebilirsin.
 
-Kamera yalnızca bir sayıdır, `camera`: ekranın sol kenarının dünyadaki x koordinatı. Oyuncuyu ekranın ortasında tutmak
-için:
+**Neden kamera?** Bölüm 64 × 32 = 2048 piksel genişliğinde, ekran ise yalnızca 640 piksel gösteriyor. Sağa koşunca
+oyuncu ekrandan çıkıyor. Kamera, dünyaya bakan ve oyuncuyu izleyen bir **pencere**dir.
+
+**Kamera tek bir sayı.** `camera`, ekranın sol kenarının dünyadaki `x`'idir. Oyuncuyu ekranın ortasında tutmak için:
 
 ```js
 camera = player.x + player.w / 2 - canvas.width / 2
 ```
 
-ve pencere bölümün uçlarının ötesini hiç göstermesin diye onu **sınırla** (`0` ile `COLS * TILE - canvas.width` arası).
+Yani "oyuncunun ortası eksi ekranın yarısı". Sonra 4. adımdaki `clamp` ile sınırlarız: pencere bölümün uçlarının
+dışını göstermesin diye `0` ile `COLS * TILE - canvas.width` (2048 - 640 = 1408) arasında tutarız. Bu yüzden başta ve
+sonda kamera durur, oyuncu kenara doğru yürür.
 
-Şimdi kamerayı neredeyse bedava yapan hile: hiçbir şeyin çizilişini değiştirme. Dünyayı çizmeden önce tüm canvas'ı
-kaydır, sonra geri al:
+**Kameranın hilesi: çizimi değiştirme, kâğıdı kaydır.** Hiçbir şeyin çizilme şeklini değiştirmeyiz. Dünyayı çizmeden
+önce bütün canvas'ı kaydırır, sonra geri alırız:
 
 ```js
 ctx.save()
-ctx.translate(-camera, 0)   // şimdi çizilen her şey `camera` piksel sola kayar
-// ...döşemeleri ve oyuncuyu normal dünya konumlarına çiz...
-ctx.restore()               // ekran koordinatlarına geri dön, örneğin skor için
+ctx.translate(-camera, 0)   // şimdi çizilen her şey camera kadar sola kayar
+// ...kareleri ve oyuncuyu normal dünya konumlarında çiz...
+ctx.restore()               // ekran koordinatlarına geri dön (örneğin skor için)
 ```
 
-Her şey kendi **dünya koordinatlarını** korur; yalnızca görünüm hareket eder. `Math.round(camera)` bulanık yarım piksel
-çizimleri önler.
+- `ctx.save()` → fırçanın şu anki ayarlarını (kaydırma dahil) bir kenara kaydeder.
+- `ctx.translate(dx, dy)` → bundan sonra çizilen her şeyi `dx` sağa, `dy` aşağı kaydırır. `-camera` verdiğimiz için
+  her şey sola kayar; kamera sağa gitmiş gibi olur.
+- `ctx.restore()` → kaydedilen ayarlara geri döner.
 
-Bir bonus: dünyanın hangi kısmının göründüğünü bildiğin için yalnızca ekrandaki döşeme sütunlarını çiz, 64'ün yaklaşık
-21'ini. Buna **ayıklama** (culling) denir ve dev bölümler böyle hızlı kalır.
+Her şey **dünya koordinatlarını** korur; yalnızca görüş kayar. `Math.round(camera)` sayıyı en yakın tam sayıya
+yuvarlar; yarım piksellerde çizim bulanık görünürdü.
+
+**Bonus: görünmeyeni çizme.** Dünyanın hangi kısmının göründüğünü bildiğimiz için yalnızca ekrandaki sütunları çizeriz:
+64 sütunun yaklaşık 21'i. Buna **culling** (ayıklama) denir; dev bölümlerin hızlı kalmasının sırrı budur.
+
+- `first = Math.floor(camera / TILE)` → ekranın solundaki ilk sütun.
+- `Math.ceil(...)` sayıyı **yukarı** yuvarlar: `640 / 32 = 20`. Ekran 20 sütun gösterir; kamera kare ortasındayken
+  kısmen görünen bir sütun daha gerekir, bu yüzden `first`'ten `first + 20`'ye kadar (dahil, `<=`) çizeriz.
+- `Math.min(COLS - 1, ...)` son sütunun bölümün dışına taşmamasını sağlar.
 
 # --task--
 
@@ -75,12 +89,55 @@ Bir bonus: dünyanın hangi kısmının göründüğünü bildiğin için yalnı
 
 # --task-tr--
 
-1. `let camera = 0` ekle. `update()`'in sonunda onu, oyuncu ortada olacak şekilde, `0` ile `COLS * TILE - canvas.width`
-   arasında sınırlayarak ayarla.
-2. `draw()` içinde gökyüzünden sonra: `ctx.save()` ve `ctx.translate(-Math.round(camera), 0)`; döşemeleri ve oyuncuyu
-   eskisi gibi çiz; sonra `ctx.restore()`.
-3. Yalnızca `first = Math.floor(camera / TILE)` ile `last = Math.min(COLS - 1, first + Math.ceil(canvas.width / TILE))`
-   arasındaki sütunları çiz.
+1. `let coyote = 0` satırının hemen altına (`const keys = {}`'den önce) kamerayı ekle:
+
+   ```js
+   let camera = 0 // ekranın sol kenarının dünyadaki x'i
+   ```
+
+2. `update()` fonksiyonunun sonunda, `coyote = ...` satırının altına bir satır boşluk bırakıp kamerayı güncelle:
+
+   ```js
+     coyote = player.grounded ? COYOTE : Math.max(0, coyote - 1)
+
+     // Oyuncuyu ekranın ortasında tut, bölümün iki ucunun ötesini gösterme.
+     camera = clamp(player.x + player.w / 2 - canvas.width / 2, 0, COLS * TILE - canvas.width) // ← yeni
+   }
+   ```
+
+3. `draw()` fonksiyonunu şöyle değiştir. Gökyüzü aynı kalır; ardından kaydırma, görünen sütunların hesabı, döngünün
+   yeni sınırları ve en sonda `ctx.restore()` gelir:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#7dd3fc'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.save() // ← yeni
+     ctx.translate(-Math.round(camera), 0) // ← yeni
+
+     // Yalnızca ekrandaki sütunları çiz.
+     const first = Math.floor(camera / TILE) // ← yeni
+     const last = Math.min(COLS - 1, first + Math.ceil(canvas.width / TILE)) // ← yeni
+     for (let row = 0; row < ROWS; row++) {
+       for (let col = first; col <= last; col++) { // ← değişti
+         const tile = LEVEL[row][col]
+         if (tile === '#' || tile === 'B') {
+           ctx.fillStyle = COLORS[tile]
+           ctx.fillRect(col * TILE, row * TILE, TILE, TILE)
+         }
+       }
+     }
+
+     ctx.fillStyle = '#dc2626'
+     ctx.fillRect(player.x, player.y, player.w, player.h)
+     ctx.restore() // ← yeni
+   }
+   ```
+
+4. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve sağa koş: oyuncu ortaya gelince ekran onunla birlikte kaymalı,
+   bölümün sonunda durmalı. Alttaki kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa `translate` içindeki eksi
+   işaretine ve iç döngüdeki `col <= last`'e bak.
 
 # --tests--
 

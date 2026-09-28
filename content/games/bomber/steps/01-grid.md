@@ -25,21 +25,71 @@ Each tile is `TILE` pixels, drawn from `TOP` down so the top strip stays free fo
 
 # --explanation-tr--
 
-Bomberman tarzı bir arena üç tür karesi olan bir ızgaradır: hiçbir şeyin kıramadığı **duvarlar** (`'#'`), bombaların yok
-ettiği **sandıklar** (`'+'`) ve **zemin** (`' '`).
+**Bu adımda:** Bomberman tarzı bir oyunun arenasını çizeceğiz. Sağda gri duvarlarla çevrili, içinde gri sütunlar,
+yeşil zemin ve kahverengi (üstünde koyu bir çizgi olan) kasalarla dolu bir alan göreceksin. Kasalar her çalıştırmada
+başka yerde olur.
 
-Duvarlar basit bir desene uyar. Kenar baştan sona duvardır; içeride de satırı **ve** sütunu çift olan her kare bir sütundur.
-Klasik koridorları yapan bu dama tahtası gibi sütunlardır: alevler ve oyuncular aralarında yalnızca düz çizgilerde ilerleyebilir.
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya** okur. `//` ile başlayan kısımlar **yorumdur**: bilgisayar atlar.
 
-Sandıklar rastgeledir, boş karelerin yaklaşık %45'i; önemli bir istisnayla. Oyuncu sandıklarla çevrili başlasaydı, ilk bombasının
-kaçış yolu olmazdı. Bu yüzden başlangıç köşelerinin **yanındaki** kareler (oyuncununki `(1, 1)`'de, düşmanlar için üç tane)
-her zaman zemindir. "Yanında", en fazla 1 Manhattan uzaklığıdır:
+**Canvas ve fırça.** Sayfada 416×384 piksellik boş bir resim alanı (`canvas`) var. Önce onu buluruz, sonra fırçasını
+(çizim bağlamı, **context**) alırız:
 
 ```js
-Math.abs(sr - r) + Math.abs(sc - c) <= 1
+const canvas = document.getElementById('game')   // kimliği 'game' olan alanı bul
+const ctx = canvas.getContext('2d')              // onun 2D fırçasını al
 ```
 
-Her kare `TILE` pikseldir ve üst şerit canlar ve süre için boş kalsın diye `TOP`'tan aşağı çizilir.
+`const ad = ...` bir şeye **sabit** bir ad (değişmeyen etiket) verir; `let` ile verilen adın değeri sonradan değişebilir
+(**değişken**). Nokta (`.`) "bunun içindeki" demektir; tırnak içi bir **yazıdır**. Fırçayla renk seçilir
+(`ctx.fillStyle = '#475569'`) ve dikdörtgen boyanır (`ctx.fillRect(x, y, en, boy)`). Sol üst köşe `(0, 0)`'dır; `x`
+sağa, `y` **aşağı** doğru büyür.
+
+**Arena bir ızgaradır.** 11 satır, 13 sütun kare (tile). Her kareyi tek bir karakterle tutarız:
+
+- `'#'` → **duvar**, hiçbir şey kıramaz,
+- `'+'` → **kasa**, bombalar yok eder,
+- `' '` (boşluk) → **zemin**.
+
+Izgara bir **liste içinde listedir**: `grid` 11 satırlık bir **dizi** (liste), her satır da 13 karakterlik bir dizi.
+`grid[r][c]` → `r`. satırın `c`. karesi. Listelerde sayma **0'dan başlar**: ilk satır `grid[0]`, son satır `grid[10]`.
+`push` listenin sonuna eleman ekler.
+
+**Duvar deseni.** Kenarların hepsi duvardır; içeride satırı **ve** sütunu çift olan her kare bir sütundur (pillar). Bu
+dama tahtası gibi sütun deseni klasik koridorları oluşturur: alevler ve oyuncular aralarında yalnızca düz çizgilerde
+ilerleyebilir. Kodda:
+
+- `%` bölümden kalanı verir: `r % 2 === 0` "r çift mi?" demektir. `===` iki değerin eşit olup olmadığını sorar.
+- `||` "veya", `&&` "ve" demektir. İlk satırda: "ilk satır **veya** ilk sütun **veya** son satır **veya** son sütun
+  **veya** (satır çift **ve** sütun çift) ise duvar".
+- `if ... else if ... else` → "şuysa bunu, değilse şuysa bunu, hiçbiri değilse bunu yap".
+
+**Rastgele kasalar.** `Math.random()` 0 ile 1 arasında rastgele bir sayı verir. `Math.random() > 0.55` yüzde 45
+ihtimalle doğrudur: doğruysa kare **zemin**, yanlışsa **kasa** olur. Böylece duvar olmayan karelerin yaklaşık yarısı
+kasayla dolar.
+
+**Önemli bir istisna.** Oyuncu kasalarla çevrili başlasaydı ilk bombasından kaçacak yeri olmazdı. Bu yüzden başlangıç
+köşelerinin **yanındaki** kareler (oyuncununki `(1, 1)`, düşmanlar için üç tane) hep zemindir. "Yanında" Manhattan
+uzaklığı en fazla 1 demektir: satır farkı ile sütun farkının toplamı.
+
+```js
+const near = (r, c, spots) => spots.some(([sr, sc]) => Math.abs(sr - r) + Math.abs(sc - c) <= 1)
+```
+
+- `(r, c, spots) => ...` bir **fonksiyondur** (ok `=>` "şunu ver"): `near(3, 4, liste)` diye çağrılır, sonucu geri verir.
+- `spots.some(...)` → "noktalardan **en az biri** için doğru mu?"
+- `([sr, sc])` → her nokta `[satır, sütun]` biçiminde iki elemanlı bir liste; bu yazım onu açıp iki ada koyar.
+- `Math.abs` sayının eksisiz hâlidir. `<=` "küçük ya da eşit".
+
+`[[1, 1], ...ENEMY_STARTS]` → `...` (yayma) `ENEMY_STARTS`'ın üç elemanını açıp `[1, 1]`'in yanına koyar: dört noktalık
+tek bir liste.
+
+**Çizmek.** İç içe iki `for` döngüsü her kareyi dolaşır. `for (let r = 0; r < ROWS; r++)` "r 0'dan başlasın, ROWS'tan
+küçükken devam et, her turda 1 artsın (`++`)" demektir. Her kare `TILE` (32) piksel; `TOP` kadar aşağıdan başlarız ki
+üstteki şerit canlar ve süre için boş kalsın. Renk `koşul ? A : B` ("doğruysa A, değilse B") zinciriyle seçilir.
+
+**Oyun döngüsü.** `requestAnimationFrame(loop)` tarayıcıya "bir sonraki ekran yenilemesinde `loop`'u çalıştır" der;
+`loop` kendini yeniden çağırdığı için ekran saniyede yaklaşık 60 kez çizilir.
 
 # --task--
 
@@ -52,13 +102,96 @@ Her kare `TILE` pikseldir ve üst şerit canlar ve süre için boş kalsın diye
 
 # --task-tr--
 
-1. `COLS = 13`, `ROWS = 11`, `TILE = 32`, `TOP = 32` ve `ENEMY_STARTS = [[ROWS - 2, COLS - 2], [1, COLS - 2], [ROWS - 2, 1]]`
-   ekle.
-2. `near(r, c, spots)` yaz: `(r, c)`, `spots`'taki herhangi bir `[row, col]`'a en fazla 1 Manhattan uzaklığındaysa true.
-3. `makeGrid()` yaz: kenarda ve satır ile sütunun ikisi de çiftken `'#'`; `(1, 1)`'in ve düşman başlangıçlarının yanında ya da
-   `Math.random() > 0.55` olduğunda `' '`; değilse `'+'`. `reset()` onu çağırır.
-4. Her kareyi `(c * TILE, TOP + r * TILE)`'de `TILE` bir kare olarak çiz: duvarlar `'#475569'`, sandıklar `'#92400e'` bir
-   şeritli (`x + 4`, `y + 14`, 4'e `TILE - 8`) `'#b45309'`, zemin `'#3f6212'`.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı al:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir boş satır bırakıp ayarları ekle:
+
+   ```js
+   const COLS = 13
+   const ROWS = 11
+   const TILE = 32
+   const TOP = 32 // room for the lives and the time
+   const ENEMY_STARTS = [[ROWS - 2, COLS - 2], [1, COLS - 2], [ROWS - 2, 1]]
+   ```
+
+3. Bir boş satır bırakıp ızgaranın değişkenini ve `near` fonksiyonunu ekle:
+
+   ```js
+   let grid // grid[r][c]: '#' wall, '+' crate or ' ' floor
+
+   const near = (r, c, spots) => spots.some(([sr, sc]) => Math.abs(sr - r) + Math.abs(sc - c) <= 1)
+   ```
+
+4. Altına ızgarayı kuran fonksiyonu ve `reset`'i yaz:
+
+   ```js
+   // Walls all round, a pillar on every even row and column, and crates on about half of the rest,
+   // but never next to where the player and the enemies start.
+   function makeGrid() {
+     grid = []
+     for (let r = 0; r < ROWS; r++) {
+       grid.push([])
+       for (let c = 0; c < COLS; c++) {
+         if (r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1 || (r % 2 === 0 && c % 2 === 0)) grid[r].push('#')
+         else if (near(r, c, [[1, 1], ...ENEMY_STARTS]) || Math.random() > 0.55) grid[r].push(' ')
+         else grid[r].push('+')
+       }
+     }
+   }
+
+   function reset() {
+     makeGrid()
+   }
+   ```
+
+   Her satır için önce boş bir satır listesi eklenir (`grid.push([])`), sonra o satıra 13 karakter eklenir. Zemin
+   karakteri tırnak içinde **bir boşluktur**: `' '`.
+
+5. Altına çizen `draw`'u yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#0f172a'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     for (let r = 0; r < ROWS; r++) {
+       for (let c = 0; c < COLS; c++) {
+         const x = c * TILE
+         const y = TOP + r * TILE
+         const tile = grid[r][c]
+         ctx.fillStyle = tile === '#' ? '#475569' : tile === '+' ? '#b45309' : '#3f6212'
+         ctx.fillRect(x, y, TILE, TILE)
+         if (tile === '+') {
+           ctx.fillStyle = '#92400e'
+           ctx.fillRect(x + 4, y + 14, TILE - 8, 4)
+         }
+       }
+     }
+   }
+   ```
+
+   Renk satırı: "duvarsa gri, değilse kasaysa kahverengi, o da değilse yeşil". Kasanın üstüne koyu bir şerit çizilir.
+
+6. En alta döngüyü ekle, ızgarayı kur ve başlat:
+
+   ```js
+   function loop() {
+     draw()
+     requestAnimationFrame(loop)
+   }
+
+   reset()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Gri duvarlarla çevrili, içinde düzenli gri sütunlar ve rastgele
+   kahverengi kasalar olan yeşil bir arena görmelisin; dört köşenin yanı boş olmalı. Alttaki kontrollerin hepsi yeşil
+   olmalı. Kırmızı kalırsa zemin karakterinin `' '` (tırnak içinde bir boşluk) olduğunu kontrol et.
 
 # --tests--
 

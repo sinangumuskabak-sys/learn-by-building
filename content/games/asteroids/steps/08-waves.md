@@ -24,21 +24,42 @@ new wave are now separate functions, `newGame()` and `spawnWave()`, because a ga
 
 # --explanation-tr--
 
-Son kaya da gidince, bir öncekinden bir asteroit fazlasıyla yeni bir **dalga** başlar ve her dalganın kayaları %20 daha
-hızlıdır:
+**Bu adımda:** oyunu tamamlayacağız. Bütün kayalar vurulunca bir kaya fazlasıyla ve daha hızlı yeni bir **dalga**
+gelecek. Canlar bitince ekranda `GAME OVER` ve en iyi skorun yazacak; boşluk tuşu yeni oyun başlatacak.
+
+**Dalgalar.** 1. dalgada 4 kaya var, her yeni dalgada bir fazlası: `3 + wave`. Her dalganın kayaları öncekinden %20
+daha hızlıdır:
 
 ```js
 speed = temelHız * (1 + (wave - 1) * 0.2)
 ```
 
-Dalgayla büyüyen bir çarpan, zorluğu ayarlamanın basit ve okunur bir yoludur. 1. dalga ×1, 3. dalga ×1,4, 6. dalga ×2.
-Köstebek Vurmaca'daki "formülden zorluk" fikrinin aynısı; zamana değil oyundaki ilerlemeye bağlı.
+1. dalga ×1, 3. dalga ×1.4, 6. dalga ×2. Dalgayla büyüyen bir çarpan, zorluğu ayarlamanın basit ve okunaklı yoludur.
 
-Yeni kayalar ortadaki gemiden uzakta, **kenarlarda** belirir; böylece yeni bir dalga asla bir çarpmayla başlamaz.
+Yeni kayalar **kenarlarda** doğar (sol kenarda ya da üst kenarda), ortadaki gemiden uzakta. Böylece dalga bir
+çarpmayla başlamaz. `const edge = Math.random() < 0.5` yazı-tura atar: `true` çıkarsa sol kenar (`x` = 0, `y`
+rastgele), `false` çıkarsa üst kenar (`y` = 0, `x` rastgele).
 
-Canların bitmesi oyunu bitirir; her zamanki rekor ve "Boşlukla yeniden oyna" ile. Yeni bir oyunu ve yeni bir dalgayı
-kurmak artık ayrı fonksiyonlardır, `newGame()` ve `spawnWave()`, çünkü bir oyunun birçok dalgası ama tek bir başlangıcı
-vardır.
+**Oyunun durumu (state).** Oyun ya oynanıyor (`'playing'`) ya da bitmiş (`'over'`). Bunu bir yazıyla `state` içinde
+tutarız ve her yerde ona göre davranırız:
+
+- `update()`'in başındaki `if (state !== 'playing') return` → "oynanmıyorsa hiçbir şey yapma". `return` fonksiyondan
+  hemen çıkar, alttaki satırlar çalışmaz.
+- Oyun bitince gemi çizilmez, ortada yazılar görünür.
+- Boşluk tuşu oyun bitmişse yeni oyun başlatır, yoksa ateş eder.
+
+**İki başlangıç fonksiyonu.** Bir oyunda çok dalga ama tek başlangıç vardır. Bu yüzden ikiye ayırırız:
+`spawnWave()` sadece kayaları kurar, `newGame()` her şeyi (puan, can, dalga, mermiler, gemi) sıfırlayıp ilk dalgayı
+çağırır. En alttaki dağınık başlangıç satırlarının yerini tek bir `newGame()` alır.
+
+**En iyi skoru hatırlamak.** `localStorage` tarayıcının küçük bir defteridir; sayfa kapansa bile içindekini unutmaz.
+
+- `localStorage.setItem('asteroids-best', best)` → `'asteroids-best'` adıyla deftere yaz.
+- `localStorage.getItem('asteroids-best')` → o adla yazılanı oku (hiç yazılmamışsa `null`, yani boş).
+- `Number(...)` → okunan yazıyı sayıya çevirir. `|| 0` → "sonuç boş ya da geçersizse 0 kullan".
+
+**Yazı birleştirmek.** `'BEST ' + best + '   SPACE TO PLAY AGAIN'` → `+` yazılarda yan yana eklemek demektir:
+`best` 1200 ise sonuç `'BEST 1200   SPACE TO PLAY AGAIN'` olur (`BEST`'ten sonra bir, `AGAIN`'den önce üç boşluk).
 
 # --task--
 
@@ -54,15 +75,139 @@ vardır.
 
 # --task-tr--
 
-1. `let wave` ve `let state` ekle. Üst ya da sol kenarda `3 + wave` büyük asteroit oluşturan `spawnWave()`'i ve
-   `score = 0`, `lives = 3`, `wave = 1`, `bullets = []`, `state = 'playing'` yapıp gemiyi sıfırlayan ve dalgayı başlatan
-   `newGame()`'i yaz. `newGame()` ile başlat.
-2. `makeAsteroid` içinde asteroit hızını `1 + (wave - 1) * 0.2` ile çarp.
-3. `update()` içinde (yalnızca oyun sürerken): hiç asteroit kalmayınca `wave`'i 1 artır ve `spawnWave()` çağır.
-4. `crash()` son can kaybedilince oyunu bitirir: `state = 'over'` ve daha yüksek bir skoru `'asteroids-best'` altında
-   rekor olarak kaydet. Değilse gemiyi sıfırlar.
-5. Oyun bitince gemiyi çizme; `GAME OVER` ve `BEST 1200   SPACE TO PLAY AGAIN` göster, Boşluk da `newGame()`
-   başlatsın.
+1. `let lives` satırının hemen altına `wave` ve `state` satırlarını, `let now = 0` satırının altına da en iyi skoru
+   okuyan satırı ekle. Bu bölüm şöyle görünmeli:
+
+   ```js
+   let lives
+   let wave
+   let state // 'playing' or 'over'
+   let now = 0
+   let best = Number(localStorage.getItem('asteroids-best')) || 0
+   ```
+
+2. `makeAsteroid` içindeki `const speed = ...` satırını dalga çarpanlı hâliyle değiştir:
+
+   ```js
+     // Smaller asteroids are faster, and every wave is 20% faster than the one before.
+     const speed = (0.6 + Math.random() * (4 - size) * 0.5) * (1 + (wave - 1) * 0.2) // ← değişti
+   ```
+
+   Eski hesabın tamamı paranteze alındı ve dalga çarpanıyla çarpıldı.
+
+3. `makeAsteroid` fonksiyonunun kapanış `}`'inden sonra, `function shoot()`'tan önce iki fonksiyon yaz:
+
+   ```js
+   function spawnWave() {
+     asteroids = []
+     for (let i = 0; i < 3 + wave; i++) {
+       // Start at the edges, away from the ship in the middle.
+       const edge = Math.random() < 0.5
+       const x = edge ? 0 : Math.random() * canvas.width
+       const y = edge ? Math.random() * canvas.height : 0
+       asteroids.push(makeAsteroid(x, y, 3))
+     }
+   }
+
+   function newGame() {
+     score = 0
+     lives = 3
+     wave = 1
+     bullets = []
+     state = 'playing'
+     resetShip()
+     spawnWave()
+   }
+   ```
+
+4. `crash` fonksiyonunu şu hâle getir. Can kalmışsa gemi yeniden doğar ve `return` ile çıkılır; kalmamışsa oyun biter
+   ve gerekirse rekor kaydedilir:
+
+   ```js
+   function crash() {
+     lives -= 1
+     if (lives > 0) {        // ← yeni
+       resetShip()
+       return                // ← yeni
+     }                       // ← yeni
+     state = 'over'          // ← yeni
+     if (score > best) {     // ← yeni
+       best = score
+       localStorage.setItem('asteroids-best', best)
+     }
+   }
+   ```
+
+5. `keydown` dinleyicisindeki boşluk satırını şöyle değiştir:
+
+   ```js
+   document.addEventListener('keydown', (event) => {
+     keys[event.key] = true
+     if (event.key === ' ' && !event.repeat) { // ← değişti
+       if (state === 'over') newGame()         // ← yeni
+       else shoot()                            // ← yeni
+     }                                         // ← yeni
+   })
+   ```
+
+6. `update()`'in en başına, `function update() {` satırının hemen altına şunu ekle:
+
+   ```js
+   function update() {
+     if (state !== 'playing') return // ← yeni
+
+     if (keys.ArrowLeft) ship.angle -= TURN
+   ```
+
+7. `update()`'in sonundaki çarpışma kontrolünü şöyle genişlet:
+
+   ```js
+     if (now >= ship.safeUntil && asteroids.some((asteroid) => hits(ship, SHIP_R * 0.7, asteroid, asteroid.r))) {
+       crash()
+       return                     // ← yeni
+     }
+
+     if (asteroids.length === 0) { // ← yeni
+       wave += 1
+       spawnWave()
+     }
+   }
+   ```
+
+   `asteroids.length === 0` → "listede hiç kaya kalmadı mı?".
+
+8. `draw()` içinde gemiyi çizen satırı, sadece oyun sürerken çizecek şekilde değiştir:
+
+   ```js
+     if (state === 'playing' && (!safe || Math.floor(now / 150) % 2 === 0)) drawShip() // ← değişti
+   ```
+
+9. `draw()`'un en sonunda, canları yazan satırdan sonra ve kapanış `}`'inden önce oyun sonu yazılarını ekle:
+
+   ```js
+     ctx.fillText('▲'.repeat(Math.max(0, lives)), canvas.width - 12, 26)
+
+     if (state === 'over') {                                  // ← yeni
+       ctx.textAlign = 'center'
+       ctx.font = 'bold 36px monospace'
+       ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2)
+       ctx.font = '16px monospace'
+       ctx.fillText('BEST ' + best + '   SPACE TO PLAY AGAIN', canvas.width / 2, canvas.height / 2 + 34)
+     }
+   }
+   ```
+
+10. En alttaki başlangıç satırlarını (`score = 0`'dan `resetShip()`'e kadar altı satırı) sil ve yerine `newGame()` yaz.
+    Sonuç şöyle olmalı:
+
+    ```js
+    newGame()
+    requestAnimationFrame(loop)
+    ```
+
+11. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Bütün kayaları temizleyince 5 kayalık yeni dalga gelmeli; üç can
+    bitince ortada `GAME OVER` yazmalı ve boşluk yeni oyun başlatmalı. Alttaki kontrollerin hepsi yeşil olmalı. Yazı
+    kontrolü kırmızıysa `'BEST '` ve `'   SPACE TO PLAY AGAIN'` içindeki boşlukları say.
 
 # --tests--
 

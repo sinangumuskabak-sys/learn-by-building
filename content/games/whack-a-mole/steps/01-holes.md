@@ -23,20 +23,59 @@ A circle is a path: `beginPath()`, `arc(x, y, r, 0, Math.PI * 2)`, `fill()`, one
 
 # --explanation-tr--
 
-Alanda 3×3 ızgarada 9 delik var. Bu sefer onları yalnızca çizmiyorsun: **saklıyorsun**, çünkü ileride her deliğin
-kendi durumu olacak (içinde bir köstebek var mı?). Bu yüzden iç içe döngülerle bir kez delik nesnelerinden oluşan bir
-dizi kur ve `draw()` o dizi üzerinde dönsün.
+**Bu adımda:** köstebek oyununun tarlasını çizeceğiz. Sağda yeşil bir çimenin üstünde 3 satır, 3 sütun halinde 9
+koyu kahverengi delik (daire) göreceksin.
 
-Her delik **merkeziyle** tanımlanır; çünkü daire olarak çizilir ve daire olarak isabet testi yapılır:
+**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
+listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan yazılar **yorumdur**:
+bilgisayar onları atlar, sadece insanlar için not.
+
+**Canvas ve fırça.** Sayfada 360×400 piksellik bir çizim alanı (**canvas**, kimliği `game`) var. Önce onu buluruz,
+sonra çizim aracını (**context**, bağlam) alırız:
+
+```js
+const canvas = document.getElementById('game')  // kâğıdı bul
+const ctx = canvas.getContext('2d')             // fırçayı al
+```
+
+`const ad = ...` bir şeye ad verir; bu ada **sabit** (constant) denir. Nokta (`.`) "bunun içindeki şu komut"
+demektir, tırnak içindeki `'game'` bir **yazıdır** (metin). Canvas'ın **sol üst köşesi** `(0, 0)`'dır; `x` sağa,
+`y` **aşağı** doğru büyür. `ctx.fillStyle = 'renk'` rengi seçer, `ctx.fillRect(x, y, en, boy)` dikdörtgen boyar.
+
+**Delikleri saklamak.** Bu sefer delikleri sadece çizmeyeceğiz, bir listede **saklayacağız**; çünkü ileride her
+deliğin kendi durumu olacak (içinden köstebek çıktı mı?).
+
+- **Dizi** (array) sıralı bir listedir: `const holes = []` boş bir liste. `holes.push(şey)` listenin sonuna ekler.
+  `holes[0]` ilk eleman (sayma 0'dan başlar).
+- **Nesne** (object) birkaç bilgiyi adlarıyla bir arada tutar: `{ x: 60, y: 100 }`. İçindeki bilgi nokta ile okunur:
+  `hole.x`.
+
+**Döngüyle 9 delik.** `for (let row = 0; row < SIZE; row++) { ... }` bir **döngüdür**: `row` adında bir **değişken**
+(`let`, değeri değişebilen kutu) 0'dan başlar, `SIZE`'dan (3) küçük olduğu sürece `{ }` içindeki kod tekrarlanır,
+her tur sonunda `row++` ile 1 artar. İçine sütunlar (`col`) için ikinci bir döngü koyarız: 3 × 3 = 9 tur.
+
+Her deliği **merkeziyle** tanımlarız, çünkü daire olarak çizilecek:
 
 ```js
 { x: col * CELL + CELL / 2, y: TOP + row * CELL + CELL / 2 }
 ```
 
-`+ CELL / 2` hücrenin köşesinden ortasına geçirir. Canvas 360 genişliğinde; üç tane 120 piksellik hücre onu tam
-doldurur, üstteki 40 piksellik şerit de (`TOP`) skor ve süre için ayrılır.
+`*` çarpma, `/` bölme. `CELL = 120` bir hücrenin boyu; `+ CELL / 2` hücrenin köşesinden ortasına geçirir. Canvas 360
+geniş, üç 120'lik hücre tam sığar. Üstte skor ve süre için 40 piksellik bir şerit (`TOP`) bırakırız.
 
-Daire bir yoldur: her delik için `beginPath()`, `arc(x, y, r, 0, Math.PI * 2)`, `fill()`.
+**Daire çizmek.** Daire bir **yoldur** (path): yolu başlat, yayı çiz, içini doldur.
+
+```js
+ctx.beginPath()
+ctx.arc(x, y, yarıçap, 0, Math.PI * 2)  // merkez, yarıçap, tam tur
+ctx.fill()
+```
+
+`Math.PI * 2` tam bir çember demektir (360 derece).
+
+**Fonksiyon.** `function draw() { ... }` içindeki kodlara `draw` adını verir. Yazmak onu çalıştırmaz; en altta
+`draw()` diye **çağırınca** çalışır. `for (const hole of holes)` ise listedeki her delik için bir kez döner; o turda
+deliğin adı `hole`'dur.
 
 # --task--
 
@@ -49,12 +88,57 @@ Daire bir yoldur: her delik için `beginPath()`, `arc(x, y, r, 0, Math.PI * 2)`,
 
 # --task-tr--
 
-1. Canvas'ı ve bağlamı `canvas` ile `ctx`'te tut; `const SIZE = 3`, `const CELL = 120`, `const TOP = 40`,
-   `const HOLE_R = 40` ekle.
-2. İç içe döngülerle (dışta satırlar, içte sütunlar) her delik için `{ x: col * CELL + CELL / 2, y: TOP + row * CELL + CELL / 2 }`
-   ekleyerek `const holes = []` dizisini kur.
-3. `draw()` yaz: canvas'ı `'#65a30d'` ile doldur, sonra her deliği `HOLE_R` yarıçaplı `'#3f2d1d'` bir daire olarak çiz.
-   `draw()`'u çağır.
+1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** tıkla ve şunu yaz:
+
+   ```js
+   const canvas = document.getElementById('game')
+   const ctx = canvas.getContext('2d')
+   ```
+
+2. Bir satır boşluk bırak ve ölçüleri ekle:
+
+   ```js
+   const SIZE = 3 // holes per row and per column
+   const CELL = 120
+   const TOP = 40 // room for the score and timer
+   const HOLE_R = 40
+   ```
+
+3. Bir satır boşluk bırak ve delik listesini döngüyle doldur:
+
+   ```js
+   const holes = []
+   for (let row = 0; row < SIZE; row++) {
+     for (let col = 0; col < SIZE; col++) {
+       holes.push({ x: col * CELL + CELL / 2, y: TOP + row * CELL + CELL / 2 })
+     }
+   }
+   ```
+
+4. Bir satır boşluk bırak ve çizim fonksiyonunu yaz:
+
+   ```js
+   function draw() {
+     ctx.fillStyle = '#65a30d'
+     ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+     ctx.fillStyle = '#3f2d1d'
+     for (const hole of holes) {
+       ctx.beginPath()
+       ctx.arc(hole.x, hole.y, HOLE_R, 0, Math.PI * 2)
+       ctx.fill()
+     }
+   }
+   ```
+
+5. En alta, fonksiyonu çağıran satırı ekle:
+
+   ```js
+   draw()
+   ```
+
+6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda yeşil zeminde 3×3 dizilmiş 9 koyu delik görmelisin ve alttaki
+   kontrollerin hepsi yeşil olmalı. Kırmızı kalırsa parantezleri ve büyük/küçük harfleri harf harf karşılaştır.
 
 # --tests--
 

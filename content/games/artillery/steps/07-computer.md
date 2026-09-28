@@ -20,18 +20,39 @@ The computer waits a second (60 frames) before shooting, so you can see whose tu
 
 # --explanation-tr--
 
-Kırmızı artık bilgisayar. Bir program nasıl nişan alabilir? Sabırlı bir insanın bir defterle yapacağını yapar: **atışları kafasında
-dener**.
+**Bu adımda:** kırmızı tankı bilgisayar oynayacak. Sen ateş ettikten sonra sağ üstte `Computer` yazacak, bir saniye
+bekleyip kendisi nişan alıp ateş edecek. Oyun sonunda `You win!` (kazandın) ya da `You lose` (kaybettin) çıkacak.
 
-Soldaki her açı (0.03'lük adımlarla) ve her güç (0.5'lik adımlarla) için hayali bir mermi yapar ve üzerinde, gerçek mermilerin
-kullandığı aynı fonksiyonu, `fly`'ı aynı rüzgârla bir şeye çarpana kadar çalıştırır. Sana en yakın düşen atış kazanır. Bu birkaç bin
-hayali atıştır ve bir bilgisayar onları göz açıp kapayıncaya kadar yapar.
+**Bir program nasıl nişan alır?** Sabırlı bir insanın defterle yapacağını yapar: **atışları kafasında dener.**
+Sola doğru her açı için (0.03'lük adımlarla) ve her güç için (0.5'lik adımlarla) hayali bir mermi yapar ve onu, gerçek
+mermilerin kullandığı **aynı** `fly` fonksiyonuyla, aynı rüzgârla, bir şeye çarpana kadar uçurur. Sana en yakın düşen
+atış kazanır. 3. adımda `fly`'ı ayrı bir fonksiyon yapmamızın sebebi tam buydu. Bu birkaç bin hayali atış eder;
+bilgisayar bunları göz açıp kapayana kadar yapar.
 
-Hiç ıskalamayan bir bilgisayara karşı oynamak eğlenceli değildir. Bu yüzden en iyi atışını bulduktan sonra açıya ve güce biraz
-**rastgele hata** ekler. O hatayla dikkatli bir oyuncuya karşı oyunlarının yaklaşık yarısını kazanır; özensiz bir oyuncu neredeyse
-her zaman kaybeder. O tek sayıyı ayarlamak zorluğu belirlemenin yoludur.
+**İç içe döngüler.** Her açı için her gücü denemek, bir döngünün içine başka bir döngü koymaktır:
 
-Bilgisayar ateş etmeden önce bir saniye (60 kare) bekler; böylece sıranın kimde olduğunu görebilirsin ve onun yerine nişan alamazsın.
+```js
+for (let angle = -Math.PI + 0.2; angle < -Math.PI / 2; angle += 0.03) {   // sola bakan açılar
+  for (let power = 4; power <= MAX_POWER; power += 0.5) {                 // her güç
+    // hayali mermiyi uçur, ne kadar ıskaladığına bak
+  }
+}
+```
+
+En içte bir döngü daha var: mermiyi en fazla 400 kare, bir şeye çarpana kadar uçurur
+(`for (let i = 0; i < 400 && !hit; i++) hit = fly(s)`). Ekrandan çıkan atışlar (`'away'`) atlanır (`continue`).
+Iskalama `Math.abs(s.x - tanks[0].x)`: merminin düştüğü yer ile senin tankın arasındaki yatay uzaklık. En iyi atışı
+`best` nesnesinde tutarız; `!best || miss < best.miss` → "henüz en iyi yoksa **ya da** bu daha az ıskalıyorsa, en iyi bu".
+
+**Hiç ıskalamayan bilgisayar sıkıcıdır.** Bu yüzden en iyi atışı bulduktan sonra açıya ve güce biraz **rastgele hata**
+ekler: `(Math.random() - 0.5) * 0.08` -0.04 ile 0.04 arasında bir sayıdır. Bu hatayla dikkatli bir oyuncuya karşı
+oyunların yaklaşık yarısını kazanır; özensiz bir oyuncu neredeyse hep kaybeder. Zorluğu bu tek sayıyla ayarlarsın.
+
+**Bir saniye düşünme.** Sıra kırmızıya geçince `thinking = 60` olur. Her karede 1 azalır (`--thinking`, 3. adımdaki
+`--timer` gibi); 0 olunca bilgisayar nişan alır ve ateş eder. Böylece sıranın kimde olduğunu görebilirsin.
+
+**Onun yerine sen oynayamazsın.** Tuşlar, fare ve Boşluk artık sadece senin sıranda (`turn === 0`) çalışır ve her zaman
+mavi tanka (`tanks[0]`) nişan aldırır. `turn !== 0` "sıra bende değil" demektir.
 
 # --task--
 
@@ -46,14 +67,111 @@ Bilgisayar ateş etmeden önce bir saniye (60 kare) bekler; böylece sıranın k
 
 # --task-tr--
 
-1. `thinking` ekle: sıra kırmızıya geçince onu 60 yap. `update()`'te kırmızı nişan alırken onu azalt ve `0`'da `computerAim()` ve
-   `fire()`'ı çağır.
-2. `computerAim()` yaz: `-Math.PI + 0.2`'den `-Math.PI / 2`'ye (dahil değil) `0.03`'lük açılar ve 4'ten `MAX_POWER`'a `0.5`'lik güçler
-   için kırmızının namlusundan hayali bir mermiyi en fazla 400 kare uçur; giden atışları atla; iniş `x`'i maviye en yakın olanı tut.
-   Kırmızının açısını ona `(Math.random() - 0.5) * 0.08` ekleyerek, gücünü ona `(Math.random() - 0.5) * 0.8` ekleyerek (en fazla
-   `MAX_POWER`) ayarla.
-3. `aimBy`, `pointAt`, Boşluk ve işaretçi yalnızca senin sıranda (sıra 0) çalışır ve `pointAt` her zaman mavi tanka nişan aldırır.
-4. Gösterge senin açını ve gücünü, `Your turn` ya da `Computer`'ı gösterir ve son `You win!` ya da `You lose` der.
+1. `let tanks ...` satırının yorumunu güncelle ve `let state ...` satırının altına `thinking`'i ekle:
+
+   ```js
+   let tanks // [you, the computer]: { x, y, hp, angle, power, color }
+   ```
+
+   ```js
+   let thinking // frames until the computer shoots
+   ```
+
+2. `endTurn()`'ün `else` kısmına bir satır ekle ve hemen altına `computerAim` fonksiyonunu yaz:
+
+   ```js
+   function endTurn() {
+     if (tanks[1].hp === 0) state = 'won'
+     else if (tanks[0].hp === 0) state = 'lost'
+     else {
+       turn = 1 - turn
+       newWind()
+       state = 'aiming'
+       if (turn === 1) thinking = 60 // ← yeni
+     }
+   }
+
+   // The computer tries many shots in its head, picks the one landing closest to you, then misses a little.
+   function computerAim() {
+     const me = tanks[1]
+     let best = null
+     for (let angle = -Math.PI + 0.2; angle < -Math.PI / 2; angle += 0.03) {
+       for (let power = 4; power <= MAX_POWER; power += 0.5) {
+         const s = { x: me.x + Math.cos(angle) * 14, y: me.y - 8 + Math.sin(angle) * 14, vx: Math.cos(angle) * power, vy: Math.sin(angle) * power }
+         let hit = null
+         for (let i = 0; i < 400 && !hit; i++) hit = fly(s)
+         if (hit === 'away') continue
+         const miss = Math.abs(s.x - tanks[0].x)
+         if (!best || miss < best.miss) best = { miss, angle, power }
+       }
+     }
+     me.angle = best.angle + (Math.random() - 0.5) * 0.08
+     me.power = Math.min(MAX_POWER, best.power + (Math.random() - 0.5) * 0.8)
+   }
+   ```
+
+   Hayali mermi `s`, `fire()`'daki gerçek mermiyle aynı şekilde kırmızının namlu ucundan çıkar.
+
+3. `update()`'te patlama bitişini yöneten `if (state === 'boom' ...) { ... }` bloğunun altına bilgisayarın ateşini ekle:
+
+   ```js
+     if (state === 'aiming' && turn === 1 && --thinking === 0) {
+       computerAim()
+       fire()
+     }
+   ```
+
+4. `aimBy()`'ın ilk iki satırını değiştir:
+
+   ```js
+   function aimBy(dAngle, dPower) {
+     if (state !== 'aiming' || turn !== 0) return // ← değişti
+     const t = tanks[0] // ← değişti
+   ```
+
+5. `keydown` olayında Boşluk kısmındaki `else fire()` satırını değiştir:
+
+   ```js
+       else if (turn === 0) fire() // ← değişti
+   ```
+
+6. `pointAt()`'in üstündeki yorumu ve içindeki `const t = ...` satırını değiştir:
+
+   ```js
+   // Point from your tank: the direction is the aim, the distance is the power.
+   ```
+
+   ```js
+     const t = tanks[0] // ← değişti
+   ```
+
+7. `pointerdown` olayındaki ikinci satırı değiştir:
+
+   ```js
+     if (state !== 'aiming' || turn !== 0) return // ← değişti
+   ```
+
+8. `draw()`'un sonundaki yazılarda dört değişiklik yap: `now` yerine `you`, sıra yazısı ve bitiş yazısı:
+
+   ```js
+     const you = tanks[0] // ← değişti
+     ctx.fillStyle = '#0f172a'
+     ctx.font = 'bold 14px sans-serif'
+     ctx.textAlign = 'left'
+     ctx.fillText('Angle ' + Math.round((-you.angle * 180) / Math.PI) + '°  Power ' + you.power.toFixed(1), 10, 20) // ← değişti
+   ```
+
+   ```js
+     ctx.fillText(turn === 0 ? 'Your turn' : 'Computer', W - 10, 20) // ← değişti
+   ```
+
+   ```js
+       ctx.fillText(state === 'won' ? 'You win!' : 'You lose', W / 2, 145) // ← değişti
+   ```
+
+9. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve ateş et. Patlamadan sonra sağ üstte `Computer` yazmalı; oklar
+   artık bir şey yapmamalı; bir saniye sonra kırmızı tank sana doğru ateş etmeli. Alttaki kontrollerin hepsi yeşil
+   olmalı. Bilgisayar hiç ateş etmiyorsa `endTurn`'e `thinking = 60` satırını eklediğini kontrol et.
 
 # --tests--
 

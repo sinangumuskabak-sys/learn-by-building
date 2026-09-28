@@ -25,22 +25,56 @@ armies and formations work in games.
 
 # --explanation-tr--
 
-Düzen kaymaz; **adım atar**: her yarım saniyede bütün istilacılar birlikte 10 piksel yana sıçrar. Düzen ekranın bir
-yanına ulaşınca bir sonraki adım **aşağı** olur ve yön tersine döner.
+**Bu adımda:** istilacı bloğu yürümeye başlayacak. Çalıştırınca blok her yarım saniyede 10 piksel yana **zıplayacak**;
+duvara gelince bir basamak aşağı inip ters yöne dönecek.
 
-Kural tek bir istilacıya değil, **canlı düzenin kenarlarına** bakmalı:
+**Kayma değil, adım.** Blok akıcı kaymaz: her 500 milisaniyede bir, bütün istilacılar birlikte 10 piksel yana atlar.
+Bunu 2. adımdaki bekleme süresi gibi kurarız: son adımın zamanını `lastStep`'te tutarız, yeterince zaman geçtiyse yeni
+adım atarız. `>=` "büyük ya da eşit" demektir.
+
+```js
+if (now - lastStep >= stepInterval()) {
+  lastStep = now
+  march()
+}
+```
+
+`stepInterval()` şimdilik sadece `500` döndüren bir fonksiyon. Neden düz bir sayı değil? İleride istilacılar azaldıkça
+hızlanacaklar; o zaman yalnızca bu fonksiyonu değiştireceğiz.
+
+**Ortak yön: `dir`.** Bütün grup tek bir yönü paylaşır: `dir = 1` sağa, `dir = -1` sola. Yana adım `10 * dir` olur:
+sağa giderken `+10`, sola giderken `-10`. Yönü çevirmek için `dir = -dir` yazarız (1 ise -1, -1 ise 1 olur). Sürüler,
+ordular ve düzenler oyunlarda böyle yürür: çok sayıda nesneye tek bir ortak kural verilir.
+
+**Kenarları bulmak.** Duvara çarpıp çarpmadığımızı tek bir istilacıya bakarak değil, **canlı bloğun kenarlarına**
+bakarak anlarız:
 
 ```js
 const left = Math.min(...living.map((invader) => invader.x))
 const right = Math.max(...living.map((invader) => invader.x + invader.w))
 ```
 
-`Math.min(...dizi)` diziyi argümanlara yayar; böylece en küçük değeri tek çağrıda bulur. Canlı istilacıları kullanmak
-ileride önemli: bir yandaki bütün sütun vurulup gidince, arcade orijinalindeki gibi düzen yeni kenarı duvara değene kadar
-yürümeye devam etmeli.
+Parça parça:
 
-Bütün grup tek bir yönü paylaşır, `dir`. Birçok nesneyi ortak bir kural vererek tek birim gibi hareket ettirmek, oyunlarda
-sürülerin, orduların ve düzenlerin çalışma biçimidir.
+- `living.map((invader) => invader.x)` → `map` listedeki her elemanı bir kurala göre dönüştürüp yeni bir liste yapar.
+  Burada her istilacının yerine onun `x`'i gelir: `[40, 84, 128, ...]`.
+- `...` (üç nokta, **yayma**) listeyi açıp elemanlarını tek tek verir: `Math.min(...[40, 84])` ile
+  `Math.min(40, 84)` aynıdır. Böylece bütün listenin en küçüğü tek çağrıda bulunur.
+- `right` için her istilacının sağ kenarını (`x + w`) alıp en büyüğünü buluruz.
+
+Neden yalnız canlılar? İleride bir yan sütunun tamamı vurulunca, blok yeni kenarı duvara değene kadar yürümeye devam
+etmeli; tıpkı salon oyununun aslı gibi.
+
+**`else`, `&&` ve `||`.** `if (...) { A } else { B }` → "koşul doğruysa A'yı, değilse B'yi yap". Koşulları birleştirmek
+için `&&` "ve", `||` "veya" demektir:
+
+```js
+if ((dir > 0 && right + 10 > canvas.width - 10) || (dir < 0 && left - 10 < 10)) {
+```
+
+Türkçesi: "(sağa gidiyorsak **ve** bir adım daha sağ duvarın 10 piksel içine taşarsa) **veya** (sola gidiyorsak **ve**
+bir adım daha sol duvarın 10 piksel içine taşarsa)". Doğruysa herkes 16 piksel aşağı iner ve yön döner; değilse herkes
+yana bir adım atar.
 
 # --task--
 
@@ -53,11 +87,46 @@ sürülerin, orduların ve düzenlerin çalışma biçimidir.
 
 # --task-tr--
 
-1. `let dir = 1` ve `let lastStep = 0` ekle; şimdilik `500` döndüren `function stepInterval()` yaz.
-2. `function march()` yaz: canlı düzenin `left` ve `right` kenarlarını bul. Sağa giderken `right + 10`
-   `canvas.width - 10`'u geçecekse ya da sola giderken `left - 10` `10`'u geçecekse, her canlı istilacıyı 16 piksel
-   aşağı indir ve `dir`'i çevir. Değilse her canlı istilacıyı `10 * dir` piksel yana taşı.
-3. `update()` içinde `lastStep`'ten beri en az `stepInterval()` ms geçtiğinde `march()` çağır (sonra `lastStep = now`).
+1. `let invaders = []` ile başlayan döngü bloğunun kapanışının (`}` `}`) altına, `let now = 0` satırından önce iki
+   satır ekle:
+
+   ```js
+   let dir = 1 // +1 marching right, -1 marching left
+   let lastStep = 0
+   ```
+
+2. `shoot()` fonksiyonunun kapanış `}`'inin altına, bir boş satır bırakıp iki fonksiyon ekle:
+
+   ```js
+   function stepInterval() {
+     return 500
+   }
+
+   function march() {
+     const living = alive()
+     const left = Math.min(...living.map((invader) => invader.x))
+     const right = Math.max(...living.map((invader) => invader.x + invader.w))
+     if ((dir > 0 && right + 10 > canvas.width - 10) || (dir < 0 && left - 10 < 10)) {
+       for (const invader of living) invader.y += 16
+       dir = -dir
+     } else {
+       for (const invader of living) invader.x += 10 * dir
+     }
+   }
+   ```
+
+3. `update()` fonksiyonunun sonuna, `bullets = bullets.filter(...)` satırının altına, bir boş satır bırakıp şunu ekle:
+
+   ```js
+     if (now - lastStep >= stepInterval()) {
+       lastStep = now
+       march()
+     }
+   ```
+
+4. **Çalıştır**'a bas. Blok her yarım saniyede bir sağa zıplamalı; sağ duvara gelince bir sıra aşağı inip sola
+   yürümeli. Alttaki kontrollerin hepsi yeşil olmalı. Blok hiç kıpırdamıyorsa `update()` içine eklediğin bloğun
+   fonksiyonun kapanış `}`'inden **önce** olduğunu kontrol et.
 
 # --tests--
 

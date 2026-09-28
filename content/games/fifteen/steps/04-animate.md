@@ -25,21 +25,39 @@ While a tile is sliding, other moves wait, so fast clicks cannot make tiles over
 
 # --explanation-tr--
 
-Bir taş yeni karesine zıpladığında göz hangi taşın hareket ettiğini izleyemez. 8 karelik kısa bir **kayma** her hamleyi okunur
-yapar.
+**Bu adımda:** taşlar yeni yerine zıplamak yerine **kayarak** gidecek. Bir taşa tıklayınca 8 kare (yaklaşık 0,13
+saniye) boyunca boşluğa doğru süzüldüğünü göreceksin.
 
-Tahta eskisi gibi hemen değişir: oyun mantığı animasyonları beklemez. Ayrıca `slide`, hangi taşın nereden nereye gittiğini ve
-animasyonun kaç karesinin geçtiğini hatırlar. Çizim, o taşı yolun bir kısmına koymak için onu kullanır:
+**Neden?** Taş bir anda yeni karesine atlayınca göz hangi taşın hareket ettiğini izleyemez. Kısa bir kayma her hamleyi
+okunur yapar.
+
+**Durum ile görüntü ayrı.** Tahta (`tiles`) eskisi gibi **hemen** değişir; oyunun kuralları animasyonu beklemez. Ayrı
+olarak `slide` adlı bir nesne hangi taşın, nereden nereye kaydığını ve animasyonun kaçıncı karesinde olduğunu hatırlar:
+
+```js
+slide = { tile: 15, from: 14, to: 15, frame: 0 }
+```
+
+Çizim bu bilgiyle o taşı yolun bir kısmına koyar:
 
 ```js
 const t = slide.frame / SLIDE_FRAMES      // başta 0, sonda 1
-const x = fromX + (toX - fromX) * t       // her zamanki aynı doğrusal ara değerleme
+const x = fromX + (toX - fromX) * t       // başlangıç + (bitiş - başlangıç) * t
 ```
 
-**Durumu** (taşların nerede olduğu) **sunumdan** (şu an nerede çizildikleri) ayrı tutmak kuralları basit tutar: testler, çözüldü
-kontrolü ve hamle sayacı animasyonu hiç düşünmek zorunda kalmaz.
+Buna **doğrusal interpolasyon** (lerp) denir: `t` 0'dan 1'e giderken `x` başlangıçtan bitişe yürür. **Durumu**
+(taşlar nerede) **görüntüden** (şu an nerede çiziliyorlar) ayrı tutmak kuralları basit tutar: hamle sayacı ve
+"çözüldü mü?" kontrolü animasyonu hiç düşünmek zorunda kalmaz.
 
-Bir taş kayarken diğer hamleler bekler; böylece hızlı tıklamalar taşları üst üste bindiremez.
+**`null`: bilerek "hiçbir şey".** Kayan taş yokken `slide` değeri `null`'dır. `if (slide)` "kayan bir taş varsa",
+`if (!slide)` "yoksa" demektir (`null` yanlış sayılır). Bir taş kayarken `move()` hemen `return` eder; böylece hızlı
+tıklamalar taşları üst üste bindiremez.
+
+**`update()`: her karede bir adım.** Döngü artık her karede önce `update()` çağırır: `slide.frame += 1`, 8'e ulaşınca
+`slide = null` (animasyon bitti). `>=` "büyük ya da eşit" demektir.
+
+**Çizim.** Kayan taşı yerinde çizmeyiz (`number === slide.tile` ise atla), onu ayrıca iki kare arasında çizeriz.
+`slide && number === slide.tile` → "kayan taş varsa **ve** bu o taşsa"; `||` "veya" demektir.
 
 # --task--
 
@@ -50,10 +68,78 @@ Bir taş kayarken diğer hamleler bekler; böylece hızlı tıklamalar taşları
 
 # --task-tr--
 
-1. `SLIDE_FRAMES = 8` ve `slide` ekle (`reset()`'te `null`). `slide` varken `move()` hiçbir şey yapmaz ve bir hamle
-   `slide = { tile, from, to, frame: 0 }` ayarlar (taşın eski karesinden boşluğa).
-2. `update()` yaz: `slide.frame`'e 1 ekle ve `SLIDE_FRAMES`'e ulaşınca `slide`'ı temizle. Her karede çağır.
-3. Kayan taş hariç her taşı karesine, sonra kayan taşı `from` ile `to` arasına çiz.
+1. `const TOP = 60` satırının hemen altına ekle:
+
+   ```js
+   const SLIDE_FRAMES = 8
+   ```
+
+2. `let moves` satırının hemen altına ekle:
+
+   ```js
+   let slide // the tile sliding right now: { tile, from, to, frame }, or null
+   ```
+
+3. `reset()` içinde `moves = 0` satırının altına ekle:
+
+   ```js
+     slide = null
+   ```
+
+4. `move(i)` fonksiyonunu şöyle değiştir:
+
+   ```js
+   function move(i) {
+     if (slide) return                                        // ← yeni
+     const gap = tiles.indexOf(0)
+     if (!neighbors(gap).includes(i)) return
+     slide = { tile: tiles[i], from: i, to: gap, frame: 0 }   // ← yeni
+     tiles[gap] = tiles[i]
+     tiles[i] = 0
+     moves += 1
+   }
+   ```
+
+   `slide = ...` satırı, taşlar yer değiştirmeden **önce** olmalı; yoksa `tiles[i]` artık 0'dır.
+
+5. `keydown` dinleyicisinin kapanış `})`'sinden sonra, `function squareX(i)`'den önce bir satır boşluk bırakıp ekle:
+
+   ```js
+   function update() {
+     if (!slide) return
+     slide.frame += 1
+     if (slide.frame >= SLIDE_FRAMES) slide = null
+   }
+   ```
+
+6. `draw()` içindeki `tiles.forEach` bloğunu ve hemen altını şöyle değiştir:
+
+   ```js
+     tiles.forEach((number, i) => {
+       if (number === 0 || (slide && number === slide.tile)) return   // ← değişti
+       drawTile(number, squareX(i), squareY(i))
+     })
+     // The sliding tile is drawn part of the way from its old square to its new one.
+     if (slide) {                                                                        // ← yeni
+       const t = slide.frame / SLIDE_FRAMES                                              // ← yeni
+       const x = squareX(slide.from) + (squareX(slide.to) - squareX(slide.from)) * t     // ← yeni
+       const y = squareY(slide.from) + (squareY(slide.to) - squareY(slide.from)) * t     // ← yeni
+       drawTile(slide.tile, x, y)                                                        // ← yeni
+     }                                                                                   // ← yeni
+   ```
+
+7. `loop()` fonksiyonunda `draw()`'dan önce `update()` çağır:
+
+   ```js
+   function loop() {
+     update()   // ← yeni
+     draw()
+     requestAnimationFrame(loop)
+   }
+   ```
+
+8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla ve bir taşı kaydır: taş boşluğa süzülerek gitmeli. Alttaki
+   kontrollerin hepsi yeşil olmalı. Taş hiç görünmüyorsa `update()`'i `loop()`'a eklediğini kontrol et.
 
 # --tests--
 

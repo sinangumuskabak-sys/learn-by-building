@@ -16,14 +16,45 @@ Finally, each lane shows its key under the hit line, so a new player on a keyboa
 
 # --explanation-tr--
 
-Telefonda şeritlerin kendisi düğme olur: bir şeridin herhangi bir yerine dokunmak ona basar. Bir dokunuşun altındaki şerit yalnızca
-`Math.floor((x - LEFT) / LANE_W)`'dir ve dört şeridin dışına bir dokunuş hiçbir şey yapmaz.
+**Bu adımda:** oyunu telefonda da oynanır yapacağız: şeride dokunmak, o şeridin tuşuna basmak gibi olacak. Ayrıca her
+şeridin vuruş çizgisinin altında beyaz harfle tuşu (`D`, `F`, `J`, `K`) göreceksin. Şarkı bitince bir dokunuş yeniden
+başlatacak.
 
-Bir dokunuş, bir tuşla tam olarak aynı `press(lane)`'i çağırır; yani zamanlama, değerlendirme ve puan her cihazda aynıdır. Şarkıdan
-sonra bir dokunuş yeniden oynatır.
+**Dokunuş olayı.** `pointerdown`, parmak (ya da fare) canvas'a değince gelen **olaydır**. Olayın `event.clientX`'i
+dokunulan noktanın ekrandaki yatay konumudur.
 
-Son olarak her şerit vuruş çizgisinin altında kendi tuşunu gösterir; böylece klavyedeki yeni bir oyuncu hangi parmağın nereye gittiğini
-bilir.
+**Ekran pikselinden canvas pikseline.** Telefonda canvas ekrana sığsın diye küçültülmüş olabilir. Bu yüzden önce
+dokunuşu canvas'ın kendi ölçüsüne çeviririz:
+
+```js
+const rect = canvas.getBoundingClientRect()                 // canvas'ın ekrandaki yeri ve boyu
+const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+```
+
+- `event.clientX - rect.left` → dokunuşun canvas'ın sol kenarından uzaklığı (ekran pikseli).
+- `* canvas.width / rect.width` → ekranda 200 piksel görünen canvas'ın gerçekte 400 olduğunu hesaba katar.
+
+**Hangi şerit?** Şeritler `LEFT`'ten başlar ve her biri `LANE_W` genişliğindedir:
+
+```js
+const lane = Math.floor((x - LEFT) / LANE_W)
+```
+
+Örnek: `x = 160` → `(160 - 60) / 70 = 1.43` → `Math.floor` küsuratı atar → şerit 1. Şeritlerin solundaki boşluğa
+dokunulursa sonuç eksi, sağındakine dokunulursa 4 ya da fazla çıkar. Bu yüzden sadece `lane >= 0 && lane < LANES` ise
+(0 ile 3 arası) basarız.
+
+Dokunuş, tuşla **aynı** `press(lane)` fonksiyonunu çağırır; zamanlama, puanlama ve her şey her cihazda aynıdır.
+
+**Tuş harfleri.** Dört harfi bir listede tutup `forEach` ile her birini kendi şeridinin ortasına yazarız:
+
+```js
+;['D', 'F', 'J', 'K'].forEach((k, lane) => ctx.fillText(k, LEFT + lane * LANE_W + LANE_W / 2, HIT_Y + 40))
+```
+
+`k` harf, `lane` sıra numarası (0–3). `LANE_W / 2` şeridin yarısı: yazı şeridin ortasına gelir (`textAlign` zaten
+`'center'`). Baştaki `;` bir inceliktir: satır `[` ile başladığında bilgisayar onu önceki satırın devamı sanabilir;
+noktalı virgül "önceki satır burada bitti" der.
 
 # --task--
 
@@ -33,9 +64,40 @@ bilir.
 
 # --task-tr--
 
-1. `pointerdown`'da: şarkıdan sonra `reset()`; değilse varsa işaretçinin altındaki şeridi `press` et.
-2. Her şeridin altına `HIT_Y + 40`'ta ortalı, beyaz (`'bold 14px sans-serif'`) `D`, `F`, `J` ve `K` çiz ve son panelin son satırını
-   `Space or tap to play again` yap.
+1. `keydown` dinleyicisinin kapanışından (`})`) sonra bir boş satır bırak ve (`function draw()`'un **üstüne**)
+   dokunuş dinleyicisini yaz:
+
+   ```js
+   // On a touch screen, each lane is its own big button.
+   canvas.addEventListener('pointerdown', (event) => {
+     if (state === 'done') return reset()
+     const rect = canvas.getBoundingClientRect()
+     const x = ((event.clientX - rect.left) * canvas.width) / rect.width
+     const lane = Math.floor((x - LEFT) / LANE_W)
+     if (lane >= 0 && lane < LANES) press(lane)
+   })
+   ```
+
+2. `draw()` içinde, notalardan sonra gelen `ctx.font = 'bold 14px sans-serif'` satırının hemen altına (`if (feedback)`
+   satırının **üstüne**) harfleri yazan satırı ekle:
+
+   ```js
+     ctx.fillStyle = 'white'
+     ctx.textAlign = 'center'
+     ctx.font = 'bold 14px sans-serif'
+     ;['D', 'F', 'J', 'K'].forEach((k, lane) => ctx.fillText(k, LEFT + lane * LANE_W + LANE_W / 2, HIT_Y + 40))   // ← yeni
+     if (feedback) {
+   ```
+
+3. Bitiş panelinin son yazısını değiştir:
+
+   ```js
+       ctx.fillText('Space or tap to play again', canvas.width / 2, 318)   // ← değişti
+   ```
+
+4. **Çalıştır**'a bas. Vuruş çizgilerinin altında `D F J K` harflerini görmelisin. Şeritlere fareyle tıklamak (ya da
+   telefonda dokunmak) notalara vurmalı; şeritlerin dışına tıklamak hiçbir şey yapmamalı. Alttaki kontrollerin hepsi
+   yeşil olmalı.
 
 # --tests--
 

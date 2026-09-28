@@ -26,22 +26,57 @@ score) in `newGame()`.
 
 # --explanation-tr--
 
-Orijinal arcade oyununun ünlü bir kazası var: makine o kadar yavaştı ki 55 istilacıyı hareket ettirmek zaman alıyordu;
-oyuncu onları vurdukça, yalnızca çizilecek şey azaldığı için düzen hızlanıyordu. Oyunun en iyi kısmı bu çıktı: son
-istilacı ekranda yıldırım gibi koşar.
+**Bu adımda:** istilacılar azaldıkça hızlanacak ve hepsi vurulunca yeni bir **dalga** (wave) gelecek. Ekranın üstünde
+ortada `WAVE 1` yazısı göreceksin; son istilacı ekranda yıldırım gibi koşacak.
 
-Bu gerilimi **bilerek** kurabilirsin: adım aralığını canlı istilacı sayısına bağla.
+**Tesadüfen doğan bir kural.** Salon oyununun aslında ünlü bir kaza var: makine o kadar yavaştı ki 55 istilacıyı
+oynatmak zaman alıyordu. Oyuncu onları vurdukça çizilecek şey azaldı ve blok **kendiliğinden** hızlandı. Oyunun en iyi
+yanı bu çıktı: son istilacı ekranda koşar. Biz bu gerilimi **bilerek** kuracağız: adım aralığı, canlı istilacı sayısına
+bağlı olsun.
 
 ```js
 60 + (alive().length - 1) * 12   // 45'i de canlıyken 588 ms … sonuncusu için 60 ms
 ```
 
-Özel bir "zor mod" kodu yok, zamanlayıcı yok: zorluk bir kuraldan **doğar**. Oyuncunun kendi başarısı oyunu zorlaştırır.
-Kendi kendine ilginç davranış üreten kurallar tasarlamak, oyun tasarımının en tatmin edici kısımlarından biridir.
+- Her listenin bir **uzunluğu** vardır: `.length`. `alive().length` canlı istilacı sayısıdır.
+- İşlem sırası matematikteki gibidir: önce parantez, sonra çarpma, sonra toplama. 45 canlıyken `60 + 44 × 12 = 588`.
 
-Son istilacı düşünce yeni bir **dalga** başlar, biraz daha hızlı (`- (wave - 1) * 40`). Bir dalgayı kurmak oyunu
-başlatmakla aynı kodu gerektirir; onu bir fonksiyona taşı, `spawnWave()`, tek seferlik kurulumu da (gemi, skor)
-`newGame()`'de tut.
+Ayrı bir "zor mod" kodu yok, zamanlayıcı yok: zorluk bir kuraldan **kendiliğinden ortaya çıkar**. Oyuncunun kendi
+başarısı oyunu zorlaştırır. Kendi başına ilginç davranış üreten kurallar tasarlamak, oyun tasarımının en keyifli
+yanlarından biridir.
+
+Sonraki dalgalar biraz daha hızlı olsun diye `- (wave - 1) * 40` çıkarırız; `Math.max(40, ...)` da aralığın 40'ın
+altına düşmesini engeller (1. adımdaki sınırlama fikri).
+
+**Kodu fonksiyonlara taşımak.** Yeni bir dalga kurmak, oyunu başlatmakla aynı kodu ister: istilacıları dizmek,
+mermileri temizlemek, yönü sıfırlamak. Aynı kodu iki kez yazmak yerine onu bir fonksiyona koyarız: `spawnWave()`.
+Oyunun başında bir kez yapılan kurulum (gemi, skor, dalga numarası) da `newGame()`'e gider; o da en sonda
+`spawnWave()`'i çağırır.
+
+Değişkenleri yine en üstte **tanımlarız** ama değer vermeyiz:
+
+```js
+let ship
+```
+
+Bu, "`ship` adında bir kutu var, içi şimdilik boş" demektir (içinde `undefined` durur). Değeri `newGame()` çalışınca
+konur. Bu yüzden kodun sonunda, döngüyü başlatmadan önce `newGame()`'i bir kez çağırırız.
+
+**Dalga bitti mi?** `update()` içinde:
+
+```js
+if (alive().length === 0) {
+  wave += 1
+  spawnWave()
+  return
+}
+```
+
+Canlı kalmadıysa dalga sayısını artır, yeni dalgayı diz ve `return` ile bu karenin geri kalanını atla (yürüyecek kimse
+yok).
+
+**Ortalanmış yazı.** `ctx.textAlign = 'center'` verilen noktayı yazının **ortası** yapar. `canvas.width / 2` ekranın
+yatay ortası olduğundan `WAVE 1` tam ortada durur.
 
 # --task--
 
@@ -54,12 +89,84 @@ başlatmakla aynı kodu gerektirir; onu bir fonksiyona taşı, `spawnWave()`, te
 
 # --task-tr--
 
-1. Düzen kurulumunu, `bullets = []`, `dir = 1` ve `lastStep = now`'ı `function spawnWave()`'e taşı. Gemiyi oluşturan,
-   `wave = 1`, `score = 0`, `lastShot = -COOLDOWN` yapan ve `spawnWave()` çağıran `function newGame()` yaz. Değişkenleri
-   `let` ile (değersiz) tanımla ve `newGame()` ile başlat.
-2. `stepInterval()` `Math.max(40, 60 + (alive().length - 1) * 12 - (wave - 1) * 40)` döndürsün.
-3. `update()` içinde hiçbir istilacı canlı değilse `wave`'i 1 artır, `spawnWave()` çağır ve bu karede dur.
-4. Tepede ortada, skorun yanına `WAVE 2` yaz.
+1. `const ROW_COLORS = [...]` satırının altından `let now = 0` satırına kadar olan her şeyi (gemi, mermiler, istilacı
+   döngüsü, `dir`, `lastStep`, `score`) sil ve yerine şu değersiz tanımları yaz:
+
+   ```js
+   let ship
+   let bullets
+   let invaders
+   let dir // +1 marching right, -1 marching left
+   let lastStep
+   let lastShot
+   let wave
+   let score
+   let now = 0
+   const keys = {}
+   ```
+
+2. `const keys = {}` satırının altına, bir boş satır bırakıp iki fonksiyon yaz (`overlaps`'ın üstünde kalacaklar):
+
+   ```js
+   function spawnWave() {
+     invaders = []
+     for (let row = 0; row < ROWS; row++) {
+       for (let col = 0; col < COLS; col++) {
+         invaders.push({ x: 40 + col * SPACING_X, y: 60 + row * SPACING_Y, w: INVADER_W, h: INVADER_H, row, alive: true })
+       }
+     }
+     bullets = []
+     dir = 1
+     lastStep = now
+   }
+
+   function newGame() {
+     ship = { x: canvas.width / 2 - SHIP_W / 2, y: SHIP_Y, w: SHIP_W, h: SHIP_H }
+     wave = 1
+     score = 0
+     lastShot = -COOLDOWN
+     spawnWave()
+   }
+   ```
+
+   Burada `let` yazmıyoruz: kutular yukarıda zaten tanımlı, şimdi sadece içlerine değer koyuyoruz.
+
+3. `stepInterval()` fonksiyonunu değiştir:
+
+   ```js
+   function stepInterval() {
+     return Math.max(40, 60 + (alive().length - 1) * 12 - (wave - 1) * 40) // ← değişti
+   }
+   ```
+
+4. `update()` içinde, `bullets = bullets.filter(...)` satırının altına ve adım kontrolünün (`if (now - lastStep ...`)
+   üstüne, bir boş satır bırakıp şunu ekle:
+
+   ```js
+     if (alive().length === 0) {
+       wave += 1
+       spawnWave()
+       return
+     }
+   ```
+
+5. `draw()` fonksiyonunun sonuna, `ctx.fillText('SCORE ' + score, 10, 24)` satırının altına iki satır ekle:
+
+   ```js
+     ctx.textAlign = 'center'
+     ctx.fillText('WAVE ' + wave, canvas.width / 2, 24)
+   ```
+
+6. En alttaki `requestAnimationFrame(loop)` satırının hemen **üstüne** oyunu kuran çağrıyı ekle:
+
+   ```js
+   newGame()
+   requestAnimationFrame(loop)
+   ```
+
+7. **Çalıştır**'a bas. Üstte ortada `WAVE 1` yazmalı. Oynamak için önce oyuna tıkla ve istilacıları vur: azaldıkça
+   daha hızlı yürümeliler, hepsi bitince yazı `WAVE 2` olmalı ve yeni blok gelmeli. Alttaki kontrollerin hepsi yeşil
+   olmalı. Ekran boş kalıyorsa `newGame()` satırını unutmuş olabilirsin.
 
 # --tests--
 

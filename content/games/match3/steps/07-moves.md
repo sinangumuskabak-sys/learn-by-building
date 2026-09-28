@@ -18,16 +18,30 @@ wait for the falling to finish, because the last move's cascades still add to th
 
 # --explanation-tr--
 
-Sınır olmadan üçlü eşleştirme hiç bitmez ve bir puan hiçbir şey ifade etmez. Gerçek oyunlar sana bir **hamle bütçesi** verir:
-burada olabildiğince çok puan için 20 takas. O tek sayı nasıl oynadığını değiştirir. Sonsuz hamleyle her eşleşme işini görür;
-20 ile zincirleme kuran hamleleri kovalamaya başlarsın.
+**Bu adımda:** oyuna bir sınır ve bir hedef gelecek: 20 hamle. Sağ üstte `Moves 20  Best 0` yazacak; her başarılı
+takas bir hamle harcayacak. Hamleler bitince "No moves left! Click to play again" yazacak ve en iyi puanın
+saklanacak.
 
-Yalnızca **eşleşen** bir takas bir hamleye mal olur. Geri seken bir takas, oyunun zaten geri aldığı bir hataydı, bu yüzden
-bedavadır.
+**Neden sınır?** Sınır olmadan oyun hiç bitmez ve puanın anlamı kalmaz. Gerçek oyunlar bir **hamle bütçesi** verir:
+burada mümkün olduğunca çok puan için 20 takas. Bu tek sayı oyun tarzını değiştirir: sonsuz hamlede her eşleşme
+iyidir; 20 hamlede zincirleme kuracak hamleleri aramaya başlarsın.
 
-Son hamlenin zincirlemeleri yatıştığında (evre yeniden `'idle'` ve `movesLeft` `0` olduğunda) oyun biter. Puanı, yeniden
-yüklemeden sağ çıksın diye `localStorage`'da tutulan en iyisiyle karşılaştır; bir tıklama yeniden başlatır. Sıraya dikkat:
-düşüşün bitmesini bekleriz, çünkü son hamlenin zincirlemeleri de puana eklenir.
+Yalnızca **eşleşen** takas bir hamle harcar. Geri seken takas, oyunun zaten geri aldığı bir hataydı; bedavadır. Bu
+yüzden `movesLeft -= 1` satırı `trySwap`'ta eşleşme kontrolünden **sonra** gelir.
+
+**Oyunun sonu.** Son hamlenin zincirleri bitince (evre yine `'idle'` ve `movesLeft` `0`) oyun biter. Sıra önemli:
+düşmenin bitmesini bekleriz, çünkü son hamlenin zincirleri hâlâ puana ekleniyor olabilir. Bu yüzden rekor kontrolü
+(`afterMoves()`) mücevherlerin yere indiği yerde çağrılır.
+
+**Rekoru saklamak (`localStorage`).** Tarayıcının, sayfa yenilense de hatırladığı küçük bir defterdir.
+`localStorage.setItem('match3-best', 120)` yazar, `localStorage.getItem('match3-best')` okur (yazı olarak ya da
+hiç yoksa `null`). `Number(...)` sayıya çevirir; kayıt yoksa `|| 0` ile `0` olur.
+
+**Oyun bitince tıklamak.** Tıklama dinleyicisi en başta sorar: hamle kaldı mı? Kalmadıysa ve her şey durduysa
+`reset()` ile yeni oyun başlatır; her durumda başka bir şey yapmadan çıkar. Böylece bitmiş oyunda takas yapılamaz.
+
+`'Moves ' + movesLeft + '  Best ' + best` birkaç yazıyı ve sayıyı birleştirir. `ctx.textAlign = 'right'` yazının
+sağ ucunu verdiğin `x`'e yaslar.
 
 # --task--
 
@@ -40,12 +54,81 @@ düşüşün bitmesini bekleriz, çünkü son hamlenin zincirlemeleri de puana e
 
 # --task-tr--
 
-1. `MOVES = 20` ve `movesLeft` ekle (`reset()`'te `MOVES`); eşleşen bir takas ondan 1 düşer.
-2. `best`'i `localStorage`'da `'match3-best'` adıyla tut. Mücevherler indiğinde ve `movesLeft` `0` olduğunda puan `best`'i
-   geçiyorsa kaydet.
-3. `pointerdown`'da `movesLeft` `0` iken: evre `'idle'` ise `reset()` et, başka hiçbir şey yapma.
-4. `Moves 20  Best 0`'ı `canvas.width - LEFT`, `y = 30`'a sağa hizalı çiz; oyun bittiğinde
-   `No moves left! Click to play again`'i `y = 58`'e ortalı çiz.
+1. `const FALL = 8 ...` satırının hemen **altına** ekle:
+
+   ```js
+   const MOVES = 20
+   ```
+
+2. `let score` satırının hemen **altına** `let movesLeft`, `let hint ...` satırının hemen **altına** da rekoru ekle:
+
+   ```js
+   let movesLeft
+   ```
+
+   ```js
+   let best = Number(localStorage.getItem('match3-best')) || 0
+   ```
+
+3. `reset()` içinde `score = 0` satırının hemen **altına** ekle:
+
+   ```js
+     movesLeft = MOVES
+   ```
+
+4. `trySwap()` içinde, geri sekme bloğunun kapanan `}`'sinden sonra, `chain = 0`'dan **önce** ekle:
+
+   ```js
+     movesLeft -= 1
+   ```
+
+5. `collapse()` fonksiyonunun kapanan `}`'sinin altına (`update()`'ten önce) bir satır boşluk bırakıp rekor
+   fonksiyonunu yaz:
+
+   ```js
+   function afterMoves() {
+     if (movesLeft === 0 && score > best) {
+       best = score
+       localStorage.setItem('match3-best', best)
+     }
+   }
+   ```
+
+6. `update()` içinde, `while (!hasMove()) newBoard()` satırının hemen **altına** (aynı `else { }` bloğunun içine)
+   ekle:
+
+   ```js
+         afterMoves()
+   ```
+
+7. Tıklama dinleyicisinin başına, `if (phase !== 'idle') return` satırından **önce** ekle:
+
+   ```js
+   canvas.addEventListener('pointerdown', (event) => {
+     if (movesLeft === 0) {       // ← yeni
+       if (phase === 'idle') reset()
+       return
+     }                            // ← yeni
+     if (phase !== 'idle') return
+   ```
+
+8. `draw()` fonksiyonunun en sonuna, `ctx.fillText('Score ' + score, LEFT, 30)` satırının altına ekle:
+
+   ```js
+     ctx.textAlign = 'right'
+     ctx.fillText('Moves ' + movesLeft + '  Best ' + best, canvas.width - LEFT, 30)
+     if (movesLeft === 0 && phase === 'idle') {
+       ctx.textAlign = 'center'
+       ctx.fillText('No moves left! Click to play again', canvas.width / 2, 58)
+     }
+   ```
+
+   `'  Best '`'in başında **iki** boşluk var.
+
+9. **Çalıştır**'a bas. Sağ üstte `Moves 20  Best 0` görmelisin. Eşleşen her takasta sayı bir azalmalı, geri seken
+   takasta değişmemeli. 20 hamle bitince mesaj çıkmalı, tıklayınca yeni oyun başlamalı. Alttaki kontrollerin hepsi
+   yeşil olmalı. Geri seken takas da hamle harcıyorsa `movesLeft -= 1`'i geri sekme bloğundan **sonraya**
+   koyduğunu kontrol et.
 
 # --tests--
 
