@@ -64,7 +64,8 @@ sonraki `filter` satırı onu siler.
 
 # --task--
 
-1. Add `POINTS = [0, 100, 50, 20]` and `let score = 0`, and write `hits(a, ar, b, br)` for two circles.
+1. Add `POINTS = [0, 100, 50, 20]` and `let score`, set `score = 0` in the start-up code at the bottom, and write
+   `hits(a, ar, b, br)` for two circles.
 2. Write `breakAsteroid(asteroid)`: add its points, remove it from `asteroids` with `filter`, and if its size is above
    1, push two new asteroids of size `size - 1` at its position.
 3. In `update()`, for each bullet, find an asteroid it hits (bullet radius 2); if there is one, break it and set the

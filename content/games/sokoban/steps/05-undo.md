@@ -19,9 +19,8 @@ history.push(JSON.stringify({ player, boxes, moves }))   // before the move
 ```
 
 `JSON.stringify` makes a **deep copy** in text form. That matters: pushing the `boxes` array itself would store a
-reference to the same array, and the next move would change the "saved" copy too. (It is the same value-versus-reference
-lesson as the shared row in 2048.) The last line uses destructuring assignment to set three variables at once; the
-leading `;` and the parentheses are needed because a line cannot start with `{` there.
+reference to the same array, and the next move would change the "saved" copy too. The last line uses destructuring
+assignment to set three variables at once; the leading `;` and the parentheses are needed because a line cannot start with `{` there.
 
 A **stack** (push, then pop the last) is exactly the right shape for undo: the most recent change is undone first. `R`
 restarts the level, and a move counter shows how efficient the solution is.

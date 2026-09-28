@@ -86,8 +86,8 @@ içinde çizildiği için araçla birlikte kendiliğinden eğilir. Ucu her kared
    `fuel: 400` on the lander.
 2. Write `burning()`: flying, `ArrowUp` held and fuel left. In `update()`, before gravity: the left and right arrows change
    `angle` by `SPIN`; while burning, push along the angle as above and use 1 fuel.
-3. On `pointerdown`, hold `ArrowLeft`, `ArrowUp` or `ArrowRight` for the left, middle or right third of the canvas; release
-   them on `pointerup` and `pointercancel`.
+3. On `pointerdown`, hold `ArrowLeft`, `ArrowUp` or `ArrowRight` for the left, middle or right third of the canvas; write
+   `stopTouch()`, which releases all three, and call it on `pointerup` and `pointercancel`.
 4. While burning, draw a `'#f97316'` flame inside `drawLander()`, before the body: `(-5, 8)`, `(5, 8)` and
    `(0, 16 + Math.random() * 8)`.
 

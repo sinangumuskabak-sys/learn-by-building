@@ -7,7 +7,7 @@ skills: [game.physics, game.state]
 # --explanation--
 
 A disc that simply appears in its hole feels flat. A disc that **falls**, speeding up like a real one, makes every move
-satisfying, and it only takes the same two lines of gravity as in Flappy Bird:
+satisfying, and it only takes two lines of gravity: speed up, then move:
 
 ```js
 falling.vy += GRAVITY

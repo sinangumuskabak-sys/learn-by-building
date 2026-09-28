@@ -6,7 +6,7 @@ skills: [game.physics, game.collision]
 
 # --explanation--
 
-Gravity works as in every game so far: add it to the vertical speed, then move. The new part is **landing on tiles**
+Gravity works as usual: add it to the vertical speed, then move. The new part is **landing on tiles**
 of any shape and height, not just a flat ground line.
 
 The recipe is: move, then check. If the move ended inside something solid, **snap back** to the edge of the tile you

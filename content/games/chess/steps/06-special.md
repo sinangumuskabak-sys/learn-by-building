@@ -18,7 +18,8 @@ only one square**, but only on the very next move. So `enPassant` remembers the 
 one move. The captured pawn is not on the square the capturing pawn moves to, but beside it.
 
 Both change more than one square, so `makeMove` and `undoMove` grow a little. The legality check stays the same: try the
-move, look at the king, take it back.
+move, look at the king, take it back. For castling, that check already covers the square the king lands on; only the
+square it starts on and the square it passes over need an extra test.
 
 # --explanation-tr--
 
@@ -64,7 +65,8 @@ kalır: hamleyi dene, şaha bak, geri al.
 3. In `makeMove`: remove the pawn taken en passant, move the rook when castling, set `enPassant` after a double step (or
    clear it), and turn off castling rights as described. Save and restore `castling`, `enPassant` and the pawn taken en
    passant in `undoMove`.
-4. In `legalMoves`, a castling move is not allowed if the king's square or the square it passes over is attacked.
+4. In `legalMoves`, a castling move is not allowed if the king's starting square or the square it passes over is attacked.
+   The square it lands on needs no extra test: the usual try-the-move `inCheck` test already rules it out.
 
 # --task-tr--
 

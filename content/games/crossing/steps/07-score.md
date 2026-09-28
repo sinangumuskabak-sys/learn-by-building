@@ -21,8 +21,8 @@ Each new frog starts with `furthest` back at the start row, so after losing a li
 Bigger goals give bigger rewards: 50 for a home and 100 more for clearing a level. Designing a score is designing
 **what you want players to do**.
 
-The best score is saved in `localStorage` when the game ends, exactly like in the earlier games, and shown next to the
-score so there is always a number to beat.
+The best score is saved in `localStorage` when the game ends, so the browser keeps it after the page is closed, and it is shown next
+to the score so there is always a number to beat.
 
 # --explanation-tr--
 

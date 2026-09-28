@@ -60,9 +60,10 @@ boxes.every((box) => goals.has(key(box.x, box.y)))
 1. Write `solved()` returning whether every box is on a goal.
 2. `move()` should do nothing once the level is solved.
 3. On Space, when the level is solved and it is not the last one, load the next level.
-4. Draw `Level 2/3` at the top left (white, `'bold 18px sans-serif'`). At the bottom center, show
-   `Solved! Press Space for the next level` in green when solved (`All levels solved!` on the last level), or
-   `Arrows: move` in grey otherwise.
+4. Draw `Level 2/3` left-aligned at `(12, TOP / 2)` with `textBaseline = 'middle'` (white, `'bold 18px sans-serif'`).
+   At the bottom center, `(canvas.width / 2, canvas.height - 16)` in `'14px sans-serif'`, show
+   `Solved! Press Space for the next level` in green `'#4ade80'` when solved (`All levels solved!` on the last level),
+   or `Arrows: move` in grey `'#a8a29e'` otherwise.
 
 # --task-tr--
 

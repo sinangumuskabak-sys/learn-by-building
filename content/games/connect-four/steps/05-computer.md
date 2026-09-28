@@ -22,8 +22,8 @@ const result = wins4(row, col) !== null
 board[row][col] = 0
 ```
 
-This is the first step towards real game AI: looking ahead at what a move would lead to. The tic-tac-toe game takes it all
-the way with minimax; here, one move ahead is enough to make the computer hard to beat for most players.
+This is the first step towards real game AI: looking ahead at what a move would lead to. Looking ahead all the way to the
+end of the game (the **minimax** algorithm) makes a computer that never loses; here, one move ahead is enough to make the computer hard to beat for most players.
 
 The computer waits half a second before moving, so you can see what happened, and you can only drop a disc on your own
 turn.
@@ -77,7 +77,7 @@ ileri bakmak bile bilgisayarı çoğu oyuncu için zor yenilir yapar.
 
 # --task--
 
-1. You are player 1 (red), the computer player 2 (yellow). Add `thinking`: when the turn passes to the computer, set it to
+1. You are player 1 (red), the computer player 2 (yellow): say so in the comment on `COLORS`. Add `thinking`: when the turn passes to the computer, set it to
    `30` frames; `update()` counts it down while nothing is falling, and at `0` plays `computerMove()`.
 2. Write `winsWith(col, who)`: whether dropping `who` in that column would win (try it, check, take it back).
 3. Write `computerMove()` with the four rules above. For rule 3, a column is unsafe if, after the computer's disc in it,

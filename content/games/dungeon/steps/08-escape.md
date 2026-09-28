@@ -6,8 +6,8 @@ skills: [game.state]
 
 # --explanation--
 
-Behind the locked door, the last room hides the stairs out. Stepping on them wins, and the time is the score: as in the 3D
-maze, the best time is the **lowest**, saved in `localStorage`.
+Behind the locked door, the last room hides the stairs out. Stepping on them wins, and the time is the score: the best time is
+the **lowest**, saved in `localStorage`.
 
 With that the adventure is complete: rooms written as text, walking with wall sliding, moving between rooms through gaps that
 line up, a sword that is just a box, enemies with a small state machine, hearts with invulnerability and knockback, keys and a

@@ -59,7 +59,7 @@ renkte çıkardı; bu yüzden hemen sonra fırçayı yeniden beyaza boyarız.
 # --task--
 
 1. Add `let bag` and `let next`. Write `takeFromBag()`: if the bag is empty, refill it with `[0, 1, 2, 3, 4, 5, 6]`
-   and shuffle it (Fisher–Yates, as in the memory game); then `pop()` an index and return a copy of that shape.
+   and shuffle it (Fisher–Yates: from the end, swap each item with a random one at or before it); then `pop()` an index and return a copy of that shape.
    Remove `randomShape()`.
 2. In `newGame()`, empty the bag and deal `next` before spawning. In `spawn()`, the new piece is `next`, and a new
    `next` is taken from the bag.

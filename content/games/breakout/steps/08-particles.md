@@ -16,8 +16,8 @@ gravity and fade away. Each particle is a tiny object with its own position, vel
 { x, y, vx, vy, life: 30, color }
 ```
 
-Every frame: move it, add gravity, count its life down, and remove the dead ones with `filter`. This is the same
-spawn → update → despawn pattern as the pipes in the flappy game, just with many short-lived objects. Explosions,
+Every frame: move it, add gravity, count its life down, and remove the dead ones with `filter`. This is the
+spawn → update → despawn pattern, here with many short-lived objects. Explosions,
 sparks, rain, dust and confetti are all built exactly like this.
 
 Fading uses `ctx.globalAlpha`, the opacity for everything drawn after it: `1` is solid, `0` is invisible. Setting it

@@ -78,7 +78,8 @@ ya da düşmana kendine özgü ve sabit bir görünüm vermenin yoludur.
 1. Add `SIZES = [0, 15, 28, 45]` and `let asteroids`.
 2. Write `makeAsteroid(x, y, size)`: a random angle, `speed = 0.6 + Math.random() * (4 - size) * 0.5` (smaller is
    faster), velocity from the angle, `r: SIZES[size]`, and a `shape` of 10 random scales from 0.75 to 1.1.
-3. Start with 4 big asteroids at the top or left edge. In `update()`, move and wrap every asteroid.
+3. In the start-up code at the bottom, set `asteroids = []` and push 4 big (size 3) asteroids on the top edge: `y = 0`,
+   and `x` either `0` or a random point across the width, 50/50. In `update()`, move and wrap every asteroid.
 4. Write `drawAsteroid(asteroid)` that strokes the jagged outline, and draw every asteroid.
 
 # --task-tr--

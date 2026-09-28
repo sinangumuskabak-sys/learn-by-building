@@ -101,7 +101,18 @@ güncelle, sonra çiz.
 
 # --task--
 
-1. Add the `LANES` array from the solution (the five road lanes), and set every lane's `offset` to `0`.
+1. Add the five road lanes, and set every lane's `offset` to `0`:
+
+   ```js
+   const LANES = [
+     { row: 7, speed: -0.05, len: 1, spacing: 4, color: '#ef4444' },
+     { row: 8, speed: 0.035, len: 2, spacing: 6, color: '#f59e0b' },
+     { row: 9, speed: -0.06, len: 1, spacing: 5, color: '#e879f9' },
+     { row: 10, speed: 0.03, len: 1, spacing: 4, color: '#38bdf8' },
+     { row: 11, speed: -0.025, len: 2, spacing: 5, color: '#f97316' },
+   ]
+   ```
+
 2. Write `period(lane)`: `spacing` times `Math.ceil((COLS + len) / spacing)`.
 3. Write `items(lane)` returning the left edge (in tiles) of every car: for each `start` from `0` up to the period in
    steps of `spacing`, the wrapped `start + offset`, minus `len`.

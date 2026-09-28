@@ -55,8 +55,8 @@ duruyorsan sadece yönü çevirmek yeter.
 
 1. Add `reverse(dir)` and write `turnAround(e)`: at a tile center (or when stopped) just flip `dir`; otherwise move
    `col` (wrapped) and `row` one step, flip `dir` and set `progress = frames - progress`.
-2. Move the key handling into `steer(dir)`: set `player.want`, and call `turnAround(player)` if `dir` is the reverse of the
-   player's direction.
+2. In `steer(dir)`, after setting `player.want`, call `turnAround(player)` if `dir` is the reverse of the player's
+   direction (and not `STOP`).
 3. Remember where a `pointerdown` on the canvas started. On `pointerup`, ignore movements under 20 pixels; otherwise
    `steer` along the longer axis.
 

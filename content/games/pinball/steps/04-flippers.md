@@ -23,7 +23,7 @@ direction `Math.sign(target - angle)` instead of assuming "up means smaller" mak
 For collisions a flipper is just another segment. The angle changes a little in every physics step, so the ball meets the flipper
 where it really is during the turn.
 
-Left or Z moves the left flipper, Right or M the right one.
+Left or Z moves the left flipper, Right, `/` or M the right one.
 
 # --explanation-tr--
 
@@ -76,7 +76,7 @@ değiştiği için top paleti dönüşün tam o anındaki yerinde bulur.
    `pressed = { left: false, right: false }`.
 2. Write `tip(f)`. Each frame, set each flipper's `speed` towards its target as above; `step()` turns it by `speed / SUB` and
    collides the ball with it (`bounce` 0.3). While ready, turn it by the whole `speed`.
-3. `keydown` and `keyup` set `pressed.left` (Left, Z) and `pressed.right` (Right, M); Space and Down still launch.
+3. `keydown` and `keyup` set `pressed.left` (Left, Z) and `pressed.right` (Right, `/`, M); Space and Down still launch.
 4. Draw each flipper as a `'#38bdf8'` line 10 wide from its pivot to its tip.
 
 # --task-tr--

@@ -93,11 +93,28 @@ ortasına yazılır. Hücrenin ortası: sol kenar + `CELL / 2`. `String(value)` 
 # --task--
 
 1. Store the canvas and context in `canvas` and `ctx`. Add `SIZE = 4`, `GAP = 12`,
-   `CELL = (canvas.width - GAP * (SIZE + 1)) / SIZE` (that is 85), `TOP = 60`, the `COLORS` table from the solution, and
+   `CELL = (canvas.width - GAP * (SIZE + 1)) / SIZE` (that is 85), `TOP = 60`, the `COLORS` table below, and
    `let board`, a 4×4 array of zeros.
+
+   ```js
+   const COLORS = {
+     2: '#eee4da',
+     4: '#ede0c8',
+     8: '#f2b179',
+     16: '#f59563',
+     32: '#f67c5f',
+     64: '#f65e3b',
+     128: '#edcf72',
+     256: '#edcc61',
+     512: '#edc850',
+     1024: '#edc53f',
+     2048: '#edc22e',
+   }
+   ```
+
 2. Write `cellX(col)` = `GAP + col * (CELL + GAP)` and `cellY(row)` = `TOP + GAP + row * (CELL + GAP)`.
 3. Write `draw()`: fill the canvas with `'#faf8ef'`, draw the board background `'#bbada0'` as a square from
-   `(0, TOP)` as wide as the canvas, then every cell: `'#cdc1b4'` when empty, `COLORS[value]` otherwise. For non-empty
+   `(0, TOP)` as wide as the canvas, then every cell: `'#cdc1b4'` when empty, `COLORS[value] || '#3c3a32'` otherwise (the dark color for values past 2048). For non-empty
    cells, draw the number centered in the cell, `'#776e65'` for 2 and 4 and `'#f9f6f2'` for bigger numbers, in
    `bold 40px` below 100, `bold 34px` below 1000 and `bold 26px` otherwise. Call `draw()`.
 

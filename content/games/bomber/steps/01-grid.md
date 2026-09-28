@@ -97,7 +97,7 @@ küçükken devam et, her turda 1 artsın (`++`)" demektir. Her kare `TILE` (32)
 2. Write `near(r, c, spots)`: true if `(r, c)` is at Manhattan distance 1 or less from any `[row, col]` in `spots`.
 3. Write `makeGrid()`: `'#'` on the border and where row and column are both even; `' '` next to `(1, 1)` and the enemy
    starts, or when `Math.random() > 0.55`; otherwise `'+'`. `reset()` calls it.
-4. Draw every tile as a `TILE` square at `(c * TILE, TOP + r * TILE)`: walls `'#475569'`, crates `'#b45309'` with a
+4. Fill the canvas with `'#0f172a'`, then draw every tile as a `TILE` square at `(c * TILE, TOP + r * TILE)`: walls `'#475569'`, crates `'#b45309'` with a
    `'#92400e'` stripe (`x + 4`, `y + 14`, `TILE - 8` by 4), floor `'#3f6212'`.
 
 # --task-tr--

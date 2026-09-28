@@ -77,7 +77,8 @@ birlikte halleder.
 2. Write `makeMove(m)` (move the piece, promote, switch `turn`, return `{ m, piece, captured }`) and `undoMove(undo)` that
    restores the board and `turn`.
 3. Write `legalMoves()`: the side to move's pseudo moves that do not leave its own king in check. `play()` uses
-   `makeMove`, and selecting a piece shows only its legal moves.
+   `makeMove`, and selecting a piece shows only its legal moves. Update the comment above `pseudoMoves`: check is no
+   longer "later", so it now says these moves ignore whether the king is left in check.
 
 # --task-tr--
 

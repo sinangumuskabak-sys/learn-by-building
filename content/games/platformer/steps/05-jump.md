@@ -6,7 +6,7 @@ skills: [game.input, game.physics]
 
 # --explanation--
 
-Jumping uses the same pieces as the endless runner: set `vy` to `JUMP` when on the ground, and cut the upward speed
+Jumping takes two pieces: set `vy` to `JUMP` when on the ground, and cut the upward speed
 when the button is released early for a short hop.
 
 But there is a famous problem with "only when on the ground". Run toward a ledge and press jump at the very edge. Very
@@ -65,8 +65,8 @@ platform oyunlarının çoğu kuralları sessizce oyuncu lehine böyle esnetir.
 
 1. Add `const JUMP = -11.5`, `const CUT = -4`, `const COYOTE = 6` and `let coyote = 0`.
 2. At the end of `update()`, refill `coyote` to `COYOTE` when grounded, otherwise count it down to a minimum of `0`.
-3. Write `jump()` (when `coyote > 0`: `player.vy = JUMP` and `coyote = 0`) and `endJump()` (cap `vy` at `CUT` like in
-   the runner). Call `jump()` on a non-repeated `keydown` of Space or `ArrowUp`, and `endJump()` on their `keyup`.
+3. Write `jump()` (when `coyote > 0`: `player.vy = JUMP` and `coyote = 0`) and `endJump()` (if `player.vy < CUT`, set it
+   to `CUT`). Call `jump()` on a non-repeated `keydown` of Space or `ArrowUp`, and `endJump()` on their `keyup`.
 
 # --task-tr--
 

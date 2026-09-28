@@ -20,7 +20,7 @@ were not capped at 12. Small per-frame changes add up. When tuning a game, alway
 minute? after five?".
 
 Scores like `00042` use `String(score).padStart(5, '0')`: pad the text on the left with zeros up to five characters.
-The best score is saved in `localStorage` as in the other games, and as always, one `reset()` function sets up every
+The best score is saved in `localStorage`, so the browser keeps it after the page is closed, and as always, one `reset()` function sets up every
 new run.
 
 # --explanation-tr--

@@ -64,7 +64,16 @@ kırılacağını gösterir.
 # --task--
 
 1. Give `MATERIALS` an `hp` each (`wood` 60, `stone` 160, `bird` `Infinity`) and add `pig` (`'#65a30d'`, density 1, hp 25).
-   `body` starts with its material's `hp`. Add `pigs()` and put two pigs in `LEVEL` (see the solution).
+   `body` starts with its material's `hp`. Add `pigs()`, which returns the bodies of kind `'pig'`, and
+   change `LEVEL` to this (the stone block is gone, two pigs are in):
+
+   ```js
+   const LEVEL = [
+     ['wood', 380, 230, 12, 60], ['wood', 440, 230, 12, 60], ['wood', 370, 218, 94, 12], ['pig', 406, 196, 22, 22],
+     ['pig', 480, 268, 22, 22],
+   ]
+   ```
+
 2. Write `damage(b, speed)` as above. `collide` damages both bodies with `closing`; landing on the ground damages a body with
    its falling `vy`.
 3. `step()` removes bodies with `hp <= 0` as well as those off the sides; each removed pig adds 500 to `score` and each block

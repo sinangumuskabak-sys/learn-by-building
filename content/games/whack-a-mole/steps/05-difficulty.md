@@ -22,11 +22,13 @@ upTime = 1000 - 500 * progress   // 1000 ms at the start → 500 ms at the end
 gap    = 700  - 350 * progress   //  700 ms at the start → 350 ms at the end
 ```
 
-This is linear interpolation, usually called **lerp**: `start + (end - start) * t`. It is the same idea as the
-normalized paddle offset in Pong, used the other way round: turn a `0…1` value back into a real setting. Designers tune
+This is linear interpolation, usually called **lerp**: `start + (end - start) * t`. It is
+normalizing used the other way round: instead of turning a real value into a `0…1` value, turn a `0…1` value back
+into a real setting. Designers tune
 games by adjusting the two ends of each lerp.
 
-The best score is kept in `localStorage`, as in the other games, and shown on the ready and game-over screens.
+The best score is kept in `localStorage`, which the browser keeps after the page is closed, and shown on the ready
+and game-over screens.
 
 # --explanation-tr--
 
@@ -73,7 +75,9 @@ Tur bittiğinde `if (score > best)` → skor rekordan büyükse (`>`) rekoru gü
    `700 - 350 * progress()`, and use them instead of the fixed `1000` and `700`.
 3. Add `let best = Number(localStorage.getItem('mole-best')) || 0`. When a round ends with a higher score, save it
    under `'mole-best'`.
-4. Draw `Best: 20` under the other text on the ready and game-over screens.
+4. Draw `Best: 20` in `'16px sans-serif'`: on the ready screen 28 pixels under `Click to start`, on the game-over
+   screen at `y = 252`. Make the game-over band 150 high (was 130) and move `Click to play again` down to `y = 282`
+   (was 260).
 
 # --task-tr--
 

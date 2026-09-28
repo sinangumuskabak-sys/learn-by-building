@@ -6,8 +6,8 @@ skills: [game.collision, game.input]
 
 # --explanation--
 
-The player walks in four directions while an arrow key is held. Walls stop it, and the check is the one from the 3D maze,
-now in pixels: a position is **blocked** if any corner of the player's box is inside a wall tile. Moving one axis at a time
+The player walks in four directions while an arrow key is held. Walls stop it, and the check works
+in pixels: a position is **blocked** if any corner of the player's box is inside a wall tile. Moving one axis at a time
 lets the player slide along a wall instead of sticking to it:
 
 ```js

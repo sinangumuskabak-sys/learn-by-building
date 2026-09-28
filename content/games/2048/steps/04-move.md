@@ -67,7 +67,7 @@ yalnızca bir şey değişince çizeriz.)
 
 # --task--
 
-1. Add `let score = 0` (reset it in `newGame()`).
+1. Add `let score` under `let board`, and set `score = 0` in `newGame()`.
 2. Write `function move(direction)` for `'left'`, `'right'`, `'up'` and `'down'`: for each of the 4 lines (rows for
    left/right, columns for up/down), read the line, reverse it for right/down, `slideRow` it, reverse back, write it
    into the board and add `gained` to `score`. If the board changed, `addTile()` and return `true`; otherwise return

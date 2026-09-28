@@ -73,7 +73,9 @@ Yazılarda `+` "toplamak" değil "ucuna eklemek" demektir.
 3. Write `function endGame()` that sets the state to `'over'` and, when `score > best`, updates `best` and saves it
    with `localStorage.setItem('flappy-best', best)`. Use it in `update()` instead of setting the state directly.
 4. In `flap()`, when the state is `'over'`, call `reset()` instead of doing nothing.
-5. Draw `Best: 3` (with the real number) under the score, in 16px text.
+5. Draw `Best: 3` (with the real number) under the score, in `'16px sans-serif'` at `(canvas.width / 2, 95)`.
+6. On the Game Over screen, draw `Press Space to try again` under `Game Over`, in `'18px sans-serif'` at
+   `(canvas.width / 2, canvas.height / 2 + 34)`.
 
 # --task-tr--
 

@@ -63,7 +63,8 @@ Başlangıçta kayan taşların hiç hamlesi yoktur: her biri kendi taşlarıyla
 
 1. Add `STRAIGHT` and `DIAGONAL` (four directions each).
 2. In `pseudoMoves`, rooks slide in the straight directions, bishops in the diagonal ones and queens in both, stopping before
-   their own pieces and on (capturing) enemy pieces.
+   their own pieces and on (capturing) enemy pieces. Update the comment above `pseudoMoves`: it now covers every piece's
+   pattern, not just the knights and kings.
 
 # --task-tr--
 

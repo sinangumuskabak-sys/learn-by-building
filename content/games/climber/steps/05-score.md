@@ -17,7 +17,7 @@ score = Math.max(score, Math.floor((START_Y - player.y - player.h) / 10))
 world y grows downwards, "higher" means a **smaller** y, which is why the feet are subtracted from `START_Y` and not the other
 way round.
 
-The best score is kept in `localStorage` like in the other games, and saved at the moment the game ends.
+The best score is kept in `localStorage`, so the browser keeps it after the page is closed, and saved at the moment the game ends.
 
 # --explanation-tr--
 

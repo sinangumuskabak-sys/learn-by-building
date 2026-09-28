@@ -9,7 +9,7 @@ skills: [game.state]
 After every move, check whether the board is back in order. When it is, the game stops taking moves, the tiles turn green
 and the number of moves is compared with the best so far.
 
-As in the raycaster, **fewer** is better here, so "is this a new best?" reads `best === 0 || moves < best`: no record yet,
+Unlike most scores, **fewer** is better here, so "is this a new best?" reads `best === 0 || moves < best`: no record yet,
 or a smaller number. Saving the record in `localStorage` makes it survive a reload.
 
 A click (or Space) on a solved board shuffles a new one. That completes the puzzle: a flat array with grid neighbours, a

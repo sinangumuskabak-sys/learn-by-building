@@ -6,7 +6,8 @@ skills: [game.physics, game.input]
 
 # --explanation--
 
-A jump is the same physics as the flappy bird, with one new part: **the ground stops you**.
+A jump is simple physics: gravity adds a little to the vertical speed every frame, and the speed moves the runner. The
+one new part is that **the ground stops you**.
 
 ```js
 runner.vy += GRAVITY   // gravity pulls a little more every frame

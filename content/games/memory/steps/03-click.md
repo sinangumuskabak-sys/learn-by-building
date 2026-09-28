@@ -6,7 +6,7 @@ skills: [game.input]
 
 # --explanation--
 
-In Tic-tac-toe every pixel belonged to some cell, so `Math.floor(x / CELL)` was enough. Here there are **gaps**
+When every pixel belongs to some cell, `Math.floor(x / CELL)` is enough. Here there are **gaps**
 between the cards, and a click in a gap should do nothing. So instead of computing a cell, ask each card: "is this
 point inside you?"
 

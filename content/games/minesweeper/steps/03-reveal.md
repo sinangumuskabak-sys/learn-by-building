@@ -6,7 +6,7 @@ skills: [game.input, game.state]
 
 # --explanation--
 
-A click opens the cell under the pointer. Finding it is a direct calculation, like in Tic-tac-toe: scale the click
+A click opens the cell under the pointer. Finding it is a direct calculation: scale the click
 into canvas pixels, then `Math.floor(x / CELL)` for the column and `Math.floor((y - TOP) / CELL)` for the row. Clicks
 on the top strip or outside the board give `undefined`.
 
@@ -74,7 +74,9 @@ olamayacağı için (0'da yazı yazmayız) ilk eleman `null`, yani "boş"tur.
 
 # --task--
 
-1. Add `NUMBER_COLORS` from the solution and `let state` (`'ready'` in `newGame()`).
+1. Add
+   `NUMBER_COLORS = [null, '#2563eb', '#16a34a', '#dc2626', '#7c3aed', '#b45309', '#0891b2', '#111827', '#6b7280']`
+   and `let state` (`'ready'` in `newGame()`).
 2. Write `cellAt(event)` returning the cell under a click (scaled to canvas pixels), or `undefined`.
 3. Write `reveal(start)`: skip already revealed cells; on the first reveal, `placeMines(start)` and switch to
    `'playing'`; if it is a mine, call `lose()` (`state = 'lost'` and reveal every mine); otherwise mark it revealed.

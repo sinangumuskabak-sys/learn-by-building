@@ -12,7 +12,8 @@ cards **one at a time**, and that pause is where the tension lives.
 So the dealer gets its own phase. `stand()` no longer loops; it sets `phase = 'dealer'` and a `timer`. Each frame `update()`
 counts the timer down, and when it runs out the dealer takes **one** decision: below 17, draw a card and start the timer
 again; otherwise finish. The `while` loop from before has become a loop spread over time, one turn per `DELAY` frames. This
-is the same trick as the flashing and falling gems of Match 3: game logic that waits happens in `update`, not in a loop.
+is a general trick for anything that should happen step by step on screen: game logic that waits happens in `update`,
+not in a loop.
 
 We also add a real blackjack move: **double down** (D). On your first two cards you may double your bet, but then you get
 **exactly one** more card and must stand. With 10 or 11 against a weak dealer card it is often the best play in the game.

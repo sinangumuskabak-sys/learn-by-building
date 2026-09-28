@@ -93,7 +93,7 @@ seferinde `draw()`'u çağırıp kendini yeniden ister. Ekran saniyede ~60 kez y
 
 # --task--
 
-1. Add `RANKS`, `SUITS = ['♠', '♥', '♦', '♣']`, `CARD_W = 64`, `CARD_H = 90`, `DEALER_Y = 70`, `PLAYER_Y = 250` and
+1. Add `RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']`, `SUITS = ['♠', '♥', '♦', '♣']`, `CARD_W = 64`, `CARD_H = 90`, `DEALER_Y = 70`, `PLAYER_Y = 250` and
    `card(rank, suit)`.
 2. Write `newDeck()` (all 52 cards, shuffled with Fisher–Yates) and `nextCard()`, which pops a card off the deck.
 3. Write `deal()`: a new deck if fewer than 15 cards are left, then two cards each for `player` and `dealer`. `reset()` makes a
@@ -103,6 +103,8 @@ seferinde `draw()`'u çağırıp kendini yeniden ister. Ekran saniyede ~60 kez y
    red (`'#dc2626'`) for ♥ and ♦, otherwise `'#0f172a'`. A hidden card is `'#1d4ed8'` with a `'#93c5fd'` frame 6 pixels in.
 5. Write `drawHand(hand, y, hideSecond)`: the cards from `x = 20`, `CARD_W + 8` apart (closer when the hand is long). Fill the
    table with `'#166534'` and draw the dealer's hand at `DEALER_Y` and yours at `PLAYER_Y`.
+6. Write `loop()`, which calls `draw()` and then `requestAnimationFrame(loop)`. At the bottom, call `reset()` and then
+   `requestAnimationFrame(loop)`.
 
 # --task-tr--
 

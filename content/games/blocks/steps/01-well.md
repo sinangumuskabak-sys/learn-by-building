@@ -6,7 +6,7 @@ skills: [prog.arrays, game.canvas]
 
 # --explanation--
 
-The playing field is a **well** 10 cells wide and 20 tall. Like 2048, it is a 2D array of numbers: `0` for an empty
+The playing field is a **well** 10 cells wide and 20 tall. It is a 2D array of numbers (an array of rows): `0` for an empty
 cell, anything else for a filled one (later, the number will say which color).
 
 The well is 240 pixels wide (10 cells of 24), and the canvas is 360, which leaves a side panel for the score and the

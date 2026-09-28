@@ -21,7 +21,7 @@ column with one check.
 
 The two players take turns, and `turn = 3 - turn` switches between 1 and 2 without an `if`: 3 − 1 is 2 and 3 − 2 is 1.
 
-The column under the mouse comes from the click position. Like in other games, convert screen pixels to canvas pixels
+The column under the mouse comes from the click position. Convert screen pixels to canvas pixels
 first, because the page scales the canvas. A disc floating above that column shows where the next one will go; the
 keyboard can move it with the arrows and drop it with Enter or Space, or drop straight into a column with 1 to 7.
 
@@ -93,7 +93,8 @@ arasında **sıkıştırırlar**.
 4. Keys: the left and right arrows move `hoverCol`, `1` to `7` set it; `1` to `7`, Space and Enter play `hoverCol`
    (`preventDefault()` them).
 5. Draw a disc of the current player's color above `hoverCol` (centered at `TOP - CELL / 2`), and `Red's turn` or
-   `Yellow's turn` centered at the top (`y = 26`, white, `'bold 18px sans-serif'`).
+   `Yellow's turn` centered at the top (`y = 26`, white, `'bold 18px sans-serif'`). Update the comment on `TOP`: the room
+   above the board is now for the messages and the next disc.
 
 # --task-tr--
 

@@ -6,7 +6,7 @@ skills: [game.physics, game.input, game.collision]
 
 # --explanation--
 
-In Pong the paddle moved at a fixed speed the instant you pressed a key. A platformer hero feels better with
+The simplest movement is a fixed speed from the instant a key is pressed. A platformer hero feels better with
 **momentum**: speed builds up while you hold a direction, and bleeds away when you let go.
 
 ```js

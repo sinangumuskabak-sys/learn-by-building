@@ -90,7 +90,8 @@ const KEYS = { q: 0, w: 1, a: 2, s: 3, 1: 0, 2: 1, 3: 2, 4: 3 }
    `inputAt`, and after the last step calls `nextRound()`.
 3. Write `padAt(x, y)`: `-1` above `TOP`, otherwise 0 to 3 from the quarter. On `pointerdown` (in canvas pixels) press that
    pad, or `reset()` when the game is over. On `keydown` (ignoring repeats), press the pad for the key; Space resets when over.
-4. The message becomes `Your turn: 2/5` in the player's turn and `Wrong! Click to retry` when over.
+4. The message becomes `Your turn: 2/5` in the player's turn and `Wrong! Click to retry` when over (and add `'over'` to
+   the comment on `let state`).
 
 # --task-tr--
 

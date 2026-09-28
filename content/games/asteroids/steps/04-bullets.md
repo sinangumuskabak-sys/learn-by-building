@@ -65,7 +65,8 @@ mermiye kare sayısıyla bir **ömür** veririz; her karede 1 azalır, 0 olunca 
 
 # --task--
 
-1. Add `BULLET_SPEED = 7`, `BULLET_LIFE = 55` and `let bullets = []`.
+1. Add `BULLET_SPEED = 7`, `BULLET_LIFE = 55` and `let bullets`, and set `bullets = []` in the start-up code at
+   the bottom, before `resetShip()`.
 2. Write `shoot()` that pushes a bullet at the ship's nose, with velocity `ship.v + direction * BULLET_SPEED` and
    `life: BULLET_LIFE`. Call it on a non-repeated Space `keydown`.
 3. In `update()`, move and wrap every bullet, subtract 1 from its `life`, and keep only bullets with `life > 0`.

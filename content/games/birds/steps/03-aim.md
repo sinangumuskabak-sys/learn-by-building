@@ -20,7 +20,7 @@ A dot every 4 frames, until the path reaches the ground, gives the dotted line. 
 dots, because the game adds gravity in whole-frame steps rather than smoothly. The formula is the smooth version, and at a
 few pixels the difference does not matter for aiming.
 
-Then the pointer: press **on the sling** (within 60 pixels), pull away, and let go. As in the pool game, the vector from the
+Then the pointer: press **on the sling** (within 60 pixels), pull away, and let go. The vector from the
 pointer back to the sling gives both the angle (`Math.atan2`) and the pull (`Math.hypot`, capped at `MAX_PULL`). A tiny pull
 does not launch, so a stray tap does not waste a bird.
 

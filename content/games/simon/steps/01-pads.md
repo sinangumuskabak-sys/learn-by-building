@@ -16,8 +16,8 @@ const PADS = [
 ]
 ```
 
-The pads fill the four quarters of the board. Pad `i` is in column `i % 2` and row `Math.floor(i / 2)`: the same
-"position in a grid from one number" trick as in the 15 puzzle, here with a 2 by 2 grid.
+The pads fill the four quarters of the board. Pad `i` is in column `i % 2` and row `Math.floor(i / 2)`: the usual
+"position in a grid from one number" trick, here with a 2 by 2 grid.
 
 One variable, `lit`, says which pad is lit (`-1` for none). Drawing each pad simply picks `pad.lit` or `pad.dim` depending
 on it. Whatever lights a pad later, the computer showing the sequence or the player pressing, only has to change `lit`.
@@ -100,7 +100,18 @@ bitirince kendini yeniden ister; böylece döngü hiç durmaz.
 
 # --task--
 
-1. Add `TOP = 40`, `HALF = canvas.width / 2` and the `PADS` list from the solution, and `let lit = -1`.
+1. Add `TOP = 40`, `HALF = canvas.width / 2` and the `PADS` list below (dim and lit color of
+   each pad, pads 0 1 on top, 2 3 below), and `let lit = -1`.
+
+   ```js
+   const PADS = [
+     { dim: '#14532d', lit: '#4ade80' },
+     { dim: '#7f1d1d', lit: '#f87171' },
+     { dim: '#713f12', lit: '#facc15' },
+     { dim: '#1e3a8a', lit: '#60a5fa' },
+   ]
+   ```
+
 2. Every frame fill `'#0f172a'` and draw each pad as a square filling its quarter below `TOP`, 6 pixels in from each side
    (`HALF - 12` wide), in its lit color if it is the lit pad and its dim color otherwise.
 

@@ -6,7 +6,7 @@ skills: [prog.arrays]
 
 # --explanation--
 
-In 2048 each cell was a plain number. A Minesweeper cell has to remember several things at once: whether it hides a
+A grid of plain numbers is not enough here. A Minesweeper cell has to remember several things at once: whether it hides a
 mine, how many mines are around it, whether it has been opened, whether it is flagged. So each cell is an **object**,
 and the board is a 2D array of objects.
 

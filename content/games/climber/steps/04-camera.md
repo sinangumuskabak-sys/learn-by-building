@@ -88,7 +88,9 @@ sayı saydamlık: 0 görünmez, 1 tam kapalı).
    `fillPlatforms()`, keep only platforms with `p.y < cameraY + canvas.height + 20`, and end the game when
    `player.y > cameraY + canvas.height`.
 5. Draw everything at `y - cameraY`, the `'#e2e8f0'` lines 1 pixel high every 40 world pixels (the first one at
-   `((-cameraY % 40) + 40) % 40`), and the Game Over screen as before.
+   `((-cameraY % 40) + 40) % 40`), and, when the game is over, a Game Over screen: cover the canvas with
+   `'rgba(248, 250, 252, 0.85)'`, then in `'#0f172a'`, centered, `Game Over` in `'bold 32px sans-serif'` at
+   `(canvas.width / 2, canvas.height / 2)` and `Press Space to play again` in `'18px sans-serif'` 32 pixels below it.
 
 # --task-tr--
 

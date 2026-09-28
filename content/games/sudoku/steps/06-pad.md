@@ -57,7 +57,7 @@ if (hints === 0 && (best === 0 || seconds < best))
 # --task--
 
 1. Add `PAD_Y = TOP + 9 * SIZE + 16`, `PAD_W = (9 * SIZE) / 10` and `PAD_H = 44`. Draw ten buttons from `LEFT`: a
-   `'#e0e7ff'` rectangle 2 pixels inside each, with `1` to `9` and then `⌫` in `'#3730a3'`.
+   `'#e0e7ff'` rectangle 2 pixels inside each, with `1` to `9` and then `⌫` in `'#3730a3'`, `'bold 22px sans-serif'`, centered in the button at `y = PAD_Y + 30`.
 2. A click inside the pad calls `enter` with that button's digit (the last one erases).
 3. Add `frames` (`0` in `reset()`), counted up each frame while not `won`. Draw `Time 0:42` at the top left.
 4. Keep `best` in `localStorage` under `'sudoku-best'` (in seconds). In `checkWin`, save the time if there were no hints and it

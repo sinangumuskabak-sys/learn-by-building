@@ -74,10 +74,12 @@ Son düşman gemisi batınca kazanırsın; kaç atışta bitirdiğin skorundur: 
 # --task--
 
 1. Ships get `hits: 0`. `fire` adds 1 to the ship's `hits` on a hit and returns `'sunk'` when that sinks it. Write `sunk(ship)`.
-2. Add `state` (`'playing'`) and `shots` (`0`). `playerShoots` only works while playing, counts shots, and says
+2. Add `state` (`'playing'`) and `shots` (`0`), and change the start message to `'Your turn: pick a square'`. `playerShoots` only works while playing, counts shots, and says
    `'You sank a ship!'` for a sinking. When every enemy ship is sunk, set `'won'` and `'You won in 23 shots!'`.
 3. After the end, a tap or Enter starts again.
-4. Outline each sunk enemy ship (`'#fca5a5'`, width 2) around its squares, and draw `Shots 3` and `Left: 5 4 3 3 2` beside your sea.
+4. Draw hits on a sunk ship in `'#7f1d1d'` instead of `'#ef4444'`. Outline each sunk enemy ship (`'#fca5a5'`, width 2)
+   around its squares, and draw `Shots 3` and `Left: 5 4 3 3 2` beside your sea, plus `Tap or Enter: again` under them
+   once the game is over.
 
 # --task-tr--
 

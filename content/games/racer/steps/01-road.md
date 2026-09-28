@@ -116,14 +116,18 @@ sonraki adımda hareket ekleyeceğiz.
 
 # --task--
 
-1. Add the constants from the solution (`SEG`, `ROAD`, `CAMERA_HEIGHT`, `DEPTH`, `DRAW`) and `buildTrack()`, which fills
+1. Add `W` and `H` (the canvas size), `SEG = 200`, `ROAD = 1000`, `CAMERA_HEIGHT = 1000`,
+   `DEPTH = 1 / Math.tan((50 * Math.PI) / 180)` and `DRAW = 100`, and `buildTrack()`, which fills
    `segments` with 800 straight segments `{ curve: 0 }` and sets `trackLength`. `reset()` builds it and sets `position = 0`.
 2. Write `project(dx, dy, dz)` returning `{ x, y, w }`, where `w` is the half width of the road at that distance
    (`scale * ROAD * (W / 2)`), and `quad(color, x1, y1, w1, x2, y2, w2)` that fills the trapezoid between the two edges.
 3. Fill the whole canvas with a `'#7dd3fc'` sky and its lower half with `'#15803d'` ground, then work out the near and far edge of the next `DRAW` segments (skipping
    any that start behind the camera) and paint them from far to near: a grass band across the whole width, the kerb
    (1.15 × the road width), the road and, on light segments, a center line (0.03 × the width). Light segments are those with
-   `Math.floor(index / 3)` even; see the solution for the colors.
+   `Math.floor(index / 3)` even. Colors (light / dark): grass `'#16a34a'` / `'#15803d'`, kerb `'#f8fafc'` / `'#dc2626'`,
+   road `'#6b7280'` / `'#646b75'`, center line `'#f8fafc'`.
+4. Write `loop()`, which calls `draw()` and then `requestAnimationFrame(loop)`. At the bottom, call `reset()` and then
+   `requestAnimationFrame(loop)`.
 
 # --task-tr--
 

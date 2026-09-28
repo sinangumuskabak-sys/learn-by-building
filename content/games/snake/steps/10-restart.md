@@ -82,12 +82,13 @@ belirler, matematikteki gibi: "oyun bitti **ve** (Boşluk **veya** Enter)".
 # --task--
 
 1. Write `function reset()` that sets `snake` (the starting three cells), `dir`, `nextDir`, `score = 0` and
-   `gameOver = false`, then calls `placeFood()`. Keep the `let` declarations at the top but without values, and
-   replace the old `placeFood()` call with `reset()`.
+   `gameOver = false`, then calls `placeFood()`. Keep the `let` declarations at the top but without values,
+   delete the old `placeFood()` call, and call `reset()` just before the last `requestAnimationFrame(loop)`.
 2. Add `let best = Number(localStorage.getItem('snake-best')) || 0`. When the game ends and `score > best`, update
    `best` and save it with `localStorage.setItem('snake-best', best)`.
-3. In `draw()`, show `Score: 3` and `Best: 5` (with the real numbers) in the top-left corner, in white 16px text,
-   left-aligned.
+3. In `draw()`, show `Score: 3` at `(8, 20)` and `Best: 5` at `(8, 40)` (with the real numbers), in white
+   `'16px sans-serif'`, left-aligned. On the Game Over screen, add `Press Space to play again` in `'16px sans-serif'`,
+   32 pixels under `Game Over`.
 4. When the game is over, pressing Space (`' '`) or Enter should call `reset()`.
 
 # --task-tr--

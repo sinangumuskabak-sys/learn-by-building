@@ -57,7 +57,8 @@ kadar, değilse hepsi. Tutulan kartlar en son, parmağın yanında çizilir ki h
 # --task--
 
 1. On `pointerdown`, `drag` also stores `dx`, `dy` (pointer minus the card's corner), `x`, `y` (the pointer) and `moved: false`.
-2. On `pointermove` while dragging, update `x` and `y`, and set `moved` once the pointer is more than 4 pixels from the press.
+2. On `pointermove` while dragging, set `moved` when the pointer is more than 4 pixels from its last position (`drag.x`,
+   `drag.y`), then update `x` and `y`.
 3. On release: not moved means a tap (`autoMove`); otherwise `tryMove` to the pile hit by the held card's middle,
    `(x - dx + CW / 2, y - dy + CH / 2)`.
 4. While dragging, draw the source pile only up to `drag.index`, then the held cards at `(x - dx, y - dy)`, each `UP_STEP` lower

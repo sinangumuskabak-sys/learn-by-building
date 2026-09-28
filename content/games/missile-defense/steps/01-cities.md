@@ -82,7 +82,7 @@ zemine basar: `GROUND - 14` ya da `GROUND - 4`.
 2. `reset()` makes `cities` from `CITY_XS`, all alive.
 3. Draw every frame: a `'#020617'` sky, `'#854d0e'` ground from `GROUND` down, each city as a 32-wide block centered on its
    `x`: 14 high in `'#38bdf8'` if alive, 4 high in `'#44403c'` if not (both standing on the ground), and the base as a
-   `'#a3e635'` block 24 wide and 14 high at `BASE`.
+   `'#a3e635'` block 24 wide and 14 high, centered on `BASE.x` (from `BASE.x - 12`) with its top at `BASE.y`.
 
 # --task-tr--
 

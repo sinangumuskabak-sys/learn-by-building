@@ -6,7 +6,7 @@ skills: [game.collision]
 
 # --explanation--
 
-In Pong you checked box against box. The ball is a circle now, and treating it as a box makes it clip bricks it
+Checking box against box is the simplest collision test. But the ball is a circle, and treating it as a box makes it clip bricks it
 visibly misses, especially at the corners. The proper test is short:
 
 1. Find the **point of the brick closest to the ball's center**. That is just the center, clamped into the brick's

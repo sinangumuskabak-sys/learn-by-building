@@ -25,7 +25,8 @@ on the screen, not about a spot in the game.
 Recognizing gestures from raw pointer events is the same idea behind pinch-to-zoom, drag-and-drop and every other touch
 interaction.
 
-Finally, keep the best score in `localStorage`, like in the other games.
+Finally, keep the best score in `localStorage`: the browser keeps what you store there after the page is closed, so
+the best score is still there next time.
 
 # --explanation-tr--
 
@@ -75,6 +76,7 @@ kullan" demektir. Her başarılı hamleden sonra skor rekoru geçtiyse (`score >
    `dy`: under 30 pixels both ways, call `next()`; otherwise move in the direction of the bigger one. Then `draw()`.
 3. Add `let best = Number(localStorage.getItem('2048-best')) || 0`; after each successful move, save a higher score as
    the new best. Draw `Best: 40` right-aligned at `(canvas.width - GAP, TOP / 2)`.
+4. Change the overlay texts to `'Space or tap to keep going'` and `'Space or tap to try again'`.
 
 # --task-tr--
 

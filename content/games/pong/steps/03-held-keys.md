@@ -6,7 +6,7 @@ skills: [game.input, game.loop]
 
 # --explanation--
 
-In Snake, one key press meant one turn. Paddles are different: they move **as long as a key is held down**.
+When one key press means one action, like one turn, `keydown` is all you need. Paddles are different: they move **as long as a key is held down**.
 
 `keydown` is the wrong tool on its own. When you hold a key, the browser sends one `keydown`, pauses about half a
 second, then repeats at the operating system's typing speed. Movement driven by that stutters and depends on the
@@ -97,7 +97,8 @@ yenilemeden hemen önce `loop`'u çağır" der. `loop` en sonda kendini yeniden 
 1. Add `const PADDLE_SPEED = 6` and `const keys = {}`. On `keydown` set `keys[event.key] = true`, on `keyup` set it
    to `false`.
 2. Write `function update()`: move `left` up/down by `PADDLE_SPEED` while `'w'`/`'s'` are held, and `right` while
-   `'ArrowUp'`/`'ArrowDown'` are held. Then clamp both `y` values between `0` and `canvas.height - PADDLE_H`.
+   `'ArrowUp'`/`'ArrowDown'` are held. Then clamp both `y` values between `0` and `canvas.height - PADDLE_H` with a helper
+   `function clamp(value, min, max)` that returns `Math.max(min, Math.min(max, value))` (later steps use it too).
 3. Write `function loop()` that calls `update()`, `draw()` and `requestAnimationFrame(loop)`, and start it instead of
    calling `draw()` once.
 

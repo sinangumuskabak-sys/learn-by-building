@@ -60,8 +60,8 @@ harita hafifçe altta görünür, yazılar öne çıkar. `ctx.fillText` yazı ya
 # --task--
 
 1. Enemies start as `{ d: 0, hp: 10, maxHp: 10 }`. Add `lives` (20) and `state` (`'playing'`).
-2. An enemy past the end costs a life. Remove escaped enemies before the towers look for targets, so that only enemies
-   the towers killed give gold.
+2. An enemy past the end costs a life: take it where escaped enemies are already removed, before the towers look for
+   targets.
 3. When `lives` reaches `0`, the state becomes `'over'`: `update()` stops, no more building, and Space (or a click)
    starts a new game.
 4. Draw a health bar above each enemy: `'#7f1d1d'` 28 by 4 at `x - 14, y - 20`, and over it `'#22c55e'` as wide as the

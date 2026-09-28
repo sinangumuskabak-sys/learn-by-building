@@ -69,7 +69,8 @@ Kaybedince mesaj parçalardan `+` ile birleştirilir: `'It was ' + answer.toUppe
 # --task--
 
 1. Add `state` (`'playing'` in `reset()`). After adding a guess: if it is the answer, the state becomes `'won'`; else, after
-   the sixth guess, `'lost'`.
+   the sixth guess, `'lost'`. Remove `&& guesses.length < TRIES` from the Enter rule: once six guesses are in, the
+   state is no longer `'playing'`, so the check below already stops a seventh.
 2. At the start of `type()`, when the game is over, Enter calls `reset()` and every key is otherwise ignored.
 3. Draw a message centered at `y = 393` (white, `'bold 16px sans-serif'`): `Guess the five-letter word` while playing,
    `You got it! Enter for a new word` when won, and `It was CRANE. Enter for a new word` (the answer in capitals) when lost.
