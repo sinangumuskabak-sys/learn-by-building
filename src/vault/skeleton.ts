@@ -27,6 +27,11 @@ export interface NoteSpec {
   auto: (progress: Progress) => { front: string; sections: Record<string, string> }
 }
 
+/** The name of the read-me note in each language; the vault's language is the one its read-me is in. */
+export function readmePath(lang: Lang): string {
+  return `${words[lang].readme}.md`
+}
+
 const words = {
   en: {
     readme: '00 Read me',

@@ -2,11 +2,12 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { catalog } from '../content/catalog.ts'
 import { games } from '../games/catalog.ts'
 import { langStore } from '../i18n/i18n.ts'
+import { langs } from '../i18n/messages.ts'
 import { progressStore, type Progress } from '../progress/progress.ts'
 import { applyOps, memoryPrompt, type MemoryOp, type NoteText } from './maymun-memory.ts'
 import { readSections, writeSection } from './sections.ts'
 import { sessionNote, withSessionList, type Summary } from './sessions.ts'
-import { applyAuto, instructionsText, journalNotes, vaultNotes, type NoteSpec, type VaultSource } from './skeleton.ts'
+import { applyAuto, instructionsText, journalNotes, readmePath, vaultNotes, type NoteSpec, type VaultSource } from './skeleton.ts'
 
 /**
  * The memory vault: Markdown notes kept in IndexedDB on this device (no server, no Obsidian needed). On first use the
@@ -96,8 +97,18 @@ function source(): VaultSource {
     challenges: new Map([...catalog.challenges.values()].map(({ challenge }) => [challenge.id, challenge])),
     games,
     skills: catalog.skills,
-    lang: langStore.get(),
+    lang: vaultLang(),
   }
+}
+
+/**
+ * The vault keeps the language it was built in (its read-me tells which), so switching the interface language does not
+ * add a second skeleton next to it; a reset builds it again in the current language.
+ */
+function vaultLang() {
+  const current = langStore.get()
+  if (files.has(readmePath(current))) return current
+  return langs.find((lang) => files.has(readmePath(lang))) ?? current
 }
 
 let specs: NoteSpec[] | null = null

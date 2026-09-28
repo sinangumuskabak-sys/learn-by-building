@@ -57,6 +57,23 @@ test('the memory vault: a note for everything, following progress, my notes kept
   await expect(note.getByLabel('My notes')).toHaveValue('')
 })
 
+test('switching the interface language keeps one vault; a reset builds it in the new language', async ({ page }) => {
+  await page.goto('./#/memory')
+  const tree = page.getByRole('navigation', { name: 'Memory vault' })
+  await expect(tree.getByRole('button', { name: '00 Read me' })).toBeVisible()
+  await page.evaluate(() => localStorage.setItem('lp.lang', JSON.stringify('tr')))
+  await page.reload()
+  const agac = page.getByRole('navigation', { name: 'Hafıza kasası' })
+  await expect(agac.getByRole('button', { name: '00 Read me' })).toBeVisible()
+  await expect(agac.getByRole('button', { name: '00 Beni oku' })).toHaveCount(0)
+  await page.goto('./#/settings')
+  await page.getByRole('button', { name: 'Tüm verileri sıfırla' }).click()
+  await page.getByRole('button', { name: /Bu cihazdaki tüm ilerleme/ }).click()
+  await page.goto('./#/memory')
+  await expect(agac.getByRole('button', { name: '00 Beni oku' })).toBeVisible()
+  await expect(agac.getByRole('button', { name: '00 Read me' })).toHaveCount(0)
+})
+
 test('Maymun fills the vault as the learner talks, without showing its memory block', async ({ page }) => {
   const stepNote = 'Games/Snake/Steps/01 Get a canvas to draw on.md'
   const statusNote = 'Games/Snake/Current status.md'
