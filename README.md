@@ -67,7 +67,8 @@ all data** in Settings turns it back into the empty skeleton.
 Maymun answers through AI you choose, and your key never leaves the browser:
 
 - **Your own API key:** OpenRouter, Anthropic (Claude), OpenAI or DeepSeek, called straight from the browser.
-- **An OpenAI-compatible server on your computer:** OmniRoute (connects your subscriptions), Ollama, LM Studio.
+- **An OpenAI-compatible server on your computer:** [OmniRoute](https://github.com/diegosouzapw/OmniRoute) (connects your
+  subscriptions), Ollama, LM Studio.
 - **The Maymun bridge** ([public/maymun-bridge.mjs](public/maymun-bridge.mjs), one file, no dependencies): uses the
   Claude Code subscription you are logged in with, or forwards to a gateway with `--upstream`. It listens on
   127.0.0.1 only, answers only allowed sites, and needs the key it prints at start.

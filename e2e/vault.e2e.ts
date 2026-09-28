@@ -115,6 +115,25 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   await note.getByRole('link', { name: /^\d{4}-\d{2}-\d{2} \d{2}\.\d{2}$/ }).click()
   await expect(note).toContainText('What ctx is')
   await expect(note).toContainText('Painted the board')
+  const session = decodeURIComponent(new URL(page.url()).hash.split('f=')[1])
+
+  // Resetting all data takes back what Maymun wrote, the session note and the conversation.
+  await page.goto('./#/settings')
+  await page.getByRole('button', { name: 'Reset all data' }).click()
+  await page.getByRole('button', { name: /Delete all progress/ }).click()
+  await page.goto('./#/memory?f=' + encodeURIComponent(stepNote))
+  await expect(note).toContainText('⏳ Not started')
+  await expect(note).not.toContainText('Thought the canvas draws by itself')
+  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await expect(note).toContainText('0/11')
+  await expect(note).not.toContainText('Painting the board, step 1.')
+  await expect(note).not.toContainText('Draw the grid.')
+  await page.goto('./#/memory?f=' + encodeURIComponent(session))
+  await expect(note).not.toContainText('What ctx is')
+  await page.goto('./#/games/snake/01-canvas')
+  if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  await expect(popup.locator('.markdown')).toHaveCount(0)
 })
 
 test('the live Obsidian copy: notes go to the folder, My notes written there come back', async ({ page }) => {
@@ -122,7 +141,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
   // The bridge is a plain script served with the site; it has no type declarations.
   // @ts-expect-error untyped module
   const { createBridge, parseArgs, VAULT_FOLDER } = await import('../public/maymun-bridge.mjs')
-  const { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } = await import('node:fs')
+  const { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
   const { join } = await import('node:path')
   const vault = mkdtempSync(join(tmpdir(), 'lp-obsidian-'))
@@ -157,6 +176,17 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     await note.getByLabel('My notes').fill('From the app.')
     await note.getByRole('button', { name: 'Save my notes' }).click()
     await expect.poll(() => readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('From the app.')
+
+    // Resetting all data starts the folder over: the skeleton comes back, anything else in it goes.
+    const stray = join(root, 'Games', 'Snake', 'Sessions', 'old session.md')
+    mkdirSync(join(root, 'Games', 'Snake', 'Sessions'), { recursive: true })
+    writeFileSync(stray, 'an old session')
+    await page.goto('./#/settings')
+    await page.getByRole('button', { name: 'Reset all data' }).click()
+    await page.getByRole('button', { name: /Delete all progress/ }).click()
+    await expect.poll(() => existsSync(stray), { timeout: 15_000 }).toBe(false)
+    await expect.poll(() => existsSync(snakeStatus) && readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('0/11')
+    expect(readFileSync(snakeStatus, 'utf8')).not.toContain('From the app.')
   } finally {
     bridge.close()
     rmSync(vault, { recursive: true, force: true })

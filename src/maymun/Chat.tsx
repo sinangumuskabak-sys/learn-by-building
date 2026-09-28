@@ -468,7 +468,14 @@ function ProviderForm({ compact }: { compact: boolean }) {
       </label>
       {current.id === 'bridge' && <BridgeHelp />}
       {current.id === 'custom' && <p className="text-xs text-muted">{t('maymun.custom.help')}</p>}
-      {current.id === 'omniroute' && <p className="text-xs text-muted">{t('maymun.omniroute.help')}</p>}
+      {current.id === 'omniroute' && (
+        <p className="text-xs text-muted">
+          {t('maymun.omniroute.help')}{' '}
+          <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" rel="noreferrer" className="text-accent underline">
+            {t('maymun.omniroute.repo')}
+          </a>
+        </p>
+      )}
       {current.local && (
         <label className="block text-xs font-medium">
           {t('maymun.address')}

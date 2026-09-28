@@ -435,6 +435,7 @@ test('OmniRoute: models grouped by connection, the best active one answers, the 
   await page.goto('/#/settings')
   const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
   await setup.getByLabel('Service').selectOption('omniroute')
+  await expect(setup.getByRole('link', { name: 'OmniRoute is open source: its page on GitHub' })).toHaveAttribute('href', 'https://github.com/diegosouzapw/OmniRoute')
   await setup.getByLabel('API key').fill('omni-key')
   await setup.getByRole('button', { name: 'Save' }).click()
   const claude = setup.locator('fieldset').filter({ hasText: 'Claude (Claude Code)' })
