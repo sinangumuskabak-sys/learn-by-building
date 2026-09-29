@@ -9,14 +9,19 @@ import { validateGames } from '../src/games/validate.ts'
 import { runChallengeInNode } from '../src/runners/node.ts'
 import { allPassed } from '../src/runners/types.ts'
 
+// `npm run validate -- <game id>` checks only that game (its files and its steps), for quick work on one game.
+const only = process.argv[2]
 const root = resolve(import.meta.dirname, '../content')
 const { content, problems } = loadContentFromDisk(root)
 problems.push(...validateContent(content))
-const { games, problems: gameProblems } = loadGamesFromDisk(root)
+const loaded = loadGamesFromDisk(root)
+const games = only ? loaded.games.filter((g) => g.id === only) : loaded.games
+if (only && games.length === 0) problems.push(`no game "${only}"`)
+const gameProblems = only ? loaded.problems.filter((p) => p.startsWith(`games/${only}/`)) : loaded.problems
 problems.push(...gameProblems, ...validateGames(games, new Set(content.skills.map((s) => s.id))))
 
 // Only run tests on structurally valid content; broken files already produced a clearer message above.
-if (problems.length === 0) {
+if (problems.length === 0 && !only) {
   for (const challenge of content.challenges.filter((c) => runnableTypes.includes(c.type))) {
     const seed = await runChallengeInNode(challenge, challenge.seed)
     if (allPassed(seed)) problems.push(`${challenge.source}: seed code already passes every test`)
