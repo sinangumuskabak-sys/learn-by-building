@@ -6,7 +6,7 @@ const { games } = loadGamesFromDisk(resolve(import.meta.dirname, '../content'))
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024
 
-async function tab(page: Page, name: 'Task' | 'Code' | 'Game') {
+async function tab(page: Page, name: 'Task' | 'Code' | 'Game' | 'Page') {
   if (isMobile(page)) await page.getByRole('tab', { name, exact: true }).click()
 }
 
@@ -14,6 +14,9 @@ async function setCode(page: Page, code: string) {
   await tab(page, 'Code')
   const editor = page.locator('.monaco-editor').first()
   await expect(editor).toBeVisible()
+  // The finished parts of a step are locked; replacing the whole file needs the lock off.
+  const unlock = page.getByRole('button', { name: 'Unlock the whole file' })
+  if (await unlock.isVisible()) await unlock.click()
   await editor.click()
   await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.press('Delete')
@@ -38,7 +41,7 @@ test('games list → step → failing code → passing code → next step keeps 
   await page.getByRole('link', { name: /Snake/ }).first().click()
   await expect(page).toHaveURL(/#\/games\/snake\/01-canvas$/)
 
-  await setCode(page, "const canvas = document.getElementById('game')\n")
+  await setCode(page, "const canvas = document.querySelector('p')\n")
   await run(page)
   await expect(page.getByRole('status').filter({ hasText: /checks failing/ })).toBeVisible()
 
@@ -47,12 +50,12 @@ test('games list → step → failing code → passing code → next step keeps 
   await expect(passedBanner(page)).toBeVisible()
 
   await page.getByRole('link', { name: /Next step/ }).last().click()
-  await expect(page).toHaveURL(/#\/games\/snake\/02-grid$/)
+  await expect(page).toHaveURL(/#\/games\/snake\/02-context$/)
   await tab(page, 'Code')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText('my own step one')
 
   await page.goto('./#/games')
-  await expect(page.getByText('1/11')).toBeVisible()
+  await expect(page.getByText(`1/${games.find((g) => g.id === 'snake')!.steps.length}`)).toBeVisible()
 })
 
 test('a crashing game shows the error with its line number', async ({ page }) => {
@@ -158,8 +161,9 @@ for (const game of games) {
     await page.getByRole('button', { name: 'Show solution' }).click()
     await page.getByRole('button', { name: /Replace your code/ }).click()
     await run(page)
-    await tab(page, 'Game')
-    await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
+    await tab(page, game.kind === 'web' ? 'Page' : 'Game')
+    if (game.kind === 'web') await expect(page.frameLocator('iframe[title="Page"]').locator('body')).not.toBeEmpty()
+    else await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
     await page.waitForTimeout(500)
     await expect(page.getByRole('alert').filter({ hasText: 'Your game hit an error' })).toHaveCount(0)
     expect(errors).toEqual([])
@@ -186,23 +190,79 @@ test('no horizontal scroll on the games pages', async ({ page }) => {
   }
 })
 
-test('a step opens at the end of its text and code, where the newest part is', async ({ page }) => {
-  await page.goto('/#/games/snake/06-body')
+test('a step opens in four parts, one after another, and the code opens where this step is written', async ({ page }) => {
+  await page.goto('/#/games/snake/06-draw')
+  await expect(page.getByTestId('step-part-1')).toContainText('What we are doing')
+  await expect(page.getByTestId('step-part-2')).toHaveCount(0)
+  for (const [part, title] of [[2, 'The code'], [3, 'What it means'], [4, 'Your turn']] as const) {
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByTestId(`step-part-${part}`)).toContainText(title)
+  }
+  await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0)
+  // The newest part is scrolled into view.
   const text = page.locator('[data-maymun="task"]')
   await expect
     .poll(() => text.evaluate((el) => Math.round(el.scrollHeight - el.scrollTop - el.clientHeight)))
     .toBeLessThanOrEqual(1)
-  await tab(page, 'Code')
-  // The last line of the code (the loop starting the game) is on screen, the first comment is scrolled away.
-  const code = page.locator('[data-maymun="code"] .view-lines')
-  await expect(code.getByText('requestAnimationFrame(loop)').last()).toBeInViewport()
-  await expect(code.getByText('// Snake, step by step.')).not.toBeInViewport()
+  // Opened parts stay open when coming back to the step.
+  await page.goto('/#/games/snake/05-head')
+  await page.goto('/#/games/snake/06-draw')
+  await expect(page.getByTestId('step-part-4')).toBeVisible()
 
-  // Short code fits, so nothing is scrolled away.
-  await page.goto('/#/games/tic-tac-toe/01-board')
   await tab(page, 'Code')
-  await expect(page.locator('[data-maymun="code"] .view-lines').getByText('Write your code below.')).toBeInViewport()
-  await expect(page.locator('[data-maymun="code"] .view-lines').getByText('Tic-tac-toe', { exact: false }).first()).toBeInViewport()
+  const code = page.locator('[data-maymun="code"] .view-lines')
+  // (Monaco puts a color swatch inside '#111', so the line is found by another part of it.)
+  await expect(code.locator('.view-line').filter({ hasText: 'canvas.height' })).toBeInViewport()
+})
+
+test('a guess before running shows whether it was right, and a failing check comes with a hint', async ({ page }) => {
+  await page.goto('/#/games/snake/08-loop')
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click()
+  const predict = page.getByTestId('predict')
+  await predict.getByRole('button', { name: 'Walk slowly to the right' }).click()
+  await expect(predict.getByRole('status')).toContainText('Not quite.')
+  await predict.getByRole('button', { name: 'Shoot off to the right in a blink' }).click()
+  await expect(predict.getByRole('status')).toContainText('Right!')
+  await run(page)
+  await tab(page, 'Game')
+  await expect(page.getByTestId('hint-box')).toContainText('requestAnimationFrame(loop)')
+})
+
+test('the finished parts of the code are locked until the learner unlocks them', async ({ page }) => {
+  await page.goto('/#/games/snake/02-context')
+  await tab(page, 'Code')
+  const code = page.locator('[data-maymun="code"] .view-lines')
+  await code.getByText('// Snake, step by step.').click()
+  await page.keyboard.type('zz')
+  await expect(page.locator('.monaco-editor .monaco-editor-overlaymessage')).toContainText('This part is already done')
+  await expect(code).not.toContainText('zz')
+  // The empty line under the finished code is where this step is written.
+  await page.locator('[data-maymun="code"] .view-line').last().click()
+  await page.keyboard.insertText("const ctx = canvas.getContext('2d')")
+  await run(page)
+  await expect(passedBanner(page)).toBeVisible()
+
+  await tab(page, 'Code')
+  await page.getByRole('button', { name: 'Unlock the whole file' }).click()
+  await code.getByText('// Snake, step by step.').click()
+  await page.keyboard.press('End')
+  await page.keyboard.type(' zz')
+  await expect(code).toContainText('step by step. zz')
+})
+
+test('a web project shows the page as it is typed and checks it in the page itself', async ({ page }) => {
+  await page.goto('/#/games/business-card/01-heading')
+  await tab(page, 'Code')
+  await page.locator('[data-maymun="code"] .view-line').nth(7).click()
+  await page.keyboard.insertText('<h1>Grace Hopper</h1>')
+  await tab(page, 'Page')
+  await expect(page.frameLocator('iframe[title="Page"]').locator('h1')).toHaveText('Grace Hopper')
+  await run(page)
+  await expect(passedBanner(page)).toBeVisible()
+  // The finished card can be seen before starting.
+  await tab(page, 'Task')
+  await page.getByRole('button', { name: 'See the finished project' }).click()
+  await expect(page.frameLocator('dialog iframe').locator('.card h1')).toHaveText('Ada Lovelace')
 })
 
 test('Maymun peeks into the panel under the pointer at its middle, its popup stays on screen, and it can be hidden', async ({ page }) => {
@@ -546,10 +606,10 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
 
   // The next step of the same game keeps the chat open and the conversation going.
   await page.getByRole('button', { name: 'Next step' }).click()
-  await expect(page).toHaveURL(/02-grid/)
+  await expect(page).toHaveURL(/02-context/)
   await expect(popup).toBeVisible()
   await ask('And here?')
-  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-grid, page "Snake"\] And here\?$/)
+  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-context, page "Snake"\] And here\?$/)
 
   // Another game has its own, empty conversation.
   await page.goto('/#/games/pong/01-court')
@@ -559,7 +619,7 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   expect(lastUserMessages()).toEqual(['[code panel, step 01-court, page "Pong"] Pong question'])
 
   // Back in Snake after a reload, everything is still there; a new topic starts clean.
-  await page.goto('/#/games/snake/02-grid')
+  await page.goto('/#/games/snake/02-context')
   await page.reload()
   await openOn('code', 'Code')
   await expect(popup).toContainText('What does this sentence mean?')
@@ -567,7 +627,7 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
   await expect(popup).not.toContainText('Why is it black?')
   await ask('Fresh start')
-  expect(lastUserMessages()).toEqual(['[code panel, step 02-grid, page "Snake"] Fresh start'])
+  expect(lastUserMessages()).toEqual(['[code panel, step 02-context, page "Snake"] Fresh start'])
 })
 
 test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)', async ({ page }) => {

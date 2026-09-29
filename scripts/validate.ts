@@ -1,10 +1,10 @@
 import { resolve } from 'node:path'
-import { runnableTypes } from '../src/content/schema.ts'
+import { runnableTypes, type Challenge } from '../src/content/schema.ts'
 import { loadContentFromDisk } from '../src/content/load-node.ts'
 import { validateContent } from '../src/content/validate.ts'
 import { loadGamesFromDisk } from '../src/games/load-node.ts'
 import { runGameTests } from '../src/games/run.ts'
-import { referenceStart } from '../src/games/schema.ts'
+import { projectFile, referenceStart, type Game } from '../src/games/schema.ts'
 import { validateGames } from '../src/games/validate.ts'
 import { runChallengeInNode } from '../src/runners/node.ts'
 import { allPassed } from '../src/runners/types.ts'
@@ -30,14 +30,21 @@ if (problems.length === 0) {
   }
 }
 
+/** A game runs on the simulated canvas; a web project's page is loaded into jsdom like a web challenge. */
+function runStep(game: Game, tests: { text: string; code: string }[], code: string) {
+  if (game.kind === 'game') return Promise.resolve(runGameTests({ code, tests, canvas: game.canvas }))
+  const file = projectFile(game.kind)
+  return runChallengeInNode({ type: 'web', tests } as unknown as Challenge, [{ ...file, contents: code }])
+}
+
 // Every game step: its solution passes, and the code it starts from (previous step's solution) does not.
 if (problems.length === 0) {
   for (const game of games) {
     for (const [index, step] of game.steps.entries()) {
       const tests = step.tests.map((t) => ({ text: t.text.en, code: t.code }))
-      const start = runGameTests({ code: referenceStart(game, index), tests, canvas: game.canvas })
+      const start = await runStep(game, tests, referenceStart(game, index))
       if (allPassed(start)) problems.push(`${step.source}: starting code already passes every test`)
-      const result = runGameTests({ code: step.solution, tests, canvas: game.canvas })
+      const result = await runStep(game, tests, step.solution)
       if (!allPassed(result)) {
         const failed = result.error ?? result.tests.filter((t) => !t.passed).map((t) => `"${t.text}" — ${t.error}`).join('; ')
         problems.push(`${step.source}: solution fails: ${failed}`)

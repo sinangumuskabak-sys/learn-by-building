@@ -7,7 +7,7 @@ import type { RunResult } from './types.ts'
 
 export const RUN_TIMEOUT_MS = 5_000
 
-function failAll(challenge: Challenge, error: string): RunResult {
+function failAll(challenge: Pick<Challenge, 'tests'>, error: string): RunResult {
   return { tests: challenge.tests.map((t) => ({ text: t.text, passed: false })), logs: [], error }
 }
 
@@ -40,7 +40,7 @@ function runJsInWorker(challenge: Challenge, input: JsRunInput): Promise<RunResu
  */
 export async function runWebInIframe(
   iframe: HTMLIFrameElement,
-  challenge: Challenge,
+  challenge: Pick<Challenge, 'tests'>,
   files: CodeFile[],
 ): Promise<RunResult> {
   const logs: string[] = []

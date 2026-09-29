@@ -7,15 +7,20 @@ import {
   ChevronRight,
   Circle,
   Eye,
+  Lightbulb,
   Loader2,
+  Lock,
+  LockOpen,
   MousePointerClick,
   Play,
   RotateCcw,
+  Sparkles,
   Trophy,
   TriangleAlert,
+  X,
   XCircle,
 } from 'lucide-react'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '../challenge/CodeWorkspace.tsx'
@@ -24,14 +29,24 @@ import { InlineMarkdown, Markdown } from '../components/Markdown.tsx'
 import { Button, IconButton } from '../components/ui.tsx'
 import { findGame, initialCode, loadGame, resumeStep, stepPassed } from '../games/catalog.ts'
 import { gameStorageSnapshot, saveGameStorage } from '../games/frame-storage.ts'
+import { lockedLines, withEditableLine } from '../games/lock.ts'
 import { buildPlayDocument } from '../games/play-document.ts'
-import { referenceStart, stepKey, type Game, type GameStep, type GameSummary } from '../games/schema.ts'
+import {
+  parsePredict,
+  projectFile,
+  referenceStart,
+  stepKey,
+  type Game,
+  type GameStep,
+  type GameSummary,
+} from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDebouncedEffect, useDocumentTitle, useMediaQuery } from '../lib/hooks.ts'
 import { formatChecks, useMaymunContext } from '../maymun/context.ts'
 import { framePointer } from '../maymun/tracker.ts'
 import { progressActions, useProgress } from '../progress/progress.ts'
 import { allPassed, type RunResult } from '../runners/types.ts'
+import { previewDocument } from '../runners/web-document.ts'
 import { NotFoundPage } from './NotFoundPage.tsx'
 
 const CodeEditor = lazy(() => import('../editor/CodeEditor.tsx'))
@@ -159,9 +174,9 @@ function StepChecks({ step, result }: { step: GameStep; result: RunResult | null
   )
 }
 
-function ResultSummary({ step, result }: { step: GameStep; result: RunResult | null }) {
-  const { t } = useI18n()
-  if (!result) return <p className="text-sm text-muted">{t('game.notRun')}</p>
+function ResultSummary({ game, step, result }: { game: Game; step: GameStep; result: RunResult | null }) {
+  const { t, l } = useI18n()
+  if (!result) return <p className="text-sm text-muted">{t(game.kind === 'web' ? 'web.notRun' : 'game.notRun')}</p>
   if (allPassed(result)) {
     return (
       <p role="status" className="flex items-center gap-2 text-sm font-medium text-success">
@@ -171,6 +186,7 @@ function ResultSummary({ step, result }: { step: GameStep; result: RunResult | n
     )
   }
   const failed = result.tests.filter((test) => !test.passed).length
+  const first = step.tests.find((_, i) => !result.tests[i]?.passed)
   return (
     <div role="status" className="space-y-2">
       <p className="text-sm font-medium text-danger">{t('game.failed', { failed, total: step.tests.length })}</p>
@@ -178,6 +194,15 @@ function ResultSummary({ step, result }: { step: GameStep; result: RunResult | n
         <pre className="overflow-x-auto rounded-lg border border-danger/30 bg-danger/8 p-3 font-mono text-xs whitespace-pre-wrap text-danger">
           {result.error}
         </pre>
+      )}
+      {(first || step.hint) && (
+        <div data-testid="hint-box" className="flex gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm">
+          <Lightbulb size={17} className="mt-0.5 shrink-0 text-amber-500" aria-hidden />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p className="font-semibold">{t('game.hint')}</p>
+            {step.hint ? <Markdown source={l(step.hint)} /> : first && <InlineMarkdown source={l(first.text)} />}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -189,8 +214,20 @@ function StepDone({ game, index }: { game: Game; index: number }) {
   const progress = useProgress()
   if (!stepPassed(progress, game, index)) return null
   const next = game.steps[index + 1]
+  const tryIt = game.steps[index].try
+  const tryBox = tryIt && (
+    <section className="rounded-xl border border-border bg-surface p-4">
+      <h2 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-accent uppercase">
+        <Sparkles size={15} aria-hidden />
+        {t('game.try')}
+      </h2>
+      <Markdown source={l(tryIt)} className="mt-2" />
+    </section>
+  )
   if (next) {
     return (
+      <>
+      {tryBox}
       <Link
         to={`/games/${game.id}/${next.id}`}
         className="group flex items-center gap-3 rounded-xl border border-success/40 bg-success/8 p-4 transition-colors hover:border-success"
@@ -201,17 +238,21 @@ function StepDone({ game, index }: { game: Game; index: number }) {
         </span>
         <ArrowRight size={18} className="text-success transition-transform group-hover:translate-x-0.5" aria-hidden />
       </Link>
+      </>
     )
   }
+  const web = game.kind === 'web'
   return (
+    <>
+    {tryBox}
     <section className="rounded-xl border border-success/40 bg-success/8 p-4">
       <h2 className="flex items-center gap-2 font-semibold text-success">
         <Trophy size={18} aria-hidden />
-        {t('game.finished', { game: l(game.title) })}
+        {t(web ? 'web.finished' : 'game.finished', { game: l(game.title) })}
       </h2>
       {game.extend.length > 0 && (
         <>
-          <p className="mt-2 text-sm">{t('game.finishedHint')}</p>
+          <p className="mt-2 text-sm">{t(web ? 'web.finishedHint' : 'game.finishedHint')}</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {game.extend.map((idea, i) => (
               <li key={i}>
@@ -222,28 +263,186 @@ function StepDone({ game, index }: { game: Game; index: number }) {
         </>
       )}
     </section>
+    </>
   )
 }
 
+/** The finished project, playable in a window: what the steps are building towards. */
+function FinishedPreview({ game }: { game: Game }) {
+  const { t, l } = useI18n()
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [open, setOpen] = useState(false)
+  const last = game.steps[game.steps.length - 1].solution
+  const doc =
+    game.kind === 'web' ? previewDocument([{ ...projectFile('web'), contents: last }]) : buildPlayDocument(last, game.canvas)
+  const title = t('game.finishedPreviewTitle', { game: l(game.title) })
+  return (
+    <>
+      <Button
+        size="sm"
+        onClick={() => {
+          setOpen(true)
+          dialog.current?.showModal()
+        }}
+      >
+        <Sparkles size={15} aria-hidden />
+        {t('game.finishedPreview')}
+      </Button>
+      <dialog
+        ref={dialog}
+        onClose={() => setOpen(false)}
+        aria-label={title}
+        className="m-auto w-[min(92vw,760px)] overflow-hidden rounded-xl border border-border bg-bg p-0 text-fg shadow-2xl backdrop:bg-black/60"
+      >
+        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>
+          <IconButton label={t('game.close')} onClick={() => dialog.current?.close()}>
+            <X size={16} />
+          </IconButton>
+        </div>
+        {open && (
+          <iframe
+            title={title}
+            srcDoc={doc}
+            sandbox="allow-scripts"
+            onLoad={(event) => {
+              const win = event.currentTarget.contentWindow
+              win?.focus()
+              win?.postMessage({ __lpGame: 'focus-canvas' }, '*')
+            }}
+            className={clsx('block h-[min(70vh,560px)] w-full border-0', game.kind === 'web' ? 'bg-white' : 'bg-[#2b303b]')}
+          />
+        )}
+      </dialog>
+    </>
+  )
+}
+
+/** A guess before running: pick an option, then see whether it was right and why. */
+function Predict({ source }: { source: string }) {
+  const { t } = useI18n()
+  const { question, options } = useMemo(() => parsePredict(source), [source])
+  const [picked, setPicked] = useState<number | null>(null)
+  const choice = picked === null ? null : options[picked]
+  return (
+    <div data-testid="predict" className="mb-3 rounded-lg border border-border bg-surface p-3">
+      <p className="text-xs font-semibold tracking-wide text-muted uppercase">{t('game.predict')}</p>
+      <Markdown source={question} className="mt-1.5" />
+      <div className="mt-2 flex flex-wrap gap-2">
+        {options.map((option, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setPicked(i)}
+            aria-pressed={picked === i}
+            className={clsx(
+              'rounded-lg border px-3 py-1.5 text-left text-sm transition-colors',
+              picked === null && 'border-border hover:border-accent',
+              picked !== null && option.correct && 'border-success bg-success/10',
+              picked === i && !option.correct && 'border-danger bg-danger/10',
+              picked !== null && picked !== i && !option.correct && 'border-border opacity-60',
+            )}
+          >
+            <InlineMarkdown source={option.text} />
+          </button>
+        ))}
+      </div>
+      {choice && (
+        <p role="status" className={clsx('mt-2 text-sm', choice.correct ? 'text-success' : 'text-danger')}>
+          <span className="font-semibold">{t(choice.correct ? 'game.predictRight' : 'game.predictWrong')}</span>{' '}
+          {choice.why && <InlineMarkdown source={choice.why} />} <span className="text-fg">{t('game.predictRun')}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** How far the learner has opened each step's four parts, kept while they move between steps. */
+const openedParts = new Map<string, number>()
+
 function StepText({ game, index }: { game: Game; index: number }) {
   const { t, l } = useI18n()
+  const progress = useProgress()
   const step = game.steps[index]
-  return (
-    <div className="space-y-5 p-5 sm:p-6">
-      <div>
+  const key = stepKey(game.id, step.id)
+  const [shown, setShown] = useState(() => (stepPassed(progress, game, index) ? 4 : (openedParts.get(key) ?? 1)))
+  const header = (
+    <div className="flex flex-wrap items-start gap-3">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold tracking-wide text-accent uppercase">
           {t('game.step', { n: index + 1, total: game.steps.length })}
         </p>
         <h1 className="mt-1 text-xl font-bold tracking-tight text-balance">{l(step.title)}</h1>
       </div>
-      <section>
-        <h2 className="sr-only">{t('game.idea')}</h2>
-        <Markdown source={l(step.explanation)} />
-      </section>
-      <section className="rounded-xl border border-accent/25 bg-accent/5 p-4">
-        <h2 className="text-xs font-semibold tracking-wide text-accent uppercase">{t('game.task')}</h2>
-        <Markdown source={l(step.task)} className="mt-2" />
-      </section>
+      <FinishedPreview game={game} />
+    </div>
+  )
+  if (!step.goal || !step.code || !step.meaning) {
+    return (
+      <div className="space-y-5 p-5 sm:p-6">
+        {header}
+        {step.explanation && (
+          <section>
+            <h2 className="sr-only">{t('game.idea')}</h2>
+            <Markdown source={l(step.explanation)} />
+          </section>
+        )}
+        <section className="rounded-xl border border-accent/25 bg-accent/5 p-4">
+          <h2 className="text-xs font-semibold tracking-wide text-accent uppercase">{t('game.task')}</h2>
+          <Markdown source={l(step.task)} className="mt-2" />
+        </section>
+        <StepDone game={game} index={index} />
+      </div>
+    )
+  }
+  const parts: { title: string; body: ReactNode }[] = [
+    { title: t('game.part.goal'), body: <Markdown source={l(step.goal)} /> },
+    { title: t('game.part.code'), body: <Markdown source={step.code} /> },
+    { title: t('game.part.meaning'), body: <Markdown source={l(step.meaning)} /> },
+    {
+      title: t('game.part.task'),
+      body: (
+        <>
+          {step.predict && <Predict source={l(step.predict)} />}
+          <Markdown source={l(step.task)} />
+        </>
+      ),
+    },
+  ]
+  return (
+    <div className="space-y-4 p-5 sm:p-6">
+      {header}
+      <ol className="space-y-3">
+        {parts.slice(0, shown).map((part, i) => (
+          <li
+            key={i}
+            data-testid={`step-part-${i + 1}`}
+            className={clsx('rounded-xl border p-4', i === 3 ? 'border-accent/30 bg-accent/5' : 'border-border bg-surface')}
+          >
+            <h2 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-accent uppercase">
+              <span className="grid size-5 place-items-center rounded-full bg-accent text-[11px] text-accent-fg" aria-hidden>
+                {i + 1}
+              </span>
+              {part.title}
+            </h2>
+            <div className="mt-2">{part.body}</div>
+            {i === shown - 1 && i < parts.length - 1 && (
+              <Button
+                size="sm"
+                variant="primary"
+                className="mt-3"
+                onClick={() => {
+                  openedParts.set(key, i + 2)
+                  setShown(i + 2)
+                }}
+              >
+                {t('game.part.continue')}
+                <ArrowRight size={15} aria-hidden />
+              </Button>
+            )}
+          </li>
+        ))}
+      </ol>
       <StepDone game={game} index={index} />
     </div>
   )
@@ -253,19 +452,24 @@ function StepText({ game, index }: { game: Game; index: number }) {
 function GameFrame({
   doc,
   title,
+  web,
+  frameRef,
   focusOnLoad,
   onError,
   onRun,
 }: {
   doc: string
   title: string
+  /** A web page: no canvas to focus, shown on white. */
+  web: boolean
+  frameRef: RefObject<HTMLIFrameElement | null>
   /** Focus the game after it loads (after Run/Restart, not when the page first opens). */
   focusOnLoad: boolean
   onError: (message: string) => void
   onRun: () => void
 }) {
   const { t } = useI18n()
-  const frame = useRef<HTMLIFrameElement>(null)
+  const frame = frameRef
   const [focused, setFocused] = useState(false)
   const handlers = useRef({ onError, onRun })
   useEffect(() => {
@@ -285,7 +489,7 @@ function GameFrame({
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [])
+  }, [frame])
 
   // The frame is not on the site's origin: it is asked to focus its canvas.
   const focusGame = () => {
@@ -295,7 +499,7 @@ function GameFrame({
   }
 
   return (
-    <div className="relative min-h-0 flex-1 bg-[#2b303b]">
+    <div className={clsx('relative min-h-0 flex-1', web ? 'bg-white' : 'bg-[#2b303b]')}>
       <iframe
         ref={frame}
         title={title}
@@ -308,7 +512,7 @@ function GameFrame({
         }}
         className="absolute inset-0 size-full border-0"
       />
-      {!focused && (
+      {!focused && !web && (
         <button
           type="button"
           onClick={focusGame}
@@ -364,8 +568,27 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const step = game.steps[index]
   const key = stepKey(game.id, step.id)
-  const [code, setCode] = useState(() => initialCode(progress, game, index))
-  const [doc, setDoc] = useState(() => buildPlayDocument(code, game.canvas, gameStorageSnapshot()))
+  const web = game.kind === 'web'
+  const file = projectFile(game.kind)
+  const start = referenceStart(game, index)
+  const [code, setCode] = useState(() => {
+    const opened = initialCode(progress, game, index)
+    return withEditableLine(opened, lockedLines(start, step.solution, opened))
+  })
+  const [lockOn, setLockOn] = useState(true)
+  const lock = useMemo(() => {
+    const lines = lockedLines(start, step.solution, code)
+    if (!lines) return null
+    // The editor counts the empty line after a final newline as a line of its own.
+    return { before: lines.before, after: lines.after + (lines.after > 0 && code.endsWith('\n') ? 1 : 0) }
+  }, [start, step.solution, code])
+  const documentFor = useCallback(
+    (source: string) =>
+      web ? previewDocument([{ ...projectFile('web'), contents: source }]) : buildPlayDocument(source, game.canvas, gameStorageSnapshot()),
+    [web, game.canvas],
+  )
+  const [doc, setDoc] = useState(() => documentFor(code))
+  const frame = useRef<HTMLIFrameElement>(null)
   const [result, setResult] = useState<RunResult | null>(null)
   const [crash, setCrash] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
@@ -377,39 +600,50 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     code,
     400,
     (value) => {
-      if (dirty.current) progressActions.saveFiles(key, [{ name: 'game.js', lang: 'js', contents: value }])
+      if (dirty.current) progressActions.saveFiles(key, [{ ...file, contents: value }])
     },
     { flushOnLeave: true },
   )
+  // A web page updates as it is typed, like a live preview.
+  useDebouncedEffect(code, 500, (value) => {
+    if (web && dirty.current) setDoc(documentFor(value))
+  })
 
   const restart = useCallback(() => {
     setCrash(null)
     setFocusOnLoad(true)
     // A new document string reloads the frame even when the code did not change.
-    setDoc(`${buildPlayDocument(code, game.canvas, gameStorageSnapshot())}<!-- ${Date.now()} -->`)
-  }, [code, game.canvas])
+    setDoc(`${documentFor(code)}<!-- ${Date.now()} -->`)
+  }, [code, documentFor])
 
   const run = useCallback(async () => {
     if (running) return
     setRunning(true)
-    restart()
     setMobileTab('game')
+    const tests = step.tests.map((test) => ({ text: l(test.text), code: test.code }))
     try {
-      const { runGameInWorker } = await import('../games/browser.ts')
-      const next = await runGameInWorker({
-        code,
-        canvas: game.canvas,
-        tests: step.tests.map((test) => ({ text: l(test.text), code: test.code })),
-      })
+      let next: RunResult
+      if (web) {
+        // The checks run inside the page's own frame, which then keeps showing the page.
+        setCrash(null)
+        const { runWebInIframe } = await import('../runners/browser.ts')
+        next = frame.current
+          ? await runWebInIframe(frame.current, { tests }, [{ ...file, contents: code }])
+          : { tests: tests.map((test) => ({ text: test.text, passed: false })), logs: [], error: 'Preview is not available' }
+      } else {
+        restart()
+        const { runGameInWorker } = await import('../games/browser.ts')
+        next = await runGameInWorker({ code, canvas: game.canvas, tests })
+      }
       setResult(next)
       if (allPassed(next)) {
-        progressActions.saveFiles(key, [{ name: 'game.js', lang: 'js', contents: code }])
+        progressActions.saveFiles(key, [{ ...file, contents: code }])
         progressActions.markPassed(key)
       }
     } finally {
       setRunning(false)
     }
-  }, [code, game.canvas, key, l, restart, running, step.tests])
+  }, [code, file, game.canvas, key, l, restart, running, step.tests, web])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -437,10 +671,11 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   )
 
   useMaymunContext('code', () => ({
-    title: `${l(game.title)} — ${l(step.title)} — game.js`,
+    title: `${l(game.title)} — ${l(step.title)} — ${file.name}`,
     text: [
+      step.code ? `Code to write in this step:\n${step.code}` : '',
       `Task:\n${l(step.task)}`,
-      `Code (game.js):\n${code}`,
+      `Code (${file.name}):\n${code}`,
       result ? `Checks:\n${formatChecks(result)}` : 'Checks: not run yet.',
       crash ? `Game crashed: ${crash}` : '',
     ]
@@ -450,22 +685,32 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   useMaymunContext('game', () => ({
     title: `${l(game.title)} — ${l(step.title)}`,
     text: [
-      crash ? `Game crashed: ${crash}` : 'The game is running.',
+      crash ? `Game crashed: ${crash}` : web ? 'The page is shown.' : 'The game is running.',
       result && result.logs.length > 0 ? `Console:\n${result.logs.join('\n')}` : '',
-      `Code (game.js):\n${code}`,
+      `Code (${file.name}):\n${code}`,
     ]
       .filter(Boolean)
       .join('\n\n'),
   }))
   useMaymunContext('results', () => ({
     title: `${l(game.title)} — ${l(step.title)} — ${t('game.checks')}`,
-    text: [result ? formatChecks(result) : 'Checks: not run yet.', `Code (game.js):\n${code}`].join('\n\n'),
+    text: [result ? formatChecks(result) : 'Checks: not run yet.', `Code (${file.name}):\n${code}`].join('\n\n'),
   }))
 
   const editor = (
     <div data-maymun="code" className="flex h-full min-h-0 flex-col bg-surface">
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-        <span className="min-w-0 flex-1 truncate px-2 font-mono text-xs text-muted">game.js</span>
+        <span className="min-w-0 flex-1 truncate px-2 font-mono text-xs text-muted">{file.name}</span>
+        {lock && (
+          <IconButton
+            label={lockOn ? t('game.unlock') : t('game.locked')}
+            aria-pressed={lockOn}
+            onClick={() => setLockOn(!lockOn)}
+            className={lockOn ? 'text-accent' : undefined}
+          >
+            {lockOn ? <Lock size={15} /> : <LockOpen size={15} />}
+          </IconButton>
+        )}
         <ConfirmButton
           label={t('game.solution')}
           confirmLabel={t('game.solutionConfirm')}
@@ -477,7 +722,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
         <ConfirmButton
           label={t('game.resetStep')}
           confirmLabel={t('game.resetConfirm')}
-          onConfirm={() => replaceCode(referenceStart(game, index))}
+          onConfirm={() => replaceCode(withEditableLine(start, lockedLines(start, step.solution, start)))}
         >
           <RotateCcw size={15} aria-hidden />
           <span className="hidden xl:inline">{t('game.resetStep')}</span>
@@ -487,15 +732,17 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
       <div className="min-h-0 flex-1">
         <Suspense fallback={<div className="p-4 text-sm text-muted">…</div>}>
           <CodeEditor
-            path={`games/${game.id}/game.js`}
-            lang="js"
+            path={`games/${game.id}/${file.name}`}
+            lang={file.lang}
             value={code}
             onChange={(value) => {
               dirty.current = true
               setCode(value)
             }}
             onRun={() => void run()}
-            label={t('game.editorLabel', { game: l(game.title) })}
+            label={t('game.editorLabel', { game: l(game.title), file: file.name })}
+            locked={lockOn ? lock : null}
+            lockedMessage={t('game.lockedMessage')}
             startAtEnd
           />
         </Suspense>
@@ -506,17 +753,25 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   const gameView = (
     <div data-maymun="game" className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
-        <span className="flex-1 text-xs font-semibold tracking-wide text-muted uppercase">{t('game.preview')}</span>
+        <span className="flex-1 text-xs font-semibold tracking-wide text-muted uppercase">{t(web ? 'web.preview' : 'game.preview')}</span>
         <IconButton label={t('game.restart')} onClick={restart}>
           <RotateCcw size={16} />
         </IconButton>
       </div>
-      <GameFrame doc={doc} title={t('game.preview')} focusOnLoad={focusOnLoad} onError={setCrash} onRun={() => void run()} />
+      <GameFrame
+        doc={doc}
+        title={t(web ? 'web.preview' : 'game.preview')}
+        web={web}
+        frameRef={frame}
+        focusOnLoad={focusOnLoad}
+        onError={setCrash}
+        onRun={() => void run()}
+      />
       {crash && (
         <div role="alert" className="flex shrink-0 gap-2 border-t border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
           <TriangleAlert size={15} className="mt-px shrink-0" aria-hidden />
           <span className="min-w-0">
-            <span className="font-semibold">{t('game.crashed')}: </span>
+            <span className="font-semibold">{t(web ? 'web.crashed' : 'game.crashed')}: </span>
             <span className="font-mono break-words">{crash}</span>
           </span>
         </div>
@@ -527,7 +782,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
   const checks = (
     <section data-maymun="results" className="h-full space-y-3 overflow-y-auto bg-surface p-4">
       <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">{t('game.checks')}</h2>
-      <ResultSummary step={step} result={result} />
+      <ResultSummary game={game} step={step} result={result} />
       {result && allPassed(result) && <StepDone game={game} index={index} />}
       <StepChecks step={step} result={result} />
       {result && result.logs.length > 0 && (
@@ -574,7 +829,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     const tabs: { id: MobileTab; label: string }[] = [
       { id: 'task', label: t('game.tabTask') },
       { id: 'code', label: t('game.tabCode') },
-      { id: 'game', label: t('game.tabGame') },
+      { id: 'game', label: t(web ? 'web.tabGame' : 'game.tabGame') },
     ]
     body = (
       <div className="flex h-full flex-col">

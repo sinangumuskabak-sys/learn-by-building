@@ -1,4 +1,4 @@
-import type { Game } from './schema.ts'
+import { parsePredict, type Game } from './schema.ts'
 
 /** Structural checks for games; running the tests is done by `npm run validate`. */
 export function validateGames(games: Game[], skillIds: Set<string>): string[] {
@@ -19,7 +19,18 @@ export function validateGames(games: Game[], skillIds: Set<string>): string[] {
       if (index > 0 && step.seed) add('only the first step has "# --seed--"; later steps start from the previous solution')
       if (step.tests.length === 0) add('needs at least one test')
       if (!step.title.tr) add('frontmatter needs "title_tr"')
-      if (!step.explanation.tr) add('needs "# --explanation-tr--"')
+      const parts = [step.goal, step.code, step.meaning]
+      if (step.explanation && parts.some(Boolean)) add('use either "# --explanation--" or goal/code/meaning, not both')
+      else if (!step.explanation && !parts.every(Boolean)) add('needs "# --goal--", "# --code--" and "# --meaning--" (or an "# --explanation--")')
+      for (const [name, text] of Object.entries({ explanation: step.explanation, goal: step.goal, meaning: step.meaning, predict: step.predict, hint: step.hint, try: step.try })) {
+        if (text && !text.tr) add(`needs "# --${name}-tr--"`)
+      }
+      for (const text of step.predict ? [step.predict.en, step.predict.tr ?? ''] : []) {
+        const { question, options } = parsePredict(text)
+        if (!question || options.length < 2 || options.filter((o) => o.correct).length !== 1) {
+          add('"# --predict--" needs a question and at least two "- [ ]" options, exactly one marked "- [x]"')
+        }
+      }
       if (!step.task.tr) add('needs "# --task-tr--"')
       for (const test of step.tests) if (!test.text.tr) add(`test "${test.text.en}" needs a "tr:" line`)
       for (const skill of step.skills) if (!skillIds.has(skill)) add(`unknown skill "${skill}"`)

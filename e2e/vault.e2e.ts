@@ -24,12 +24,12 @@ test('the memory vault: a note for everything, following progress, my notes kept
   await snake.getByRole('button', { name: 'Current status' }).click()
   const note = page.getByRole('main').last()
   await expect(note).toContainText('Snake — Current status')
-  await expect(note).toContainText('0/11')
+  await expect(note).toContainText('0/27')
 
   // Finishing a step shows in the vault (the app writes the status), and links lead to the step's note.
   await passFirstSnakeStep(page)
   await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
-  await expect(note).toContainText('1/11')
+  await expect(note).toContainText('1/27')
   await expect(note).toContainText('✅ Done')
   await note.getByRole('link', { name: /^01 / }).click()
   await expect(note).toContainText('What you learned')
@@ -51,8 +51,8 @@ test('the memory vault: a note for everything, following progress, my notes kept
   await page.getByRole('button', { name: 'Reset all data' }).click()
   await page.getByRole('button', { name: /Delete all progress/ }).click()
   await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
-  await expect(note).toContainText('0/11')
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Get a canvas to draw on.md'))
+  await expect(note).toContainText('0/27')
+  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
   await expect(note).toContainText('⏳ Not started')
   await expect(note.getByLabel('My notes')).toHaveValue('')
 })
@@ -75,7 +75,7 @@ test('switching the interface language keeps one vault; a reset builds it in the
 })
 
 test('Maymun fills the vault as the learner talks, without showing its memory block', async ({ page }) => {
-  const stepNote = 'Games/Snake/Steps/01 Get a canvas to draw on.md'
+  const stepNote = 'Games/Snake/Steps/01 Find the canvas.md'
   const statusNote = 'Games/Snake/Current status.md'
   const sent: { messages: { role: string; content: string }[] }[] = []
   const memory = JSON.stringify([
@@ -114,13 +114,13 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   expect(system).toContain(`- ${statusNote}: now (set), next (set), questions (add)`)
 
   // What Maymun wrote is in the vault; what it may not write is not.
-  await popup.getByRole('link', { name: '01 Get a canvas to draw on' }).click()
+  await popup.getByRole('link', { name: '01 Find the canvas' }).click()
   const note = page.getByRole('main').last()
   await expect(note).toContainText('Thought the canvas draws by itself; it needs ctx.')
   await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
   await expect(note).toContainText('Painting the board, step 1.')
   await expect(note).not.toContainText('not Maymun’s to write')
-  await expect(note).toContainText('0/11')
+  await expect(note).toContainText('0/27')
 
   // A new topic sums up the session into a note next to the project's status, linked from it.
   await page.goto('./#/games/snake/01-canvas')
@@ -142,7 +142,7 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   await expect(note).toContainText('⏳ Not started')
   await expect(note).not.toContainText('Thought the canvas draws by itself')
   await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
-  await expect(note).toContainText('0/11')
+  await expect(note).toContainText('0/27')
   await expect(note).not.toContainText('Painting the board, step 1.')
   await expect(note).not.toContainText('Draw the grid.')
   await page.goto('./#/memory?f=' + encodeURIComponent(session))
@@ -216,7 +216,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     await page.getByRole('button', { name: 'Reset all data' }).click()
     await page.getByRole('button', { name: /Delete all progress/ }).click()
     await expect.poll(() => existsSync(stray), { timeout: 15_000 }).toBe(false)
-    await expect.poll(() => existsSync(snakeStatus) && readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('0/11')
+    await expect.poll(() => existsSync(snakeStatus) && readFileSync(snakeStatus, 'utf8'), { timeout: 15_000 }).toContain('0/27')
     expect(readFileSync(snakeStatus, 'utf8')).not.toContain('From the app.')
   } finally {
     bridge.close()

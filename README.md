@@ -33,9 +33,9 @@ Build real games step by step: the code editor on the left, the game running on 
 idea, has its own checks, and ends with a playable game.
 
 <!-- games:en:start -->
-44 games, 307 steps:
+45 games, 334 steps:
 
-- **Beginner:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Blackjack · Hangman · Conway's Game of Life · Typing Rain · Sokoban · Rhythm Lanes · Snake · Pong · Flappy-style Bird
+- **Beginner:** My business card · Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Blackjack · Hangman · Conway's Game of Life · Typing Rain · Sokoban · Rhythm Lanes · Snake · Pong · Flappy-style Bird
 - **Intermediate:** Candy Crush-style Match 3 · Sudoku · Puzzle Bobble-style Bubble Shooter · Klondike Solitaire · Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Battleship · Missile Command-style Defense · Bomberman-style Arena · Asteroids · Pool · Pinball
 - **Advanced:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess · OutRun-style Racer · Zelda-style Dungeon · Scorched Earth-style Artillery · Angry Birds-style Slingshot
 <!-- games:en:end -->
@@ -114,9 +114,9 @@ bağımsız bir projedir, freeCodeCamp kodu içermez.
 **Oyun Atölyesi:** Gerçek oyunları adım adım yap; kod solda, oyun sağda çalışır.
 
 <!-- games:tr:start -->
-44 oyun, 307 adım:
+45 oyun, 334 adım:
 
-- **Başlangıç:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Blackjack · Adam Asmaca · Conway'in Hayat Oyunu · Yazı Yağmuru · Sokoban · Ritim Şeritleri · Yılan · Pong · Flappy tarzı kuş
+- **Başlangıç:** Kartvizitim · XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Blackjack · Adam Asmaca · Conway'in Hayat Oyunu · Yazı Yağmuru · Sokoban · Ritim Şeritleri · Yılan · Pong · Flappy tarzı kuş
 - **Orta:** Candy Crush Tarzı Üçlü Eşleştirme · Sudoku · Puzzle Bobble Tarzı Balon Atıcı · Klondike Solitaire · Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Amiral Battı · Missile Command Tarzı Savunma · Bomberman Tarzı Arena · Asteroids · Bilardo · Pinball
 - **İleri:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç · OutRun Tarzı Yarış · Zelda Tarzı Zindan · Scorched Earth Tarzı Topçu · Angry Birds Tarzı Sapan
 <!-- games:tr:end -->

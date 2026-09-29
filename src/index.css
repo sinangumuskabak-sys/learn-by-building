@@ -231,3 +231,11 @@ body {
     animation: none;
   }
 }
+
+/* Finished parts of a step's code that cannot be edited (see CodeEditor `locked`). */
+.lp-locked-line {
+  background: color-mix(in oklab, currentColor 6%, transparent);
+}
+.lp-locked-text {
+  opacity: 0.55;
+}

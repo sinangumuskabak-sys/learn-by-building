@@ -1,0 +1,37 @@
+{
+  "id": "business-card",
+  "order": 5,
+  "kind": "web",
+  "title": {
+    "en": "My business card",
+    "tr": "Kartvizitim"
+  },
+  "description": {
+    "en": "Build your own business card page with HTML and CSS: a heading, a card with rounded corners and a shadow, and your links. The page updates as you type.",
+    "tr": "HTML ve CSS ile kendi kartvizit sayfanı yap: başlık, yuvarlak köşeli ve gölgeli bir kart, bağlantıların. Sayfa sen yazdıkça güncellenir."
+  },
+  "difficulty": "beginner",
+  "color": "#4f46e5",
+  "skills": [
+    "fe.html",
+    "fe.css"
+  ],
+  "extend": [
+    {
+      "en": "Add a photo above your name with `<img src=\"...\" alt=\"...\">` and make it round with `border-radius: 50%`.",
+      "tr": "Adının üstüne `<img src=\"...\" alt=\"...\">` ile bir fotoğraf ekle ve `border-radius: 50%` ile yuvarlak yap."
+    },
+    {
+      "en": "Add a second line under your name with `<h2>` for your city or school, in a lighter color.",
+      "tr": "Adının altına `<h2>` ile şehrini ya da okulunu yaz, daha açık bir renkle."
+    },
+    {
+      "en": "Make a dark version: dark card, light text. Try `background: #1e293b` and `color: white`.",
+      "tr": "Karanlık bir sürüm yap: koyu kart, açık yazı. `background: #1e293b` ve `color: white` dene."
+    },
+    {
+      "en": "Make the card grow a little when the mouse is over it: `.card:hover { transform: scale(1.03); }` plus `transition: transform 0.2s` on `.card`.",
+      "tr": "Fare üstüne gelince kart biraz büyüsün: `.card:hover { transform: scale(1.03); }` ve `.card` kuralına `transition: transform 0.2s`."
+    }
+  ]
+}

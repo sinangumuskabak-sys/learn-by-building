@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { parseGameStep } from './parse.ts'
-import { gameMetaSchema, type Game, type GameStep } from './schema.ts'
+import { gameMetaSchema, projectFile, type Game, type GameStep } from './schema.ts'
 
 /**
  * Reads `content/games/<id>/game.json` and `steps/*.md` (Node only; the browser gets games through the
@@ -37,7 +37,7 @@ export function loadGamesFromDisk(contentRoot: string): { games: Game[]; problem
     for (const file of files) {
       const path = join(stepsDir, file)
       try {
-        steps.push(parseGameStep(rel(path), file.slice(0, -3), readFileSync(path, 'utf8')))
+        steps.push(parseGameStep(rel(path), file.slice(0, -3), readFileSync(path, 'utf8'), projectFile(meta.kind).lang))
       } catch (error) {
         problems.push((error as Error).message)
       }

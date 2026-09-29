@@ -24,6 +24,22 @@
     "category": "databases"
   },
   {
+    "id": "fe.html",
+    "title": {
+      "en": "HTML structure",
+      "tr": "HTML ile sayfa yapısı"
+    },
+    "category": "frontend-mobile"
+  },
+  {
+    "id": "fe.css",
+    "title": {
+      "en": "Styling with CSS",
+      "tr": "CSS ile görünüm"
+    },
+    "category": "frontend-mobile"
+  },
+  {
     "id": "fe.accessibility",
     "title": {
       "en": "Accessibility",
