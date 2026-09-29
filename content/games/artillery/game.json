@@ -14,7 +14,6 @@
     { "en": "Difficulty levels that change the computer's error.", "tr": "Bilgisayarın hatasını değiştiren zorluk seviyeleri." },
     { "en": "A big bomb with a wider blast, one per game.", "tr": "Oyun başına bir tane, daha geniş patlamalı büyük bir bomba." },
     { "en": "Fall damage for a tank that drops a long way into a crater.", "tr": "Bir kratere uzun süre düşen bir tank için düşme hasarı." },
-    { "en": "A dotted trail showing where your last shot went.", "tr": "Son atışının nereye gittiğini gösteren noktalı bir iz." },
     { "en": "Let the tanks drive a few steps left or right each turn.", "tr": "Tanklar her sırada birkaç adım sola ya da sağa sürebilsin." }
   ]
 }

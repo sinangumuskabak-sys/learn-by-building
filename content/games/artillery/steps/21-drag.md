@@ -1,157 +1,85 @@
 ---
-title: Wind
-title_tr: Rüzgâr
-skills: [game.physics]
+title: Drag and let go
+title_tr: Sürükle ve bırak
+skills: [game.input]
 ---
 
-# --explanation--
+# --goal--
 
-With the same angle and power, a shot always lands in the same place, so once you find the range the game is over. **Wind** keeps
-it interesting: a new random wind every turn, from `-0.05` to `0.05`.
+Press on the canvas, drag to aim, and let go to fire, like pulling back a slingshot. While the finger is down every
+movement aims again.
 
-Wind is a small force pushing sideways, so it goes where gravity goes, into the velocity, every frame:
+# --goal-tr--
 
-```js
-s.vx += wind
-s.vy += GRAVITY
-```
+Tuvale bas, nişan almak için **sürükle**, ateş etmek için **bırak**; sapan çeker gibi. Parmak basılıyken her hareket
+yeniden nişan aldırır.
 
-Because it adds to `vx` every frame, its effect **grows with time**: a long high lob drifts much more than a short flat shot. After
-`t` frames the drift is `wind × (1 + 2 + ... + t)`, the same growing sum as a falling object. Players learn to shoot flatter into a
-headwind and higher with the wind behind them.
-
-The wind is shown as an arrow and a number from 0 to 5, rounded to whole hundredths so it reads cleanly.
-
-# --explanation-tr--
-
-**Bu adımda:** rüzgâr ekleyeceğiz. Ekranın üst ortasında `Wind → 3` gibi bir yazı olacak: ok rüzgârın yönünü, sayı
-gücünü gösterecek. Her sırada rüzgâr değişecek ve mermileri yana itecek.
-
-**Neden rüzgâr?** Aynı açı ve güçle bir atış hep aynı yere düşer; menzili bir kez bulunca oyunun tadı kaçar. Her sırada
-yeni, rastgele bir rüzgâr (-0.05 ile 0.05 arası) oyunu ilginç tutar.
-
-**Rüzgâr, yerçekimi gibi bir kuvvettir.** Yerçekimi her karede `vy`'ye ekleniyordu (3. adım). Rüzgâr da her karede
-yana doğru, `vx`'e eklenir:
+# --code--
 
 ```js
-s.vx += wind      // rüzgâr yana iter
-s.vy += GRAVITY   // yerçekimi aşağı çeker
+let dragging
+
+  dragging = false
+
+  dragging = true
+
+canvas.addEventListener('pointermove', (event) => {
+  if (dragging) pointAt(event)
+})
+
+document.addEventListener('pointerup', () => {
+  if (!dragging) return
+  dragging = false
+  fire()
+})
 ```
 
-Her karede `vx`'e eklendiği için etkisi **zamanla büyür**: uzun, yüksek bir atış kısa, düz bir atıştan çok daha fazla
-sürüklenir. `t` karede kayma `wind × (1 + 2 + ... + t)` olur; düşen bir cismin hızlanmasıyla aynı büyüyen toplam.
-Oyuncular karşıdan esen rüzgârda daha düz, arkadan esende daha yüksek atmayı öğrenir.
+# --meaning--
 
-**Rastgele rüzgâr, düzgün sayılarla.** `Math.random() - 0.5` -0.5 ile 0.5 arasında bir sayıdır. 10 ile çarpıp
-`Math.round` ile yuvarlayınca -5 ile 5 arasında bir **tam sayı** olur; 100'e bölünce -0.05 ile 0.05 arasında, hep tam
-yüzdelik (0.03 gibi) bir sayı çıkar. Ekranda bunu 100 ile çarpıp işaretsiz gösteririz (`Math.abs`): `3`.
+- `dragging` is true between pressing and letting go.
+- Letting go is heard on the whole document, so it still fires if the finger slides off the canvas.
 
-```js
-const newWind = () => (wind = Math.round((Math.random() - 0.5) * 10) / 100)
-```
+# --meaning-tr--
 
-Bu tek satırlık fonksiyon hesaplanan sayıyı `wind` değişkenine koyar. Oyunun başında (`reset`) ve sıra her değiştiğinde
-(`endTurn`) çağrılır.
-
-**Ok seçimi:** `wind > 0 ? '→' : wind < 0 ? '←' : ''` → "artıysa sağ ok, eksiyse sol ok, sıfırsa ok yok (boş yazı)".
-Artı `vx` sağa doğru demek, o yüzden artı rüzgâr sağa eser.
+- `dragging` → basıldığından bırakılana kadar `true`.
+- `pointermove` → sürüklerken her harekette `pointAt`.
+- `pointerup` **bütün belgede** dinleniyor: parmak tuvalin dışına kaysa da bırakınca ateş eder.
+- `if (!dragging) return` → yalnız tuvalde başlamış bir sürüklemede ateş et.
 
 # --task--
 
-1. Add `wind` and `newWind()`, which sets it to `Math.round((Math.random() - 0.5) * 10) / 100`. Call it in `reset()` and at every
-   change of turn.
-2. `fly` adds `wind` to `vx` every frame, before gravity.
-3. Draw `Wind → 3` (or `←`, or no arrow when calm) centered at `(W / 2, 20)`, with the number `Math.abs(Math.round(wind * 100))`.
+1. Under `thinking`, write `dragging`; at the end of `reset`, set it to `false`.
+2. In the pointer-down listener, start dragging before `pointAt`.
+3. Under it, write the move and up listeners.
 
 # --task-tr--
 
-1. `let timer ...` satırının altına rüzgârı ekle:
-
-   ```js
-   let wind
-   ```
-
-2. `reset()` içinde `blast = null` satırının altına (`state = 'aiming'`'in üstüne) ekle:
-
-   ```js
-     newWind()
-   ```
-
-3. `reset()`'in kapanış `}`'sinden sonra, `function fire()`'ın **üstüne** `newWind`'i yaz:
-
-   ```js
-   const newWind = () => (wind = Math.round((Math.random() - 0.5) * 10) / 100) // -0.05 to 0.05
-   ```
-
-4. `fly()`'ın yorumunu güncelle ve en başına rüzgârı ekle:
-
-   ```js
-   // One frame of flight: wind pushes sideways, gravity pulls down. Returns what it hit, or null.
-   function fly(s) {
-     s.vx += wind // ← yeni
-     s.vy += GRAVITY
-   ```
-
-5. `endTurn()` içinde, sıra değiştiği yerde `turn = 1 - turn` satırının altına ekle:
-
-   ```js
-     else {
-       turn = 1 - turn
-       newWind() // ← yeni
-       state = 'aiming'
-     }
-   ```
-
-6. `draw()`'da açı yazısını çizen `ctx.fillText('Angle ' ...)` satırının altına (`ctx.textAlign = 'right'`'ın üstüne)
-   rüzgâr yazısını ekle:
-
-   ```js
-     ctx.textAlign = 'center'
-     const arrow = wind > 0 ? '→' : wind < 0 ? '←' : ''
-     ctx.fillText('Wind ' + arrow + ' ' + Math.abs(Math.round(wind * 100)), W / 2, 20)
-   ```
-
-   `→` ve `←` işaretlerini klavyede bulamazsan bu satırdan kopyala. `'Wind '` ve `' '` içindeki boşluklar önemli.
-
-7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Üst ortada rüzgâr yazmalı; her atıştan sonra değişmeli. Yüksek
-   atışların rüzgâr yönünde belirgin şekilde kaydığını görmelisin. Alttaki kontrollerin hepsi yeşil olmalı.
+1. `let thinking` satırının altına `dragging` yaz; `reset`'in sonuna `dragging = false` yaz.
+2. Dokunma dinleyicisinde `pointAt(event)` satırının üstüne `dragging = true` yaz.
+3. Altına `pointermove` ve `pointerup` dinleyicilerini yaz. **Çalıştır**, sürükle ve bırak.
 
 # --tests--
 
-The wind should be a whole number of hundredths, at most 0.05, and change.
-tr: Rüzgâr tam yüzdelik, en fazla 0.05 olmalı ve değişmeli.
+Dragging should aim, and letting go should fire.
+tr: Sürüklemek nişan aldırmalı, bırakmak ateş etmeli.
 
 ```js
-const seen = new Set()
-for (let i = 0; i < 40; i++) {
-  newWind()
-  assert.isAtMost(Math.abs(wind), 0.05 + 1e-9)
-  assert.closeTo(wind * 100, Math.round(wind * 100), 1e-9)
-  seen.add(wind)
-}
-assert.isAbove(seen.size, 4, 'the wind changes')
+const t = tanks[0]
+$.pointerDown(t.x + 60, t.y - 8 - 60)
+$.move(t.x, t.y - 8 - 60)
+assert.closeTo(t.angle, -Math.PI / 2, 1e-9)
+assert.strictEqual(state, 'aiming')
+$.pointerUp(t.x, t.y - 8 - 60)
+assert.strictEqual(state, 'flying')
 ```
 
-The wind should push a shell a little more every frame.
-tr: Rüzgâr bir mermiyi her karede biraz daha itmeli.
+Moving without pressing should not aim.
+tr: Basmadan hareket nişan aldırmamalı.
 
 ```js
-wind = 0.05
-const s = { x: 280, y: 100, vx: 0, vy: -6 }
-for (let i = 0; i < 10; i++) fly(s)
-assert.closeTo(s.x, 280 + 0.05 * 55, 1e-9, 'the wind pushes a little more every frame')
-```
-
-The wind should be shown with its direction.
-tr: Rüzgâr yönüyle gösterilmeli.
-
-```js
-wind = -0.03
-$.tick(1)
-assert.include($.texts(), 'Wind ← 3')
-wind = 0.05
-$.tick(1)
-assert.include($.texts(), 'Wind → 5')
+const t = tanks[0]
+$.move(t.x, t.y - 100)
+assert.closeTo(t.angle, -Math.PI / 4, 1e-9)
 ```
 
 # --solution--
@@ -171,13 +99,14 @@ const MAX_POWER = 12
 const FALL = 2 // pixels per frame a tank drops when the ground under it is gone
 
 let ground // ground[x]: the y of the surface in column x
-let tanks // [blue, red]: { x, y, hp, angle, power, color }
+let tanks // [you, the computer]: { x, y, hp, angle, power, color }
 let turn // 0 or 1: whose shot it is
 let shell // { x, y, vx, vy } or null
 let blast // { x, y } while an explosion shows
 let timer // frames left to watch the explosion
 let wind
 let state // 'aiming', 'flying', 'boom', 'won' or 'lost'
+let thinking // frames until the computer shoots
 let dragging
 
 // Hills from three sine waves of random size and position, added together.
@@ -256,7 +185,26 @@ function endTurn() {
     turn = 1 - turn
     newWind()
     state = 'aiming'
+    if (turn === 1) thinking = 60
   }
+}
+
+// The computer tries many shots in its head, picks the one landing closest to you, then misses a little.
+function computerAim() {
+  const me = tanks[1]
+  let best = null
+  for (let angle = -Math.PI + 0.2; angle < -Math.PI / 2; angle += 0.03) {
+    for (let power = 4; power <= MAX_POWER; power += 0.5) {
+      const s = { x: me.x + Math.cos(angle) * 14, y: me.y - 8 + Math.sin(angle) * 14, vx: Math.cos(angle) * power, vy: Math.sin(angle) * power }
+      let hit = null
+      for (let i = 0; i < 400 && !hit; i++) hit = fly(s)
+      if (hit === 'away') continue
+      const miss = Math.abs(s.x - tanks[0].x)
+      if (!best || miss < best.miss) best = { miss, angle, power }
+    }
+  }
+  me.angle = best.angle + (Math.random() - 0.5) * 0.08
+  me.power = Math.min(MAX_POWER, best.power + (Math.random() - 0.5) * 0.8)
 }
 
 function update() {
@@ -268,6 +216,10 @@ function update() {
     blast = null
     endTurn()
   }
+  if (state === 'aiming' && turn === 1 && --thinking === 0) {
+    computerAim()
+    fire()
+  }
   if (state !== 'flying') return
   const hit = fly(shell)
   if (!hit) return
@@ -278,8 +230,8 @@ function update() {
 }
 
 function aimBy(dAngle, dPower) {
-  if (state !== 'aiming') return
-  const t = tanks[turn]
+  if (state !== 'aiming' || turn !== 0) return
+  const t = tanks[0]
   t.angle = Math.max(-Math.PI, Math.min(0, t.angle + dAngle))
   t.power = Math.max(2, Math.min(MAX_POWER, t.power + dPower))
 }
@@ -291,26 +243,25 @@ document.addEventListener('keydown', (event) => {
   else if (event.key === 'ArrowDown') aimBy(0, -0.25)
   else if (event.key === ' ') {
     if (state === 'won' || state === 'lost') reset()
-    else fire()
+    else if (turn === 0) fire()
   } else return
   event.preventDefault()
 })
 
-// Point from the tank whose turn it is: the direction is the aim, the distance is the power.
+// Point from your tank: the direction is the aim, the distance is the power.
 function pointAt(event) {
   const rect = canvas.getBoundingClientRect()
   const x = ((event.clientX - rect.left) * W) / rect.width
   const y = ((event.clientY - rect.top) * H) / rect.height
-  const t = tanks[turn]
-  // Below the barrel, atan2 gives an angle between 0 and π: aim flat to that side instead.
+  const t = tanks[0]
   const angle = Math.atan2(y - (t.y - 8), x - t.x)
-  t.angle = angle > 0 ? (angle > Math.PI / 2 ? -Math.PI : 0) : angle
+  t.angle = angle
   t.power = Math.max(2, Math.min(MAX_POWER, Math.hypot(x - t.x, y - (t.y - 8)) / 12))
 }
 
 canvas.addEventListener('pointerdown', (event) => {
   if (state === 'won' || state === 'lost') return reset()
-  if (state !== 'aiming') return
+  if (state !== 'aiming' || turn !== 0) return
   dragging = true
   pointAt(event)
 })
@@ -369,23 +320,23 @@ function draw() {
     ctx.fill()
   }
 
-  const now = tanks[turn]
+  const you = tanks[0]
   ctx.fillStyle = '#0f172a'
   ctx.font = 'bold 14px sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('Angle ' + Math.round((-now.angle * 180) / Math.PI) + '°  Power ' + now.power.toFixed(1), 10, 20)
+  ctx.fillText('Angle ' + Math.round((-you.angle * 180) / Math.PI) + '°  Power ' + you.power.toFixed(1), 10, 20)
   ctx.textAlign = 'center'
   const arrow = wind > 0 ? '→' : wind < 0 ? '←' : ''
   ctx.fillText('Wind ' + arrow + ' ' + Math.abs(Math.round(wind * 100)), W / 2, 20)
   ctx.textAlign = 'right'
-  ctx.fillText(turn === 0 ? 'Blue to shoot' : 'Red to shoot', W - 10, 20)
+  ctx.fillText(turn === 0 ? 'Your turn' : 'Computer', W - 10, 20)
   if (state === 'won' || state === 'lost') {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
     ctx.fillRect(140, 110, 280, 80)
     ctx.fillStyle = 'white'
     ctx.textAlign = 'center'
     ctx.font = 'bold 22px sans-serif'
-    ctx.fillText(state === 'won' ? 'Blue wins!' : 'Red wins!', W / 2, 145)
+    ctx.fillText(state === 'won' ? 'You win!' : 'You lose', W / 2, 145)
     ctx.font = '15px sans-serif'
     ctx.fillText('Space or tap to play again', W / 2, 172)
   }
