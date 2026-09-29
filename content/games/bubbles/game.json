@@ -11,7 +11,6 @@
   "color": "#a855f7",
   "skills": ["prog.arrays", "game.collision", "game.input", "game.state"],
   "extend": [
-    { "en": "Swap the loaded and the next bubble with a key or a tap on the next one.", "tr": "Yüklü ve sıradaki balonu bir tuşla ya da sıradakine dokunarak değiş tokuş et." },
     { "en": "Levels drawn as text, like the famous ones, instead of random rows.", "tr": "Rastgele satırlar yerine ünlüleri gibi metin olarak çizilen seviyeler." },
     { "en": "A bomb bubble that pops everything around where it lands.", "tr": "Düştüğü yerin çevresindeki her şeyi patlatan bir bomba balonu." },
     { "en": "A short shake of the board just before the ceiling comes down.", "tr": "Tavan inmeden hemen önce tahtanın kısa bir sallanması." },

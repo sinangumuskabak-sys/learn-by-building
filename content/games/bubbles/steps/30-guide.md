@@ -1,190 +1,102 @@
 ---
-title: A guide that bounces
-title_tr: Seken bir kılavuz
-skills: [game.physics, game.state]
+title: A dotted guide
+title_tr: Noktalı kılavuz
+skills: [game.physics]
 ---
 
-# --explanation--
+# --goal--
 
-Bank shots, bouncing off a wall to reach a gap, are the heart of the game, but hard to judge by eye. So the short aim line becomes
-a **guide**: a dotted path that follows the exact rules of a real shot, bouncing off the walls, and stops where the bubble would
-first touch something.
+The short aiming line becomes a dotted path that follows the shot, bouncing off the walls, up to the bubble it would
+hit. Bank shots get much easier.
 
-It is a small **simulation**: a pretend bubble moves in steps of 4 pixels with the same wall rule and the same `touches` test as the
-real one, and a dot is drawn every fifth step. Because it uses the very same rules, the guide can never lie.
+# --goal-tr--
 
-One more kindness: the shooter only offers colors **still on the board**. Late in a game only two or three colors remain, and
-getting a bubble of a color that is gone would be a wasted shot you could do nothing about. A `Set` of the grid's colors gives the
-choices. When the board is empty, any color will do.
+Kısa nişan çizgisi yerine atışın **izleyeceği yolu** noktalarla gösterelim: duvarlardan sekerek çarpacağı balona kadar.
+Duvardan sektirmeli atışlar çok kolaylaşır. İşin güzeli, yolu hesaplamak için atılan balonu hareket ettiren kodun
+aynısını küçük adımlarla "prova" ediyoruz.
 
-Finally, the best score is kept in `localStorage`.
-
-# --explanation-tr--
-
-**Bu adımda:** kısa nişan çizgisi, **seken bir kılavuza** dönüşecek: atışın gerçekten izleyeceği yolu gösteren, duvarlardan
-seken noktalı bir çizgi. Ayrıca atıcı yalnızca tahtada hâlâ bulunan renkleri verecek ve sağ üstte en iyi puanın
-(`Best 1100` gibi) görünecek.
-
-**Neden kılavuz?** Duvardan sektirip bir boşluğa ulaşan atışlar oyunun kalbidir, ama gözle tahmin etmek zordur.
-
-**Küçük bir benzetim (simulation).** Kılavuz, "sahte" bir balonu atıcıdan başlatıp gerçek atışla **aynı kurallarla**
-yürütür:
-
-- her adımda 4 piksel ilerler (`Math.cos(aim) * 4`, `Math.sin(aim) * 4`, 3. adımdaki hız hesabı gibi);
-- yan duvarı geçince yatay yönü ters çevirir (`vx = -vx`);
-- gerçek atışın kullandığı `touches` testi "bir şeye değdi mi?" der; değdiyse `break` ile döngüden **tamamen çıkar**
-  (`continue` yalnızca o turu atlıyordu, `break` bütün döngüyü bitirir);
-- en fazla 200 adım atar ve her 5. adımda (`i % 5 === 0`) 3×3 piksellik küçük bir nokta çizer. `x - 1.5` noktayı tam
-  ortalar.
-
-Aynı kuralları kullandığı için kılavuz, atışın gideceği yeri doğru gösterir. `vx` değiştiği için `let`, `vy` hiç
-değişmediği için `const`'tur. Bu kılavuz eski nişan çizgisinin yerini alır.
-
-**Yalnızca işe yarar renkler.** Oyunun sonlarına doğru tahtada iki üç renk kalır. Tahtada artık olmayan bir renkte balon
-almak, hiçbir şey yapamayacağın boşa bir atış olur. Yeni `pickColor`:
+# --code--
 
 ```js
-const present = [...new Set(grid.flat().filter((color) => color >= 0))]
+// The path the shot will take, bouncing off the walls, until it would touch a bubble.
+function guide() {
+  let x = SHOOTER.x
+  let y = SHOOTER.y
+  let vx = Math.cos(aim) * 4
+  const vy = Math.sin(aim) * 4
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+  for (let i = 1; i < 200; i++) {
+    x += vx
+    y += vy
+    if (x < R || x > canvas.width - R) vx = -vx
+    if (touches(x, y)) break
+    if (i % 5 === 0) ctx.fillRect(x - 1.5, y - 1.5, 3, 3)
+  }
+}
+
+  if (state === 'playing') guide()
 ```
 
-- `grid.flat()` iç içe listeyi tek düz listeye çevirir: `[[1, -1], [3, 1]]` → `[1, -1, 3, 1]`.
-- `filter` boşları (`-1`) atar: `[1, 3, 1]`.
-- `new Set(...)` tekrarları siler (kümede her şey bir kez bulunur): `{1, 3}`. `[...küme]` onu yeniden listeye çevirir.
+# --meaning--
 
-Tahta boşsa `present.length` 0'dır ve bütün renkler seçenek olur: `COLORS.map((_, i) => i)` → `[0, 1, 2, 3, 4]` (her
-rengin kendisini değil numarasını al; `_` "bu değeri kullanmıyorum" demenin yaygın yoludur). `koşul ? a : b` ile ikisinden
-biri seçilir, sonra rastgele biri döner. `present.length` 0 değilse "doğru" sayılır.
+- A pretend bubble starts at the shooter and moves in small steps of 4 pixels in the aim's direction.
+- At a side wall its `vx` flips, like the real shot; when it would touch a bubble or the ceiling, the loop stops.
+- Every fifth step a small dot is drawn.
 
-**En iyi puan (`localStorage`).** Tarayıcının küçük bir defteridir; sayfa kapansa da içindekiler kalır.
-`localStorage.getItem('bubbles-best')` okur, `setItem` kaydeder. Defter yazı saklar; `Number(...)` sayıya çevirir,
-`|| 0` "kayıt yoksa 0 kullan" der. Oyun bittiğinde (`state !== 'playing'`) puan rekoru geçmişse kaydederiz.
+# --meaning-tr--
+
+- `let x`, `let y` → hayali bir balon nişancıdan başlar.
+- `Math.cos(aim) * 4`, `Math.sin(aim) * 4` → nişan yönünde 4 piksellik küçük adımlar (açıyı x ve y adımına çeviren
+  trigonometri, atışta da kullandığımız).
+- `for (let i = 1; i < 200; i++)` → en fazla 200 adım prova et.
+- `if (x < R || x > canvas.width - R) vx = -vx` → yan duvara gelince gerçek atış gibi sek.
+- `if (touches(x, y)) break` → bir balona ya da tavana değecekse **dur** (`break` döngüden çıkar).
+- `if (i % 5 === 0)` → her 5 adımda bir, 3×3'lük küçük bir nokta çiz.
+- `draw` içindeki eski çizgi kodunun yerine `guide()`, yalnız oyun sürerken.
 
 # --task--
 
-1. Replace `pickColor` with one that picks among the colors still in the grid (or any color when it is empty).
-2. Write `guide()`: from the shooter, step a point 4 pixels along the aim (bouncing `vx` off the side walls) up to 200 times, stop
-   when `touches` it, and draw a `'rgba(255, 255, 255, 0.5)'` 3 by 3 dot every fifth step. It replaces the aim line.
-3. Keep `best` in `localStorage` under `'bubbles-best'`, saved when a game ends with a higher score, and draw `Best 1100`
-   right-aligned at `(canvas.width - 10, 21)`.
+1. Above `function draw() {`, write the comment and `guide`.
+2. In `draw`, replace the six lines that draw the aiming line with `if (state === 'playing') guide()`.
 
 # --task-tr--
 
-1. `let state // 'playing', 'won' or 'lost'` satırının altına ekle:
-
-   ```js
-   let best = Number(localStorage.getItem('bubbles-best')) || 0
-   ```
-
-2. `const pickColor = ...` satırını sil ve yerine şunu yaz:
-
-   ```js
-   // The colors still on the board, so the shooter never offers a useless one.
-   function pickColor() {
-     const present = [...new Set(grid.flat().filter((color) => color >= 0))]
-     const choices = present.length ? present : COLORS.map((_, i) => i)
-     return choices[Math.floor(Math.random() * choices.length)]
-   }
-   ```
-
-3. `attach()`'in en sonuna, `} else if (cells.some(...)) state = 'lost'` satırının altına (son `}`'den önce) ekle:
-
-   ```js
-     if (state !== 'playing' && score > best) {
-       best = score
-       localStorage.setItem('bubbles-best', best)
-     }
-   ```
-
-4. `drawBubble` fonksiyonunun kapanış `}`'sinin altına, `function draw()` satırından önce kılavuzu yaz:
-
-   ```js
-   // The path the shot will take, bouncing off the walls, until it would touch a bubble.
-   function guide() {
-     let x = SHOOTER.x
-     let y = SHOOTER.y
-     let vx = Math.cos(aim) * 4
-     const vy = Math.sin(aim) * 4
-     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-     for (let i = 1; i < 200; i++) {
-       x += vx
-       y += vy
-       if (x < R || x > canvas.width - R) vx = -vx
-       if (touches(x, y)) break
-       if (i % 5 === 0) ctx.fillRect(x - 1.5, y - 1.5, 3, 3)
-     }
-   }
-   ```
-
-5. `draw()`'da nişan çizgisini çizen `if (state === 'playing') { ... }` bloğunun tamamını (yorum ve altı çizim satırıyla,
-   kapanış `}`'si dahil) sil ve yerine tek satır yaz:
-
-   ```js
-     if (state === 'playing') guide()
-   ```
-
-6. `draw()`'da `ctx.fillText('Score ' + score, 10, 21)` satırının altına ekle:
-
-   ```js
-     ctx.textAlign = 'right'
-     ctx.fillText('Best ' + best, canvas.width - 10, 21)
-   ```
-
-7. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Atıcıdan yukarı noktalı bir yol görmelisin; nişanı yana çevirince yol
-   duvardan sekmeli ve ilk değeceği balonda bitmeli. Sağ üstte `Best` yazmalı. Alttaki kontrollerin hepsi yeşil olmalı.
+1. `function draw() {` satırının üstüne yorumu ve `guide` fonksiyonunu yaz (arada bir boş satır kalsın).
+2. `draw` içindeki nişan çizgisini çizen altı satırı (`ctx.strokeStyle = ...`'dan `ctx.stroke()`'a kadar) sil; yerine
+   `if (state === 'playing') guide()` yaz.
+3. **Çalıştır**, nişanı yana çevir: noktalar duvardan sekmeli. Oyun bitti!
 
 # --tests--
 
-The shooter should only offer colors still on the board.
-tr: Atıcı yalnızca tahtada hâlâ olan renkleri sunmalı.
+A dotted guide should be drawn while playing.
+tr: Oyun sürerken noktalı bir kılavuz çizilmeli.
 
 ```js
-const empty = () => {
-  grid = grid.map((row) => row.map(() => -1))
-}
-empty()
-grid[0][0] = grid[3][4] = 3
-for (let i = 0; i < 20; i++) assert.strictEqual(pickColor(), 3, 'only colors still on the board')
-empty()
-const all = new Set()
-for (let i = 0; i < 100; i++) all.add(pickColor())
-assert.strictEqual(all.size, 5, 'any color on an empty board')
-```
-
-The guide should stop at the ceiling, and bounce off the walls.
-tr: Kılavuz tavanda durmalı ve duvarlardan sekmeli.
-
-```js
-const empty = () => {
-  grid = grid.map((row) => row.map(() => -1))
-}
-empty()
-aim = -Math.PI / 2
-$.tick(1)
+$.tick()
 const dots = $.rects('rgba(255, 255, 255, 0.5)')
-assert.isAbove(dots.length, 15)
-assert.isAbove(Math.min(...dots.map((d) => d.y)), 30, 'the guide stops at the ceiling')
-aim = -Math.PI + 0.3
-$.tick(1)
-const bouncing = $.rects('rgba(255, 255, 255, 0.5)')
-assert.isAtLeast(Math.min(...bouncing.map((d) => d.x)), R - 2, 'it bounces off the wall too')
-assert.isAbove(Math.max(...bouncing.map((d) => d.x)), 60, 'and comes back')
+assert.isAbove(dots.length, 5)
+assert.isTrue(dots.every((d) => d.w === 3 && d.h === 3))
 ```
 
-The best score should be saved.
-tr: En iyi puan kaydedilmeli.
+The guide should bounce off a side wall.
+tr: Kılavuz yan duvardan sekmeli.
 
 ```js
-const empty = () => {
-  grid = grid.map((row) => row.map(() => -1))
-}
-empty()
-grid[0][3] = grid[0][4] = 2
-score = 70
-attach(0, 5, 2)
-assert.strictEqual(best, 1100)
-assert.strictEqual(localStorage.getItem('bubbles-best'), '1100')
-$.tick(1)
-assert.include($.texts(), 'Best 1100')
+aim = -Math.PI + 0.3
+$.tick()
+const xs = $.rects('rgba(255, 255, 255, 0.5)').map((d) => d.x)
+const lowest = Math.min(...xs)
+assert.isBelow(lowest, 40, 'the dots reach the left wall')
+assert.isAbove(xs[xs.length - 1], lowest, 'and come back from it')
+```
+
+There should be no guide after the game.
+tr: Oyun bitince kılavuz olmamalı.
+
+```js
+state = 'lost'
+$.tick()
+assert.lengthOf($.rects('rgba(255, 255, 255, 0.5)'), 0)
 ```
 
 # --solution--
