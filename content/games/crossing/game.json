@@ -11,7 +11,6 @@
   "color": "#15803d",
   "skills": ["game.loop", "game.input", "game.collision", "game.state"],
   "extend": [
-    { "en": "A timer bar for each frog: if it runs out before the frog gets home, the frog is lost.", "tr": "Her kurbağa için bir süre çubuğu: kurbağa eve varmadan biterse kurbağa kaybedilir." },
     { "en": "Turtles in one river lane that dive every few seconds: riding them is only safe while they are up.", "tr": "Nehrin bir şeridinde birkaç saniyede bir dalan kaplumbağalar: üstlerinde durmak yalnız su üstündeyken güvenli." },
     { "en": "Draw the frog facing the way it last hopped, and cars with windows and wheels.", "tr": "Kurbağayı en son zıpladığı yöne bakar çiz; arabalara cam ve tekerlek ekle." },
     { "en": "A short splash or squash animation before the next frog appears.", "tr": "Bir sonraki kurbağa gelmeden önce kısa bir suya düşme ya da ezilme animasyonu." },
