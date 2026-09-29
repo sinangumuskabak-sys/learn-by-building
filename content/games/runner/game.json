@@ -11,7 +11,6 @@
   "color": "#64748b",
   "skills": ["game.physics", "game.input", "game.collision", "game.state"],
   "extend": [
-    { "en": "Jump buffering: remember a jump pressed up to 6 frames before landing, and do it the moment the runner lands.", "tr": "Zıplama tamponu: yere inmeden en fazla 6 kare önce basılan zıplamayı hatırla ve inince uygula." },
     { "en": "Draw the runner's legs alternating every few frames so it looks like it is running.", "tr": "Koşucunun bacaklarını birkaç karede bir değiştirerek çiz; koşuyormuş gibi görünsün." },
     { "en": "Clouds that drift by at half the game speed (parallax).", "tr": "Oyun hızının yarısında geçen bulutlar (paralaks)." },
     { "en": "Every 1000 points, flash the score and swap to a dark \"night\" color scheme.", "tr": "Her 1000 puanda skoru yakıp söndür ve koyu bir \"gece\" renk düzenine geç." },
