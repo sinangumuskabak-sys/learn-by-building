@@ -11,7 +11,7 @@ import { ProviderSetup } from '../maymun/Chat.tsx'
 import { maymunStore, useMaymunSettings } from '../maymun/store.ts'
 import { resetAllThreads } from '../maymun/memory.ts'
 import { progressActions } from '../progress/progress.ts'
-import { resetVault } from '../vault/store.ts'
+import { resetVault, restoreVault, startVault, vaultFiles, type VaultFile } from '../vault/store.ts'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -82,18 +82,30 @@ export function SettingsPage() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   useDocumentTitle(t('settings.title'))
 
-  const exportProgress = () => {
-    const blob = new Blob([progressActions.exportJson()], { type: 'application/json' })
+  // One backup file: the progress (with the code written in each step) and the memory vault's notes.
+  const exportProgress = async () => {
+    await startVault()
+    const backup = { ...(JSON.parse(progressActions.exportJson()) as object), vault: vaultFiles() }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `learn-platform-progress-${new Date().toISOString().slice(0, 10)}.json`
+    link.download = `learn-platform-backup-${new Date().toISOString().slice(0, 10)}.json`
     link.click()
     URL.revokeObjectURL(url)
   }
 
   const importProgress = async (file: File) => {
-    const ok = progressActions.importJson(await file.text())
+    const text = await file.text()
+    const ok = progressActions.importJson(text)
+    if (ok) {
+      const vault = (JSON.parse(text) as { vault?: unknown }).vault
+      const notes = Array.isArray(vault)
+        ? vault.filter((note): note is VaultFile =>
+            typeof note?.path === 'string' && typeof note.content === 'string' && typeof note.updatedAt === 'string')
+        : []
+      if (notes.length) await restoreVault(notes)
+    }
     setMessage({ ok, text: ok ? t('settings.importDone') : t('settings.importFailed') })
   }
 
@@ -160,7 +172,7 @@ export function SettingsPage() {
 
       <Section title={t('settings.progress')}>
         <Row label={t('settings.progress')} hint={t('settings.progressHint')}>
-          <Button size="sm" onClick={exportProgress}>
+          <Button size="sm" onClick={() => void exportProgress()}>
             <Download size={15} aria-hidden />
             {t('settings.export')}
           </Button>

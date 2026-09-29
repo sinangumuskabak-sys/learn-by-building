@@ -57,6 +57,39 @@ test('the memory vault: a note for everything, following progress, my notes kept
   await expect(note.getByLabel('My notes')).toHaveValue('')
 })
 
+test('one backup file brings back progress and notes after the browser data is gone', async ({ page }) => {
+  // The home page says where everything is kept, once.
+  await page.goto('./#/games')
+  const storage = page.getByRole('note')
+  await expect(storage).toContainText('kept only in this browser')
+  await storage.getByRole('button', { name: 'Got it' }).click()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Workshop', level: 1 })).toBeVisible()
+  await expect(page.getByRole('note')).toHaveCount(0)
+
+  await passFirstSnakeStep(page)
+  const note = page.getByRole('main').last()
+  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
+  await note.getByLabel('My notes').fill('ctx is the brush.')
+  await note.getByRole('button', { name: 'Save my notes' }).click()
+  await expect(note.getByRole('status')).toHaveText('Saved')
+
+  await page.goto('./#/settings')
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download backup' }).click()])
+  expect(download.suggestedFilename()).toMatch(/^learn-platform-backup-\d{4}-\d{2}-\d{2}\.json$/)
+  const backup = await download.path()
+
+  await page.getByRole('button', { name: 'Reset all data' }).click()
+  await page.getByRole('button', { name: /Delete all progress/ }).click()
+  await page.locator('input[type="file"]').setInputFiles(backup)
+  await expect(page.getByText('Backup restored.')).toBeVisible()
+
+  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+  await expect(note).toContainText('1/28')
+  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
+  await expect(note.getByLabel('My notes')).toHaveValue('ctx is the brush.')
+})
+
 test('switching the interface language keeps one vault; a reset builds it in the new language', async ({ page }) => {
   await page.goto('./#/memory')
   const tree = page.getByRole('navigation', { name: 'Memory vault' })

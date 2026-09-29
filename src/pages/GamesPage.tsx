@@ -1,4 +1,5 @@
 import { ArrowRight, CheckCircle2, Hammer } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { games, passedSteps, resumeStep } from '../games/catalog.ts'
@@ -6,6 +7,42 @@ import { difficulties, type GameSummary } from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { useProgress } from '../progress/progress.ts'
+
+const NOTE_KEY = 'lp.storageNote'
+
+/** Once, on the home page: everything is kept in this browser, so take a backup now and then. */
+function StorageNote() {
+  const { t } = useI18n()
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(NOTE_KEY) === 'seen'
+    } catch {
+      return false
+    }
+  })
+  if (hidden) return null
+  const close = () => {
+    try {
+      localStorage.setItem(NOTE_KEY, 'seen')
+    } catch {
+      // Private mode: the note shows again next visit.
+    }
+    setHidden(true)
+  }
+  return (
+    <p role="note" className="mt-6 flex max-w-2xl flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-muted">
+      <span>
+        {t('games.storageNote')}{' '}
+        <Link to="/settings" className="font-medium text-accent hover:underline">
+          {t('games.storageNoteLink')}
+        </Link>
+      </span>
+      <button type="button" onClick={close} className="ml-auto font-medium text-fg hover:underline">
+        {t('games.storageNoteClose')}
+      </button>
+    </p>
+  )
+}
 
 /** The workshop, the home page: projects that show their result as you type (web pages), then the games. */
 export function GamesPage() {
@@ -22,6 +59,8 @@ export function GamesPage() {
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{t('games.title')}</h1>
         <p className="mt-2 text-muted">{t('games.subtitle')}</p>
       </header>
+
+      <StorageNote />
 
       {projects.length > 0 && (
         <section className="mt-10">

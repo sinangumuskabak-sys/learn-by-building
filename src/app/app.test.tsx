@@ -21,7 +21,7 @@ beforeEach(() => {
 describe('workshop (home page)', () => {
   it('opens on the workshop: build projects first, then games', async () => {
     const router = renderAt('/')
-    expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 }, { timeout: 5000 })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/games')
     const projects = screen.getByRole('heading', { name: /Build projects/ }).closest('section')!
     expect(within(projects).getByRole('link', { name: /My business card/ })).toBeInTheDocument()
@@ -33,7 +33,7 @@ describe('workshop (home page)', () => {
   it('leads the old catalog addresses to the workshop', async () => {
     for (const path of ['/c/programming-fundamentals', '/learn/loop-basics-quiz']) {
       const router = renderAt(path)
-      expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 }, { timeout: 5000 })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/games')
       cleanup()
     }

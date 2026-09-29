@@ -164,6 +164,17 @@ export async function resetVault() {
   writeListeners.forEach((listener) => listener(vaultFiles(), true))
 }
 
+/** Puts back the notes of a backup in place of the current ones; notes the backup lacks are rebuilt from progress. */
+export async function restoreVault(backup: VaultFile[]) {
+  await startVault()
+  files.clear()
+  for (const file of backup) files.set(file.path, file)
+  await writeMany(backup, true)
+  await sync(progressStore.get())
+  emit()
+  writeListeners.forEach((listener) => listener(vaultFiles(), true))
+}
+
 export function vaultFiles(): VaultFile[] {
   return snapshot
 }
