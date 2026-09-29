@@ -30,8 +30,8 @@
       "tr": "Karanlık bir sürüm yap: koyu kart, açık yazı. `background: #1e293b` ve `color: white` dene."
     },
     {
-      "en": "Make the card grow a little when the mouse is over it: `.card:hover { transform: scale(1.03); }` plus `transition: transform 0.2s` on `.card`.",
-      "tr": "Fare üstüne gelince kart biraz büyüsün: `.card:hover { transform: scale(1.03); }` ve `.card` kuralına `transition: transform 0.2s`."
+      "en": "Add a button that switches the page between light and dark (a few lines of JavaScript that toggle a class on `body`).",
+      "tr": "Sayfayı açık ve koyu arasında değiştiren bir düğme ekle (`body`'ye bir sınıf ekleyip kaldıran birkaç satır JavaScript)."
     }
   ]
 }

@@ -30,8 +30,8 @@
       "tr": "Gece modu: yalnız sarı lamba saniyede bir yanıp sönsün."
     },
     {
-      "en": "Draw a pole under the light and a road with a zebra crossing, all with boxes.",
-      "tr": "Lambanın altına bir direk, altına da yaya geçitli bir yol çiz; hepsi kutularla."
+      "en": "Draw a road with a zebra crossing under the pole, all with boxes.",
+      "tr": "Direğin altına yaya geçitli bir yol çiz; hepsi kutularla."
     }
   ]
 }
