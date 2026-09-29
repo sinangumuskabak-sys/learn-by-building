@@ -17,7 +17,7 @@ Bunun için CSS'in en kullanışlı araçlarından biri: **flexbox** (esnek kutu
 
 # --code--
 
-```html
+```css
 ul {
   list-style: none;
   padding: 0;

@@ -39,9 +39,9 @@ write where this step's work goes; a guess before running and a hint box when a 
 finished project can be opened from any step.
 
 <!-- games:en:start -->
-1 build projects and 44 games, 334 steps:
+3 build projects and 44 games, 357 steps:
 
-- **Build projects:** My business card
+- **Build projects:** My business card · Traffic light · Text detective
 - **Beginner games:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Blackjack · Hangman · Conway's Game of Life · Typing Rain · Sokoban · Rhythm Lanes · Snake · Pong · Flappy-style Bird
 - **Intermediate games:** Candy Crush-style Match 3 · Sudoku · Puzzle Bobble-style Bubble Shooter · Klondike Solitaire · Breakout · Frogger-style Crossing · Doodle Jump-style Climber · Lunar Lander · 2048 · Minesweeper · Tetris-style Blocks · Tower Defense · Space Invaders-style · Battleship · Missile Command-style Defense · Bomberman-style Arena · Asteroids · Pool · Pinball
 - **Advanced games:** Mario-style Platformer · Pac-Man-style Maze Chase · Wolfenstein-style 3D Maze · Chess · OutRun-style Racer · Zelda-style Dungeon · Scorched Earth-style Artillery · Angry Birds-style Slingshot
@@ -123,9 +123,9 @@ bağımsız bir projedir, freeCodeCamp kodu içermez.
 kısımlar kilitlidir; yalnız o adımın kodunu yazarsın.
 
 <!-- games:tr:start -->
-1 yapım atölyesi ve 44 oyun, 334 adım:
+3 yapım atölyesi ve 44 oyun, 357 adım:
 
-- **Yapım atölyeleri:** Kartvizitim
+- **Yapım atölyeleri:** Kartvizitim · Trafik lambası · Metin dedektifi
 - **Başlangıç oyunları:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Blackjack · Adam Asmaca · Conway'in Hayat Oyunu · Yazı Yağmuru · Sokoban · Ritim Şeritleri · Yılan · Pong · Flappy tarzı kuş
 - **Orta oyunlar:** Candy Crush Tarzı Üçlü Eşleştirme · Sudoku · Puzzle Bobble Tarzı Balon Atıcı · Klondike Solitaire · Tuğla Kırma · Frogger Tarzı Karşıya Geçiş · Doodle Jump Tarzı Tırmanış · Ay'a İniş · 2048 · Mayın Tarlası · Tetris Tarzı Bloklar · Kule Savunması · Space Invaders Tarzı · Amiral Battı · Missile Command Tarzı Savunma · Bomberman Tarzı Arena · Asteroids · Bilardo · Pinball
 - **İleri oyunlar:** Mario Tarzı Platform · Pac-Man Tarzı Labirent Kovalamaca · Wolfenstein Tarzı 3B Labirent · Satranç · OutRun Tarzı Yarış · Zelda Tarzı Zindan · Scorched Earth Tarzı Topçu · Angry Birds Tarzı Sapan

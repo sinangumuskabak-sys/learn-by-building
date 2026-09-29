@@ -14,7 +14,7 @@ Kartın sayfanın üstünde **havada duruyormuş** gibi görünmesi için altın
 
 # --code--
 
-```html
+```css
 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 ```
 

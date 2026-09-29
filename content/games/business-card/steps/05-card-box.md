@@ -16,7 +16,7 @@ Bir sınıfa kural yazmak için seçicinin başına nokta konur: `.card` = "sın
 
 # --code--
 
-```html
+```css
 .card {
   background: white;
   padding: 24px;

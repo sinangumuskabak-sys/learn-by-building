@@ -162,7 +162,7 @@ for (const game of games) {
     await page.getByRole('button', { name: /Replace your code/ }).click()
     await run(page)
     await tab(page, game.kind === 'web' ? 'Page' : 'Game')
-    if (game.kind === 'web') await expect(page.frameLocator('iframe[title="Page"]').locator('body')).not.toBeEmpty()
+    if (game.kind === 'web') await expect(page.frameLocator('iframe[title="Page"]').locator('body > *').first()).toBeVisible()
     else await expect(page.frameLocator('iframe[title="Game"]').locator('canvas')).toBeVisible()
     await page.waitForTimeout(500)
     await expect(page.getByRole('alert').filter({ hasText: 'Your game hit an error' })).toHaveCount(0)
@@ -236,6 +236,12 @@ test('the finished parts of the code are locked until the learner unlocks them',
   await page.keyboard.type('zz')
   await expect(page.locator('.monaco-editor .monaco-editor-overlaymessage')).toContainText('This part is already done')
   await expect(code).not.toContainText('zz')
+  // A new line can be opened right after the finished code.
+  await page.locator('[data-maymun="code"] .view-line').last().click()
+  await page.keyboard.press('ArrowLeft') // to the end of the last finished line
+  await page.keyboard.press('Enter')
+  await page.keyboard.insertText('// a new line')
+  await expect(code).toContainText('// a new line')
   // The empty line under the finished code is where this step is written.
   await page.locator('[data-maymun="code"] .view-line').last().click()
   await page.keyboard.insertText("const ctx = canvas.getContext('2d')")

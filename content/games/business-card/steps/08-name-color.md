@@ -17,7 +17,7 @@ Bu sefer seçici bir etiket adı: `h1`. Kural sayfadaki bütün `h1`'lere uygula
 
 # --code--
 
-```html
+```css
 h1 {
   margin: 0;
   color: #4f46e5;

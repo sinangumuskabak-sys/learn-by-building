@@ -1,0 +1,38 @@
+{
+  "id": "text-detective",
+  "order": 7,
+  "kind": "web",
+  "title": {
+    "en": "Text detective",
+    "tr": "Metin dedektifi"
+  },
+  "description": {
+    "en": "A page that studies any text as you type: characters, words, the most common word, and the text in Caesar code. Your first real JavaScript: variables, functions, arrays, loops and a Map.",
+    "tr": "Yazdıkça her metni inceleyen bir sayfa: karakterler, kelimeler, en sık kelime ve metnin Sezar şifreli hâli. İlk gerçek JavaScript'in: değişkenler, fonksiyonlar, diziler, döngüler ve Map."
+  },
+  "difficulty": "beginner",
+  "color": "#0ea5e9",
+  "skills": [
+    "prog.functions",
+    "prog.arrays",
+    "prog.loops"
+  ],
+  "extend": [
+    {
+      "en": "Show the five most common words as a list instead of just one.",
+      "tr": "Yalnız en sık kelimeyi değil, en sık beş kelimeyi liste hâlinde göster."
+    },
+    {
+      "en": "Add a number box for the shift, so the reader can choose it.",
+      "tr": "Kaydırma için bir sayı kutusu ekle; okuyan kişi kaydırmayı kendisi seçsin."
+    },
+    {
+      "en": "Write `decode(text, shift)` and a button that turns a secret back into plain text.",
+      "tr": "`decode(text, shift)` fonksiyonunu ve şifreyi düz metne çeviren bir düğme yaz."
+    },
+    {
+      "en": "Use the Turkish alphabet (29 letters, `toLocaleLowerCase('tr')`) and change `% 26` to fit it.",
+      "tr": "Türk alfabesini kullan (29 harf, `toLocaleLowerCase('tr')`) ve `% 26`'yı ona göre değiştir."
+    }
+  ]
+}

@@ -57,10 +57,18 @@ function guardLocked(
     const key = event.browserEvent.key
     const ctrl = event.ctrlKey || event.metaKey
     if (SAFE_KEYS.has(key)) return
-    if (ctrl && ['c', 'a', 'f', 'z', 'y', 'Enter'].includes(key.toLowerCase())) return
+    if (ctrl && ['c', 'a', 'f', 'z', 'y', 'enter'].includes(key.toLowerCase())) return
     for (const selection of editor.getSelections() ?? []) {
-      const outside = selection.startLineNumber < r.first || selection.endLineNumber > r.last
       const empty = selection.isEmpty()
+      // A new line right after the last finished line (or right before the first one below) leaves them as they are.
+      const line = selection.startLineNumber
+      const opensLine =
+        empty &&
+        key === 'Enter' &&
+        ((line === r.first - 1 && selection.startColumn === r.model.getLineMaxColumn(line)) ||
+          (line === r.last + 1 && selection.startColumn === 1))
+      if (opensLine) continue
+      const outside = selection.startLineNumber < r.first || selection.endLineNumber > r.last
       const joinsAbove = empty && key === 'Backspace' && selection.startLineNumber === r.first && selection.startColumn === 1
       const joinsBelow =
         empty && key === 'Delete' && selection.endLineNumber === r.last && selection.endColumn === r.model.getLineMaxColumn(r.last)

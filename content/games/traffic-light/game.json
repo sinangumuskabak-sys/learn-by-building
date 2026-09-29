@@ -1,0 +1,37 @@
+{
+  "id": "traffic-light",
+  "order": 6,
+  "kind": "web",
+  "title": {
+    "en": "Traffic light",
+    "tr": "Trafik lambası"
+  },
+  "description": {
+    "en": "A traffic light that switches by itself, with only HTML and CSS: boxes, circles, flexbox, colors by position, and a CSS animation with a timeline.",
+    "tr": "Kendi kendine yanıp sönen bir trafik lambası; yalnız HTML ve CSS ile: kutular, daireler, flexbox, sıraya göre renkler ve zaman çizelgeli CSS animasyonu."
+  },
+  "difficulty": "beginner",
+  "color": "#ef4444",
+  "skills": [
+    "fe.html",
+    "fe.css"
+  ],
+  "extend": [
+    {
+      "en": "Add a pedestrian light next to it: two lamps (red person, green person) that follow the cars' light.",
+      "tr": "Yanına bir yaya lambası ekle: arabaların lambasına uyan iki ışık (kırmızı adam, yeşil adam)."
+    },
+    {
+      "en": "Make the bright lamp glow: `box-shadow: 0 0 30px red` inside a keyframe.",
+      "tr": "Yanan lamba parlasın: bir anlık kareye `box-shadow: 0 0 30px red` ekle."
+    },
+    {
+      "en": "A night mode: only the yellow lamp blinks, once a second.",
+      "tr": "Gece modu: yalnız sarı lamba saniyede bir yanıp sönsün."
+    },
+    {
+      "en": "Draw a pole under the light and a road with a zebra crossing, all with boxes.",
+      "tr": "Lambanın altına bir direk, altına da yaya geçitli bir yol çiz; hepsi kutularla."
+    }
+  ]
+}

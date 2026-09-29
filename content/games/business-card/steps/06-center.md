@@ -15,7 +15,7 @@ sayfanın **ortasına** alacağız.
 
 # --code--
 
-```html
+```css
 max-width: 320px;
 margin: 40px auto;
 ```

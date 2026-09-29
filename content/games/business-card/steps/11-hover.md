@@ -17,7 +17,7 @@ Fare üstündeyken ayrı kural yazmak için seçicinin sonuna `:hover` eklenir.
 
 # --code--
 
-```html
+```css
 a {
   color: #4f46e5;
   text-decoration: none;
