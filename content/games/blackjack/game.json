@@ -14,7 +14,6 @@
     { "en": "Let the player choose the bet (5, 10 or 25) before each deal.", "tr": "Oyuncu her dağıtımdan önce bahsi seçsin (5, 10 ya da 25)." },
     { "en": "Split: two cards of the same rank become two hands with their own bets.", "tr": "Bölme: aynı değerde iki kart, kendi bahisleriyle iki el olsun." },
     { "en": "Slide each new card in from the deck instead of making it appear.", "tr": "Her yeni kartı belirtmek yerine desteden kaydırarak getir." },
-    { "en": "A hint that shows the basic strategy move for your hand.", "tr": "Elin için temel strateji hamlesini gösteren bir ipucu." },
-    { "en": "Use six decks, like a casino, and show how many cards are left.", "tr": "Bir kumarhane gibi altı deste kullan ve kaç kart kaldığını göster." }
+    { "en": "A hint that shows the basic strategy move for your hand.", "tr": "Elin için temel strateji hamlesini gösteren bir ipucu." }
   ]
 }
