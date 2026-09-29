@@ -14,7 +14,6 @@
     { "en": "Shields: four bunkers made of small blocks that bullets and bombs chip away.", "tr": "Kalkanlar: mermilerin ve bombaların yonttuğu küçük bloklardan dört sığınak." },
     { "en": "A mystery ship that crosses the top now and then and is worth 100 points.", "tr": "Arada bir tepeden geçen ve 100 puan değerinde bir gizemli gemi." },
     { "en": "Two-frame animation: invaders switch between two looks every time they step.", "tr": "İki kareli animasyon: istilacılar her adımda iki görünüm arasında değişsin." },
-    { "en": "Explosion particles when an invader is hit (see the Breakout particle step).", "tr": "Bir istilacı vurulunca patlama parçacıkları (Tuğla Kırma'daki parçacık adımına bak)." },
-    { "en": "An extra life every 1500 points.", "tr": "Her 1500 puanda bir ekstra can." }
+    { "en": "Explosion particles when an invader is hit (see the Breakout particle step).", "tr": "Bir istilacı vurulunca patlama parçacıkları (Tuğla Kırma'daki parçacık adımına bak)." }
   ]
 }

@@ -1,152 +1,67 @@
 ---
-title: Play again, beat your best
-title_tr: Yeniden oyna, rekorunu kır
-skills: [game.state]
+title: Faster and faster
+title_tr: Gittikçe hızlanan
+skills: [game.state, prog.functions]
 ---
 
-# --explanation--
+# --goal--
 
-The last piece is the loop every arcade game has: game over, see your score against the best, press a button, play
-again.
+The fewer invaders are left, the faster they march — the famous tension of the game. Later waves are quicker too.
 
-Because all setup already lives in `newGame()`, restarting is a single call. That is the payoff of the "one function
-sets up a fresh game" habit you have used in every game: adding a restart never means hunting for all the variables that
-need resetting.
+# --goal-tr--
 
-The best score goes in `localStorage` at the one place the game ends, `endGame()`, so it is saved whether the player ran
-out of lives or the invaders landed.
+İstilacılar **azaldıkça hızlansın**: oyunun ünlü gerilimi. Sonraki dalgalar da daha hızlı olsun. Artık yürüyüş aralığı
+sabit 500 değil, bir formül.
 
-# --explanation-tr--
-
-**Bu adımda:** oyunun son parçası: oyun bitince en iyi skorunu göreceksin, Boşluk'a basınca yeni oyun başlayacak.
-`GAME OVER`'ın altında `BEST 480   SPACE TO PLAY AGAIN` gibi bir satır çıkacak.
-
-**Yeniden başlatmak tek satır.** Her salon oyununda bu döngü vardır: oyun biter, skorunu en iyisiyle karşılaştırırsın,
-bir düğmeye basarsın, yeniden oynarsın. Bütün kurulum 6. adımda `newGame()`'e taşındığı için yeniden başlatmak tek bir
-çağrıdır. "Yeni oyunu tek bir fonksiyon kurar" alışkanlığının ödülü bu: yeniden başlatma eklerken sıfırlanması gereken
-değişkenleri tek tek aramak zorunda kalmazsın.
-
-**Boşluk'un iki görevi.** Oyun bittiyse yeni oyun, sürüyorsa ateş:
+# --code--
 
 ```js
-if (event.key === ' ') {
-  if (state === 'over') newGame()
-  else shoot()
+// Fewer invaders march faster: from 588 ms with all 45 alive down to 60 ms for the last one, quicker in later waves.
+function stepInterval() {
+  return Math.max(40, 60 + (alive().length - 1) * 12 - (wave - 1) * 40)
 }
 ```
 
-Bir `if`'in içine başka bir `if` koyabilirsin. `else`'ten sonra tek komut varsa süslü parantez gerekmez.
+# --meaning--
 
-**Tarayıcının küçük defteri: `localStorage`.** Sayfayı kapatsan bile silinmeyen bir not defteridir. Her notun bir adı
-ve bir değeri vardır:
+- Each living invader beyond the last adds 12 ms; each wave after the first takes 40 ms off.
+- `Math.max(40, ...)` never lets the step be quicker than 40 ms.
 
-```js
-localStorage.setItem('invaders-best', 480)   // 'invaders-best' adıyla 480 yaz
-localStorage.getItem('invaders-best')        // okur: '480' (yazı olarak!)
-```
+# --meaning-tr--
 
-Defter her şeyi **yazı** olarak saklar. Okurken `Number(...)` ile yazıyı sayıya çeviririz.
-
-```js
-let best = Number(localStorage.getItem('invaders-best')) || 0
-```
-
-İlk kez oynarken defterde not yoktur; `getItem` "hiçbir şey" (`null`) verir. `a || b` burada "a boş ya da sıfırsa b'yi
-kullan" demektir; yani not yoksa `best` 0 olur.
-
-**Nerede kaydedilir?** Oyunun bittiği tek yerde: `endGame()`. Böylece canlar bitse de, istilacılar insen de kayıt
-yapılır. Yalnızca yeni skor eskisinden büyükse (`score > best`) yazarız.
-
-Yazının içindeki üç boşluk (`'   SPACE TO PLAY AGAIN'`) en iyi skorla talimat arasında boşluk bırakır; kontroller
-tam olarak üç boşluk bekler.
+- `60 + (alive().length - 1) * 12` → son istilacı tek başına 60 ms'de bir adım atar; yaşayan her fazladan istilacı
+  12 ms ekler. 45'i birden yaşarken 60 + 44 × 12 = **588 ms**.
+- `- (wave - 1) * 40` → ilk dalgadan sonraki her dalga 40 ms kısaltır.
+- `Math.max(40, ...)` → aralık 40 ms'nin altına **inmesin**; yoksa ileri dalgalarda sıfıra, eksiye düşerdi.
 
 # --task--
 
-1. Add `let best = Number(localStorage.getItem('invaders-best')) || 0`. In `endGame()`, save a higher score as the new
-   best under `'invaders-best'`.
-2. When Space is pressed and the game is over, start a `newGame()`; while playing, it shoots as before.
-3. Under `GAME OVER`, draw `BEST 480   SPACE TO PLAY AGAIN` (the real best, three spaces) in `'16px monospace'`.
+Replace the body of `stepInterval` with the formula, and write the comment above it.
 
 # --task-tr--
 
-1. `let now = 0` satırının altına en iyi skoru okuyan satırı ekle:
-
-   ```js
-   let best = Number(localStorage.getItem('invaders-best')) || 0
-   ```
-
-2. `endGame()` fonksiyonunu şöyle yap:
-
-   ```js
-   function endGame() {
-     state = 'over'
-     if (score > best) { // ← yeni
-       best = score // ← yeni
-       localStorage.setItem('invaders-best', best) // ← yeni
-     } // ← yeni
-   }
-   ```
-
-3. `keydown` bloğunu şöyle yap:
-
-   ```js
-   document.addEventListener('keydown', (event) => {
-     keys[event.key] = true
-     if (event.key === ' ') { // ← değişti
-       if (state === 'over') newGame() // ← yeni
-       else shoot() // ← yeni
-     } // ← yeni
-   })
-   ```
-
-4. `draw()` içinde, `ctx.fillText('GAME OVER', canvas.width / 2, 250)` satırının altına (hâlâ `if (state === 'over')`
-   bloğunun içinde) iki satır ekle:
-
-   ```js
-       ctx.font = '16px monospace'
-       ctx.fillText('BEST ' + best + '   SPACE TO PLAY AGAIN', canvas.width / 2, 290)
-   ```
-
-5. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Oyun bitince `GAME OVER`'ın altında en iyi skor ve
-   `SPACE TO PLAY AGAIN` yazmalı; Boşluk'a basınca 3 can ve `WAVE 1` ile yeni oyun başlamalı. Alttaki kontrollerin hepsi
-   yeşil olmalı. `BEST` kontrolü kırmızıysa `BEST ` sonrasındaki ve `SPACE`'ten önceki boşlukları say.
+`stepInterval`'ın gövdesini formülle değiştir, üstüne yorum satırını yaz. **Çalıştır** ve istilacıları azalt.
 
 # --tests--
 
-A new best should be saved when the game ends.
-tr: Oyun bitince yeni rekor kaydedilmeli.
+The step should be 588 ms with all 45 alive and 60 ms with one left.
+tr: Adım 45'i yaşarken 588 ms, bir tane kalınca 60 ms olmalı.
 
 ```js
-score = 480
-endGame()
-assert.strictEqual(best, 480)
-assert.strictEqual(localStorage.getItem('invaders-best'), '480')
-draw()
-assert.include($.texts(), 'BEST 480 SPACE TO PLAY AGAIN')
+assert.strictEqual(stepInterval(), 588)
+for (const invader of invaders) invader.alive = false
+invaders[0].alive = true
+assert.strictEqual(stepInterval(), 60)
 ```
 
-A lower score should not replace the best.
-tr: Daha düşük bir skor rekorun yerini almamalı.
+Later waves should be quicker, but never under 40 ms.
+tr: Sonraki dalgalar daha hızlı olmalı ama 40 ms'nin altına inmemeli.
 
 ```js
-best = 900
-score = 100
-endGame()
-assert.strictEqual(best, 900)
-```
-
-Space after game over should start a fresh game.
-tr: Oyun bittikten sonra Boşluk yepyeni bir oyun başlatmalı.
-
-```js
-score = 250
-lives = 0
-wave = 3
-endGame()
-$.tap(' ')
-assert.strictEqual(state, 'playing')
-assert.deepEqual([score, lives, wave], [0, 3, 1])
-assert.lengthOf(alive(), 45)
+wave = 2
+assert.strictEqual(stepInterval(), 548)
+wave = 30
+assert.strictEqual(stepInterval(), 40)
 ```
 
 # --solution--
