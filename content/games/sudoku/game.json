@@ -12,7 +12,6 @@
   "skills": ["prog.functions", "prog.arrays", "game.input", "game.state"],
   "extend": [
     { "en": "Pencil marks: a mode where digits are written small, as notes, several per cell.", "tr": "Kurşun kalem notları: rakamların küçük, not olarak, hücre başına birkaç tane yazıldığı bir kip." },
-    { "en": "Undo with Ctrl+Z, keeping a list of the changes made.", "tr": "Yapılan değişikliklerin listesini tutarak Ctrl+Z ile geri alma." },
     { "en": "Difficulty levels: 40, 50 or 55 holes, with a best time for each.", "tr": "Zorluk seviyeleri: 40, 50 ya da 55 delik ve her biri için ayrı en iyi süre." },
     { "en": "Count how many steps the solver takes, and show it as a difficulty score.", "tr": "Çözücünün kaç adım attığını say ve bunu bir zorluk puanı olarak göster." },
     { "en": "Watch the solver work: fill in one digit per frame and undo in red when it backtracks.", "tr": "Çözücüyü izle: her karede bir rakam doldur, geri izlediğinde kırmızıyla geri al." }
