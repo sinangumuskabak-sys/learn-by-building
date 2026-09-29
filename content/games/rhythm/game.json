@@ -14,7 +14,6 @@
     { "en": "Use performance.now() instead of frames, so the song keeps time on a 120 Hz screen too.", "tr": "Şarkı 120 Hz bir ekranda da zamanı tutsun diye kareler yerine performance.now() kullan." },
     { "en": "A beep for every hit with the Web Audio API, higher for each lane.", "tr": "Web Audio API ile her vuruşta, her şerit için daha tiz bir bip." },
     { "en": "Long notes that must be held until their tail passes the line.", "tr": "Kuyruğu çizgiyi geçene kadar basılı tutulması gereken uzun notalar." },
-    { "en": "A second, harder chart, and a menu to choose one.", "tr": "İkinci, daha zor bir çizelge ve birini seçmek için bir menü." },
-    { "en": "A speed setting that changes SPEED without changing the timing.", "tr": "Zamanlamayı değiştirmeden SPEED'i değiştiren bir hız ayarı." }
+    { "en": "A second, harder chart, and a menu to choose one.", "tr": "İkinci, daha zor bir çizelge ve birini seçmek için bir menü." }
   ]
 }

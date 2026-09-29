@@ -12,7 +12,7 @@
   "skills": ["prog.arrays", "prog.functions", "game.state", "game.input"],
   "extend": [
     { "en": "Let the player choose the piece to promote to, not always a queen.", "tr": "Oyuncu her zaman vezir değil, terfi edeceği taşı seçsin." },
-    { "en": "Draws by repetition and by the fifty-move rule.", "tr": "Tekrar ve elli hamle kuralıyla beraberlik." },
+    { "en": "A draw when the same position comes up for the third time.", "tr": "Aynı pozisyon üçüncü kez gelince beraberlik." },
     { "en": "Piece-square tables: a bonus table for each kind of piece, so the computer develops and castles.", "tr": "Taş-kare tabloları: her taş türü için bir bonus tablosu; bilgisayar taşlarını geliştirsin ve rok yapsın." },
     { "en": "A move list in chess notation (e4, Nf3, O-O) next to the board.", "tr": "Tahtanın yanında satranç gösterimiyle (e4, Af3, O-O) bir hamle listesi." },
     { "en": "Iterative deepening: search depth 1, 2, 3, ... until a time limit, and play the best move found.", "tr": "Yinelemeli derinleştirme: bir zaman sınırına kadar 1, 2, 3, ... derinlikte ara ve bulunan en iyi hamleyi oyna." }

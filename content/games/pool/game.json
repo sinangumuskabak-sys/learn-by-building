@@ -11,7 +11,6 @@
   "color": "#15803d",
   "skills": ["game.physics", "game.collision", "game.input", "game.loop"],
   "extend": [
-    { "en": "Two players taking turns: keep shooting while you pocket a ball.", "tr": "Sırayla oynayan iki oyuncu: top soktuğun sürece vurmaya devam et." },
     { "en": "Spin: hitting the cue ball low makes it roll back after a head-on hit.", "tr": "Falso: isteka topuna alttan vurmak, tam karşıdan vuruştan sonra onu geri getirsin." },
     { "en": "A cue stick drawn behind the ball that pulls back with the power.", "tr": "Topun arkasında çizilen ve güçle birlikte geri çekilen bir isteka." },
     { "en": "A sound whose volume depends on how hard two balls hit.", "tr": "Sesi iki topun ne kadar sert çarptığına bağlı bir ses." },

@@ -14,7 +14,6 @@
     { "en": "Draw the player with a mouth that opens and closes as it moves, facing its direction.", "tr": "Oyuncuyu hareket ettikçe açılıp kapanan, yönüne bakan bir ağızla çiz." },
     { "en": "Eaten ghosts return to the house as a pair of eyes that path-finds its way back.", "tr": "Yenen hayaletler eve yolunu bularak geri dönen bir çift göz olarak gitsin." },
     { "en": "A fruit that appears twice per level for bonus points.", "tr": "Her bölümde iki kez çıkan, bonus puanlı bir meyve." },
-    { "en": "Slow the ghosts down inside the tunnel, as in the original game.", "tr": "Orijinal oyundaki gibi hayaletleri tünelde yavaşlat." },
     { "en": "Design your own maze in MAZE: keep it connected and check there are no dead ends.", "tr": "MAZE içinde kendi labirentini tasarla: bağlı kalsın ve çıkmaz sokak olmasın." }
   ]
 }

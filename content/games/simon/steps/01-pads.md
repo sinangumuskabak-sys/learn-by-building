@@ -1,206 +1,79 @@
 ---
-title: Four pads
-title_tr: Dört tuş
-skills: [game.canvas, prog.arrays]
+title: Get the canvas and the pen
+title_tr: Canvas'ı ve kalemi al
+skills: [game.canvas]
 ---
 
-# --explanation--
+# --goal--
 
-Simon has four colored pads that light up. Each pad needs two colors, a dim one for "off" and a bright one for "lit", so
-keep them together in one list of objects:
+Simon is drawn on a `<canvas>` 400 pixels wide and 440 high, with the id `game`. We find it from JavaScript and ask it
+for its 2D context, the object that holds every drawing command.
 
-```js
-const PADS = [
-  { dim: '#14532d', lit: '#4ade80' },   // green
-  ...
-]
-```
+# --goal-tr--
 
-The pads fill the four quarters of the board. Pad `i` is in column `i % 2` and row `Math.floor(i / 2)`: the usual
-"position in a grid from one number" trick, here with a 2 by 2 grid.
+Bir **renk hafızası** oyunu (Simon) yazacağız: dört renkli tuş sırayla yanar, sen de aynı sırayla basarsın. Her turda
+dizi bir renk uzar.
 
-One variable, `lit`, says which pad is lit (`-1` for none). Drawing each pad simply picks `pad.lit` or `pad.dim` depending
-on it. Whatever lights a pad later, the computer showing the sequence or the player pressing, only has to change `lit`.
+Oyundaki her şey sayfadaki bir **canvas** (tuval) üzerine çizilir: 400 piksel eninde, 440 piksel boyunda boş bir
+dikdörtgen. Resim yapmadan önce iki şey lazım: **kâğıt** ve **kalem**. Bu adımda ikisini de alıyoruz; ekranda henüz bir
+şey değişmeyecek.
 
-# --explanation-tr--
-
-**Bu adımda:** Simon'un dört renkli tuşunu çizeceğiz. Çalıştırınca sağda, üstte biraz boşluk bırakılmış, 2×2
-dizilmiş dört koyu renkli kare göreceksin: yeşil, kırmızı, sarı ve mavi.
-
-**Kod nerede, nasıl çalışır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
-listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur. `//` ile başlayan kısımlar **yorumdur**:
-bilgisayar onları atlar, sadece insanlar için not. **Çalıştır** düğmesine basınca kod çalışır, sonucu sağ üstteki
-**Oyun** alanında görürsün; sağ alttaki **Kontroller** kodunun istenen şeyi yapıp yapmadığını söyler.
-
-**Canvas ve fırça.** Sayfada 400×440 piksellik boş bir resim alanı (`canvas`, tuval) var. Oyundaki her şeyi onun
-üstüne boyarız. Önce kâğıdı buluruz, sonra fırçayı alırız:
+# --code--
 
 ```js
-const canvas = document.getElementById('game')   // kimliği "game" olan canvas'ı bul
-const ctx = canvas.getContext('2d')              // onun 2D çizim aracını (fırçayı) al
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
 ```
 
-`const ad = ...` bir şeye **ad verir** (sabit): bir kutuya etiket yapıştırmak gibi. Nokta (`.`) "bunun içindeki
-şu komut" demektir. Tırnak içindeki `'game'` bir **yazıdır**; sayılar ise tırnaksız yazılır.
+# --meaning--
 
-Fırçayla iki hamle yaparsın: renk seç, dikdörtgen boya.
+- `document` is the page; `getElementById('game')` finds the element whose id is `game`.
+- `const canvas =` gives what was found a name, so later lines can use it.
+- `canvas.getContext('2d')` asks the canvas for its 2D drawing tools; we call them `ctx` (short for context).
 
-```js
-ctx.fillStyle = '#0f172a'        // renk (koyu lacivert)
-ctx.fillRect(10, 20, 50, 30)     // x, y, genişlik, yükseklik
-```
+# --meaning-tr--
 
-Canvas'ın **sol üst köşesi** `(0, 0)`'dır; `x` sağa, `y` **aşağı** doğru büyür. Renkler `'#4ade80'` gibi kodlarla
-yazılır; kodları ezberlemen gerekmez, verileni aynen yaz.
-
-**Her tuşun iki rengi var.** Sönükken koyu (`dim`), yanarken parlak (`lit`). İkisini bir **nesnede** tutarız,
-dört tuşu da bir **dizide**:
-
-```js
-const PADS = [
-  { dim: '#14532d', lit: '#4ade80' },   // yeşil
-  { dim: '#7f1d1d', lit: '#f87171' },   // kırmızı
-  ...
-]
-```
-
-- Süslü parantez `{ }` bir **nesne**dir: `ad: değer` çiftlerinden oluşan bir paket. `pad.lit` "bu tuşun parlak
-  rengi" demektir.
-- Köşeli parantez `[ ]` bir **dizi**dir: sıralı bir liste. Elemanlar **0'dan** numaralanır: `PADS[0]` yeşil,
-  `PADS[3]` mavi.
-
-**Tuşlar nereye?** Tahtanın dört çeyreğine. `HALF` tahtanın yarısı: `canvas.width / 2` = 200 (`/` bölme). Tuş
-`i`'nin sütunu `i % 2`, satırı `Math.floor(i / 2)`:
-
-```
-tuş:  0 1      sütun = i % 2              (%: bölümden kalan; 3 % 2 = 1)
-      2 3      satır = Math.floor(i / 2)  (aşağı yuvarla; 3 / 2 = 1.5 → 1)
-```
-
-Üstte skor yazısı için 40 piksel boşluk bırakırız (`TOP`). Her kare çeyreğinin her kenarından 6 piksel içeride
-başlar, bu yüzden eni `HALF - 12`'dir. Tuşlar arasında ince bir boşluk kalır.
-
-**Hangi tuş yanıyor?** Tek bir değişken söyler: `let lit = -1`. `let` de ad verir ama değeri sonradan
-**değişebilir** (değişken). `-1` "hiçbiri" demek, çünkü `-1` numaralı tuş yok. Çizerken her tuş için bakarız:
-
-```js
-ctx.fillStyle = i === lit ? pad.lit : pad.dim
-```
-
-`===` "eşit mi?" diye sorar. `? :` kısa bir seçimdir: "bu tuş yanan tuş mu? Evetse parlak renk, değilse koyu
-renk." Tuşu ileride kim yakarsa yaksın (bilgisayar ya da oyuncu), sadece `lit`'i değiştirmesi yetecek.
-
-**Fonksiyon ve her tuş için çizmek.** `function draw() { ... }` birkaç satıra `draw` adını verir (tarif yazmak
-gibi); `draw()` yazınca çalışır. İçinde `PADS.forEach((pad, i) => { ... })` "dizideki her tuş için şunu yap"
-demektir: `pad` o tuşun nesnesi, `i` sıra numarası. `=>` küçük bir fonksiyon yazmanın kısa yoludur.
-
-**Oyun döngüsü.** Tuşlar ileride yanıp sönecek, bu yüzden ekranı saniyede yaklaşık 60 kez yeniden çizeriz.
-`requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki boyamandan önce `loop`'u çağır" der. `loop` da işini
-bitirince kendini yeniden ister; böylece döngü hiç durmaz.
+- `document` → **sayfanın kendisi.** Sayfadaki her şeye buradan ulaşırız.
+- `.getElementById('game')` → "kimliği (id) `game` olan öğeyi bul". Nokta (`.`) "bunun içindeki şu komut" demek;
+  parantez `( )` komuta bilgi verir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
+- `const canvas =` → bulunan şeye **canvas** adını verir. Kutuya etiket yapıştırmak gibi: bundan sonra hep bu adla
+  çağırırız. `const` "bu ad hep aynı şeyi gösterecek" demek; `=` "sağdakini soldaki ada ver".
+- `canvas.getContext('2d')` → canvas'tan **2 boyutlu çizim kalemini** ister.
+- `const ctx =` → kaleme `ctx` adını verir (context, yani bağlam kelimesinin kısaltması). Bütün çizim satırları
+  `ctx.` ile başlayacak: "kalemle şunu yap".
 
 # --task--
 
-1. Add `TOP = 40`, `HALF = canvas.width / 2` and the `PADS` list below (dim and lit color of
-   each pad, pads 0 1 on top, 2 3 below), and `let lit = -1`.
-
-   ```js
-   const PADS = [
-     { dim: '#14532d', lit: '#4ade80' },
-     { dim: '#7f1d1d', lit: '#f87171' },
-     { dim: '#713f12', lit: '#facc15' },
-     { dim: '#1e3a8a', lit: '#60a5fa' },
-   ]
-   ```
-
-2. Every frame fill `'#0f172a'` and draw each pad as a square filling its quarter below `TOP`, 6 pixels in from each side
-   (`HALF - 12` wide), in its lit color if it is the lit pad and its dim color otherwise.
+Write the two lines under the three comment lines, then press **Run**.
 
 # --task-tr--
 
-1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** kâğıdı ve fırçayı alan satırları
-   yaz:
+Kodu, editördeki üç yorum satırının (`//` ile başlayanlar; bilgisayar onları okumaz, insanlar için not) **altına**
+yaz. Kopyalama; kendin yaz, harf harf. Sonra **Çalıştır**'a bas (ya da `Ctrl + Enter`). Ekran değişmez, ama alttaki
+kontroller yeşil olmalı.
 
-   ```js
-   const canvas = document.getElementById('game')
-   const ctx = canvas.getContext('2d')
-   ```
+# --hint--
 
-2. Bir satır boşluk bırak ve ölçüleri, tuş renklerini ve yanan tuş değişkenini ekle:
+Check the spelling: `getElementById` has a capital `E`, `B` and `I`; `getContext` has a capital `C`.
 
-   ```js
-   const TOP = 40 // room for the score
-   const HALF = canvas.width / 2
-   // Each pad: its dim color and its lit color. Pads 0 1 on top, 2 3 below.
-   const PADS = [
-     { dim: '#14532d', lit: '#4ade80' },
-     { dim: '#7f1d1d', lit: '#f87171' },
-     { dim: '#713f12', lit: '#facc15' },
-     { dim: '#1e3a8a', lit: '#60a5fa' },
-   ]
+# --hint-tr--
 
-   let lit = -1 // the pad lit right now, or -1
-   ```
-
-   Renk kodlarını dikkatle kopyala; kontroller bu renklere bakıyor.
-
-3. Bir satır boşluk bırak ve çizim fonksiyonunu yaz:
-
-   ```js
-   function draw() {
-     ctx.fillStyle = '#0f172a'
-     ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-     PADS.forEach((pad, i) => {
-       const x = (i % 2) * HALF
-       const y = TOP + Math.floor(i / 2) * HALF
-       ctx.fillStyle = i === lit ? pad.lit : pad.dim
-       ctx.fillRect(x + 6, y + 6, HALF - 12, HALF - 12)
-     })
-   }
-   ```
-
-   Önce bütün tahtayı koyu boyar, sonra her tuşu kendi çeyreğine çizer.
-
-4. Bir satır boşluk bırak ve oyun döngüsünü yazıp başlat:
-
-   ```js
-   function loop() {
-     draw()
-     requestAnimationFrame(loop)
-   }
-
-   requestAnimationFrame(loop)
-   ```
-
-5. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda dört koyu renkli kare görmelisin ve alttaki kontrollerin
-   hepsi yeşil olmalı. Bir kare yanlış renkteyse `PADS` listesindeki renk kodlarını ve sırasını kontrol et.
-   Merak edersen `let lit = -1` satırında `-1`'i `0` yapıp çalıştır: yeşil tuş parlar. Sonra geri `-1` yap.
+Yazımı kontrol et: `getElementById` içinde büyük `E`, `B` ve `I` var; `getContext` içinde büyük `C` var. Büyük/küçük harf önemli.
 
 # --tests--
 
-The four pads should fill the four quarters.
-tr: Dört tuş dört çeyreği doldurmalı.
+`canvas` should be the `#game` canvas element.
+tr: `canvas`, sayfadaki `#game` canvas'ı olmalı.
 
 ```js
-$.tick(1)
-const pads = $.rects().filter((r) => r.w === 188)
-assert.deepEqual(pads.map((r) => [r.x, r.y, r.color]), [
-  [6, 46, '#14532d'],
-  [206, 46, '#7f1d1d'],
-  [6, 246, '#713f12'],
-  [206, 246, '#1e3a8a'],
-])
+assert.strictEqual(canvas, $.canvas)
 ```
 
-The lit pad should be drawn bright.
-tr: Yanan tuş parlak çizilmeli.
+`ctx` should be the canvas's 2D context.
+tr: `ctx`, canvas'ın 2D çizim bağlamı olmalı.
 
 ```js
-lit = 3
-$.tick(1)
-assert.lengthOf($.rects('#60a5fa'), 1)
-assert.lengthOf($.rects('#1e3a8a'), 0)
-assert.lengthOf($.rects('#14532d'), 1)
+assert.strictEqual(ctx, $.canvas.getContext('2d'))
 ```
 
 # --seed--
@@ -219,35 +92,4 @@ assert.lengthOf($.rects('#14532d'), 1)
 // Write your code below.
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
-
-const TOP = 40 // room for the score
-const HALF = canvas.width / 2
-// Each pad: its dim color and its lit color. Pads 0 1 on top, 2 3 below.
-const PADS = [
-  { dim: '#14532d', lit: '#4ade80' },
-  { dim: '#7f1d1d', lit: '#f87171' },
-  { dim: '#713f12', lit: '#facc15' },
-  { dim: '#1e3a8a', lit: '#60a5fa' },
-]
-
-let lit = -1 // the pad lit right now, or -1
-
-function draw() {
-  ctx.fillStyle = '#0f172a'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  PADS.forEach((pad, i) => {
-    const x = (i % 2) * HALF
-    const y = TOP + Math.floor(i / 2) * HALF
-    ctx.fillStyle = i === lit ? pad.lit : pad.dim
-    ctx.fillRect(x + 6, y + 6, HALF - 12, HALF - 12)
-  })
-}
-
-function loop() {
-  draw()
-  requestAnimationFrame(loop)
-}
-
-requestAnimationFrame(loop)
 ```

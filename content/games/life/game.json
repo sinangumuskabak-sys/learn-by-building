@@ -14,7 +14,6 @@
     { "en": "Color cells by age: new cells bright, old ones darker.", "tr": "Hücreleri yaşa göre renklendir: yeni hücreler parlak, yaşlılar daha koyu." },
     { "en": "Speed buttons (+ and -) that change SPEED while it runs.", "tr": "Çalışırken SPEED'i değiştiren hız düğmeleri (+ ve -)." },
     { "en": "More patterns from text: a pulsar, a spaceship, the R-pentomino.", "tr": "Metinden daha çok desen: bir pulsar, bir uzay gemisi, R-pentomino." },
-    { "en": "Other rules: HighLife (born with 3 or 6) and see what changes.", "tr": "Başka kurallar: HighLife (3 ya da 6 ile doğar) ve neyin değiştiğine bak." },
-    { "en": "Detect when the world has become still, and show the generation it happened.", "tr": "Dünyanın ne zaman durağanlaştığını algıla ve bunun hangi nesilde olduğunu göster." }
+    { "en": "Other rules: HighLife (born with 3 or 6) and see what changes.", "tr": "Başka kurallar: HighLife (3 ya da 6 ile doğar) ve neyin değiştiğine bak." }
   ]
 }

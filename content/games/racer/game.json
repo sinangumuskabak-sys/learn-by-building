@@ -14,7 +14,6 @@
     { "en": "Hills: give each segment a height and project it too; draw from near to far and skip road hidden behind a hill top.", "tr": "Tepeler: her parçaya bir yükseklik ver ve onu da izdüşür; yakından uzağa çiz ve bir tepenin arkasında kalan yolu atla." },
     { "en": "Trees and signs at the side of the road, scaled like the cars.", "tr": "Yol kenarında arabalar gibi ölçeklenen ağaçlar ve tabelalar." },
     { "en": "A parallax background (mountains) that slides sideways in curves.", "tr": "Virajlarda yana kayan bir paralaks arka plan (dağlar)." },
-    { "en": "A countdown timer with checkpoints that add time, like the arcade original.", "tr": "Orijinal atari oyunundaki gibi, zaman ekleyen kontrol noktalarıyla geri sayan bir süre." },
     { "en": "An engine sound whose pitch follows the speed.", "tr": "Perdesi hızı izleyen bir motor sesi." }
   ]
 }

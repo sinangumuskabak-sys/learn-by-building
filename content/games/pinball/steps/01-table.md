@@ -1,208 +1,77 @@
 ---
-title: A table of lines
-title_tr: Çizgilerden bir masa
-skills: [game.canvas, prog.arrays]
+title: Paint the table
+title_tr: Masayı boya
+skills: [game.canvas]
 ---
 
-# --explanation--
+# --goal--
 
-A pinball table is walls, bumpers and flippers. The walls are the simplest part, and the most flexible way to describe them is as
-a list of **line segments**, each `[x1, y1, x2, y2]`.
+Pinball is drawn on a `<canvas>`, 400 pixels wide and 600 tall. We take hold of it, get its 2D drawing context and
+paint the whole table dark.
 
-That one idea goes a long way. A curved top is just a few short segments at angles; the launch lane on the right is two long
-parallel segments and a floor; the slopes that guide the ball towards the flippers are two more. To change the table you edit the
-list, and every later rule (collisions) works for any shape you draw with it.
+# --goal-tr--
 
-Drawing is one loop: for every segment, a path from one end to the other, stroked. `lineCap = 'round'` rounds the ends so the
-corners where segments meet look joined.
+Pinball'u sayfadaki bir **canvas** (tuval) üstüne çizeceğiz: 400 piksel eninde, 600 piksel boyunda boş bir
+dikdörtgen. Sağdaki uzun, koyu alan o.
 
-The ball starts at the bottom of the launch lane, waiting.
+İlk iş tuvali bulmak, sonra onun **çizim kalemini** almak ve bütün masayı koyu renge boyamak. Bir resme
+başlamadan önce kâğıdı masaya koyup fırçayı eline almak gibi.
 
-# --explanation-tr--
-
-**Bu adımda:** pinball masasının duvarlarını ve fırlatma kanalında bekleyen topu çizeceğiz. Sağda koyu bir masa,
-açık gri çizgilerden duvarlar ve sağ altta küçük beyaz bir top göreceksin.
-
-**Kod nedir, nerede yazılır?** Soldaki kod panelindeki `game.js` dosyası, bilgisayara verdiğin talimatların
-listesidir. Bilgisayar onları **yukarıdan aşağıya, satır satır** okur ve yapar. `//` ile başlayan kısımlar
-**yorumdur**: bilgisayar onları atlar, sadece insanlar için not.
-
-**Canvas (tuval) ve fırça.** Sayfada 400 piksel eninde, 600 piksel boyunda boş bir resim alanı var: kimliği (id)
-`game` olan bir `canvas`. Oyundaki her şeyi onun üstüne boyayacağız. Önce kâğıdı buluruz, sonra fırçayı alırız:
+# --code--
 
 ```js
-const canvas = document.getElementById('game')  // sayfadaki "game" kimlikli canvas'ı bul
-const ctx = canvas.getContext('2d')             // onun çizim aracını (context) al
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+
+ctx.fillStyle = '#0c0a09'
+ctx.fillRect(0, 0, canvas.width, canvas.height)
 ```
 
-- `const canvas =` → "Bundan sonra şuna `canvas` diyeceğim." `const` ile adlandırılan şeye **sabit** denir: bir
-  kutuya etiket yapıştırmak gibidir; sonra hep o etiketle çağırırsın ve içi değişmez.
-- Nokta (`.`) "bunun içindeki şu komut" demektir. Tırnak içindeki `'game'` bir **yazıdır** (metin).
-- `ctx` artık senin fırçan. `ctx.fillStyle = 'red'` fırçaya renk sürer, `ctx.fillRect(x, y, en, boy)` bir
-  dikdörtgen boyar.
+# --meaning--
 
-**Konum:** canvas'ın **sol üst köşesi** `(0, 0)`'dır. `x` sağa gittikçe, `y` **aşağı** indikçe büyür. Renkler
-`'white'` gibi adlarla ya da `'#0c0a09'` gibi kodlarla yazılır.
+- `document.getElementById('game')` finds the canvas whose id is `game`.
+- `canvas.getContext('2d')` gives the 2D drawing tools; we call them `ctx`.
+- `fillStyle` picks a color, `fillRect(x, y, width, height)` fills a rectangle. `(0, 0)` is the top-left corner,
+  and `canvas.width` / `canvas.height` make it cover the whole canvas.
 
-**Duvarlar = çizgi listesi.** Masanın her duvarı düz bir çizgi parçasıdır ve iki ucuyla anlatılır:
-`[x1, y1, x2, y2]` ("şu noktadan şu noktaya"). Köşeli parantez `[ ]` bir **dizidir** (array): sırayla dizilmiş
-değerlerden oluşan bir liste. `WALLS` ise dizilerden oluşan bir dizi, yani her satırı bir duvar olan bir liste.
-Kavisli tepe birkaç kısa eğik çizgiden, sağdaki fırlatma kanalı iki uzun çizgi ve bir tabandan oluşur. Masayı
-değiştirmek istersen sadece bu listeyi değiştirirsin.
+# --meaning-tr--
 
-**Değişken ve nesne.** `let ball` bir **değişkendir**: `const` gibi etiketli bir kutu, ama içi sonradan
-değiştirilebilir. Topun bilgilerini bir **nesnede** (object) tutarız:
-
-```js
-ball = { x: 375, y: 570, vx: 0, vy: 0 }
-```
-
-Süslü parantez `{ }` içinde `ad: değer` çiftleri vardır. `ball.x` "topun x'i" demektir. `vx` ve `vy` topun hızı
-(şimdilik 0: top duruyor).
-
-**Fonksiyon** bir talimat grubuna verilen addır. `function newBall() { ... }` onu **tanımlar** (tarifi yazar),
-`newBall()` ise **çağırır** (tarifi uygular). Süslü parantezlerin arasındaki satırlar fonksiyonun içidir.
-
-**Çizgi ve daire çizmek:**
-
-```js
-ctx.beginPath()        // yeni bir çizime başla
-ctx.moveTo(20, 470)    // kalemi buraya koy
-ctx.lineTo(20, 120)    // buraya kadar çiz
-ctx.stroke()           // çizgiyi boya
-ctx.arc(x, y, R, 0, Math.PI * 2)  // (x, y) merkezli, R yarıçaplı tam daire; sonra ctx.fill() ile doldurulur
-```
-
-`strokeStyle` çizgi rengi, `lineWidth` kalınlığı, `lineCap = 'round'` çizgi uçlarını yuvarlar ki köşeler birleşik
-görünsün.
-
-**Döngü:** `for (const [x1, y1, x2, y2] of WALLS) { ... }` "WALLS'taki **her** duvar için, dört sayısını
-`x1, y1, x2, y2` diye aç ve içerdekini yap" demektir. Böylece 11 duvarı tek bir kalıpla çizeriz.
-
-**Oyun döngüsü:** `requestAnimationFrame(loop)` tarayıcıya "ekranı bir sonraki yenilemeden önce `loop`'u çağır"
-der. `loop` her seferinde çizip kendini yeniden ister; böylece saniyede yaklaşık 60 kez çizim yapılır.
+- `document.getElementById('game')` → sayfada kimliği (id) `game` olan öğeyi, yani canvas'ı bulur.
+- `const canvas =` → bulunana **canvas** adını verir.
+- `canvas.getContext('2d')` → canvas'ın **2D çizim kalemini** (context) ister. Adı `ctx`; bundan sonra her çizim
+  satırı `ctx.` ile başlayacak.
+- `ctx.fillStyle = '#0c0a09'` → dolgu rengini seçer: siyaha çok yakın, sıcak bir koyu renk.
+- `ctx.fillRect(0, 0, canvas.width, canvas.height)` → içi dolu bir dikdörtgen çizer. Dört sayı: sol üst köşenin
+  `x`'i ve `y`'si, sonra en ve boy.
+  - Canvas'ta `(0, 0)` **sol üst köşedir**; `x` sağa, `y` **aşağı** doğru büyür.
+  - `canvas.width` (400) ve `canvas.height` (600) tuvalin kendi boyu: dikdörtgen her yeri kaplar.
 
 # --task--
 
-1. Add `R = 8`, `LANE_X = 375` and `WALLS`, line segments `[x1, y1, x2, y2]`: the outline, the launch lane and the two
-   slopes.
-
-   ```js
-   const WALLS = [
-     [20, 470, 20, 120], [20, 120, 60, 55], [60, 55, 140, 22], [140, 22, 260, 22], [260, 22, 340, 50], [340, 50, 390, 120],
-     [390, 120, 390, 590], [360, 590, 360, 170], [360, 590, 390, 590], // the launch lane
-     [20, 470, 128, 530], [360, 470, 272, 530], // the slopes down to the flippers
-   ]
-   ```
-
-2. Write `newBall()`, which puts `ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }`, and `reset()`, which calls it.
-3. Draw the table `'#0c0a09'`, every wall as a `'#a8a29e'` line 4 wide with round caps, and the ball as a `'#e7e5e4'` circle.
+Write the four lines under the three comment lines, then press **Run**.
 
 # --task-tr--
 
-1. Kod panelinde en alttaki `// Write your code below.` satırının **altına** canvas'ı ve fırçayı alan iki satırı yaz:
+1. Editördeki üç yorum satırının (`//` ile başlayanlar) **altına** ilk iki satırı yaz.
+2. Bir boş satır bırak ve boyama satırlarını yaz.
+3. **Çalıştır**'a bas: masa koyu renk olmalı, alttaki kontrol yeşile dönmeli.
 
-   ```js
-   const canvas = document.getElementById('game')
-   const ctx = canvas.getContext('2d')
-   ```
+# --hint--
 
-2. Bir satır boşluk bırak ve topun yarıçapını, kanalın yerini ve duvar listesini ekle (listeyi aynen kopyala,
-   sayılar önemli):
+Check the spelling: `getElementById` has a capital `E`, `B` and `I`; `getContext('2d')` needs the quotes.
 
-   ```js
-   const R = 8 // ball radius
-   const LANE_X = 375 // the launch lane on the right
-   // The walls, as line segments [x1, y1, x2, y2].
-   const WALLS = [
-     [20, 470, 20, 120], [20, 120, 60, 55], [60, 55, 140, 22], [140, 22, 260, 22], [260, 22, 340, 50], [340, 50, 390, 120],
-     [390, 120, 390, 590], [360, 590, 360, 170], [360, 590, 390, 590], // the launch lane
-     [20, 470, 128, 530], [360, 470, 272, 530], // the slopes down to the flippers
-   ]
-   ```
+# --hint-tr--
 
-3. Altına topu tutacak değişkeni ve iki fonksiyonu yaz. `newBall()` topu kanalın dibine koyar, `reset()` oyunu
-   baştan kurar (şimdilik sadece `newBall()`'u çağırır):
-
-   ```js
-   let ball // { x, y, vx, vy }
-
-   function newBall() {
-     ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }
-   }
-
-   function reset() {
-     newBall()
-   }
-   ```
-
-4. Altına masayı, duvarları ve topu çizen `draw()` fonksiyonunu yaz:
-
-   ```js
-   function draw() {
-     ctx.fillStyle = '#0c0a09'
-     ctx.fillRect(0, 0, canvas.width, canvas.height)
-     ctx.strokeStyle = '#a8a29e'
-     ctx.lineWidth = 4
-     ctx.lineCap = 'round'
-     for (const [x1, y1, x2, y2] of WALLS) {
-       ctx.beginPath()
-       ctx.moveTo(x1, y1)
-       ctx.lineTo(x2, y2)
-       ctx.stroke()
-     }
-     ctx.fillStyle = '#e7e5e4'
-     ctx.beginPath()
-     ctx.arc(ball.x, ball.y, R, 0, Math.PI * 2)
-     ctx.fill()
-   }
-   ```
-
-5. En alta oyun döngüsünü ve başlatma satırlarını ekle:
-
-   ```js
-   function loop() {
-     draw()
-     requestAnimationFrame(loop)
-   }
-
-   reset()
-   requestAnimationFrame(loop)
-   ```
-
-   `reset()` topu hazırlar, `requestAnimationFrame(loop)` çizimi başlatır.
-
-6. **Çalıştır**'a bas (ya da `Ctrl + Enter`). Sağda koyu masa, gri duvarlar ve sağ altta kanalda bekleyen beyaz
-   top görünmeli; alttaki kontrollerin hepsi yeşil olmalı. Bir şey çizilmiyorsa parantezleri ve virgülleri kontrol
-   et: her `[` ve `{` bir `]` ve `}` ile kapanmalı.
+Yazımı kontrol et: `getElementById` içinde büyük `E`, `B` ve `I` var; `getContext('2d')` tırnaklarıyla yazılır.
 
 # --tests--
 
-The walls should be a list of segments, four numbers each.
-tr: Duvarlar her biri dört sayıdan oluşan bir parçalar listesi olmalı.
+The whole 400×600 table should be painted `#0c0a09`.
+tr: 400×600'lük masanın tamamı `#0c0a09` ile boyanmalı.
 
 ```js
-assert.isAtLeast(WALLS.length, 10)
-for (const w of WALLS) assert.lengthOf(w, 4)
-assert.deepInclude(WALLS, [20, 470, 20, 120], 'the left wall')
-```
-
-Every wall should be drawn as one line.
-tr: Her duvar bir çizgi olarak çizilmeli.
-
-```js
-$.tick(1)
-assert.lengthOf($.screen().filter((c) => c.op === 'stroke'), WALLS.length, 'one line per wall')
-const ends = $.screen().filter((c) => c.op === 'lineTo').map((c) => c.args.join())
-assert.include(ends, '20,120')
-```
-
-The ball should wait in the launch lane.
-tr: Top fırlatma kanalında beklemeli.
-
-```js
-$.tick(1)
-assert.deepInclude($.arcs(), { x: LANE_X, y: 570, r: R, color: '#e7e5e4' }, 'the ball waits in the launch lane')
+const full = $.rects('#0c0a09').filter((r) => r.x === 0 && r.y === 0 && r.w === 400 && r.h === 600)
+assert.lengthOf(full, 1, 'fillRect(0, 0, canvas.width, canvas.height) with fillStyle #0c0a09')
 ```
 
 # --seed--
@@ -222,48 +91,6 @@ assert.deepInclude($.arcs(), { x: LANE_X, y: 570, r: R, color: '#e7e5e4' }, 'the
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 
-const R = 8 // ball radius
-const LANE_X = 375 // the launch lane on the right
-// The walls, as line segments [x1, y1, x2, y2].
-const WALLS = [
-  [20, 470, 20, 120], [20, 120, 60, 55], [60, 55, 140, 22], [140, 22, 260, 22], [260, 22, 340, 50], [340, 50, 390, 120],
-  [390, 120, 390, 590], [360, 590, 360, 170], [360, 590, 390, 590], // the launch lane
-  [20, 470, 128, 530], [360, 470, 272, 530], // the slopes down to the flippers
-]
-
-let ball // { x, y, vx, vy }
-
-function newBall() {
-  ball = { x: LANE_X, y: 570, vx: 0, vy: 0 }
-}
-
-function reset() {
-  newBall()
-}
-
-function draw() {
-  ctx.fillStyle = '#0c0a09'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.strokeStyle = '#a8a29e'
-  ctx.lineWidth = 4
-  ctx.lineCap = 'round'
-  for (const [x1, y1, x2, y2] of WALLS) {
-    ctx.beginPath()
-    ctx.moveTo(x1, y1)
-    ctx.lineTo(x2, y2)
-    ctx.stroke()
-  }
-  ctx.fillStyle = '#e7e5e4'
-  ctx.beginPath()
-  ctx.arc(ball.x, ball.y, R, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function loop() {
-  draw()
-  requestAnimationFrame(loop)
-}
-
-reset()
-requestAnimationFrame(loop)
+ctx.fillStyle = '#0c0a09'
+ctx.fillRect(0, 0, canvas.width, canvas.height)
 ```

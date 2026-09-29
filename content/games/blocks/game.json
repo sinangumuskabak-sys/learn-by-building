@@ -11,7 +11,6 @@
   "color": "#a855f7",
   "skills": ["prog.arrays", "prog.functions", "game.collision", "game.state", "game.loop"],
   "extend": [
-    { "en": "Hold: press C to put the current piece aside and swap it back later (once per piece).", "tr": "Tutma: C'ye basınca mevcut parçayı kenara koy, sonra geri değiştir (parça başına bir kez)." },
     { "en": "Lock delay: give the player half a second to slide a piece after it lands before it locks.", "tr": "Kilit gecikmesi: parça yere indikten sonra kilitlenmeden önce oyuncuya kaydırmak için yarım saniye ver." },
     { "en": "Smooth sideways movement: when an arrow is held, move once, wait 170 ms, then repeat every 50 ms.", "tr": "Akıcı yan hareket: ok basılı tutulunca bir kez hareket et, 170 ms bekle, sonra her 50 ms'de tekrarla." },
     { "en": "Flash the cleared rows white for a few frames before removing them.", "tr": "Silinen satırları kaldırmadan önce birkaç kare beyaz yakıp söndür." },

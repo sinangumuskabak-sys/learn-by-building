@@ -13,7 +13,6 @@
   "extend": [
     { "en": "Chording: clicking a revealed number whose neighbours already have that many flags opens all its other neighbours.", "tr": "Akor: çevresinde o kadar bayrak olan açık bir sayıya tıklamak diğer bütün komşularını açsın." },
     { "en": "Difficulty levels: 16×16 with 40 mines, 30×16 with 99. Only the constants should change.", "tr": "Zorluk seviyeleri: 40 mayınlı 16×16, 99 mayınlı 30×16. Yalnızca sabitler değişmeli." },
-    { "en": "Touch support: a long press (500 ms) places a flag.", "tr": "Dokunmatik destek: uzun basış (500 ms) bayrak koysun." },
-    { "en": "Show the wrongly placed flags with a cross when you lose.", "tr": "Kaybedince yanlış konmuş bayrakları bir çarpıyla göster." }
+    { "en": "Touch support: a long press (500 ms) places a flag.", "tr": "Dokunmatik destek: uzun basış (500 ms) bayrak koysun." }
   ]
 }

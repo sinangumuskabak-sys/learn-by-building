@@ -39,7 +39,7 @@ write where this step's work goes; a guess before running and a hint box when a 
 finished project can be opened from any step.
 
 <!-- games:en:start -->
-3 build projects and 44 games, 361 steps:
+3 build projects and 44 games, 1169 steps:
 
 - **Build projects:** My business card · Traffic light · Text detective
 - **Beginner games:** Tic-tac-toe · Simon Says Colors · Connect Four · Memory · Wordle-style Word Guess · Whack-a-Mole · 15 Puzzle · Endless Runner · Blackjack · Hangman · Conway's Game of Life · Typing Rain · Sokoban · Rhythm Lanes · Snake · Pong · Flappy-style Bird
@@ -123,7 +123,7 @@ bağımsız bir projedir, freeCodeCamp kodu içermez.
 kısımlar kilitlidir; yalnız o adımın kodunu yazarsın.
 
 <!-- games:tr:start -->
-3 yapım atölyesi ve 44 oyun, 361 adım:
+3 yapım atölyesi ve 44 oyun, 1169 adım:
 
 - **Yapım atölyeleri:** Kartvizitim · Trafik lambası · Metin dedektifi
 - **Başlangıç oyunları:** XOX · Renk Hafızası (Simon) · Dört Bağla · Hafıza Kartları · Wordle Tarzı Kelime Tahmini · Köstebek Vurmaca · 15 Bulmacası · Sonsuz Koşucu · Blackjack · Adam Asmaca · Conway'in Hayat Oyunu · Yazı Yağmuru · Sokoban · Ritim Şeritleri · Yılan · Pong · Flappy tarzı kuş

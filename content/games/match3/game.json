@@ -13,7 +13,6 @@
   "extend": [
     { "en": "Swap the gems with a short sliding animation, and slide them back when the swap fails.", "tr": "Mücevherleri kısa bir kayma animasyonuyla takas et ve takas başarısız olunca geri kaydır." },
     { "en": "A match of four creates a striped gem that clears its whole row when it is matched.", "tr": "Dörtlü bir eşleşme, eşleştiğinde bütün satırını temizleyen çizgili bir mücevher yaratsın." },
-    { "en": "Swipe to swap on a phone: pointerdown on one gem, pointerup towards a neighbour.", "tr": "Telefonda kaydırarak takas: bir mücevherde pointerdown, bir komşuya doğru pointerup." },
     { "en": "Levels with a target score: reach it within the moves to unlock the next level.", "tr": "Hedef puanlı seviyeler: sonraki seviyeyi açmak için hamleler bitmeden ona ulaş." },
     { "en": "Floating +30 numbers where the gems were cleared.", "tr": "Mücevherlerin temizlendiği yerde yükselen +30 sayıları." }
   ]

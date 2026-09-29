@@ -12,7 +12,6 @@
   "skills": ["prog.arrays", "game.state", "game.input"],
   "extend": [
     { "en": "A harder computer: look two or more moves ahead with minimax, like the tic-tac-toe game.", "tr": "Daha zor bir bilgisayar: XOX oyunundaki gibi minimax ile iki ya da daha fazla hamle ileriye bak." },
-    { "en": "Let the loser of the last game start the next one.", "tr": "Son oyunu kaybeden sonrakine başlasın." },
     { "en": "Make the disc bounce a little when it lands.", "tr": "Disk yere inince biraz zıplasın." },
     { "en": "An undo button for games against a friend.", "tr": "Arkadaşla oynanan oyunlar için bir geri al düğmesi." },
     { "en": "A bigger board, 9 by 7, where you need five in a row.", "tr": "Beş tane yan yana gereken 9'a 7 daha büyük bir tahta." }

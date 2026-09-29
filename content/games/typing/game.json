@@ -13,7 +13,6 @@
   "extend": [
     { "en": "Longer words at higher levels, from a list sorted by length.", "tr": "Uzunluğa göre sıralı bir listeden, yüksek seviyelerde daha uzun kelimeler." },
     { "en": "A burst of particles when a word is cleared.", "tr": "Bir kelime temizlendiğinde bir parçacık patlaması." },
-    { "en": "Backspace to let go of the current word and pick another.", "tr": "Şimdiki kelimeyi bırakıp başka birini seçmek için Backspace." },
     { "en": "A word list of your own: programming keywords, or Turkish words.", "tr": "Kendi kelime listen: programlama anahtar kelimeleri ya da Türkçe kelimeler." },
     { "en": "Show which letters you miss most at the end of the game.", "tr": "Oyun sonunda en çok hangi harfleri kaçırdığını göster." }
   ]

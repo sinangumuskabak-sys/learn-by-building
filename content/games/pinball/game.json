@@ -11,7 +11,6 @@
   "color": "#38bdf8",
   "skills": ["game.physics", "game.collision", "game.input", "game.state"],
   "extend": [
-    { "en": "Slingshots: angled walls above the flippers that kick like bumpers.", "tr": "Sapanlar: paletlerin üstünde tampon gibi tekmeleyen açılı duvarlar." },
     { "en": "Three drop targets that give a big bonus when all are hit.", "tr": "Hepsi vurulunca büyük ödül veren üç düşen hedef." },
     { "en": "A tilt: shake the table with a key, but too many shakes end the ball.", "tr": "Tilt: masayı bir tuşla salla, ama çok fazla sallamak topu bitirsin." },
     { "en": "Multiball: a second ball in play after 5000 points.", "tr": "Çoklu top: 5000 puandan sonra oyunda ikinci bir top." },

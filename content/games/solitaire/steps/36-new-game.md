@@ -1,0 +1,335 @@
+---
+title: A new game
+title_tr: Yeni oyun
+skills: [game.input, game.state]
+---
+
+# --goal--
+
+After a win, a tap deals a new game. N deals a new game at any time, because not every Klondike deal can be won. A new deal
+also lets go of any held card.
+
+# --goal-tr--
+
+Kazandıktan sonra bir **dokunuş** yeni oyun dağıtsın. Ayrıca **N** tuşu her an yeni oyun başlatsın: her Klondike dağıtımı
+kazanılamaz. En iyi oynayışla bile birkaç dağıtımdan biri imkânsızdır.
+
+Yeni dağıtımda elde tutulan bir kart kalmamalı; `deal` onu da temizleyecek.
+
+# --code--
+
+```js
+drag = null
+
+if (won) return deal()
+
+else if (event.key === 'n' || event.key === 'N') deal()
+```
+
+# --meaning--
+
+- `deal` now also sets `drag = null`.
+- In `pointerdown`, a tap on a won game deals and stops there.
+- In the key listener, N (small or capital) deals; like Space it reaches `preventDefault`.
+
+# --meaning-tr--
+
+- `deal` içinde `drag = null` → yeni oyunda elde kart yok.
+- `pointerdown` içinde `if (won) return deal()` → oyun kazanılmışsa dokunuş yeni oyun dağıtır ve dinleyici orada biter;
+  karta bakılmaz.
+- `else if (event.key === 'n' || event.key === 'N') deal()` → küçük `n` **veya** büyük `N` (Caps Lock açıksa) yeni oyun
+  dağıtır. `else if` zincirine eklendiği için Boşluk gibi `preventDefault`'a kadar iner.
+
+# --task--
+
+1. In `deal`, under `piles.stock = deck`, write `drag = null`.
+2. In `pointerdown`, under `const p = toCanvas(event)`, write the `won` line.
+3. In the `keydown` listener, add the N line between the Space line and `else return`.
+
+# --task-tr--
+
+1. `deal` içinde `piles.stock = deck` satırının altına `drag = null` yaz.
+2. `pointerdown` dinleyicisinde `const p = toCanvas(event)` satırının altına `if (won) return deal()` yaz.
+3. `keydown` dinleyicisinde Boşluk satırı ile `else return` satırının **arasına** N satırını yaz.
+4. **Çalıştır** ve **N**'ye bas: kartlar yeniden dağıtılmalı.
+
+# --tests--
+
+After a win, a tap should deal a new game.
+tr: Kazandıktan sonra bir dokunuş yeni oyun dağıtmalı.
+
+```js
+flipStock()
+won = true
+$.click(200, 300)
+assert.isFalse(won, 'a tap deals a new game')
+assert.lengthOf(piles.stock, 24)
+assert.lengthOf(piles.waste, 0)
+```
+
+N should deal a new game at any time and let go of a held card.
+tr: N her an yeni oyun dağıtmalı ve tutulan kartı bırakmalı.
+
+```js
+flipStock()
+$.pointerDown(16 + 20, 136 + 30)
+assert.ok(drag)
+$.press('n')
+assert.lengthOf(piles.waste, 0, 'N deals a new game')
+assert.strictEqual(moves, 0)
+assert.isNull(drag)
+flipStock()
+$.press('N')
+assert.lengthOf(piles.waste, 0, 'capital N too')
+```
+
+# --solution--
+
+```js
+// Solitaire, step by step.
+// The page already has <canvas id="game" width="480" height="560"></canvas>.
+// Write your code below.
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+
+const SUITS = ['♠', '♥', '♦', '♣']
+const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+const CW = 56 // card width
+const CH = 78
+const LEFT = 16
+const COL = 64 // distance between columns
+const TOP_Y = 40 // the stock, the waste and the foundations
+const TAB_Y = 136 // the seven tableau columns
+const DOWN_STEP = 8 // how much of a face-down card shows under the next one
+const UP_STEP = 22
+
+let piles // stock, waste, f0..f3 (foundations) and t0..t6 (tableau): arrays of { rank, suit, up }
+let drag // { from, index, dx, dy, x, y, moved } while a card is held
+let moves
+let frames
+let won
+
+const isRed = (card) => card.suit === 1 || card.suit === 2
+const last = (pile) => pile[pile.length - 1]
+const colX = (i) => LEFT + i * COL
+
+function newDeck() {
+  const deck = []
+  for (let suit = 0; suit < 4; suit++) for (let rank = 1; rank <= 13; rank++) deck.push({ rank, suit, up: false })
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[deck[i], deck[j]] = [deck[j], deck[i]]
+  }
+  return deck
+}
+
+// Column i gets i + 1 cards, the last one face up; the rest is the stock.
+function deal() {
+  const deck = newDeck()
+  piles = { stock: [], waste: [] }
+  for (let f = 0; f < 4; f++) piles['f' + f] = []
+  for (let i = 0; i < 7; i++) {
+    piles['t' + i] = deck.splice(0, i + 1)
+    last(piles['t' + i]).up = true
+  }
+  piles.stock = deck
+  drag = null
+  moves = 0
+  frames = 0
+  won = false
+}
+
+// Where each pile sits on the table.
+function pileX(key) {
+  if (key === 'stock') return colX(0)
+  if (key === 'waste') return colX(1)
+  if (key[0] === 'f') return colX(3 + Number(key[1]))
+  return colX(Number(key[1]))
+}
+
+// The y of card `index` in a tableau column: face-down cards overlap more than face-up ones.
+function cardY(key, index) {
+  if (key[0] !== 't') return TOP_Y
+  let y = TAB_Y
+  const pile = piles[key]
+  for (let i = 0; i < index; i++) y += pile[i].up ? UP_STEP : DOWN_STEP
+  return y
+}
+
+// Tableau: one lower, the other color; only a king goes into an empty column.
+function canStack(card, pile) {
+  const under = last(pile)
+  if (!under) return card.rank === 13
+  return under.up && under.rank === card.rank + 1 && isRed(under) !== isRed(card)
+}
+
+// Foundation: same suit, one higher, starting from the ace.
+function canFound(card, pile) {
+  const under = last(pile)
+  if (!under) return card.rank === 1
+  return under.suit === card.suit && under.rank === card.rank - 1
+}
+
+function flipStock() {
+  if (piles.stock.length) {
+    const card = piles.stock.pop()
+    card.up = true
+    piles.waste.push(card)
+  } else {
+    // An empty stock takes the waste back, face down, in the same order as before.
+    piles.stock = piles.waste.reverse().map((card) => ({ ...card, up: false }))
+    piles.waste = []
+  }
+  moves += 1
+}
+
+// Move cards from index onwards of pile `from` to pile `to`, if the rules allow it.
+function tryMove(from, index, to) {
+  const cards = piles[from].slice(index)
+  if (from === to || !cards.length) return false
+  const allowed = to[0] === 'f' ? cards.length === 1 && canFound(cards[0], piles[to]) : to[0] === 't' && canStack(cards[0], piles[to])
+  if (!allowed) return false
+  piles[to].push(...piles[from].splice(index))
+  const exposed = last(piles[from])
+  if (from[0] === 't' && exposed) exposed.up = true
+  moves += 1
+  checkWin()
+  return true
+}
+
+// A tap sends a card to the best place it can go: a foundation first, then a tableau column.
+function autoMove(from, index) {
+  const targets = ['f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6']
+  return targets.some((to) => tryMove(from, index, to))
+}
+
+function checkWin() {
+  if (['f0', 'f1', 'f2', 'f3'].every((f) => piles[f].length === 13)) {
+    won = true
+  }
+}
+
+// Which card, or which empty pile, is at (x, y)? The card drawn last, on top, wins.
+function hit(x, y) {
+  for (const key of Object.keys(piles)) {
+    const px = pileX(key)
+    if (x < px || x > px + CW) continue
+    const pile = piles[key]
+    if (key[0] === 't') {
+      for (let i = pile.length - 1; i >= 0; i--) {
+        const cy = cardY(key, i)
+        if (y >= cy && y <= cy + CH) return { key, index: i }
+      }
+      if (!pile.length && y >= TAB_Y && y <= TAB_Y + CH) return { key, index: 0 }
+    } else if (y >= TOP_Y && y <= TOP_Y + CH) return { key, index: pile.length - 1 }
+  }
+  return null
+}
+
+function toCanvas(event) {
+  const rect = canvas.getBoundingClientRect()
+  return { x: ((event.clientX - rect.left) * canvas.width) / rect.width, y: ((event.clientY - rect.top) * canvas.height) / rect.height }
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  const p = toCanvas(event)
+  if (won) return deal()
+  const h = hit(p.x, p.y)
+  if (!h) return
+  if (h.key === 'stock') return flipStock()
+  const pile = piles[h.key]
+  if (h.index < 0 || !pile[h.index] || !pile[h.index].up) return
+  if (h.key === 'waste' || h.key[0] === 'f') h.index = pile.length - 1 // only the top card of these
+  const cx = pileX(h.key)
+  const cy = cardY(h.key, h.index)
+  drag = { from: h.key, index: h.index, dx: p.x - cx, dy: p.y - cy, x: p.x, y: p.y, moved: false }
+})
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!drag) return
+  const p = toCanvas(event)
+  if (Math.hypot(p.x - drag.x, p.y - drag.y) > 4) drag.moved = true
+  drag.x = p.x
+  drag.y = p.y
+})
+
+document.addEventListener('pointerup', () => {
+  if (!drag) return
+  const { from, index, moved } = drag
+  if (!moved) autoMove(from, index)
+  else {
+    // Drop on the pile under the middle of the held card.
+    const target = hit(drag.x - drag.dx + CW / 2, drag.y - drag.dy + CH / 2)
+    if (target) tryMove(from, index, target.key)
+  }
+  drag = null
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === ' ') flipStock()
+  else if (event.key === 'n' || event.key === 'N') deal()
+  else return
+  event.preventDefault()
+})
+
+function drawCardAt(card, x, y) {
+  ctx.fillStyle = card.up ? '#ffffff' : '#1d4ed8'
+  ctx.fillRect(x, y, CW, CH)
+  ctx.strokeStyle = '#0f172a'
+  ctx.lineWidth = 1
+  ctx.strokeRect(x, y, CW, CH)
+  if (!card.up) return
+  ctx.fillStyle = isRed(card) ? '#dc2626' : '#0f172a'
+  ctx.font = 'bold 14px sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText(RANKS[card.rank] + SUITS[card.suit], x + 4, y + 16)
+  ctx.font = '28px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText(SUITS[card.suit], x + CW / 2, y + 54)
+}
+
+function draw() {
+  ctx.fillStyle = '#166534'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  for (const [key, pile] of Object.entries(piles)) {
+    const x = pileX(key)
+    // An empty place shows as an outline.
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(x, key[0] === 't' ? TAB_Y : TOP_Y, CW, CH)
+    const hidden = drag && drag.from === key ? drag.index : pile.length
+    // The stock, the waste and the foundations only need their top card.
+    const first = key[0] === 't' ? 0 : Math.max(0, hidden - 1)
+    for (let i = first; i < hidden; i++) drawCardAt(pile[i], x, cardY(key, i))
+  }
+  // The held cards follow the pointer, on top of everything.
+  if (drag) {
+    piles[drag.from].slice(drag.index).forEach((card, i) => drawCardAt(card, drag.x - drag.dx, drag.y - drag.dy + i * UP_STEP))
+  }
+
+  ctx.fillStyle = 'white'
+  ctx.font = 'bold 15px sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText('Moves ' + moves + '  Time ' + Math.floor(frames / 60), LEFT, 24)
+  if (won) {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+    ctx.fillRect(60, 240, canvas.width - 120, 80)
+    ctx.fillStyle = 'white'
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 22px sans-serif'
+    ctx.fillText('You won in ' + moves + ' moves!', canvas.width / 2, 275)
+    ctx.font = '15px sans-serif'
+    ctx.fillText('Tap for a new game', canvas.width / 2, 302)
+  }
+}
+
+function loop() {
+  if (!won) frames += 1
+  draw()
+  requestAnimationFrame(loop)
+}
+
+deal()
+requestAnimationFrame(loop)
+```

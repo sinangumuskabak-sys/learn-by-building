@@ -12,7 +12,6 @@
   "skills": ["game.input", "game.collision", "game.physics", "game.state", "prog.loops"],
   "extend": [
     { "en": "Levels: when the wall is cleared, build a new one with one more row and a slightly faster ball.", "tr": "Bölümler: duvar bitince bir sıra fazla ve biraz daha hızlı topla yenisini kur." },
-    { "en": "Tough bricks: give the top row 2 hit points and draw them darker until the first hit.", "tr": "Sağlam tuğlalar: en üst sıraya 2 can ver ve ilk vuruşa kadar daha koyu çiz." },
     { "en": "Power-ups: sometimes a broken brick drops a capsule; catching it widens the paddle for 10 seconds.", "tr": "Güçlendirmeler: kırılan tuğla bazen bir kapsül düşürsün; yakalamak raketi 10 saniyeliğine genişletsin." },
     { "en": "Screen shake: offset the whole drawing by a few random pixels for a moment when a brick breaks.", "tr": "Ekran sarsıntısı: bir tuğla kırılınca tüm çizimi bir anlığına birkaç rastgele piksel kaydır." },
     { "en": "Keep the ball's total speed constant after paddle hits by normalizing (vx, vy) and scaling it.", "tr": "Raket vuruşlarından sonra (vx, vy)'yi normalleştirip ölçekleyerek topun toplam hızını sabit tut." }

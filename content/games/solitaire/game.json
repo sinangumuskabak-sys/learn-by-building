@@ -12,7 +12,6 @@
   "skills": ["prog.arrays", "prog.functions", "game.input", "game.state"],
   "extend": [
     { "en": "Draw three: turn over three cards at a time, playing only the top one.", "tr": "Üçlü çekiş: kartları üçer üçer çevir, yalnızca üsttekini oyna." },
-    { "en": "When every card is face up, finish the game automatically, one card per few frames.", "tr": "Her kart açıkken oyunu birkaç karede bir kartla kendiliğinden bitir." },
     { "en": "A hint key that shows one legal move.", "tr": "Geçerli bir hamle gösteren bir ipucu tuşu." },
     { "en": "Slide cards to their new place instead of jumping.", "tr": "Kartları zıplatmak yerine yeni yerlerine kaydır." },
     { "en": "A cascade of bouncing cards when you win.", "tr": "Kazanınca seken kartlardan bir şelale." }

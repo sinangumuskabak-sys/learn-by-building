@@ -11,7 +11,7 @@
   "color": "#f59e0b",
   "skills": ["prog.arrays", "game.input", "game.state"],
   "extend": [
-    { "en": "A timer next to the move counter, with the best time saved too.", "tr": "Hamle sayacının yanında bir süre ve en iyi sürenin de kaydedilmesi." },
+    { "en": "Save the best time too, next to the best move count.", "tr": "En iyi süreyi de, en az hamlenin yanında kaydet." },
     { "en": "Let the player pick 3 by 3 (easy) or 5 by 5 (hard): everything is written with N.", "tr": "Oyuncu 3'e 3 (kolay) ya da 5'e 5 (zor) seçsin: her şey N ile yazıldı." },
     { "en": "Cut a picture into the tiles instead of numbers.", "tr": "Sayılar yerine bir resmi taşlara böl." },
     { "en": "Clicking a tile in the gap's row or column slides the whole line at once.", "tr": "Boşluğun satırındaki ya da sütunundaki bir taşa tıklamak bütün sırayı birden kaydırsın." },

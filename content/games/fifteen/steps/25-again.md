@@ -1,0 +1,252 @@
+---
+title: Play again
+title_tr: Yeniden oyna
+skills: [game.input]
+---
+
+# --goal--
+
+On a solved board, a click or Space shuffles a new puzzle.
+
+# --goal-tr--
+
+Çözülmüş tahtada **tıklamak** ya da **Boşluk** tuşu yeni bir karışık tahta getirsin. `reset` zaten her şeyi yapıyor:
+sırala, karıştır, sayacı sıfırla, `'playing'`.
+
+# --code--
+
+```js
+canvas.addEventListener('pointerdown', (event) => {
+  if (state === 'solved') {
+    reset()
+    return
+  }
+  // ...
+
+  if (event.key === ' ' && state === 'solved') reset()
+})
+```
+
+# --meaning--
+
+- A click on a solved board calls `reset()` and returns, so it does not also try to move a tile.
+- Space is the key named `' '`.
+
+# --meaning-tr--
+
+- `if (state === 'solved') { reset(); return }` → tıklama dinleyicisinin **en başında**: çözüldüyse yeni oyun başlat ve
+  çık; aşağıdaki taş kaydırma koduna inme.
+- `event.key === ' ' && state === 'solved'` → Boşluk tuşu (**adı** tırnak içinde bir boşluk) **ve** çözüldüyse.
+- (`// ...` "buradaki satırlar aynı kalıyor" demek; onu yazma.)
+
+# --task--
+
+1. In the `pointerdown` listener, write the `if` block at the very top.
+2. In the `keydown` listener, under the arrow `if` block, write the Space line. Press **Run**.
+
+# --task-tr--
+
+1. `pointerdown` dinleyicisinin **en üstüne**, `(event) => {` satırının hemen altına `if (state === 'solved') { ... }`
+   bloğunu yaz.
+2. `keydown` dinleyicisinde `if (from !== undefined) { ... }` bloğunu kapatan `}` satırının altına Boşluk satırını yaz.
+3. **Çalıştır**.
+
+# --tests--
+
+A click on a solved board should shuffle a new one.
+tr: Çözülmüş tahtaya tıklamak yenisini karıştırmalı.
+
+```js
+tiles = solvedTiles()
+;[tiles[14], tiles[15]] = [0, 15]
+move(15)
+$.tick(10)
+$.click(200, 200)
+assert.strictEqual(state, 'playing')
+assert.isFalse(isSolved())
+assert.strictEqual(moves, 0)
+```
+
+Space on a solved board should shuffle too, but not while playing.
+tr: Çözülmüş tahtada Boşluk da karıştırmalı; oynarken değil.
+
+```js
+tiles = solvedTiles()
+;[tiles[14], tiles[15]] = [0, 15]
+$.press(' ')
+assert.deepEqual(tiles.slice(12), [13, 14, 0, 15], 'Space does nothing while playing')
+move(15)
+$.tick(10)
+$.press(' ')
+assert.strictEqual(state, 'playing')
+assert.isFalse(isSolved())
+```
+
+# --solution--
+
+```js
+// Sliding puzzle, step by step.
+// The page already has <canvas id="game" width="400" height="460"></canvas>.
+// Write your code below.
+const canvas = document.getElementById('game')
+const ctx = canvas.getContext('2d')
+
+const N = 4 // 4 by 4: tiles 1 to 15 and one gap
+const SIZE = 90
+const GAP = 6
+const LEFT = (canvas.width - N * SIZE - (N - 1) * GAP) / 2
+const TOP = 60
+const SLIDE_FRAMES = 8
+
+let tiles // tiles[position] is the number on that square, 0 for the gap; positions go row by row
+let moves
+let state // 'playing' or 'solved'
+let slide // the tile sliding right now: { tile, from, to, frame }, or null
+
+const rowOf = (i) => Math.floor(i / N)
+const colOf = (i) => i % N
+const solvedTiles = () => [...Array(N * N - 1).keys()].map((i) => i + 1).concat(0)
+
+// The squares next to position i (up, down, left, right), staying inside the board.
+function neighbors(i) {
+  const list = []
+  if (rowOf(i) > 0) list.push(i - N)
+  if (rowOf(i) < N - 1) list.push(i + N)
+  if (colOf(i) > 0) list.push(i - 1)
+  if (colOf(i) < N - 1) list.push(i + 1)
+  return list
+}
+
+// Mix the tiles by making random slides, so the puzzle can always be solved.
+function shuffle(count) {
+  let gap = tiles.indexOf(0)
+  let previous = -1
+  for (let n = 0; n < count; n++) {
+    const options = neighbors(gap).filter((i) => i !== previous) // do not undo the last slide
+    const i = options[Math.floor(Math.random() * options.length)]
+    tiles[gap] = tiles[i]
+    tiles[i] = 0
+    previous = gap
+    gap = i
+  }
+}
+
+// A position can be solved when the number of pairs out of order, plus the gap's row counted from the bottom, is odd.
+function solvable(list) {
+  const numbers = list.filter((t) => t !== 0)
+  let inversions = 0
+  for (let a = 0; a < numbers.length; a++) {
+    for (let b = a + 1; b < numbers.length; b++) if (numbers[a] > numbers[b]) inversions++
+  }
+  const gapRowFromBottom = N - rowOf(list.indexOf(0))
+  return (inversions + gapRowFromBottom) % 2 === 1
+}
+
+function reset() {
+  tiles = solvedTiles()
+  do shuffle(200)
+  while (isSolved())
+  moves = 0
+  state = 'playing'
+  slide = null
+}
+
+function isSolved() {
+  return tiles.every((t, i) => t === solvedTiles()[i])
+}
+
+// Slide the tile at position i into the gap, if it is next to the gap.
+function move(i) {
+  if (state !== 'playing' || slide) return
+  const gap = tiles.indexOf(0)
+  if (!neighbors(gap).includes(i)) return
+  slide = { tile: tiles[i], from: i, to: gap, frame: 0 }
+  tiles[gap] = tiles[i]
+  tiles[i] = 0
+  moves += 1
+  if (isSolved()) {
+    state = 'solved'
+  }
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (state === 'solved') {
+    reset()
+    return
+  }
+  const rect = canvas.getBoundingClientRect()
+  const x = ((event.clientX - rect.left) * canvas.width) / rect.width - LEFT
+  const y = ((event.clientY - rect.top) * canvas.height) / rect.height - TOP
+  const col = Math.floor(x / (SIZE + GAP))
+  const row = Math.floor(y / (SIZE + GAP))
+  if (col >= 0 && col < N && row >= 0 && row < N) move(row * N + col)
+})
+
+// An arrow moves the tile on the other side of the gap in that direction: Left slides the tile right of the gap to the left.
+document.addEventListener('keydown', (event) => {
+  const gap = tiles.indexOf(0)
+  const from = { ArrowLeft: 1, ArrowRight: -1, ArrowUp: N, ArrowDown: -N }[event.key]
+  if (from !== undefined) {
+    event.preventDefault()
+    if (neighbors(gap).includes(gap + from)) move(gap + from)
+  }
+  if (event.key === ' ' && state === 'solved') reset()
+})
+
+function update() {
+  if (!slide) return
+  slide.frame += 1
+  if (slide.frame >= SLIDE_FRAMES) slide = null
+}
+
+function squareX(i) {
+  return LEFT + colOf(i) * (SIZE + GAP)
+}
+function squareY(i) {
+  return TOP + rowOf(i) * (SIZE + GAP)
+}
+
+function drawTile(number, x, y) {
+  ctx.fillStyle = state === 'solved' ? '#16a34a' : '#f59e0b'
+  ctx.fillRect(x, y, SIZE, SIZE)
+  ctx.fillStyle = '#1c1917'
+  ctx.font = 'bold 36px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(String(number), x + SIZE / 2, y + SIZE / 2 + 2)
+}
+
+function draw() {
+  ctx.fillStyle = '#292524'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  tiles.forEach((number, i) => {
+    if (number === 0 || (slide && number === slide.tile)) return
+    drawTile(number, squareX(i), squareY(i))
+  })
+  // The sliding tile is drawn part of the way from its old square to its new one.
+  if (slide) {
+    const t = slide.frame / SLIDE_FRAMES
+    const x = squareX(slide.from) + (squareX(slide.to) - squareX(slide.from)) * t
+    const y = squareY(slide.from) + (squareY(slide.to) - squareY(slide.from)) * t
+    drawTile(slide.tile, x, y)
+  }
+
+  ctx.fillStyle = 'white'
+  ctx.font = 'bold 18px sans-serif'
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'left'
+  ctx.fillText('Moves ' + moves, LEFT, 36)
+  ctx.textAlign = 'right'
+  ctx.fillText(state === 'solved' ? 'Solved! Click to shuffle' : '', canvas.width - LEFT, 36)
+}
+
+function loop() {
+  update()
+  draw()
+  requestAnimationFrame(loop)
+}
+
+reset()
+requestAnimationFrame(loop)
+```

@@ -11,7 +11,7 @@
   "color": "#16a34a",
   "skills": ["prog.arrays", "game.input", "game.state"],
   "extend": [
-    { "en": "Only accept guesses that are real words: check them against a bigger word list.", "tr": "Yalnızca gerçek kelime olan tahminleri kabul et: onları daha büyük bir kelime listesine karşı kontrol et." },
+    { "en": "A bigger list of allowed guesses than of answers, so rarer words are accepted too.", "tr": "Cevaplardan daha büyük bir kabul edilen tahmin listesi; nadir kelimeler de kabul edilsin." },
     { "en": "A daily word: pick the answer from today's date, so everyone gets the same one.", "tr": "Günün kelimesi: cevabı bugünün tarihinden seç; herkes aynı kelimeyi alsın." },
     { "en": "Flip the tiles one after another when a guess is scored.", "tr": "Bir tahmin puanlanınca döşemeleri birbiri ardına çevir." },
     { "en": "Hard mode: every hint you found must be used in the next guesses.", "tr": "Zor mod: bulduğun her ipucu sonraki tahminlerde kullanılmak zorunda." },
