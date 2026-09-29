@@ -91,10 +91,11 @@ const emit = () => {
   listeners.forEach((listener) => listener())
 }
 
+// The catalog of short challenges left the app (the workshop replaced it), so the vault has no notes for it.
 function source(): VaultSource {
   return {
-    categories: catalog.curriculum.categories,
-    challenges: new Map([...catalog.challenges.values()].map(({ challenge }) => [challenge.id, challenge])),
+    categories: [],
+    challenges: new Map(),
     games,
     skills: catalog.skills,
     lang: vaultLang(),

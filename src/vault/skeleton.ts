@@ -90,9 +90,11 @@ const words = {
       [
         `- Games: ${o.gamesDone} finished, ${o.gamesStarted} in progress, ${o.games} in total`,
         `- Game steps: ${o.stepsDone}/${o.steps} done`,
-        `- Challenges: ${o.challengesDone}/${o.challenges} done`,
+        o.challenges ? `- Challenges: ${o.challengesDone}/${o.challenges} done` : '',
         o.last ? `- Last activity: ${o.last.link} (${o.last.date})` : '- Last activity: none yet',
-      ].join('\n'),
+      ]
+        .filter(Boolean)
+        .join('\n'),
   },
   tr: {
     readme: '00 Beni oku',
@@ -150,9 +152,11 @@ const words = {
       [
         `- Oyunlar: ${o.gamesDone} bitti, ${o.gamesStarted} devam ediyor, toplam ${o.games}`,
         `- Oyun adımları: ${o.stepsDone}/${o.steps} tamam`,
-        `- Görevler: ${o.challengesDone}/${o.challenges} tamam`,
+        o.challenges ? `- Görevler: ${o.challengesDone}/${o.challenges} tamam` : '',
         o.last ? `- Son çalışma: ${o.last.link} (${o.last.date})` : '- Son çalışma: henüz yok',
-      ].join('\n'),
+      ]
+        .filter(Boolean)
+        .join('\n'),
   },
 }
 
@@ -511,7 +515,7 @@ function readme(lang: Lang): string {
     lang === 'tr'
       ? `# Learn Platform hafıza kasası
 
-Bu klasör, Learn Platform'daki çalışmanın **hafızası**: her kategori, görev, oyun, oyun adımı ve beceri için bir not.
+Bu klasör, Learn Platform'daki çalışmanın **hafızası**: her atölye, oyun, adım ve beceri için bir not.
 
 - **Kim yazar?** \`auto\` bölümleri (durum, ilerleme tabloları) uygulama, ilerledikçe kendisi yazar. \`maymun\` bölümleri
   (öğrendiklerin, zorlandıkların, sorduğun sorular, güncel durum) Maymun, konuştukça doldurur. **Notlarım** bölümü senin:
@@ -524,8 +528,7 @@ Bu klasör, Learn Platform'daki çalışmanın **hafızası**: her kategori, gö
 `
       : `# Learn Platform memory vault
 
-This folder is the **memory** of your work in Learn Platform: one note for every category, challenge, game, game step
-and skill.
+This folder is the **memory** of your work in Learn Platform: one note for every project, game, step and skill.
 
 - **Who writes?** \`auto\` sections (status, progress tables) are written by the app as you go. \`maymun\` sections (what
   you learned, what was hard, questions you asked, current status) are filled by Maymun as you talk. **My notes** is

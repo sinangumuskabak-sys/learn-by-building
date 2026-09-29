@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { catalog } from '../content/catalog.ts'
 import { games } from '../games/catalog.ts'
 import { stepKey } from '../games/schema.ts'
 import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
@@ -7,11 +6,11 @@ import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 const empty = { version: 1 as const, challenges: {} }
 
 describe('the app map for Maymun', () => {
-  it('lists every page, category, challenge and game with a link, in the learner’s language', () => {
+  it('lists every page, project and game with a link, in the learner’s language', () => {
     const map = appMap('tr', empty)
     for (const page of ['#/games', '#/skills', '#/memory', '#/settings']) expect(map).toContain(page)
-    for (const category of catalog.curriculum.categories) expect(map).toContain(`(#/c/${category.id})`)
-    for (const id of catalog.order) expect(map).toContain(`(#/learn/${id})`)
+    expect(map).not.toContain('#/learn/')
+    expect(map).toContain('## Build projects')
     for (const game of games) expect(map).toContain(`${game.title.tr ?? game.title.en} (#/games/${game.id})`)
     expect(appMap('en', empty)).toContain(`${games[0].title.en} (#/games/${games[0].id})`)
     // Long enough to be worth sending only when asked for.
@@ -23,13 +22,10 @@ describe('the app map for Maymun', () => {
     const progress = {
       version: 1 as const,
       challenges: {
-        [catalog.order[0]]: { status: 'passed' as const, updatedAt: '2026-09-29T10:00:00Z' },
         [stepKey('snake', snake.steps[0].id)]: { status: 'passed' as const, updatedAt: '2026-09-29T10:00:00Z' },
       },
     }
     const map = appMap('en', progress)
-    expect(map).toContain(`(#/learn/${catalog.order[0]}): `)
-    expect(map).toMatch(new RegExp(`\\(#/learn/${catalog.order[0]}\\):[^\\n]*passed`))
     expect(map).toContain(`[1/${snake.steps.length} steps done]`)
     expect(map).toContain('not started]')
   })

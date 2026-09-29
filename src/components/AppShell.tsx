@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { BookOpen, Gamepad2, GraduationCap, Languages, LayoutGrid, type LucideIcon, Moon, Network, Settings, Sun } from 'lucide-react'
+import { BookOpen, GraduationCap, Hammer, Languages, type LucideIcon, Moon, Network, Settings, Sun } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useI18n } from '../i18n/i18n.ts'
@@ -10,8 +10,7 @@ import { IconButton } from './ui.tsx'
 
 // On narrow screens the items show only their icon, so four sections still fit next to the toggles.
 const nav: { to: string; label: MessageKey; end: boolean; icon: LucideIcon }[] = [
-  { to: '/', label: 'nav.catalog', end: true, icon: LayoutGrid },
-  { to: '/games', label: 'nav.games', end: false, icon: Gamepad2 },
+  { to: '/games', label: 'nav.games', end: false, icon: Hammer },
   { to: '/skills', label: 'nav.skills', end: false, icon: Network },
   { to: '/memory', label: 'nav.memory', end: false, icon: BookOpen },
   { to: '/settings', label: 'nav.settings', end: false, icon: Settings },

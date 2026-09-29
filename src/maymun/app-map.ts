@@ -1,4 +1,3 @@
-import { catalog, type Catalog } from '../content/catalog.ts'
 import type { LocalizedText } from '../content/schema.ts'
 import { games as allGames } from '../games/catalog.ts'
 import { difficulties, stepKey, type GameSummary } from '../games/schema.ts'
@@ -23,17 +22,7 @@ export const mayAskForMap = (text: string) => {
 /** Whether a finished (or long enough) answer is the request for the map. */
 export const asksForMap = (text: string) => text.trim().startsWith(APP_MAP_MARKER)
 
-const typeNames: Record<string, string> = {
-  'code-js': 'JavaScript code',
-  'code-ts': 'TypeScript code',
-  web: 'web page (HTML/CSS/JS)',
-  sql: 'SQL',
-  quiz: 'quiz',
-  read: 'read the code, answer questions',
-  design: 'written design answer',
-}
-
-export function appMap(lang: Lang, progress: Progress, source: Catalog = catalog, games: GameSummary[] = allGames): string {
+export function appMap(lang: Lang, progress: Progress, games: GameSummary[] = allGames): string {
   const text = (t: LocalizedText) => (lang === 'tr' && t.tr) || t.en
   const lines = [
     '# Learn Platform: the map of the app',
@@ -43,8 +32,8 @@ export function appMap(lang: Lang, progress: Progress, source: Catalog = catalog
     '',
     '## Menu (top bar)',
     '',
-    '- Catalog (#/): categories of short challenges, a search box, and a button for the next unfinished challenge.',
-    '- Games (#/games): the Game Workshop; a real game is built step by step, easier games first.',
+    '- Workshop (#/games, also the home page): build projects (web pages that change as you type) and games, each built',
+    '  step by step. Every step has four parts in order: what we are doing, the code, what it means, your turn.',
     '- Skills (#/skills): every skill with the learner\'s level (L0-L8) and what shows it.',
     '- Memory (#/memory): the memory vault, notes for everything; download it or copy it live into Obsidian.',
     '- Settings (#/settings): theme, language, showing Maymun, the AI service Maymun answers through, editor font size,',
@@ -52,31 +41,22 @@ export function appMap(lang: Lang, progress: Progress, source: Catalog = catalog
     '- Language (TR/EN) and light/dark theme switches sit at the right of the top bar.',
     '- Maymun (you): the cat at the right edge of the panel the learner points at; a click opens the chat. The camera',
     '  button sends a picture of the screen with the next question.',
-    '',
-    '## Categories and challenges',
-    '',
   ]
-  for (const category of source.curriculum.categories) {
-    const ids = category.modules.flatMap((m) => m.challenges).filter((id) => source.challenges.has(id))
-    const done = ids.filter((id) => statusOf(progress, id) === 'passed').length
-    lines.push(`- ${text(category.title)} (#/c/${category.id}): ${ids.length ? `${done}/${ids.length} done` : 'coming soon, no challenges yet'}`)
-    for (const id of ids) {
-      const { challenge } = source.challenges.get(id)!
-      const title = (lang === 'tr' && challenge.title_tr) || challenge.title
-      lines.push(`  - ${title} (#/learn/${id}): ${typeNames[challenge.type] ?? challenge.type}, level L${challenge.level}, ${statusOf(progress, id)}`)
-    }
+  const item = (game: GameSummary) => {
+    const done = game.steps.filter((s) => statusOf(progress, stepKey(game.id, s.id)) === 'passed').length
+    const where = done === game.steps.length ? 'finished' : done ? `${done}/${game.steps.length} steps done` : `${game.steps.length} steps, not started`
+    return `- ${text(game.title)} (#/games/${game.id}): ${text(game.description)} [${where}]`
   }
-  lines.push('', '## Games (Game Workshop)', '', 'Each game is built in steps; a step is done when all its checks pass.', '')
+  const projects = games.filter((g) => g.kind === 'web').sort((a, b) => a.order - b.order)
+  if (projects.length) {
+    lines.push('', '## Build projects (web pages)', '', 'The page updates as the learner types; a step is done when all its checks pass.', '')
+    lines.push(...projects.map(item))
+  }
+  lines.push('', '## Games', '', 'Each game is built in steps; a step is done when all its checks pass.', '')
   for (const difficulty of difficulties) {
-    const list = games.filter((g) => g.difficulty === difficulty).sort((a, b) => a.order - b.order)
+    const list = games.filter((g) => g.kind === 'game' && g.difficulty === difficulty).sort((a, b) => a.order - b.order)
     if (!list.length) continue
-    lines.push(`### ${difficulty[0].toUpperCase()}${difficulty.slice(1)}`, '')
-    for (const game of list) {
-      const done = game.steps.filter((s) => statusOf(progress, stepKey(game.id, s.id)) === 'passed').length
-      const where = done === game.steps.length ? 'finished' : done ? `${done}/${game.steps.length} steps done` : `${game.steps.length} steps, not started`
-      lines.push(`- ${text(game.title)} (#/games/${game.id}): ${text(game.description)} [${where}]`)
-    }
-    lines.push('')
+    lines.push(`### ${difficulty[0].toUpperCase()}${difficulty.slice(1)}`, '', ...list.map(item), '')
   }
   return lines.join('\n').trim()
 }

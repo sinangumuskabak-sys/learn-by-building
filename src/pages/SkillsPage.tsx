@@ -4,21 +4,23 @@ import { catalog } from '../content/catalog.ts'
 import { MAX_LEVEL } from '../content/schema.ts'
 import { CategoryIcon } from '../components/icons.tsx'
 import { Page } from '../components/ui.tsx'
-import { gameSkillEvidence } from '../games/catalog.ts'
+import { games, gameSkillEvidence } from '../games/catalog.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { useProgress } from '../progress/progress.ts'
-import { skillLevel } from '../progress/skills.ts'
 
 const levels = Array.from({ length: MAX_LEVEL + 1 }, (_, level) => level)
 
+/** Skills some project step practises; the others have nothing to learn them from yet. */
+const taught = new Set(games.flatMap((game) => game.steps.flatMap((step) => step.skills)))
+
 export function SkillsPage() {
-  const { t, l, ct } = useI18n()
+  const { t, l } = useI18n()
   const progress = useProgress()
   useDocumentTitle(t('skills.title'))
 
   const groups = catalog.curriculum.categories
-    .map((category) => ({ category, skills: catalog.skills.filter((s) => s.category === category.id) }))
+    .map((category) => ({ category, skills: catalog.skills.filter((s) => s.category === category.id && taught.has(s.id)) }))
     .filter((group) => group.skills.length > 0)
 
   return (
@@ -48,10 +50,8 @@ export function SkillsPage() {
             </h2>
             <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
               {skills.map((skill) => {
-                const fromChallenges = skillLevel(progress, skill.id)
                 const fromGames = gameSkillEvidence(progress, skill.id)
-                const level = Math.max(fromChallenges.level, fromGames.level)
-                const evidence = fromChallenges.evidence
+                const level = fromGames.level
                 return (
                   <li key={skill.id} className="p-4">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -77,19 +77,10 @@ export function SkillsPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                       <span className="text-muted">{t('skills.evidence')}:</span>
-                      {evidence.length === 0 && fromGames.steps.length === 0 ? (
+                      {fromGames.steps.length === 0 ? (
                         <span className="text-muted">{t('skills.noEvidence')}</span>
                       ) : (
                         <>
-                          {evidence.map((challenge) => (
-                            <Link
-                              key={challenge.id}
-                              to={`/learn/${challenge.id}`}
-                              className="rounded-md bg-success/10 px-2 py-0.5 text-success hover:underline"
-                            >
-                              {ct(challenge)}
-                            </Link>
-                          ))}
                           {fromGames.steps.map(({ game, step, index }) => (
                             <Link
                               key={`${game.id}/${step.id}`}

@@ -73,17 +73,12 @@ export function formatChecks(result: RunResult): string {
 /** Maymun's own instructions (`prompt.md`) and what the learner sees, sent along with every question. */
 /** What each page of the app is for, so Maymun knows where the learner is even when the page shows little text. */
 export function pagePurpose(path: string): string {
-  if (path === '/' || path === '') {
-    return 'The catalog (home page): the categories of short coding challenges, a search box, and "Continue" for the next unfinished challenge.'
-  }
-  if (path.startsWith('/c/')) return 'A category page: its modules and the challenges in each, with the learner\'s status and level for each challenge.'
-  if (path.startsWith('/learn/')) {
-    return 'A challenge: the task on one side; depending on its kind a code editor with tests, quiz questions, code to read, or a design answer.'
-  }
   if (/^\/games\/[^/]+/.test(path)) {
-    return 'A step of a game the learner builds step by step: the lesson (task panel), their code (game.js), the running game and the checks for this step.'
+    return 'A step of a project the learner builds step by step: the lesson in four parts (what we are doing, the code, what it means, your turn) in the task panel, their code (game.js, or index.html for a web page), the running game or page, and the checks for this step.'
   }
-  if (path === '/games') return 'The Game Workshop: the list of games built step by step, with the learner\'s progress in each.'
+  if (path === '/games' || path === '/' || path === '') {
+    return 'The Workshop (home page): build projects (web pages) and games built step by step, with the learner\'s progress in each.'
+  }
   if (path === '/skills') return 'The skill map: every skill with the learner\'s level (L0-L8) and the challenges or game steps that show it.'
   if (path === '/memory') {
     return 'The memory vault: the learner\'s Markdown notes (status, what they learned, their own notes) for every category, challenge, game, step and skill; they can download it or copy it into Obsidian.'

@@ -1,38 +1,64 @@
-import { ArrowRight, CheckCircle2, Gamepad2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Hammer } from 'lucide-react'
 import { Link } from 'react-router'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { games, passedSteps, resumeStep } from '../games/catalog.ts'
-import { difficulties } from '../games/schema.ts'
+import { difficulties, type GameSummary } from '../games/schema.ts'
 import { useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { useProgress } from '../progress/progress.ts'
 
+/** The workshop, the home page: projects that show their result as you type (web pages), then the games. */
 export function GamesPage() {
-  const { t, l } = useI18n()
-  const progress = useProgress()
+  const { t } = useI18n()
   useDocumentTitle(t('games.title'))
+  const projects = games.filter((game) => game.kind === 'web')
 
   return (
     <Page>
       <header className="max-w-2xl">
         <span className="grid size-12 place-items-center rounded-xl bg-accent/10 text-accent">
-          <Gamepad2 size={24} aria-hidden />
+          <Hammer size={24} aria-hidden />
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{t('games.title')}</h1>
         <p className="mt-2 text-muted">{t('games.subtitle')}</p>
       </header>
 
+      {projects.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-bold tracking-tight">
+            {t('games.projects')}
+            <span className="ml-2 text-sm font-normal text-muted tabular-nums">{projects.length}</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted">{t('games.projectsHint')}</p>
+          <GameCards list={projects} />
+        </section>
+      )}
+
+      <h2 className="mt-12 text-xl font-bold tracking-tight">{t('games.games')}</h2>
       {difficulties.map((difficulty) => {
-        const group = games.filter((game) => game.difficulty === difficulty)
+        const group = games.filter((game) => game.kind === 'game' && game.difficulty === difficulty)
         if (group.length === 0) return null
         return (
-          <section key={difficulty} className="mt-10">
-            <h2 className="text-lg font-semibold tracking-tight">
+          <section key={difficulty} className="mt-6">
+            <h3 className="text-lg font-semibold tracking-tight">
               {t(`games.difficulty.${difficulty}`)}
               <span className="ml-2 text-sm font-normal text-muted tabular-nums">{group.length}</span>
-            </h2>
+            </h3>
+            <GameCards list={group} />
+          </section>
+        )
+      })}
+      <p className="mt-10 rounded-xl border border-dashed border-border p-5 text-sm text-muted">{t('games.soon')}</p>
+    </Page>
+  )
+}
+
+function GameCards({ list }: { list: GameSummary[] }) {
+  const { t, l } = useI18n()
+  const progress = useProgress()
+  return (
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {group.map((game) => {
+              {list.map((game) => {
                 const done = passedSteps(progress, game)
                 const total = game.steps.length
                 const finished = done === total
@@ -48,9 +74,9 @@ export function GamesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{t('games.steps', { count: total })}</Badge>
                         </div>
-                        <h3 className="mt-3 text-lg font-semibold tracking-tight group-hover:text-accent">
+                        <p className="mt-3 text-lg font-semibold tracking-tight group-hover:text-accent">
                           {l(game.title)}
-                        </h3>
+                        </p>
                         <p className="mt-1 flex-1 text-sm text-muted">{l(game.description)}</p>
                         <div className="mt-4 flex items-center gap-3">
                           <ProgressBar value={done} max={total} label={l(game.title)} />
@@ -81,11 +107,6 @@ export function GamesPage() {
                 )
               })}
             </ul>
-          </section>
-        )
-      })}
-      <p className="mt-10 rounded-xl border border-dashed border-border p-5 text-sm text-muted">{t('games.soon')}</p>
-    </Page>
   )
 }
 

@@ -1,10 +1,9 @@
-import { createHashRouter, type RouteObject } from 'react-router'
+import { createHashRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '../components/AppShell'
-import { CategoryPage } from '../pages/CategoryPage'
-import { HomePage } from '../pages/HomePage'
 import { NotFoundPage, RouteErrorPage } from '../pages/NotFoundPage'
 
-// The catalog loads eagerly; heavier screens (Markdown, resizable panels, editor) load when first visited.
+// The shell loads eagerly; the screens (Markdown, resizable panels, editor) load when first visited. The workshop (the
+// list of projects) is the home page; the old catalog addresses lead there too.
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -14,12 +13,9 @@ export const routes: RouteObject[] = [
         // A page that fails shows an error inside the shell, so the header and Maymun stay.
         errorElement: <RouteErrorPage />,
         children: [
-          { index: true, element: <HomePage /> },
-          { path: 'c/:categoryId', element: <CategoryPage /> },
-          {
-            path: 'learn/:challengeId',
-            lazy: async () => ({ Component: (await import('../pages/ChallengePage')).ChallengePage }),
-          },
+          { index: true, element: <Navigate to="/games" replace /> },
+          { path: 'c/:categoryId', element: <Navigate to="/games" replace /> },
+          { path: 'learn/:challengeId', element: <Navigate to="/games" replace /> },
           { path: 'games', lazy: async () => ({ Component: (await import('../pages/GamesPage')).GamesPage }) },
           {
             path: 'games/:gameId/:stepId?',

@@ -23,7 +23,6 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Group, Panel, Separator } from 'react-resizable-panels'
-import { ResizeHandle } from '../challenge/CodeWorkspace.tsx'
 import { ConfirmButton } from '../components/ConfirmButton.tsx'
 import { InlineMarkdown, Markdown } from '../components/Markdown.tsx'
 import { Button, IconButton } from '../components/ui.tsx'
@@ -554,6 +553,14 @@ function stickToBottom(el: HTMLDivElement | null) {
   }
 }
 
+function ResizeHandle() {
+  return (
+    <Separator className="group relative w-px shrink-0 bg-border outline-none data-[separator=active]:bg-accent">
+      <span className="absolute inset-y-0 -right-1.5 -left-1.5 group-hover:bg-accent/20 group-focus-visible:bg-accent/30" />
+    </Separator>
+  )
+}
+
 function HResizeHandle() {
   return (
     <Separator className="group relative h-px shrink-0 bg-border outline-none data-[separator=active]:bg-accent">
@@ -604,9 +611,11 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     },
     { flushOnLeave: true },
   )
-  // A web page updates as it is typed, like a live preview.
+  // A web page updates as it is typed, like a live preview; not while the checks run in the same frame (the run shows
+  // the page itself, and reloading the frame would stop the checks).
+  const checking = useRef(false)
   useDebouncedEffect(code, 500, (value) => {
-    if (web && dirty.current) setDoc(documentFor(value))
+    if (web && dirty.current && !checking.current) setDoc(documentFor(value))
   })
 
   const restart = useCallback(() => {
@@ -626,6 +635,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
       if (web) {
         // The checks run inside the page's own frame, which then keeps showing the page.
         setCrash(null)
+        checking.current = true
         const { runWebInIframe } = await import('../runners/browser.ts')
         next = frame.current
           ? await runWebInIframe(frame.current, { tests }, [{ ...file, contents: code }])
@@ -641,6 +651,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
         progressActions.markPassed(key)
       }
     } finally {
+      checking.current = false
       setRunning(false)
     }
   }, [code, file, game.canvas, key, l, restart, running, step.tests, web])
@@ -754,7 +765,7 @@ function StepWorkspace({ game, index }: { game: Game; index: number }) {
     <div data-maymun="game" className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
         <span className="flex-1 text-xs font-semibold tracking-wide text-muted uppercase">{t(web ? 'web.preview' : 'game.preview')}</span>
-        <IconButton label={t('game.restart')} onClick={restart}>
+        <IconButton label={t(web ? 'web.restart' : 'game.restart')} onClick={restart}>
           <RotateCcw size={16} />
         </IconButton>
       </div>

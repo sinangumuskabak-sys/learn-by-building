@@ -461,7 +461,7 @@ test('Maymun knows when the learner moves to another page, and what that page is
   }
   await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
   await ask('What is here?')
-  expect(sent[0].messages[0].content).toContain('The catalog (home page)')
+  expect(sent[0].messages[0].content).toContain('The Workshop (home page)')
 
   // The chat stays open on another page of the app, and knows it: the header, the page's text and what it is for.
   await page.goto('/#/settings')
@@ -471,7 +471,7 @@ test('Maymun knows when the learner moves to another page, and what that page is
   await ask('And what can I do here?')
   const system = sent[1].messages[0].content
   expect(system).toContain('"Settings" (/settings): Settings: theme, language')
-  expect(system).toContain('They moved here from "Learn Platform" since their previous question.')
+  expect(system).toContain('They moved here from "Workshop" since their previous question.')
   expect(system).toContain('Reset all data')
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 })

@@ -71,6 +71,51 @@ assert.isAbove(head.x, 5)
 
 English and Turkish are both required.
 
+### Four-part steps (preferred)
+
+New steps teach in a fixed order, shown as four parts the learner opens one after another. Use these sections
+instead of `explanation`:
+
+```md
+# --goal--            1. What we are doing in this step and why (short; one idea).
+# --goal-tr--
+# --code--            2. The code the learner will write, as one code block (the new or changed lines only).
+# --meaning--         3. What it means, line by line or part by part.
+# --meaning-tr--
+# --task--            4. Your turn: exactly where to write it, then Run.
+# --task-tr--
+
+# --predict--         optional: a guess before running (question, then options; the right one is "- [x]")
+# --predict-tr--
+# --hint--            optional: shown in the hint box when a check fails
+# --hint-tr--
+# --try--             optional: a small change to try after the step passes (not checked)
+# --try-tr--
+```
+
+A predict section looks like this; an indented line under an option says why it is right or wrong:
+
+```md
+What will the square do?
+- [ ] Walk slowly to the right
+- [x] Shoot off to the right in a blink
+  The loop runs about 60 times a second.
+```
+
+Keep steps small: one idea and a few lines of code each. The editor locks the lines the step's solution keeps from
+the code it starts with (the finished parts), so the learner writes only between them; when a step only adds lines,
+an empty line is opened there to type into. `npm run validate` checks that a step has either `explanation` or all of
+`goal`, `code` and `meaning`, and that predict questions have exactly one right option.
+
+## Build projects (web pages)
+
+`"kind": "web"` in `game.json` makes a build project: the learner writes one `index.html` (styles in a `<style>` tag,
+scripts in `<script>` tags), `seed` and `solution` are ```` ```html ```` blocks, and `canvas` is left out. The page
+updates as the learner types. Its tests are like web challenge tests: they run inside the page (in `npm run validate`,
+in jsdom) and see `document` and `window`. Read styles with `window.getComputedStyle(...)`, or from the page's own
+rules through `document.styleSheets` when a value is written differently by browsers and jsdom (shorthands such as
+`margin: 40px auto`, `list-style`).
+
 ## Tests
 
 Tests run on a **simulated page**, never a real browser: the canvas records draw calls, the clock only moves when the

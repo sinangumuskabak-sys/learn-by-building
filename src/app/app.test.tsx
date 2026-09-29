@@ -1,7 +1,6 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { catalog } from '../content/catalog.ts'
 import { langStore } from '../i18n/i18n.ts'
 import { progressActions, progressStore } from '../progress/progress.ts'
 import { routes } from './router'
@@ -19,88 +18,45 @@ beforeEach(() => {
   })
 })
 
-describe('catalog page', () => {
-  it('lists every category with its progress', () => {
-    renderAt('/')
-    expect(screen.getByRole('heading', { name: 'Learn software engineering by writing code' })).toBeInTheDocument()
-    for (const category of catalog.curriculum.categories) {
-      expect(screen.getByRole('heading', { name: category.title.en })).toBeInTheDocument()
+describe('workshop (home page)', () => {
+  it('opens on the workshop: build projects first, then games', async () => {
+    const router = renderAt('/')
+    expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/games')
+    const projects = screen.getByRole('heading', { name: /Build projects/ }).closest('section')!
+    expect(within(projects).getByRole('link', { name: /My business card/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Games', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /steps Snake Steer/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Catalog' })).not.toBeInTheDocument()
+  })
+
+  it('leads the old catalog addresses to the workshop', async () => {
+    for (const path of ['/c/programming-fundamentals', '/learn/loop-basics-quiz']) {
+      const router = renderAt(path)
+      expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/games')
+      cleanup()
     }
-    expect(screen.getByRole('link', { name: /Start learning/ })).toHaveAttribute('href', `/learn/${catalog.order[0]}`)
   })
 
-  it('searches challenges by title', () => {
+  it('switches the interface language', async () => {
     renderAt('/')
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'odd numbers' } })
-    expect(screen.getByRole('link', { name: /Iterate odd numbers/ })).toBeInTheDocument()
-  })
-
-  it('switches the interface language', () => {
-    renderAt('/')
+    await screen.findByRole('heading', { name: 'Workshop', level: 1 })
     fireEvent.click(screen.getByRole('button', { name: 'Türkçe' }))
-    expect(screen.getByRole('heading', { name: 'Yazılım mühendisliğini kod yazarak öğren' })).toBeInTheDocument()
-    expect(screen.getByText('Programlama Temelleri')).toBeInTheDocument()
-  })
-})
-
-describe('category page', () => {
-  it('shows modules and challenges in order', () => {
-    renderAt('/c/programming-fundamentals')
-    expect(screen.getByRole('heading', { name: 'Programming Fundamentals', level: 1 })).toBeInTheDocument()
-    const loops = screen.getByRole('heading', { name: 'Loops' }).closest('li')!
-    const titles = within(loops).getAllByRole('link').map((link) => link.textContent)
-    expect(titles[0]).toContain('Loop basics')
-  })
-
-  it('shows a not-found page for unknown categories', () => {
-    renderAt('/c/nope')
-    expect(screen.getByRole('heading', { name: 'Category not found' })).toBeInTheDocument()
-  })
-})
-
-describe('quiz challenge', () => {
-  it('grades answers and records a pass', async () => {
-    renderAt('/learn/loop-basics-quiz')
-    const check = await screen.findByRole('button', { name: 'Check answers' })
-    expect(check).toBeDisabled()
-
-    fireEvent.click(screen.getByRole('radio', { name: '3' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'i++' }))
-    fireEvent.click(check)
-    expect(screen.getAllByText('Not quite — try again')).toHaveLength(2)
-    expect(progressStore.get().challenges['loop-basics-quiz']).toBeUndefined()
-
-    fireEvent.click(screen.getByRole('radio', { name: '4' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'i += 2' }))
-    fireEvent.click(check)
-    expect(screen.getByText('All answers correct!')).toBeInTheDocument()
-    expect(progressStore.get().challenges['loop-basics-quiz']?.status).toBe('passed')
-    expect(screen.getByRole('link', { name: /Next challenge/ })).toBeInTheDocument()
-  })
-})
-
-describe('design challenge', () => {
-  it('requires an answer and every rubric item before completing', async () => {
-    renderAt('/learn/design-cache-policy')
-    const done = await screen.findByRole('button', { name: 'Mark as complete' })
-    expect(done).toBeDisabled()
-    fireEvent.change(screen.getByRole('textbox'), {
-      target: { value: 'Shared Redis cache with a 1 hour TTL, refreshed by a webhook when prices change.' },
-    })
-    for (const box of screen.getAllByRole('checkbox')) fireEvent.click(box)
-    expect(done).toBeEnabled()
-    fireEvent.click(done)
-    expect(progressStore.get().challenges['design-cache-policy']?.status).toBe('passed')
+    expect(screen.getByRole('heading', { name: 'Atölye', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Kartvizitim/ })).toBeInTheDocument()
   })
 })
 
 describe('skill map', () => {
-  it('derives levels from completed challenges', async () => {
-    act(() => progressActions.markPassed('iterate-odd-numbers'))
+  it('shows the skills the projects teach, with the steps that prove them', async () => {
+    act(() => progressActions.markPassed('game:business-card/01-heading'))
     renderAt('/skills')
-    const loops = (await screen.findByText('prog.loops')).closest('li')!
-    expect(within(loops).getByText('L3')).toBeInTheDocument()
-    expect(within(loops).getByRole('link', { name: 'Iterate odd numbers with a for loop' })).toBeInTheDocument()
+    const html = (await screen.findByText('fe.html')).closest('li')!
+    expect(within(html).getByText('L3')).toBeInTheDocument()
+    expect(within(html).getByRole('link', { name: /My business card/ })).toBeInTheDocument()
+    // A skill nothing teaches yet is not listed.
+    expect(screen.queryByText('db.joins')).not.toBeInTheDocument()
   })
 })
 
