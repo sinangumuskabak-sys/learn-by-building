@@ -1,176 +1,76 @@
 ---
-title: A cursor and a record
-title_tr: Bir imleç ve bir rekor
-skills: [game.input, game.state]
+title: A side panel
+title_tr: Yan panel
+skills: [game.canvas]
 ---
 
-# --explanation--
+# --goal--
 
-Some players prefer the keyboard, and some cannot use a pointer at all. A yellow **cursor** on the enemy's sea moves with the
-arrow keys (wrapping round at the edges), and Enter or Space fires at it. Both the tap and the key end up in the same
-`playerShoots`, so the rules are the same whichever you use.
+Next to your small sea there is room for the numbers: your shots, your best, the enemy ships still afloat, and the keys.
 
-Two finishing touches:
+# --goal-tr--
 
-- when the game ends, the enemy fleet is **revealed**, so you can see where the ships you did not find were hiding;
-- your best result, the fewest shots you ever needed to win, is kept in `localStorage`.
+Küçük denizinin yanında boş yer var. Oraya bir **bilgi paneli** koyalım: kaç atış yaptın, rekorun ne, düşmanın hangi
+uzunlukta gemileri hâlâ yüzüyor, hangi tuş ne yapıyor.
 
-# --explanation-tr--
-
-**Bu adımda:** oyunu klavyeyle de oynanır yapacağız. Düşman denizinde sarı çerçeveli bir **imleç** göreceksin; ok
-tuşlarıyla onu gezdirip Enter ya da Boşluk ile ateş edeceksin. Oyun bitince düşmanın gemileri görünecek ve en iyi
-sonucun (`Best`) saklanacak.
-
-**Neden klavye?** Bazı oyuncular klavyeyi tercih eder, bazıları ise fare ya da dokunmatik ekran hiç kullanamaz.
-Tıklama da tuş da aynı `playerShoots`'a varır; hangisini kullanırsan kullan kurallar aynıdır.
-
-**Yön tablosu.** Her ok tuşunun imleci ne kadar oynattığını bir nesnede tutarız:
+# --code--
 
 ```js
-const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
+const x = HOME.x + N * SMALL + 20
+ctx.fillStyle = 'white'
+ctx.font = '14px sans-serif'
+ctx.fillText('Shots ' + shots, x, HOME.y + 16)
+ctx.fillText('Best ' + (best || '-'), x, HOME.y + 38)
+ctx.fillText('Left: ' + enemyFleet.filter((s) => !sunk(s)).map((s) => s.cells.length).join(' '), x, HOME.y + 60)
+ctx.fillText('H: their heat map', x, HOME.y + 82)
+if (state !== 'playing') ctx.fillText('Tap or Enter: again', x, HOME.y + 104)
 ```
 
-`moves[event.key]` köşeli parantezle "adı basılan tuş olan alan" demektir. Ok tuşuysa `[satır farkı, sütun farkı]`
-gelir; başka bir tuşsa `undefined` gelir, yani `if (moves[event.key])` "ok tuşuna mı basıldı?" diye okunur.
-`const [dr, dc] = moves[event.key]` iki elemanlı listeyi açıp iki ada koyar (5. adımdaki yön döngüsünün aynısı).
+# --meaning--
 
-**Kenardan dolanmak: `%`.** `%` bölümden kalanı verir: `11 % 10` → 1, `9 % 10` → 9. İmleç en sağdan bir adım daha
-sağa gidince (sütun 10) `% N` onu 0'a, yani en sola götürür. Sola giderken `-1` olmasın diye önce `N` ekleriz:
-`(0 - 1 + 10) % 10` → 9, en sağ. Bir saatin 12'den sonra 1'e dönmesi gibi.
+- `x` is 20 pixels to the right of your small sea.
+- `best || '-'` shows a dash while there is no record yet.
+- `filter`, `map` and `join(' ')` turn the ships still afloat into a text like `5 3 2`.
 
-**`else if` zinciri.** Tuş ok ise imleç oynar; değilse Enter ya da Boşluk ise ateş (oyun bittiyse yeni oyun); o da
-değilse H ise ısı haritası; hiçbiri değilse `else return` ile hiçbir şey yapılmaz.
+# --meaning-tr--
 
-**Düşman donanmasını göstermek.** Oyun bitince bulamadığın gemilerin nerede saklandığını görmek istersin.
-`drawSea`'nın `showShips` parametresine artık `state !== 'playing'` veririz: oyun sürerken `false`, bitince `true`.
-
-**En iyi sonuç: `localStorage`.** Tarayıcının, sayfayı kapatsan da silinmeyen küçük defteridir.
-`localStorage.setItem('ad', değer)` yazar, `localStorage.getItem('ad')` okur. Defter her şeyi **yazı** olarak tutar,
-okurken `Number(...)` ile sayıya çeviririz. İlk seferde not yoktur; `|| 0` "yoksa 0 kullan" demektir. Burada en az
-atış en iyisidir; `0` "henüz kazanılmadı" anlamına gelir. Bu yüzden kazanınca: kayıt yoksa (`best === 0`) **veya** yeni
-atış sayısı daha azsa kaydederiz. Ekranda `best || '-'` → en iyi 0 ise `'-'` yazılır.
+- `const x = HOME.x + N * SMALL + 20` → küçük denizin sağ kenarından 20 piksel sağ.
+- `best || '-'` → rekor 0 (yok) ise çizgi göster.
+- `enemyFleet.filter((s) => !sunk(s))` → batmamış düşman gemileri; `.map((s) => s.cells.length)` → uzunlukları;
+  `.join(' ')` → aralarına boşluk koyarak tek bir metin: `5 3 2`.
+- Her satır bir öncekinin 22 piksel altında.
 
 # --task--
 
-1. Add `cursor` (`{ r: 0, c: 0 }` in `reset()`). The arrow keys move it with wrap-around; Enter or Space fires at it (or starts a
-   new game after the end). Draw it as a `'#fde047'` outline while playing.
-2. Keep `best` in `localStorage` under `'battleship-best'`, saved on a win with fewer shots, and draw `Best 23` (or `Best -`) under
-   the shots.
-3. When the game is over, draw the enemy sea with its ships shown.
+At the end of `draw`, under your fleet's `drawSea`, write the panel lines.
 
 # --task-tr--
 
-1. `let showHeat` satırının altına iki satır ekle:
-
-   ```js
-   let cursor // { r, c } for the keyboard
-   let best = Number(localStorage.getItem('battleship-best')) || 0
-   ```
-
-2. `reset()`'in sonuna, `showHeat = false` satırının altına ekle:
-
-   ```js
-     cursor = { r: 0, c: 0 }
-   ```
-
-3. `playerShoots` içinde, kazanma bloğunda `message = 'You won in ' ...` satırının altına (`return`'den önce) ekle:
-
-   ```js
-       if (best === 0 || shots < best) {
-         best = shots
-         localStorage.setItem('battleship-best', best)
-       }
-   ```
-
-4. Enter'ı ve H'yi dinleyen `keydown` bloğunu şöyle yap:
-
-   ```js
-   document.addEventListener('keydown', (event) => {
-     const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] } // ← yeni
-     if (moves[event.key]) { // ← yeni
-       const [dr, dc] = moves[event.key]
-       cursor = { r: (cursor.r + dr + N) % N, c: (cursor.c + dc + N) % N }
-     } else if (event.key === 'Enter' || event.key === ' ') { // ← yeni
-       if (state !== 'playing') reset()
-       else playerShoots(cursor.r, cursor.c)
-     } else if (event.key === 'h' || event.key === 'H') showHeat = !showHeat
-     else return
-     event.preventDefault()
-   })
-   ```
-
-5. `draw()` içinde düşman denizini çizen satırı değiştir (oyun bitince gemiler görünür):
-
-   ```js
-     drawSea(SEA, BIG, myShots, enemyFleet, state !== 'playing', null) // ← değişti
-   ```
-
-6. Batan gemilerin çerçevelerini çizen `for` bloğunun kapanış `}`'inin altına imleci ekle:
-
-   ```js
-     if (state === 'playing') {
-       ctx.strokeStyle = '#fde047'
-       ctx.strokeRect(SEA.x + cursor.c * BIG + 1, SEA.y + cursor.r * BIG + 1, BIG - 2, BIG - 2)
-     }
-   ```
-
-7. `draw()`'un sonundaki yazıları şöyle yap (`Best` satırı eklenir, alttakiler bir satır aşağı kayar):
-
-   ```js
-     ctx.fillText('Shots ' + shots, x, HOME.y + 16)
-     ctx.fillText('Best ' + (best || '-'), x, HOME.y + 38) // ← yeni
-     ctx.fillText('Left: ' + enemyFleet.filter((s) => !sunk(s)).map((s) => s.cells.length).join(' '), x, HOME.y + 60) // ← değişti
-     ctx.fillText('H: their heat map', x, HOME.y + 82) // ← değişti
-     if (state !== 'playing') ctx.fillText('Tap or Enter: again', x, HOME.y + 104) // ← değişti
-   }
-   ```
-
-8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sol üst karede sarı bir çerçeve olmalı; ok tuşları onu gezdirmeli
-   (kenardan çıkınca öbür kenardan girmeli), Enter ya da Boşluk o kareye ateş etmeli. Kazanınca `Best` yazısında atış
-   sayın görünmeli. Alttaki kontrollerin hepsi yeşil olmalı.
+`draw`'ın sonunda, senin filonu çizen `drawSea(HOME, ...)` satırının altına panel satırlarını yaz. **Çalıştır**. Oyun bitti!
 
 # --tests--
 
-The arrow keys should move the cursor, wrapping round, and Enter should fire at it.
-tr: Ok tuşları imleci başa sararak hareket ettirmeli ve Enter ona ateş etmeli.
+The panel should show your shots, your best and the ships left.
+tr: Panel atışlarını, rekorunu ve kalan gemileri göstermeli.
 
 ```js
-enemyFleet = [{ cells: [[1, 1], [1, 2]], hits: 0 }]
-$.press('ArrowDown')
-$.press('ArrowRight')
-assert.deepEqual(cursor, { r: 1, c: 1 })
-$.press('Enter')
-assert.strictEqual(myShots[1][1], 'hit', 'Enter shoots at the cursor')
-$.press('ArrowUp')
-$.press('ArrowUp')
-assert.deepEqual(cursor, { r: 9, c: 1 }, 'the cursor wraps round')
-$.tick(1)
-assert.lengthOf($.screen().filter((c) => c.op === 'strokeRect' && c.stroke === '#fde047'), 1)
+shots = 12
+enemyFleet = [{ cells: [[0, 0], [0, 1]], hits: 2 }, { cells: [[5, 5], [5, 6], [5, 7]], hits: 0 }]
+$.tick()
+const texts = $.texts()
+assert.include(texts, 'Shots 12')
+assert.include(texts, 'Best -')
+assert.include(texts, 'Left: 3')
+assert.include(texts, 'H: their heat map')
 ```
 
-A win should save the fewest shots as the best.
-tr: Bir kazanç en az atışı en iyi olarak kaydetmeli.
+After the game it should say how to play again.
+tr: Oyun bitince yeniden nasıl oynanacağını söylemeli.
 
 ```js
-enemyFleet = [{ cells: [[0, 0], [0, 1]], hits: 0 }]
-$.click(48, 68)
-$.tick(THINK)
-$.click(84, 68)
-assert.strictEqual(state, 'won')
-assert.strictEqual(best, 2)
-assert.strictEqual(localStorage.getItem('battleship-best'), '2')
-$.tick(1)
-assert.include($.texts(), 'Best 2')
-```
-
-At the end the enemy fleet should be revealed.
-tr: Sonda düşman filosu açığa çıkmalı.
-
-```js
-enemyFleet = [{ cells: [[3, 3], [3, 4]], hits: 0 }]
-state = 'lost'
-$.tick(1)
-assert.lengthOf($.rects('#64748b').filter((r) => r.w === BIG - 2), 2, 'at the end the enemy fleet is shown')
+state = 'won'
+$.tick()
+assert.include($.texts(), 'Tap or Enter: again')
 ```
 
 # --solution--

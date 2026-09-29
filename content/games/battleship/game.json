@@ -14,7 +14,6 @@
     { "en": "Let the player place their own ships, turning them with R.", "tr": "Oyuncu kendi gemilerini R ile döndürerek yerleştirsin." },
     { "en": "Difficulty levels: random, hunt and target, or the heat map.", "tr": "Zorluk seviyeleri: rastgele, avla ve hedefle ya da ısı haritası." },
     { "en": "A salvo rule: as many shots per turn as ships still afloat.", "tr": "Salvo kuralı: sıra başına hâlâ yüzen gemi sayısı kadar atış." },
-    { "en": "Show your own heat map of the enemy's sea as a hint.", "tr": "İpucu olarak düşman denizinin kendi ısı haritanı göster." },
-    { "en": "Ships that must not touch each other, and a placement that respects it.", "tr": "Birbirine değmemesi gereken gemiler ve buna uyan bir yerleşim." }
+    { "en": "Show your own heat map of the enemy's sea as a hint.", "tr": "İpucu olarak düşman denizinin kendi ısı haritanı göster." }
   ]
 }
