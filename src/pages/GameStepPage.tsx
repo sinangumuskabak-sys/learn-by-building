@@ -376,7 +376,7 @@ function StepText({ game, index }: { game: Game; index: number }) {
       <FinishedPreview game={game} />
     </div>
   )
-  if (!step.goal || !step.code || !step.meaning) {
+  if (!step.goal) {
     return (
       <div className="space-y-5 p-5 sm:p-6">
         {header}
@@ -394,14 +394,21 @@ function StepText({ game, index }: { game: Game; index: number }) {
       </div>
     )
   }
+  // A step without code to copy is the "build it yourself" one: only what to build, then the learner's turn.
+  const own = !step.code || !step.meaning
   const parts: { title: string; body: ReactNode }[] = [
-    { title: t('game.part.goal'), body: <Markdown source={l(step.goal)} /> },
-    { title: t('game.part.code'), body: <Markdown source={step.code} /> },
-    { title: t('game.part.meaning'), body: <Markdown source={l(step.meaning)} /> },
+    { title: t(own ? 'game.part.own' : 'game.part.goal'), body: <Markdown source={l(step.goal)} /> },
+    ...(own
+      ? []
+      : [
+          { title: t('game.part.code'), body: <Markdown source={step.code ?? ''} /> },
+          { title: t('game.part.meaning'), body: <Markdown source={l(step.meaning!)} /> },
+        ]),
     {
       title: t('game.part.task'),
       body: (
         <>
+          {own && <p className="mb-2 text-sm text-muted">{t('game.part.ownHint')}</p>}
           {step.predict && <Predict source={l(step.predict)} />}
           <Markdown source={l(step.task)} />
         </>
@@ -416,7 +423,7 @@ function StepText({ game, index }: { game: Game; index: number }) {
           <li
             key={i}
             data-testid={`step-part-${i + 1}`}
-            className={clsx('rounded-xl border p-4', i === 3 ? 'border-accent/30 bg-accent/5' : 'border-border bg-surface')}
+            className={clsx('rounded-xl border p-4', i === parts.length - 1 ? 'border-accent/30 bg-accent/5' : 'border-border bg-surface')}
           >
             <h2 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-accent uppercase">
               <span className="grid size-5 place-items-center rounded-full bg-accent text-[11px] text-accent-fg" aria-hidden>

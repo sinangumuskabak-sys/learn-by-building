@@ -215,6 +215,17 @@ test('a step opens in four parts, one after another, and the code opens where th
   await expect(code.locator('.view-line').filter({ hasText: 'canvas.height' })).toBeInViewport()
 })
 
+test('the last step is built without given code: only the goal, then the learner’s turn', async ({ page }) => {
+  const snake = games.find((g) => g.id === 'snake')!
+  await page.goto(`/#/games/snake/${snake.steps.at(-1)!.id}`)
+  await expect(page.getByTestId('step-part-1')).toContainText('Build it yourself')
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByTestId('step-part-2')).toContainText('Your turn')
+  await expect(page.getByTestId('step-part-2')).toContainText('No code is given in this step')
+  await expect(page.getByTestId('step-part-3')).toHaveCount(0)
+  await expect(page.getByText('The code', { exact: true })).toHaveCount(0)
+})
+
 test('a guess before running shows whether it was right, and a failing check comes with a hint', async ({ page }) => {
   await page.goto('/#/games/snake/08-loop')
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click()
@@ -252,7 +263,7 @@ test('the finished parts of the code are locked until the learner unlocks them',
   await page.getByRole('button', { name: 'Unlock the whole file' }).click()
   await code.getByText('// Snake, step by step.').click()
   await page.keyboard.press('End')
-  await page.keyboard.type(' zz')
+  await page.keyboard.insertText(' zz')
   await expect(code).toContainText('step by step. zz')
 })
 

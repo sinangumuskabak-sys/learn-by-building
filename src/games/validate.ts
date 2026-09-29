@@ -20,8 +20,13 @@ export function validateGames(games: Game[], skillIds: Set<string>): string[] {
       if (step.tests.length === 0) add('needs at least one test')
       if (!step.title.tr) add('frontmatter needs "title_tr"')
       const parts = [step.goal, step.code, step.meaning]
+      // A "build it yourself" step (the last one) has a goal and a task but no code to copy and no meaning.
+      const own = !!step.goal && !step.code && !step.meaning
       if (step.explanation && parts.some(Boolean)) add('use either "# --explanation--" or goal/code/meaning, not both')
-      else if (!step.explanation && !parts.every(Boolean)) add('needs "# --goal--", "# --code--" and "# --meaning--" (or an "# --explanation--")')
+      else if (!step.explanation && !own && !parts.every(Boolean)) {
+        add('needs "# --goal--", "# --code--" and "# --meaning--" (or an "# --explanation--", or only a goal for a build-it-yourself step)')
+      }
+      if (own && index !== game.steps.length - 1) add('a build-it-yourself step (a goal without code) can only be the last step')
       for (const [name, text] of Object.entries({ explanation: step.explanation, goal: step.goal, meaning: step.meaning, predict: step.predict, hint: step.hint, try: step.try })) {
         if (text && !text.tr) add(`needs "# --${name}-tr--"`)
       }

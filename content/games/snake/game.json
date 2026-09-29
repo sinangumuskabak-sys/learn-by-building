@@ -11,7 +11,6 @@
   "color": "#22c55e",
   "skills": ["game.canvas", "game.loop", "game.input", "game.collision", "prog.arrays"],
   "extend": [
-    { "en": "Wrap around: leaving one edge brings the snake back on the opposite edge instead of ending the game.", "tr": "Kenardan geçiş: bir kenardan çıkan yılan oyunu bitirmek yerine karşı kenardan geri girsin." },
     { "en": "Pause with the P key; draw \"Paused\" over the board.", "tr": "P tuşuyla duraklat; tahtanın üstüne \"Duraklatıldı\" yaz." },
     { "en": "Add a few wall blocks inside the board, and make sure food never spawns on them.", "tr": "Tahtanın içine birkaç duvar bloğu ekle; yem asla onların üstüne düşmesin." },
     { "en": "Touch controls: swipe on the canvas to turn (pointerdown + pointerup, compare the distance moved).", "tr": "Dokunmatik kontrol: kaydırarak dön (pointerdown + pointerup, gidilen mesafeyi karşılaştır)." },

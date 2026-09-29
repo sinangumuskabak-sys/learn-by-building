@@ -102,6 +102,9 @@ What will the square do?
   The loop runs about 60 times a second.
 ```
 
+The **last** step may be a "build it yourself" step: only `goal`, `task` and tests (no `code`, no `meaning`). The
+learner sees what to build and writes it with what they learned; `hint` is where to put a nudge.
+
 Keep steps small: one idea and a few lines of code each. The editor locks the lines the step's solution keeps from
 the code it starts with (the finished parts), so the learner writes only between them; when a step only adds lines,
 an empty line is opened there to type into. `npm run validate` checks that a step has either `explanation` or all of

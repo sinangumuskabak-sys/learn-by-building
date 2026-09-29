@@ -27,8 +27,8 @@
       "tr": "Kaydırma için bir sayı kutusu ekle; okuyan kişi kaydırmayı kendisi seçsin."
     },
     {
-      "en": "Write `decode(text, shift)` and a button that turns a secret back into plain text.",
-      "tr": "`decode(text, shift)` fonksiyonunu ve şifreyi düz metne çeviren bir düğme yaz."
+      "en": "Add a button that uses `decode` to turn a secret typed in the box back into plain text.",
+      "tr": "Kutuya yazılan şifreyi `decode` ile düz metne çeviren bir düğme ekle."
     },
     {
       "en": "Use the Turkish alphabet (29 letters, `toLocaleLowerCase('tr')`) and change `% 26` to fit it.",
