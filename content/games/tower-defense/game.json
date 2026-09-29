@@ -14,7 +14,6 @@
     { "en": "Upgrade: clicking a tower you own raises its damage and range for a growing price.", "tr": "Yükseltme: sahip olduğun bir kuleye tıklamak, artan bir fiyata hasarını ve menzilini artırsın." },
     { "en": "A frost tower that slows the enemies it hits for a second.", "tr": "Vurduğu düşmanları bir saniyeliğine yavaşlatan bir buz kulesi." },
     { "en": "Fast, weak enemies in some waves and one big boss every fifth wave.", "tr": "Bazı dalgalarda hızlı ama zayıf düşmanlar, her beşinci dalgada bir büyük patron." },
-    { "en": "Sell a tower with a right click for half its price.", "tr": "Sağ tıkla bir kuleyi yarı fiyatına sat." },
     { "en": "A second road, or a map where the player places walls and the enemies find the shortest way (breadth-first search).", "tr": "İkinci bir yol ya da oyuncunun duvar koyduğu ve düşmanların en kısa yolu bulduğu bir harita (genişlik öncelikli arama)." }
   ]
 }
