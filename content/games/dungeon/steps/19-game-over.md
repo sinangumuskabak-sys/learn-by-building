@@ -1,158 +1,106 @@
 ---
-title: The stairs out
-title_tr: Dışarı çıkan merdiven
+title: Game over
+title_tr: Oyun bitti
 skills: [game.state]
 ---
 
-# --explanation--
+# --goal--
 
-Behind the locked door, the last room hides the stairs out. Stepping on them wins, and the time is the score: the best time is
-the **lowest**, saved in `localStorage`.
+Losing the last heart ends the game: everything stops, a dark screen says so, and Space (or a tap) starts again. The
+screen already knows what to say after an escape; the stairs come next.
 
-With that the adventure is complete: rooms written as text, walking with wall sliding, moving between rooms through gaps that
-line up, a sword that is just a box, enemies with a small state machine, hearts with invulnerability and knockback, keys and a
-door, and a world that remembers what you took. Most top-down adventure games are these same pieces, with more rooms.
+# --goal-tr--
 
-# --explanation-tr--
+Son kalbi kaybetmek oyunu **bitirsin**: her şey dursun, karanlık bir ekran bunu söylesin; Boşluk (ya da bir dokunuş)
+yeniden başlatsın. Ekran kaçıştan sonra ne diyeceğini de şimdiden biliyor; merdiven sonraki adımda.
 
-**Bu adımda:** zindandan kaçışı ekleyeceğiz. Kilitli kapının arkasındaki son odada (sağ alt) koyu bir kare, yani çıkış
-merdiveni var. Üstüne basınca kazanırsın. Sağ üstte geçen süre yazacak, en iyi sürenin de kaydı tutulacak.
-
-**Süreyi kare sayarak ölçeriz.** Oyun saniyede 60 kare çizer. `frames` oynarken her karede 1 artar; ekrana yazarken
-60'a bölüp saniyeye çeviririz. `(sayı).toFixed(1)` sayıyı virgülden sonra tek basamakla yazıya çevirir: `600 / 60`
-→ `'10.0'`. Bu işi yapan küçük fonksiyonun adı `seconds`.
-
-**Kazanmak yeni bir durum.** 6. adımda `state` ya `'playing'` ya `'over'` idi. Şimdi üçüncü bir değer ekliyoruz:
-`'won'` (kazandı). Oyuncunun ortasının altındaki karo `E` olunca `state = 'won'` olur. `update` zaten "oynamıyorsa dur"
-diyordu; oyun burada donar. Bitiş ekranı da hazır: sadece yazısını duruma göre seçeriz (`state === 'won' ? ... : 'Game over'`).
-
-**Rekoru saklamak: `localStorage`.** Tarayıcının küçük bir defteri gibidir; sayfayı kapatıp açsan da içindekiler kalır.
+# --code--
 
 ```js
-localStorage.setItem('dungeon-best', best)   // deftere yaz
-localStorage.getItem('dungeon-best')         // defterden oku (yazı olarak gelir)
+let state // 'playing', 'won' or 'over'
+
+  state = 'playing'
+
+  if (state !== 'playing') return
+
+      if (hearts === 0) state = 'over'
+
+    if (state !== 'playing') reset()
+    else if (swing === 0) swing = 12
+
+  if (state !== 'playing') {
+    reset()
+    return
+  }
+
+  if (state !== 'playing') {
+    ctx.fillStyle = 'rgba(12, 10, 9, 0.75)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = 'white'
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 28px sans-serif'
+    ctx.fillText(state === 'won' ? 'You escaped in ' + seconds(frames) + ' s!' : 'Game over', canvas.width / 2, 190)
+    ctx.font = '16px sans-serif'
+    ctx.fillText('Press Space to play again', canvas.width / 2, 222)
+  }
 ```
 
-`Number(...)` yazıyı sayıya çevirir. Defterde bir şey yoksa sayı çıkmaz; `|| 0` "o zaman 0 al" der. `best` 0 ise
-"henüz rekor yok" demektir.
+# --meaning--
 
-**Az olan iyidir.** Süre kısaldıkça daha iyi. Yeni süre, rekor hiç yoksa (`best === 0`) **ya da** eskisinden küçükse
-(`frames < best`) yeni rekor olur.
+- `update` does nothing unless playing, so the time and the enemies freeze.
+- Space and a tap both start again when the game is over.
+- The dark screen covers the whole canvas at 75%.
 
-**Yazıda koşullu parça:** `(best ? '  Best ' + seconds(best) : '')` → rekor varsa "Best ..." kısmını ekle, yoksa boş
-yazı ekle. `ctx.textAlign = 'right'` yazıyı verilen noktanın soluna hizalar; böylece sağ kenara yaslanır.
+# --meaning-tr--
 
-Böylece macera tamam: yazıyla çizilmiş odalar, duvar boyunca kayarak yürümek, hizalı boşluklardan odadan odaya geçmek,
-aslında bir kutu olan kılıç, küçük bir durum makinesiyle düşmanlar, dokunulmazlık ve geri itmeyle kalpler, anahtar ve
-kapı, ve aldıklarını hatırlayan bir dünya. Yukarıdan bakışlı macera oyunlarının çoğu, daha çok odayla, bu parçalardan yapılır.
+- `update`'in başındaki satır → oynanmıyorsa hiçbir şey hareket etmez; süre de donar.
+- `if (hearts === 0) state = 'over'` → son kalp gidince.
+- Boşluk ve dokunuş: oyun bittiyse `reset()`; dokunuşta `return` → pede ya da kılıca geçme.
+- `state === 'won' ? ... : 'Game over'` → kazanınca süreyi, kaybedince "Game over" yazar.
 
 # --task--
 
-1. Add `frames` (`0` in `reset()`, 1 more every playing frame) and `best` from `localStorage` `'dungeon-best'`.
-2. An `E` under the middle of the player sets the state to `'won'`, and saves the time as `best` if it is the first or a faster
-   one.
-3. Draw an `E` as a `'#1c1917'` square 4 pixels inside its tile. At the top right, `Time 12.3` and, once there is one,
-   `  Best 9.8`. When won, the message is `You escaped in 12.3 s!`.
+1. Above `frames`, write `state`; in `reset`, set it after `frames`.
+2. At the top of `update`, stop when not playing; after `hurt = 60`, end the game on the last heart.
+3. On Space and on a tap, start again when the game is over.
+4. At the end of `draw`, draw the end screen.
 
 # --task-tr--
 
-1. `let state ...` satırının yorumunu güncelle ve altına iki satır ekle:
-
-   ```js
-   let state // 'playing', 'won' or 'over'
-   let frames
-   let best = Number(localStorage.getItem('dungeon-best')) || 0
-   ```
-
-2. `reset()` içinde `swing = 0` satırının altına ekle:
-
-   ```js
-     frames = 0
-   ```
-
-3. `update()`'in başında `if (state !== 'playing') return` satırının altına ekle:
-
-   ```js
-     frames += 1
-   ```
-
-4. `update()`'te anahtar/kalp toplayan `if (here === 'k' || here === 'h') { ... }` bloğunun kapanış `}`'sinden sonra,
-   `// A locked door ...` yorumunun **üstüne** çıkışı ekle:
-
-   ```js
-     if (here === 'E') {
-       state = 'won'
-       if (best === 0 || frames < best) {
-         best = frames
-         localStorage.setItem('dungeon-best', best)
-       }
-     }
-   ```
-
-5. `draw()`'daki karo döngüsünde, kalbi çizen `if (ch === 'h') { ... }` bloğunun altına merdiveni ekle:
-
-   ```js
-         if (ch === 'E') {
-           ctx.fillStyle = '#1c1917'
-           ctx.fillRect(x + 4, y + 4, T - 8, T - 8)
-         }
-   ```
-
-6. `draw()`'da `ctx.fillText('Keys ' + keysHeld, 100, 30)` satırının hemen altına süre yazısını ekle:
-
-   ```js
-     ctx.textAlign = 'right'
-     const seconds = (f) => (f / 60).toFixed(1)
-     ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 12, 30)
-   ```
-
-   `'  Best '` içinde başta **iki** boşluk var; kontroller yazıyı harfi harfine arar.
-
-7. `draw()`'un sonundaki bitiş ekranında `ctx.fillText('Game over', ...)` satırını şununla değiştir:
-
-   ```js
-       ctx.fillText(state === 'won' ? 'You escaped in ' + seconds(frames) + ' s!' : 'Game over', canvas.width / 2, 190) // ← değişti
-   ```
-
-8. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. Sağ üstte süre akmalı. Anahtarı al, kapıyı aç, sağ alttaki
-   odada ortadaki koyu kareye bas: `You escaped in ... s!` görmelisin; Boşluk yeniden başlatır ve artık `Best` de
-   yazar. Alttaki kontrollerin hepsi yeşil olmalı.
+1. `let frames` üstüne `state`, `reset`'te `frames = 0` altına `state = 'playing'` yaz.
+2. `update`'in en üstüne durdurma satırını; dokunma bloğunda `hurt = 60` altına oyun bitti satırını yaz.
+3. `keydown`'da sallama satırının üstüne yeniden başlatma satırını yazıp sallamayı `else if` yap; dokunmada `const y`
+   altına yeniden başlatma bloğunu yaz.
+4. `draw`'ın sonuna bitiş ekranını yaz. **Çalıştır**.
 
 # --tests--
 
-Reaching the stairs should win and record the time.
-tr: Merdivene ulaşmak kazandırmalı ve süreyi kaydetmeli.
+With no hearts left the game should end, and Space should start again.
+tr: Kalp kalmayınca oyun bitmeli, Boşluk yeniden başlatmalı.
 
 ```js
-enter(1, 1)
-enemies = []
-frames = 599
-player.x = 7 * T + 5
-player.y = 5 * T + 5
+hearts = 1
+const e = enemies[0]
+player.x = e.x
+player.y = e.y
 $.tick(1)
-assert.strictEqual(state, 'won')
-assert.strictEqual(best, 600)
-assert.strictEqual(localStorage.getItem('dungeon-best'), '600')
-assert.include($.texts(), 'You escaped in 10.0 s!')
+assert.strictEqual(state, 'over')
+const f = frames
+$.tick(1)
+assert.strictEqual(frames, f, 'frozen')
+assert.include($.texts(), 'Game over')
 $.press(' ')
-assert.deepEqual([state, frames], ['playing', 0])
-$.tick(1)
-assert.include($.texts(), 'Time 0.0 Best 10.0')
+assert.deepEqual([state, hearts, frames], ['playing', 3, 0])
 ```
 
-A slower escape should not replace the best time.
-tr: Daha yavaş bir kaçış en iyi süreyi değiştirmemeli.
+A tap should start again too.
+tr: Bir dokunuş da yeniden başlatmalı.
 
 ```js
-best = 300
-enter(1, 1)
-enemies = []
-player.x = 7 * T + 5
-player.y = 5 * T + 5
-frames = 500
-$.tick(1)
-assert.strictEqual(state, 'won')
-assert.strictEqual(best, 300)
+state = 'over'
+$.pointerDown(300, 200)
+assert.strictEqual(state, 'playing')
+assert.strictEqual(swing, 0, 'the tap did not swing')
 ```
 
 # --solution--
@@ -243,7 +191,6 @@ let keysHeld
 let hurt // frames the player cannot be hurt again
 let state // 'playing', 'won' or 'over'
 let frames
-let best = Number(localStorage.getItem('dungeon-best')) || 0
 const held = {}
 
 function reset() {
@@ -384,13 +331,6 @@ function update() {
     tiles[row][col] = '.'
     taken.add(id)
   }
-  if (here === 'E') {
-    state = 'won'
-    if (best === 0 || frames < best) {
-      best = frames
-      localStorage.setItem('dungeon-best', best)
-    }
-  }
   // A locked door right in front of you opens with a key.
   const [dx, dy] = player.dir
   const fc = Math.floor((cx + dx * T * 0.6) / T)
@@ -473,10 +413,6 @@ function draw() {
         ctx.fillStyle = '#e11d48'
         ctx.fillRect(x + 9, y + 9, 14, 14)
       }
-      if (ch === 'E') {
-        ctx.fillStyle = '#1c1917'
-        ctx.fillRect(x + 4, y + 4, T - 8, T - 8)
-      }
     })
   })
 
@@ -506,7 +442,7 @@ function draw() {
   ctx.fillText('Keys ' + keysHeld, 100, 30)
   ctx.textAlign = 'right'
   const seconds = (f) => (f / 60).toFixed(1)
-  ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 12, 30)
+  ctx.fillText('Time ' + seconds(frames), canvas.width - 12, 30)
 
   // The touch pad, faint, in the corner.
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'

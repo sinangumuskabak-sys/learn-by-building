@@ -1,158 +1,85 @@
 ---
-title: A key and a locked door
-title_tr: Bir anahtar ve kilitli bir kapı
+title: Best time
+title_tr: En iyi süre
 skills: [game.state]
 ---
 
-# --explanation--
+# --goal--
 
-The door in the second room is locked, and the key is in the room below the first. This turns four rooms into a small
-**puzzle of order**: you cannot go straight to the exit, you have to explore.
+The fastest escape is kept in `localStorage` and shown next to the time. Here the best is the smallest number of frames.
 
-Picking up the key works like picking up a heart: it goes into `keysHeld`, the tile becomes floor, and `taken` remembers it.
+# --goal-tr--
 
-Opening the door needs a key and happens when you walk **into** it. The door is a wall, so you can never stand on it; instead,
-look at the tile just in front of you (60% of a tile ahead in the direction you face). If it is a door and you have a key, the
-key is used, the door becomes floor, and `taken` remembers that too, so it stays open when you come back.
+En hızlı kaçış `localStorage`'da saklansın ve sürenin yanında görünsün. Burada en iyisi **en küçük** kare sayısı.
 
-# --explanation-tr--
-
-**Bu adımda:** sarı bir anahtar toplayıp kilitli kahverengi kapıyı açacaksın. Üst şeritte kalplerin yanında
-`Keys 0` yazacak; anahtarı alınca `Keys 1` olacak.
-
-**Küçük bir sıra bulmacası.** İkinci odanın (sağ üst) altındaki kapı kilitli; anahtar ise ilk odanın altındaki odada
-(sol alt). Böylece dört oda küçük bir bulmacaya dönüşür: doğrudan çıkışa gidemezsin, önce keşfetmen gerekir.
-
-**Anahtarı almak, kalbi almak gibidir.** 6. adımda kalp için yaptığımızın aynısı: oyuncunun ortasının altındaki karo
-`k` ise anahtar sayın (`keysHeld`) 1 artar, karo zemin olur ve `taken` torbası bunu hatırlar. İkisini tek `if`'te
-birleştiriyoruz: "`k` **ya da** `h` ise: `k` ise anahtar ekle, **değilse** kalp ekle; sonra ikisinde de karoyu zemin yap
-ve hatırla."
-
-**Kapıyı açmak biraz farklı.** Kapı bir duvardır (`solidTile` onu duvar sayıyor), yani asla üstünde duramazsın. Onun
-yerine **hemen önündeki** karoya bakarız: oyuncunun ortasından, baktığın yönde bir karonun %60'ı kadar ileri
-(`T * 0.6`, yaklaşık 19 piksel). Oradaki karo `D` ise ve anahtarın varsa: anahtar harcanır, kapı zemin olur ve `taken`
-onu da hatırlar; geri geldiğinde açık kalır. Yani kapıya doğru yürüdüğün an açılır.
+# --code--
 
 ```js
-const fc = Math.floor((cx + dx * T * 0.6) / T)   // öndeki karonun sütunu
-const fr = Math.floor((cy + dy * T * 0.6) / T)   // öndeki karonun satırı
+let best = Number(localStorage.getItem('dungeon-best')) || 0
+
+    if (best === 0 || frames < best) {
+      best = frames
+      localStorage.setItem('dungeon-best', best)
+    }
+
+  ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 12, 30)
 ```
 
-`tiles[fr] && tiles[fr][fc] === 'D'` → önce "o satır var mı?" diye sorarız. Odanın kenarındaysan öndeki satır odanın
-dışında olabilir; `tiles[fr]` yoksa `&&` ikinci soruya hiç geçmez ve hata olmaz.
+# --meaning--
 
-`'Keys ' + keysHeld` yazı ile sayıyı yan yana koyar: `'Keys 1'`.
+- 0 means "no escape yet", so the first escape always counts.
+- `(best ? ... : '')` adds the best time only when there is one.
+
+# --meaning-tr--
+
+- `best === 0` → henüz kaçış yok: ilk kaçış her zaman rekor. `frames < best` → daha hızlı.
+- `(best ? '  Best ' + seconds(best) : '')` → rekor varsa ekle, yoksa boş yazı.
 
 # --task--
 
-1. Add `keysHeld` (`0` in `reset()`). A `k` under the middle of the player adds a key, becomes floor and is taken.
-2. Every frame, find the tile 0.6 of a tile in front of the middle of the player. If it is a `D` and you hold a key, use the key,
-   make the door floor and add it to `taken`.
-3. Draw a `k` as a `'#eab308'` 12 by 16 rectangle at `(x + 10, y + 8)` in its tile, and `Keys 1` at `(100, 30)` in white,
-   `'bold 16px sans-serif'`.
+1. Above `held`, write `best`.
+2. In the stairs block, save a new record.
+3. Add the best time to the time text.
 
 # --task-tr--
 
-1. `let tiles ...` satırının yorumunu güncelle, `let hearts` satırının altına anahtar sayısını ekle:
-
-   ```js
-   let tiles // the current room, as arrays of characters we can change (doors open, keys are picked up)
-   ```
-
-   ```js
-   let hearts
-   let keysHeld // ← yeni
-   ```
-
-2. `reset()` içinde `hearts = 3` satırının altına ekle:
-
-   ```js
-     keysHeld = 0
-   ```
-
-3. `update()` içinde kalp toplayan `if (here === 'h') { ... }` bloğunu sil ve yerine şunu yaz (anahtar ve kalp birlikte,
-   ardından kapı):
-
-   ```js
-     if (here === 'k' || here === 'h') {
-       if (here === 'k') keysHeld += 1
-       else hearts = Math.min(3, hearts + 1)
-       tiles[row][col] = '.'
-       taken.add(id)
-     }
-     // A locked door right in front of you opens with a key.
-     const [dx, dy] = player.dir
-     const fc = Math.floor((cx + dx * T * 0.6) / T)
-     const fr = Math.floor((cy + dy * T * 0.6) / T)
-     if (tiles[fr] && tiles[fr][fc] === 'D' && keysHeld > 0) {
-       keysHeld -= 1
-       tiles[fr][fc] = '.'
-       taken.add(room.rx + ',' + room.ry + ',' + fc + ',' + fr)
-     }
-   ```
-
-   Bunların hepsi `if (swing > 0) swing -= 1` satırının üstünde kalmalı.
-
-4. `draw()` içindeki karo döngüsünde, kapıyı çizen `if (ch === 'D') { ... }` bloğu ile kalbi çizen `if (ch === 'h')`
-   bloğunun **arasına** anahtarı ekle:
-
-   ```js
-         if (ch === 'k') {
-           ctx.fillStyle = '#eab308'
-           ctx.fillRect(x + 10, y + 8, 12, 16)
-         }
-   ```
-
-5. `draw()`'da kalpleri çizen `for (let i = 0; i < 3; i++) { ... }` döngüsünün kapanış `}`'sinden hemen sonra anahtar
-   yazısını ekle:
-
-   ```js
-     ctx.fillStyle = 'white'
-     ctx.font = 'bold 16px sans-serif'
-     ctx.textAlign = 'left'
-     ctx.fillText('Keys ' + keysHeld, 100, 30)
-   ```
-
-6. **Çalıştır**'a bas. Oynamak için önce oyuna tıkla. İlk odanın alt boşluğundan in, sarı anahtarı al (`Keys 1`
-   olmalı), sonra yukarı çıkıp sağdaki odaya geç ve alttaki kahverengi kapıya yürü: kapı açılmalı. Alttaki
-   kontrollerin hepsi yeşil olmalı. Kapı açılmıyorsa `fc`/`fr` satırlarında `0.6` ve parantezleri kontrol et.
+1. `const held` üstüne `best` satırını yaz.
+2. Merdiven bloğuna, `state = 'won'` altına rekor bloğunu yaz.
+3. Süre yazısına en iyi süre kısmını ekle. **Çalıştır**.
 
 # --tests--
 
-The key should be picked up once.
-tr: Anahtar bir kez alınmalı.
+Reaching the stairs should record the time.
+tr: Merdivene ulaşmak süreyi kaydetmeli.
 
 ```js
-enter(0, 1)
+enter(1, 1)
 enemies = []
-player.x = 6 * T + 5
+frames = 599
+player.x = 7 * T + 5
 player.y = 5 * T + 5
 $.tick(1)
-assert.strictEqual(keysHeld, 1)
-assert.strictEqual(tiles[5][6], '.')
+assert.strictEqual(best, 600)
+assert.strictEqual(localStorage.getItem('dungeon-best'), '600')
+$.press(' ')
+assert.deepEqual([state, frames], ['playing', 0])
 $.tick(1)
-assert.strictEqual(keysHeld, 1)
-assert.include($.texts(), 'Keys 1')
+assert.include($.texts(), 'Time 0.0 Best 10.0')
 ```
 
-Walking into the door with a key should open it for good.
-tr: Anahtarla kapıya yürümek onu kalıcı olarak açmalı.
+A slower escape should not replace the best time.
+tr: Daha yavaş kaçış en iyi süreyi değiştirmemeli.
 
 ```js
-enter(1, 0)
+best = 300
+enter(1, 1)
 enemies = []
 player.x = 7 * T + 5
-player.y = 9 * T + 5
-player.dir = [0, 1]
+player.y = 5 * T + 5
+frames = 500
 $.tick(1)
-assert.strictEqual(tiles[10][7], 'D', 'no key: still locked')
-keysHeld = 1
-$.tick(1)
-assert.strictEqual(tiles[10][7], '.')
-assert.strictEqual(keysHeld, 0)
-enter(0, 0)
-enter(1, 0)
-assert.strictEqual(tiles[10][7], '.')
+assert.strictEqual(state, 'won')
+assert.strictEqual(best, 300)
 ```
 
 # --solution--
@@ -241,7 +168,9 @@ let swing // frames left of the sword swing
 let hearts
 let keysHeld
 let hurt // frames the player cannot be hurt again
-let state // 'playing' or 'over'
+let state // 'playing', 'won' or 'over'
+let frames
+let best = Number(localStorage.getItem('dungeon-best')) || 0
 const held = {}
 
 function reset() {
@@ -250,6 +179,7 @@ function reset() {
   keysHeld = 0
   hurt = 0
   swing = 0
+  frames = 0
   state = 'playing'
   const start = findIn(ROOMS[0][0], 'P')
   player = { x: start.col * T + (T - SIZE) / 2, y: start.row * T + (T - SIZE) / 2, dir: [0, 1] }
@@ -346,6 +276,7 @@ const box = (body) => ({ x: body.x, y: body.y, w: SIZE, h: SIZE })
 
 function update() {
   if (state !== 'playing') return
+  frames += 1
   if (hurt > 0) hurt -= 1
 
   let dir = padDir
@@ -379,6 +310,13 @@ function update() {
     else hearts = Math.min(3, hearts + 1)
     tiles[row][col] = '.'
     taken.add(id)
+  }
+  if (here === 'E') {
+    state = 'won'
+    if (best === 0 || frames < best) {
+      best = frames
+      localStorage.setItem('dungeon-best', best)
+    }
   }
   // A locked door right in front of you opens with a key.
   const [dx, dy] = player.dir
@@ -462,6 +400,10 @@ function draw() {
         ctx.fillStyle = '#e11d48'
         ctx.fillRect(x + 9, y + 9, 14, 14)
       }
+      if (ch === 'E') {
+        ctx.fillStyle = '#1c1917'
+        ctx.fillRect(x + 4, y + 4, T - 8, T - 8)
+      }
     })
   })
 
@@ -489,6 +431,9 @@ function draw() {
   ctx.font = 'bold 16px sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText('Keys ' + keysHeld, 100, 30)
+  ctx.textAlign = 'right'
+  const seconds = (f) => (f / 60).toFixed(1)
+  ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 12, 30)
 
   // The touch pad, faint, in the corner.
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
@@ -503,7 +448,7 @@ function draw() {
     ctx.fillStyle = 'white'
     ctx.textAlign = 'center'
     ctx.font = 'bold 28px sans-serif'
-    ctx.fillText('Game over', canvas.width / 2, 190)
+    ctx.fillText(state === 'won' ? 'You escaped in ' + seconds(frames) + ' s!' : 'Game over', canvas.width / 2, 190)
     ctx.font = '16px sans-serif'
     ctx.fillText('Press Space to play again', canvas.width / 2, 222)
   }

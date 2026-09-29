@@ -11,7 +11,6 @@
   "color": "#16a34a",
   "skills": ["game.collision", "game.state", "game.input", "prog.arrays"],
   "extend": [
-    { "en": "Remember defeated enemies per room, so cleared rooms stay cleared.", "tr": "Yenilen düşmanları oda oda hatırla; temizlenen odalar temiz kalsın." },
     { "en": "A slide animation between rooms instead of an instant switch.", "tr": "Odalar arasında anında geçiş yerine kayan bir animasyon." },
     { "en": "A second kind of enemy that shoots in the direction it faces.", "tr": "Baktığı yöne ateş eden ikinci bir düşman türü." },
     { "en": "A minimap of the rooms you have visited.", "tr": "Ziyaret ettiğin odaların bir mini haritası." },
