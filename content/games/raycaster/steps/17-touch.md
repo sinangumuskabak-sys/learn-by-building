@@ -1,130 +1,80 @@
 ---
-title: Light and shade
-title_tr: Işık ve gölge
-skills: [game.canvas]
+title: Touch controls
+title_tr: Dokunmatik kontrol
+skills: [game.input]
 ---
 
-# --explanation--
+# --goal--
 
-With one flat color per wall, corners disappear: two walls meeting at a corner are the same color, so you cannot tell
-where one ends. Two cheap tricks give the picture depth:
+On a phone there are no arrow keys. Holding the left third of the screen turns left, the right third turns right, the
+middle walks. A tap after winning plays again.
 
-- **Side shading.** Walls facing north or south (`side === 'y'`) are drawn at 70% brightness. Corners become visible at
-  once, as if light came from one direction.
-- **Distance fog.** Everything gets darker with distance, down to a minimum of 25%: `1 - dist / 12`. Far corridors fade
-  into the dark, which makes distances easy to judge and hides how small the map really is.
+# --goal-tr--
 
-Both are just a multiplier on the red, green and blue values. Multiply, round, and build the `'rgb(...)'` string:
+Telefonda ok tuşu yok. Ekranın **sol üçte birini** basılı tutmak sola, **sağ üçte birini** sağa döndürsün, **ortası**
+yürütsün. Kazandıktan sonra bir dokunuş yeniden oynatsın. Dokunuşlar aynı `keys` nesnesine yazıyor; `update` farkı
+anlamıyor bile.
 
-```js
-const light = (hit.side === 'y' ? 0.7 : 1) * Math.max(0.25, 1 - dist / 12)
-```
-
-Tricks like these are how early 3D games looked good on very slow computers: no real lighting, just a number per column.
-
-# --explanation-tr--
-
-**Bu adımda:** duvarlara ışık ve gölge vereceğiz. Köşeler belirginleşecek (bazı yüzler daha koyu olacak) ve uzaktaki
-koridorlar karanlığa karışacak; görüntü çok daha derin görünecek.
-
-**Sorun:** her duvarın tek düz rengi olunca köşeler kaybolur. Köşede buluşan iki duvar aynı renkte olduğu için
-birinin nerede bitip ötekinin nerede başladığını göremezsin. İki ucuz hile görüntüye derinlik verir:
-
-- **Yüz gölgesi.** Kuzeye ya da güneye bakan duvarlar (`side === 'y'`, yani ışının yatay çizgiye çarptığı yüzler)
-  %70 parlaklıkla çizilir. Işık tek bir yönden geliyormuş gibi köşeler hemen görünür olur.
-- **Uzaklık sisi.** Her şey uzaklaştıkça kararır, en az %25'e kadar: `1 - dist / 12`. Uzaklık 0 iken 1 (tam
-  parlak), 6 iken 0.5, 9'dan sonra 0.25'te kalır. Uzak koridorlar karanlıkta kaybolur; bu hem uzaklığı tahmin
-  etmeyi kolaylaştırır hem de haritanın aslında ne kadar küçük olduğunu gizler.
-
-İkisi de kırmızı, yeşil ve mavi değerlerini çarptığımız tek bir sayıdır (`light`, ışık):
+# --code--
 
 ```js
-const light = (hit.side === 'y' ? 0.7 : 1) * Math.max(0.25, 1 - dist / 12)
+// Touch: hold the left third to turn left, the right third to turn right, the middle to walk.
+canvas.addEventListener('pointerdown', (event) => {
+  if (state === 'won') {
+    reset()
+    return
+  }
+  const rect = canvas.getBoundingClientRect()
+  const third = ((event.clientX - rect.left) / rect.width) * 3
+  keys[third < 1 ? 'ArrowLeft' : third < 2 ? 'ArrowUp' : 'ArrowRight'] = true
+})
+function stopTouch() {
+  keys.ArrowLeft = false
+  keys.ArrowUp = false
+  keys.ArrowRight = false
+}
+canvas.addEventListener('pointerup', stopTouch)
+canvas.addEventListener('pointercancel', stopTouch)
 ```
 
-`Math.max(0.25, ...)` iki sayıdan büyüğünü seçer; böylece ışık 0.25'in altına inmez. Rengin her parçasını `light`
-ile çarparız, `Math.round` ile en yakın tam sayıya yuvarlarız (`Math.round(104.6)` → `105`; renk değerleri tam sayı
-olmalı) ve `'rgb(...)'` yazısını kurarız.
+# --meaning--
 
-**`return` ile değer döndüren fonksiyon.** `shade(hit, dist)` bir renk yazısı hesaplar ve `return` ile geri verir.
-Çağıran yer bu cevabı doğrudan kullanır: `ctx.fillStyle = shade(hit, dist)`.
+- `third` is between 0 and 3: which third of the canvas was touched (the canvas may be shown bigger or smaller).
+- The touch presses a pretend key; lifting the finger releases all three.
+- `pointercancel` happens when the browser takes over the touch, e.g. for scrolling.
 
-Eski 3D oyunlar çok yavaş bilgisayarlarda böyle hilelerle güzel görünürdü: gerçek bir ışıklandırma yok, sütun başına
-tek bir sayı.
+# --meaning-tr--
+
+- `(event.clientX - rect.left) / rect.width` → dokunuşun tuvalin genişliğinde nereye düştüğü (0–1); tuval ekranda
+  büyük ya da küçük gösterilse de doğru çalışır. `* 3` → 0 ile 3 arası: hangi üçte bir.
+- `keys[...] = true` → **sahte** bir tuşa basar: sol üçte bir `ArrowLeft`, orta `ArrowUp`, sağ `ArrowRight`.
+- `stopTouch` → parmak kalkınca üçünü de bırakır. `pointercancel` → tarayıcı dokunuşu kendine alırsa (kaydırma gibi).
 
 # --task--
 
-1. Write `shade(hit, dist)` returning `'rgb(r, g, b)'`: the wall's color times `light` as above, each part rounded with
-   `Math.round`.
-2. Draw each column with `shade(hit, dist)`, using the corrected distance.
+Above `update`, write the touch listeners.
 
 # --task-tr--
 
-1. `draw()` fonksiyonunun **hemen üstüne** (`function draw() {` satırından önce) gölge fonksiyonunu yaz:
-
-   ```js
-   function shade(hit, dist) {
-     // Walls facing north or south are a little darker, and everything fades with distance.
-     const light = (hit.side === 'y' ? 0.7 : 1) * Math.max(0.25, 1 - dist / 12)
-     const [r, g, b] = COLORS[hit.tile]
-     return 'rgb(' + Math.round(r * light) + ', ' + Math.round(g * light) + ', ' + Math.round(b * light) + ')'
-   }
-
-   ```
-
-2. `draw()`'daki sütun döngüsünde şu iki satırı sil:
-
-   ```js
-       const [r, g, b] = COLORS[hit.tile]
-       ctx.fillStyle = 'rgb(' + r + ', ' + g + ', ' + b + ')'
-   ```
-
-   ve yerine tek satır yaz. Döngü şöyle olmalı:
-
-   ```js
-     for (let i = 0; i < RAYS; i++) {
-       const angle = player.angle - FOV / 2 + (FOV * (i + 0.5)) / RAYS
-       const hit = castRay(angle)
-       // The distance straight ahead, not along the ray: otherwise flat walls bulge (the fish-eye effect).
-       const dist = hit.dist * Math.cos(angle - player.angle)
-       const h = Math.min(H * 3, PROJECTION / dist)
-       ctx.fillStyle = shade(hit, dist) // ← değişti
-       ctx.fillRect(i * COLUMN, (H - h) / 2, COLUMN, h)
-     }
-   ```
-
-   `shade`'e düzeltilmiş uzaklık `dist`'i veriyoruz, `hit.dist`'i değil.
-
-3. **Çalıştır**'a bas. Duvarlar uzaklaştıkça kararmalı ve köşelerde bir yüz ötekinden koyu görünmeli. Alttaki
-   kontrollerin hepsi yeşil olmalı. Renk kontrolü kırmızıysa `'rgb('` ve `', '` içindeki boşlukları karşılaştır.
+`update` fonksiyonunun üstüne dokunma dinleyicilerini yaz. **Çalıştır**.
 
 # --tests--
 
-Walls should get darker with distance, down to a quarter.
-tr: Duvarlar mesafeyle bir çeyreğe kadar koyulaşmalı.
+Touching the thirds of the screen should turn and walk.
+tr: Ekranın üçte birlerine dokunmak döndürmeli ve yürütmeli.
 
 ```js
-assert.strictEqual(shade({ side: 'x', tile: '#' }, 0), 'rgb(148, 163, 184)')
-assert.strictEqual(shade({ side: 'x', tile: '#' }, 3.5), 'rgb(105, 115, 130)')
-assert.strictEqual(shade({ side: 'x', tile: '#' }, 20), 'rgb(37, 41, 46)')
-```
-
-North and south faces should be darker than east and west ones.
-tr: Kuzey ve güney yüzler doğu ve batı yüzlerden koyu olmalı.
-
-```js
-assert.strictEqual(shade({ side: 'y', tile: '#' }, 1), 'rgb(95, 105, 118)')
-assert.strictEqual(shade({ side: 'x', tile: '2' }, 3), 'rgb(139, 68, 45)')
-```
-
-The view should use the shading.
-tr: Görünüm gölgelendirmeyi kullanmalı.
-
-```js
-$.tick(1)
-const columns = $.rects().filter((r) => r.w === 2)
-assert.strictEqual(columns[120].color, 'rgb(105, 115, 130)')
-assert.isTrue(columns.some((c) => c.color !== columns[120].color), 'not all columns alike')
+$.pointerDown(400, 100)
+$.tick(5)
+assert.closeTo(player.angle, 0.2, 1e-9)
+$.pointerUp(400, 100)
+$.pointerDown(240, 100)
+$.tick(5)
+assert.isAbove(player.x, 1.7)
+$.pointerUp(240, 100)
+const x = player.x
+$.tick(5)
+assert.strictEqual(player.x, x)
 ```
 
 # --solution--
@@ -163,10 +113,15 @@ const RADIUS = 0.2 // how close the player can get to a wall
 const MINI = 8 // minimap pixels per tile
 
 let player
+let state // 'playing' or 'won'
+let frames
+let best = Number(localStorage.getItem('ray-best')) || 0
 const keys = {}
 
 function reset() {
   player = { x: 1.5, y: 1.5, angle: 0 }
+  state = 'playing'
+  frames = 0
 }
 
 function tileAt(x, y) {
@@ -220,9 +175,17 @@ function castRay(angle) {
   }
 }
 
+// The player escapes by walking up to the exit.
+function nearExit() {
+  const row = MAP.findIndex((line) => line.includes('E'))
+  const col = MAP[row].indexOf('E')
+  return Math.hypot(player.x - (col + 0.5), player.y - (row + 0.5)) < 0.8
+}
+
 document.addEventListener('keydown', (event) => {
   keys[event.key] = true
   if (event.key.startsWith('Arrow')) event.preventDefault()
+  if (event.key === ' ' && state === 'won') reset()
 })
 document.addEventListener('keyup', (event) => {
   keys[event.key] = false
@@ -230,6 +193,10 @@ document.addEventListener('keyup', (event) => {
 
 // Touch: hold the left third to turn left, the right third to turn right, the middle to walk.
 canvas.addEventListener('pointerdown', (event) => {
+  if (state === 'won') {
+    reset()
+    return
+  }
   const rect = canvas.getBoundingClientRect()
   const third = ((event.clientX - rect.left) / rect.width) * 3
   keys[third < 1 ? 'ArrowLeft' : third < 2 ? 'ArrowUp' : 'ArrowRight'] = true
@@ -243,11 +210,23 @@ canvas.addEventListener('pointerup', stopTouch)
 canvas.addEventListener('pointercancel', stopTouch)
 
 function update() {
+  if (state !== 'playing') return
+  frames += 1
   if (keys.ArrowLeft || keys.a) player.angle -= TURN
   if (keys.ArrowRight || keys.d) player.angle += TURN
   const forward = (keys.ArrowUp || keys.w ? 1 : 0) - (keys.ArrowDown || keys.s ? 1 : 0)
   if (forward !== 0) move(Math.cos(player.angle) * MOVE * forward, Math.sin(player.angle) * MOVE * forward)
+
+  if (nearExit()) {
+    state = 'won'
+    if (best === 0 || frames < best) {
+      best = frames
+      localStorage.setItem('ray-best', best)
+    }
+  }
 }
+
+const seconds = (f) => (f / 60).toFixed(1)
 
 function shade(hit, dist) {
   // Walls facing north or south are a little darker, and everything fades with distance.
@@ -287,6 +266,23 @@ function draw() {
   ctx.moveTo(player.x * MINI, player.y * MINI)
   ctx.lineTo((player.x + Math.cos(player.angle)) * MINI, (player.y + Math.sin(player.angle)) * MINI)
   ctx.stroke()
+
+  ctx.fillStyle = 'white'
+  ctx.font = 'bold 16px sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillText('Time ' + seconds(frames) + (best ? '  Best ' + seconds(best) : ''), canvas.width - 10, 22)
+
+  if (state === 'won') {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
+    ctx.fillRect(0, 0, canvas.width, H)
+    ctx.fillStyle = '#22c55e'
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 28px sans-serif'
+    ctx.fillText('Escaped in ' + seconds(frames) + ' s', canvas.width / 2, H / 2)
+    ctx.fillStyle = 'white'
+    ctx.font = '16px sans-serif'
+    ctx.fillText('Press Space to play again', canvas.width / 2, H / 2 + 30)
+  }
 }
 
 function loop() {
