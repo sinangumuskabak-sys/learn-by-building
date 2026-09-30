@@ -37,11 +37,32 @@ export interface NamedContext extends PanelContext {
   panel: string
 }
 
+/**
+ * The text a panel shows. A drop-down list counts as its chosen item only: the whole list (a service's hundreds of
+ * models) would push the rest of the page out of what Maymun reads.
+ */
+function shownText(panel: HTMLElement): string {
+  const lists = panel.querySelectorAll('select')
+  if (!lists.length || panel.innerText === undefined) return panel.innerText ?? panel.textContent ?? ''
+  const copy = panel.cloneNode(true) as HTMLElement
+  copy.querySelectorAll('select').forEach((list, i) => list.replaceWith(document.createTextNode(lists[i].selectedOptions[0]?.text ?? '')))
+  // Laid out off screen, at the panel's width, so the text keeps its line breaks.
+  const holder = document.createElement('div')
+  holder.style.cssText = `position:fixed;left:-100000px;top:0;width:${panel.clientWidth}px`
+  holder.append(copy)
+  document.body.append(holder)
+  try {
+    return copy.innerText
+  } finally {
+    holder.remove()
+  }
+}
+
 /** What one panel element holds: its provider if it has one, otherwise the text it shows. */
 function panelContext(panel: HTMLElement, max: number): NamedContext {
   const name = panel.dataset.maymun ?? 'page'
   const provided = providers.get(name)?.()
-  const text = provided?.text ?? (panel.innerText ?? panel.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim()
+  const text = provided?.text ?? shownText(panel).replace(/\n{3,}/g, '\n\n').trim()
   return { panel: name, title: provided?.title ?? document.title, text: clip(text, max) }
 }
 

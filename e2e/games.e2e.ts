@@ -469,6 +469,13 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
 
 test('Maymun knows when the learner moves to another page, and what that page is for', async ({ page }) => {
   const sent: { messages: { role: string; content: string }[] }[] = []
+  // A service with hundreds of models: the settings page's model list must not push the rest of the page out.
+  await page.route('https://openrouter.ai/api/v1/models', (route) =>
+    route.fulfill({
+      headers: { 'access-control-allow-origin': '*' },
+      json: { data: Array.from({ length: 500 }, (_, i) => ({ id: `vendor/model-${i}`, name: `Model ${i}`, pricing: { prompt: '0.000001', completion: '0.000002' } })) },
+    }),
+  )
   await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
     sent.push(route.request().postDataJSON())
     await route.fulfill({
@@ -500,6 +507,7 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(system).toContain('"Settings" (/settings): Settings: theme, language')
   expect(system).toContain('They moved here from "Workshop" since their previous question.')
   expect(system).toContain('Reset all data')
+  expect(system).not.toContain('vendor/model-400')
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 
   // Into a game: still the same conversation, open, with a line where the project changed.
