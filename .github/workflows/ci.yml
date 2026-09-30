@@ -33,11 +33,11 @@ jobs:
           name: playwright-traces
           path: test-results
       # The published build: real addresses and page files for the site's own address (the tests above build for a
-      # local root). On its own domain: set SITE_URL to it and put the domain in public/CNAME.
+      # local root). The domain is also in public/CNAME.
       - run: npm run build
         if: github.event_name == 'push'
         env:
-          SITE_URL: https://sinangumuskabak-sys.github.io/learn-platform
+          SITE_URL: https://learnbybuilding.dev
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
         with:

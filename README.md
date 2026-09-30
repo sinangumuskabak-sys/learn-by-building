@@ -2,7 +2,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/sinangumuskabak-sys/learn-platform?style=social)](https://github.com/sinangumuskabak-sys/learn-platform/stargazers)
 
-**Try it:** https://sinangumuskabak-sys.github.io/learn-platform/ — free, no sign-up, English and Turkish. If it helps you,
+**Try it:** https://learnbybuilding.dev — free, no sign-up, English and Turkish. If it helps you,
 please ⭐ star the repo: it helps other learners find it.
 
 Learn to code by **building things you can see, in your browser**: web pages and real games, one small step at a time.
