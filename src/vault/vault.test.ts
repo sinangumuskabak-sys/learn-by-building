@@ -85,12 +85,12 @@ describe('vault zip', () => {
   })
 
   it('writes a ZIP with UTF-8 names that ends in the central directory', () => {
-    const data = zip([{ path: 'Learn Platform/Güncel durum.md', content: '# Merhaba' }])
+    const data = zip([{ path: 'Learn by Building/Güncel durum.md', content: '# Merhaba' }])
     const view = new DataView(data.buffer)
     expect(view.getUint32(0, true)).toBe(0x04034b50)
     expect(view.getUint32(data.length - 22, true)).toBe(0x06054b50)
     expect(view.getUint16(data.length - 22 + 10, true)).toBe(1)
-    expect(new TextDecoder().decode(data.slice(30, 30 + 'Learn Platform/Güncel durum.md'.length + 2))).toContain('Güncel')
+    expect(new TextDecoder().decode(data.slice(30, 30 + 'Learn by Building/Güncel durum.md'.length + 2))).toContain('Güncel')
   })
 })
 

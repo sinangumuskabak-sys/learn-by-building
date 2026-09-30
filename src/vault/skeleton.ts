@@ -513,9 +513,9 @@ export function applyAuto(content: string, spec: NoteSpec, progress: Progress): 
 function readme(lang: Lang): string {
   const text =
     lang === 'tr'
-      ? `# Learn Platform hafıza kasası
+      ? `# Learn by Building hafıza kasası
 
-Bu klasör, Learn Platform'daki çalışmanın **hafızası**: her atölye, oyun, adım ve beceri için bir not.
+Bu klasör, Learn by Building'deki çalışmanın **hafızası**: her atölye, oyun, adım ve beceri için bir not.
 
 - **Kim yazar?** \`auto\` bölümleri (durum, ilerleme tabloları) uygulama, ilerledikçe kendisi yazar. \`maymun\` bölümleri
   (öğrendiklerin, zorlandıkların, sorduğun sorular, güncel durum) Maymun, konuştukça doldurur. **Notlarım** bölümü senin:
@@ -526,9 +526,9 @@ Bu klasör, Learn Platform'daki çalışmanın **hafızası**: her atölye, oyun
   grafik görünümü (beceri haritası) hazır.
 - **Sıfırlama:** Ayarlar → Tüm verileri sıfırla, bu kasayı da boş iskelete döndürür.
 `
-      : `# Learn Platform memory vault
+      : `# Learn by Building memory vault
 
-This folder is the **memory** of your work in Learn Platform: one note for every project, game, step and skill.
+This folder is the **memory** of your work in Learn by Building: one note for every project, game, step and skill.
 
 - **Who writes?** \`auto\` sections (status, progress tables) are written by the app as you go. \`maymun\` sections (what
   you learned, what was hard, questions you asked, current status) are filled by Maymun as you talk. **My notes** is

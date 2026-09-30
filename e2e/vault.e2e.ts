@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
+import { go } from './nav.ts'
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024
 
 async function passFirstSnakeStep(page: Page) {
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
   await page.getByRole('button', { name: 'Show solution' }).click()
   await page.getByRole('button', { name: /Replace your code/ }).click()
@@ -12,7 +13,7 @@ async function passFirstSnakeStep(page: Page) {
 }
 
 test('the memory vault: a note for everything, following progress, my notes kept, a zip, and a reset', async ({ page }) => {
-  await page.goto('./#/memory')
+  await go(page, '/memory')
   const tree = page.getByRole('navigation', { name: 'Memory vault' })
   await expect(tree.getByRole('button', { name: '00 Read me' })).toBeVisible()
   await expect(tree).toContainText(/\d{3} notes/)
@@ -28,7 +29,7 @@ test('the memory vault: a note for everything, following progress, my notes kept
 
   // Finishing a step shows in the vault (the app writes the status), and links lead to the step's note.
   await passFirstSnakeStep(page)
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
   await expect(note).toContainText('1/28')
   await expect(note).toContainText('✅ Done')
   await note.getByRole('link', { name: /^01 / }).click()
@@ -44,22 +45,22 @@ test('the memory vault: a note for everything, following progress, my notes kept
 
   // The whole vault downloads as a zip, ready for Obsidian.
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download the vault (.zip)' }).click()])
-  expect(download.suggestedFilename()).toBe('Learn Platform.zip')
+  expect(download.suggestedFilename()).toBe('Learn by Building.zip')
 
   // Resetting all data brings the vault back to its skeleton.
-  await page.goto('./#/settings')
+  await go(page, '/settings')
   await page.getByRole('button', { name: 'Reset all data' }).click()
   await page.getByRole('button', { name: /Delete all progress/ }).click()
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
   await expect(note).toContainText('0/28')
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
   await expect(note).toContainText('⏳ Not started')
   await expect(note.getByLabel('My notes')).toHaveValue('')
 })
 
 test('one backup file brings back progress and notes after the browser data is gone', async ({ page }) => {
   // The home page says where everything is kept, once.
-  await page.goto('./#/games')
+  await go(page, '/games')
   const storage = page.getByRole('note')
   await expect(storage).toContainText('kept only in this browser')
   await storage.getByRole('button', { name: 'Got it' }).click()
@@ -69,12 +70,12 @@ test('one backup file brings back progress and notes after the browser data is g
 
   await passFirstSnakeStep(page)
   const note = page.getByRole('main').last()
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
   await note.getByLabel('My notes').fill('ctx is the brush.')
   await note.getByRole('button', { name: 'Save my notes' }).click()
   await expect(note.getByRole('status')).toHaveText('Saved')
 
-  await page.goto('./#/settings')
+  await go(page, '/settings')
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download backup' }).click()])
   expect(download.suggestedFilename()).toMatch(/^learn-platform-backup-\d{4}-\d{2}-\d{2}\.json$/)
   const backup = await download.path()
@@ -84,14 +85,14 @@ test('one backup file brings back progress and notes after the browser data is g
   await page.locator('input[type="file"]').setInputFiles(backup)
   await expect(page.getByText('Backup restored.')).toBeVisible()
 
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
   await expect(note).toContainText('1/28')
-  await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
+  await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Steps/01 Find the canvas.md'))
   await expect(note.getByLabel('My notes')).toHaveValue('ctx is the brush.')
 })
 
 test('switching the interface language keeps one vault; a reset builds it in the new language', async ({ page }) => {
-  await page.goto('./#/memory')
+  await go(page, '/memory')
   const tree = page.getByRole('navigation', { name: 'Memory vault' })
   await expect(tree.getByRole('button', { name: '00 Read me' })).toBeVisible()
   await page.evaluate(() => localStorage.setItem('lp.lang', JSON.stringify('tr')))
@@ -99,10 +100,10 @@ test('switching the interface language keeps one vault; a reset builds it in the
   const agac = page.getByRole('navigation', { name: 'Hafıza kasası' })
   await expect(agac.getByRole('button', { name: '00 Read me' })).toBeVisible()
   await expect(agac.getByRole('button', { name: '00 Beni oku' })).toHaveCount(0)
-  await page.goto('./#/settings')
+  await go(page, '/settings')
   await page.getByRole('button', { name: 'Tüm verileri sıfırla' }).click()
   await page.getByRole('button', { name: /Bu cihazdaki tüm ilerleme/ }).click()
-  await page.goto('./#/memory')
+  await go(page, '/memory')
   await expect(agac.getByRole('button', { name: '00 Beni oku' })).toBeVisible()
   await expect(agac.getByRole('button', { name: '00 Read me' })).toHaveCount(0)
 })
@@ -129,7 +130,7 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
       body: pieces.map((p) => `data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`).join('') + 'data: [DONE]\n\n',
     })
   })
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
   await page.reload()
   if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
@@ -150,17 +151,17 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   await popup.getByRole('link', { name: '01 Find the canvas' }).click()
   const note = page.getByRole('main').last()
   await expect(note).toContainText('Thought the canvas draws by itself; it needs ctx.')
-  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await go(page, '/memory?f=' + encodeURIComponent(statusNote))
   await expect(note).toContainText('Painting the board, step 1.')
   await expect(note).not.toContainText('not Maymun’s to write')
   await expect(note).toContainText('0/28')
 
   // A new chat sums up the session into a note next to the project's status, linked from it. The chat stayed open
   // on the memory pages (one conversation for the whole app).
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await expect(popup).toBeVisible()
   await popup.getByRole('button', { name: 'New chat (Maymun still remembers the earlier pages)' }).click()
-  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await go(page, '/memory?f=' + encodeURIComponent(statusNote))
   await expect(note).toContainText('Draw the grid.')
   await note.getByRole('link', { name: /^\d{4}-\d{2}-\d{2} \d{2}\.\d{2}$/ }).click()
   await expect(note).toContainText('What ctx is')
@@ -169,19 +170,19 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
 
   // Resetting all data takes back what Maymun wrote, the session note and the conversation.
   await popup.getByRole('button', { name: 'Close' }).click()
-  await page.goto('./#/settings')
+  await go(page, '/settings')
   await page.getByRole('button', { name: 'Reset all data' }).click()
   await page.getByRole('button', { name: /Delete all progress/ }).click()
-  await page.goto('./#/memory?f=' + encodeURIComponent(stepNote))
+  await go(page, '/memory?f=' + encodeURIComponent(stepNote))
   await expect(note).toContainText('⏳ Not started')
   await expect(note).not.toContainText('Thought the canvas draws by itself')
-  await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
+  await go(page, '/memory?f=' + encodeURIComponent(statusNote))
   await expect(note).toContainText('0/28')
   await expect(note).not.toContainText('Painting the board, step 1.')
   await expect(note).not.toContainText('Draw the grid.')
-  await page.goto('./#/memory?f=' + encodeURIComponent(session))
+  await go(page, '/memory?f=' + encodeURIComponent(session))
   await expect(note).not.toContainText('What ctx is')
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
   await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
   await expect(popup.locator('.markdown')).toHaveCount(0)
@@ -204,7 +205,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
   try {
     // The app talks to the bridge on its usual port; this test's bridge listens on another one.
     await page.route('http://127.0.0.1:8787/v1/vault', (route) => route.continue({ url: `http://127.0.0.1:${port}/v1/vault` }))
-    await page.goto('./#/memory')
+    await go(page, '/memory')
     // A key saved back when the bridge was one of Maymun's services still works.
     await page.evaluate((key) => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'bridge', keys: { bridge: key } })), key)
     await page.reload()
@@ -222,7 +223,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     // Written in Obsidian, read back when the page is opened again.
     const disk = readFileSync(snakeStatus, 'utf8')
     writeFileSync(snakeStatus, disk.replace(/## My notes\n[\s\S]*$/, '## My notes\nFrom Obsidian.\n'))
-    await page.goto('./#/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
+    await go(page, '/memory?f=' + encodeURIComponent('Games/Snake/Current status.md'))
     await page.reload()
     // Reading back goes through every note in the folder: give it time on a busy machine.
     await expect(page.getByRole('main').last().getByLabel('My notes')).toHaveValue('From Obsidian.', { timeout: 15_000 })
@@ -248,7 +249,7 @@ test('the live Obsidian copy: notes go to the folder, My notes written there com
     const stray = join(root, 'Games', 'Snake', 'Sessions', 'old session.md')
     mkdirSync(join(root, 'Games', 'Snake', 'Sessions'), { recursive: true })
     writeFileSync(stray, 'an old session')
-    await page.goto('./#/settings')
+    await go(page, '/settings')
     await page.getByRole('button', { name: 'Reset all data' }).click()
     await page.getByRole('button', { name: /Delete all progress/ }).click()
     await expect.poll(() => existsSync(stray), { timeout: 15_000 }).toBe(false)
@@ -276,7 +277,7 @@ test('coming back: where you were, what is next, and a skill due for review', as
     })
   })
   // The first step was passed ten days ago, so its skills are due for review.
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await page.evaluate(() => {
     const at = new Date(Date.now() - 10 * 86_400_000).toISOString()
     localStorage.setItem('lp.progress.v1', JSON.stringify({ version: 1, challenges: { 'game:snake/01-canvas': { status: 'passed', passedAt: at, updatedAt: at } } }))

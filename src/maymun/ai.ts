@@ -161,7 +161,7 @@ async function streamOpenAiCompatible({ provider: id, key, base, model, system, 
   if (key) headers.Authorization = `Bearer ${key}`
   if (id === 'openrouter') {
     headers['HTTP-Referer'] = location.origin
-    headers['X-Title'] = 'Learn Platform'
+    headers['X-Title'] = 'Learn by Building'
   }
   let response: Response
   try {

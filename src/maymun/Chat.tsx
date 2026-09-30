@@ -1,6 +1,6 @@
 import { Camera, MessageSquarePlus, Send, Square, Trash2, X } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { useMediaQuery } from '../lib/hooks.ts'
@@ -421,9 +421,9 @@ function Bubble({ role, text, image, shot, tag, remembered, model, recalled: loo
           {remembered.map((path, i) => (
             <span key={path}>
               {i > 0 && ', '}
-              <a href={`#/memory?f=${encodeURIComponent(path)}`} className="underline hover:text-fg">
+              <Link to={`/memory?f=${encodeURIComponent(path)}`} className="underline hover:text-fg">
                 {path.split('/').at(-1)!.replace(/\.md$/, '')}
-              </a>
+              </Link>
             </span>
           ))}
         </p>
@@ -474,7 +474,7 @@ function PageMark({ n, disabled }: { n: number; disabled: boolean }) {
 }
 
 /** The page's title as the tab shows it, without the site name. */
-const pageTitle = () => document.title.replace(/ · Learn Platform$/, '') || 'Learn Platform'
+const pageTitle = () => document.title.replace(/ · Learn by Building$/, '') || 'Learn by Building'
 
 /** "Last time you were…", "next…", and a skill due for review with a one-question offer; from the memory vault. */
 function WelcomeBack({ welcome, onAsk, onClose }: { welcome: Welcome; onAsk: (text: string) => void; onClose: () => void }) {

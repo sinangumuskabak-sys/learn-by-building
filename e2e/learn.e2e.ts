@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { go } from './nav.ts'
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024
 
@@ -19,11 +20,11 @@ test('the home page is the workshop, and the old catalog addresses lead there', 
   await page.goto('./')
   await expect(page.getByRole('heading', { name: 'Workshop', level: 1 })).toBeVisible()
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Catalog' })).toHaveCount(0)
-  await page.goto('./#/learn/iterate-odd-numbers')
-  await expect(page).toHaveURL(/#\/games$/)
+  await go(page, '/learn/iterate-odd-numbers')
+  await expect(page).toHaveURL(/\/games$/)
 })
 
-for (const path of ['./', './#/skills', './#/settings']) {
+for (const path of ['./', '/skills', '/settings']) {
   test(`no horizontal scroll: ${path}`, async ({ page }) => {
     await page.goto(path)
     await page.waitForLoadState('networkidle')
@@ -33,7 +34,7 @@ for (const path of ['./', './#/skills', './#/settings']) {
 }
 
 test('a web project’s page cannot reach the site’s storage', async ({ page }) => {
-  await page.goto('./#/games/business-card/01-heading')
+  await go(page, '/games/business-card/01-heading')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-secret' } })))
   await page.reload()
   await setCode(
@@ -47,7 +48,7 @@ test('a web project’s page cannot reach the site’s storage', async ({ page }
 
 test('Maymun’s picture of the screen shows a web project’s page, which draws its own picture', async ({ page }) => {
   test.skip(isMobile(page), 'the page and the chat are on different tabs on phones')
-  await page.goto('./#/games/business-card/01-heading')
+  await go(page, '/games/business-card/01-heading')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
   await page.reload()
   await setCode(page, '<body style="margin:0;min-height:100vh;background:rgb(0, 200, 0)"></body>\n')
@@ -78,7 +79,7 @@ test('Maymun’s picture of the screen shows a web project’s page, which draws
 
 test('a page that fails to load says so and leads back', async ({ page }) => {
   await page.route('**/*SettingsPage*', (route) => route.abort())
-  await page.goto('./#/settings')
+  await go(page, '/settings')
   await expect(page.getByRole('heading', { name: 'This page ran into a problem' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Reload the page' })).toBeVisible()
   await page.unroute('**/*SettingsPage*')

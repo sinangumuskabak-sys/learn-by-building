@@ -2,9 +2,10 @@ import clsx from 'clsx'
 import { Download, FileText, Folder } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { urlFor } from '../app/site.ts'
 import { Markdown } from '../components/Markdown.tsx'
 import { Button } from '../components/ui.tsx'
-import { useI18n } from '../i18n/i18n.ts'
+import { langStore, useI18n } from '../i18n/i18n.ts'
 import { useDocumentTitle } from '../lib/hooks.ts'
 import { useStore } from '../lib/store.ts'
 import { mirrorStatus, mirrorStore, pullNotes, setMirror } from '../vault/mirror.ts'
@@ -13,7 +14,7 @@ import { splitMyNotes, writeMyNotes } from '../vault/sections.ts'
 import { useVault, writeVaultFile, type VaultFile } from '../vault/store.ts'
 import { zip } from '../vault/zip.ts'
 
-const ROOT = 'Learn Platform'
+const ROOT = 'Learn by Building'
 
 interface Folder {
   name: string
@@ -45,7 +46,7 @@ function forDisplay(content: string): string {
   return content
     .replace(/^---\n[\s\S]*?\n---\n?/, '')
     .replace(/^<!-- (auto|maymun):[a-z-]+ -->\n?/gm, '')
-    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, path: string, label: string) => `[${label}](#/memory?f=${encodeURIComponent(`${path}.md`)})`)
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, path: string, label: string) => `[${label}](${urlFor(langStore.get(), `/memory?f=${encodeURIComponent(`${path}.md`)}`)})`)
 }
 
 function download(files: VaultFile[]) {

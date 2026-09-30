@@ -86,7 +86,7 @@ export function pagePurpose(path: string): string {
   if (path === '/settings') {
     return 'Settings: theme, language, showing Maymun, the AI service and key Maymun answers through, the editor font size, exporting or importing progress, and resetting all data.'
   }
-  return 'A page of Learn Platform.'
+  return 'A page of Learn by Building.'
 }
 
 /** Where the learner is: the page's title, address and purpose, and the page of their previous question if it differs. */

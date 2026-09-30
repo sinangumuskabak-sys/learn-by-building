@@ -1,4 +1,9 @@
-# Learn Platform
+# Learn by Building
+
+[![GitHub stars](https://img.shields.io/github/stars/sinangumuskabak-sys/learn-platform?style=social)](https://github.com/sinangumuskabak-sys/learn-platform/stargazers)
+
+**Try it:** https://sinangumuskabak-sys.github.io/learn-platform/ — free, no sign-up, English and Turkish. If it helps you,
+please ⭐ star the repo: it helps other learners find it.
 
 Learn to code by **building things you can see, in your browser**: web pages and real games, one small step at a time.
 Every step goes the same way: **what we are doing → the code → what it means → your turn**. You write the code yourself,
@@ -68,7 +73,7 @@ comes next as you talk (a hidden block at the end of its answers, checked before
 summed up when you come back after a break or start a new topic; **My notes** in every note is yours alone. Browse it
 on the **Memory** page, or download it as a folder: it opens as is in [Obsidian](https://obsidian.md) ("Open folder as
 vault"), which is optional. With the Maymun bridge (below) started with `--vault <your Obsidian vault>`, the Memory page can keep a
-live copy in that vault's `Learn Platform` folder, and what you write under **My notes** in Obsidian comes back. **Reset
+live copy in that vault's `Learn by Building` folder, and what you write under **My notes** in Obsidian comes back. **Reset
 all data** in Settings turns it back into the empty skeleton.
 
 Maymun answers through AI you choose, and your key never leaves the browser:

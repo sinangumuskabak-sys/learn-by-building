@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate, type RouteObject } from 'react-router'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { NotFoundPage, RouteErrorPage } from '../pages/NotFoundPage'
 
@@ -13,7 +13,8 @@ export const routes: RouteObject[] = [
         // A page that fails shows an error inside the shell, so the header and Maymun stay.
         errorElement: <RouteErrorPage />,
         children: [
-          { index: true, element: <Navigate to="/games" replace /> },
+          // The workshop is the home page (its address for search engines too); /games shows it as well.
+          { index: true, lazy: async () => ({ Component: (await import('../pages/GamesPage')).GamesPage }) },
           { path: 'c/:categoryId', element: <Navigate to="/games" replace /> },
           { path: 'learn/:challengeId', element: <Navigate to="/games" replace /> },
           { path: 'games', lazy: async () => ({ Component: (await import('../pages/GamesPage')).GamesPage }) },
@@ -31,4 +32,5 @@ export const routes: RouteObject[] = [
   },
 ]
 
-export const router = createHashRouter(routes)
+/** The router for a language's addresses (see site.ts: English at the root, Turkish under /tr/). */
+export const createAppRouter = (basename: string) => createBrowserRouter(routes, { basename })

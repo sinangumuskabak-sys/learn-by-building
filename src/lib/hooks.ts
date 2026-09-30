@@ -14,7 +14,7 @@ export function useMediaQuery(query: string): boolean {
 
 export function useDocumentTitle(title: string) {
   useEffect(() => {
-    document.title = title ? `${title} · Learn Platform` : 'Learn Platform'
+    document.title = title ? `${title} · Learn by Building` : 'Learn by Building'
   }, [title])
 }
 

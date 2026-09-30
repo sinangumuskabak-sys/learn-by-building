@@ -2,6 +2,7 @@ import { localizeChallenge } from '../content/localize.ts'
 import type { Challenge, LocalizedText } from '../content/schema.ts'
 import { createPersistedStore, useStore } from '../lib/store.ts'
 import { langs, messages, type Lang, type MessageKey } from './messages.ts'
+import { switchLang } from '../app/site.ts'
 
 function detectLang(): Lang {
   return typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('tr') ? 'tr' : 'en'
@@ -21,7 +22,8 @@ export function useI18n() {
   const lang = useStore(langStore)
   return {
     lang,
-    setLang: (next: Lang) => langStore.set(next),
+    /** Switches language by opening the same page at its address in that language (see app/site.ts). */
+    setLang: (next: Lang) => (next === lang ? undefined : switchLang(next)),
     t: (key: MessageKey, params?: Record<string, string | number>) => translate(lang, key, params),
     /** Picks the current language from content text, falling back to English. */
     l: (text: LocalizedText) => (lang === 'tr' && text.tr) || text.en,

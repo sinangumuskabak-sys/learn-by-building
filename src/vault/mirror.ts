@@ -5,7 +5,7 @@ import { onVaultWrite, readVaultFile, startVault, vaultFiles, writeVaultFile, ty
 
 /**
  * The live Obsidian mirror: with the Maymun bridge started with `--vault <folder>`, every note the app writes is copied
- * into `<folder>/Learn Platform/`, and what the learner writes under "My notes" there (in Obsidian) comes back. Optional;
+ * into `<folder>/Learn by Building/`, and what the learner writes under "My notes" there (in Obsidian) comes back. Optional;
  * the vault works without it.
  */
 
@@ -116,7 +116,7 @@ async function call(method: 'GET' | 'POST', body?: unknown): Promise<Reply | nul
 const CHUNK = 100
 
 async function push(files: VaultFile[], reset = false) {
-  const obsidian = obsidianSettings(skillsFolderOf(vaultFiles().map((f) => f.path)), 'Learn Platform')
+  const obsidian = obsidianSettings(skillsFolderOf(vaultFiles().map((f) => f.path)), 'Learn by Building')
   for (let i = 0; i < Math.max(1, files.length); i += CHUNK) {
     const part = files.slice(i, i + CHUNK).map(({ path, content }) => ({ path, content, notesBase: agreedOn(path) }))
     const ok = await call('POST', { files: part, ...(i === 0 ? { obsidian, ...(reset ? { reset: true } : {}) } : {}) })

@@ -20,9 +20,10 @@ beforeEach(() => {
 
 describe('workshop (home page)', () => {
   it('opens on the workshop: build projects first, then games', async () => {
+    // The home page itself: its own address, which search engines index.
     const router = renderAt('/')
     expect(await screen.findByRole('heading', { name: 'Workshop', level: 1 }, { timeout: 5000 })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/games')
+    expect(router.state.location.pathname).toBe('/')
     const projects = screen.getByRole('heading', { name: /Build projects/ }).closest('section')!
     expect(within(projects).getByRole('link', { name: /My business card/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Games', level: 2 })).toBeInTheDocument()

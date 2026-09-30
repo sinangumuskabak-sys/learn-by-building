@@ -8,11 +8,11 @@ const empty = { version: 1 as const, challenges: {} }
 describe('the app map for Maymun', () => {
   it('lists every page, project and game with a link, in the learner’s language', () => {
     const map = appMap('tr', empty)
-    for (const page of ['#/games', '#/skills', '#/memory', '#/settings']) expect(map).toContain(page)
-    expect(map).not.toContain('#/learn/')
+    for (const page of ['/games', '/skills', '/memory', '/settings']) expect(map).toContain(page)
+    expect(map).not.toContain('/learn/')
     expect(map).toContain('## Build projects')
-    for (const game of games) expect(map).toContain(`${game.title.tr ?? game.title.en} (#/games/${game.id})`)
-    expect(appMap('en', empty)).toContain(`${games[0].title.en} (#/games/${games[0].id})`)
+    for (const game of games) expect(map).toContain(`${game.title.tr ?? game.title.en} (/games/${game.id})`)
+    expect(appMap('en', empty)).toContain(`${games[0].title.en} (/games/${games[0].id})`)
     // Long enough to be worth sending only when asked for.
     expect(map.length).toBeGreaterThan(4000)
   })

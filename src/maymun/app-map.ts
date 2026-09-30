@@ -25,18 +25,18 @@ export const asksForMap = (text: string) => text.trim().startsWith(APP_MAP_MARKE
 export function appMap(lang: Lang, progress: Progress, games: GameSummary[] = allGames): string {
   const text = (t: LocalizedText) => (lang === 'tr' && t.tr) || t.en
   const lines = [
-    '# Learn Platform: the map of the app',
+    '# Learn by Building: the map of the app',
     '',
     `Names are as the learner sees them (interface language: ${lang}). Links work in your answers as Markdown links,`,
-    'for example [Snake](#/games/snake).',
+    'for example [Snake](/games/snake).',
     '',
     '## Menu (top bar)',
     '',
-    '- Workshop (#/games, also the home page): build projects (web pages that change as you type) and games, each built',
+    '- Workshop (/games, also the home page): build projects (web pages that change as you type) and games, each built',
     '  step by step. Every step has four parts in order: what we are doing, the code, what it means, your turn.',
-    '- Skills (#/skills): every skill with the learner\'s level (L0-L8) and what shows it.',
-    '- Memory (#/memory): the memory vault, notes for everything; download it or copy it live into Obsidian.',
-    '- Settings (#/settings): theme, language, showing Maymun, the AI service Maymun answers through, editor font size,',
+    '- Skills (/skills): every skill with the learner\'s level (L0-L8) and what shows it.',
+    '- Memory (/memory): the memory vault, notes for everything; download it or copy it live into Obsidian.',
+    '- Settings (/settings): theme, language, showing Maymun, the AI service Maymun answers through, editor font size,',
     '  exporting or importing progress, resetting all data.',
     '- Language (TR/EN) and light/dark theme switches sit at the right of the top bar.',
     '- Maymun (you): the cat at the right edge of the panel the learner points at; a click opens the chat. The camera',
@@ -45,7 +45,7 @@ export function appMap(lang: Lang, progress: Progress, games: GameSummary[] = al
   const item = (game: GameSummary) => {
     const done = game.steps.filter((s) => statusOf(progress, stepKey(game.id, s.id)) === 'passed').length
     const where = done === game.steps.length ? 'finished' : done ? `${done}/${game.steps.length} steps done` : `${game.steps.length} steps, not started`
-    return `- ${text(game.title)} (#/games/${game.id}): ${text(game.description)} [${where}]`
+    return `- ${text(game.title)} (/games/${game.id}): ${text(game.description)} [${where}]`
   }
   const projects = games.filter((g) => g.kind === 'web').sort((a, b) => a.order - b.order)
   if (projects.length) {

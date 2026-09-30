@@ -165,7 +165,7 @@ export function Maymun() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
   // The game or challenge; elsewhere the page itself, so the header follows the learner from page to page.
-  const titleOf = (_key: string) => document.title.replace(/ · Learn Platform$/, '') || t('maymun.general')
+  const titleOf = (_key: string) => document.title.replace(/ · Learn by Building$/, '') || t('maymun.general')
 
   useEffect(() => {
     if (!open) return

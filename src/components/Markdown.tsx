@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { useMemo } from 'react'
+import { useMemo, type MouseEvent } from 'react'
+import { openInApp } from '../app/site.ts'
 
 /**
  * Renders challenge Markdown. Content comes from the repository, but it is still sanitized because forks and
@@ -15,7 +16,16 @@ export function Markdown({ source, className }: { source: string; className?: st
         .replaceAll('<table>', '<table tabindex="0">'),
     [source],
   )
-  return <div className={`markdown ${className ?? ''}`} dangerouslySetInnerHTML={{ __html: html }} />
+  return <div className={`markdown ${className ?? ''}`} onClick={followInApp} dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+/** A plain click on a link into the app moves within it instead of loading the page again. */
+function followInApp(event: MouseEvent) {
+  const link = (event.target as HTMLElement).closest('a')
+  const href = link?.getAttribute('href')
+  if (!link || !href || link.target || link.hasAttribute('download') || event.button !== 0) return
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (openInApp(href)) event.preventDefault()
 }
 
 /** Inline Markdown (hint texts, quiz options) without wrapping paragraphs. */

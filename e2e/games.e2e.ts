@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { go } from './nav.ts'
 import { resolve } from 'node:path'
 import { loadGamesFromDisk } from '../src/games/load-node.ts'
 
@@ -37,9 +38,9 @@ ctx.fillRect(0, 0, 400, 400)
 `
 
 test('games list → step → failing code → passing code → next step keeps my code', async ({ page }) => {
-  await page.goto('./#/games')
+  await go(page, '/games')
   await page.getByRole('link', { name: /Snake/ }).first().click()
-  await expect(page).toHaveURL(/#\/games\/snake\/01-canvas$/)
+  await expect(page).toHaveURL(/\/games\/snake\/01-canvas$/)
 
   await setCode(page, "const canvas = document.querySelector('p')\n")
   await run(page)
@@ -50,16 +51,16 @@ test('games list → step → failing code → passing code → next step keeps 
   await expect(passedBanner(page)).toBeVisible()
 
   await page.getByRole('link', { name: /Next step/ }).last().click()
-  await expect(page).toHaveURL(/#\/games\/snake\/02-context$/)
+  await expect(page).toHaveURL(/\/games\/snake\/02-context$/)
   await tab(page, 'Code')
   await expect(page.locator('.monaco-editor .view-lines')).toContainText('my own step one')
 
-  await page.goto('./#/games')
+  await go(page, '/games')
   await expect(page.getByText(`1/${games.find((g) => g.id === 'snake')!.steps.length}`)).toBeVisible()
 })
 
 test('a crashing game shows the error with its line number', async ({ page }) => {
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await setCode(page, 'const a = 1\nmissingFunction()\n')
   await run(page)
   await tab(page, 'Game')
@@ -69,7 +70,7 @@ test('a crashing game shows the error with its line number', async ({ page }) =>
 })
 
 test('the game cannot reach the site’s storage, but keeps its own saved values between runs', async ({ page }) => {
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await page.evaluate(() => {
     localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-secret' } }))
     localStorage.removeItem('runs')
@@ -100,7 +101,7 @@ test('Maymun’s picture of the screen shows the game, which draws its own pictu
   await page.route('https://openrouter.ai/api/v1/chat/completions', (route) =>
     route.fulfill({ headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' }, body: 'data: [DONE]\n\n' }),
   )
-  await page.goto('./#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
   await page.reload()
   await setCode(page, step1)
@@ -138,7 +139,7 @@ test('the finished game plays with the real keyboard', async ({ page }) => {
   test.skip(isMobile(page), 'keyboard play is a desktop check')
   const snake = games.find((g) => g.id === 'snake')!
   const last = snake.steps.at(-1)!
-  await page.goto(`./#/games/snake/${last.id}`)
+  await go(page, `/games/snake/${last.id}`)
   await setCode(page, last.solution)
   await run(page)
   await expect(passedBanner(page)).toBeVisible()
@@ -156,7 +157,7 @@ for (const game of games) {
   test(`finished game runs in the real page without errors: ${game.id}`, async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
-    await page.goto(`./#/games/${game.id}/${game.steps[game.steps.length - 1].id}`)
+    await go(page, `/games/${game.id}/${game.steps[game.steps.length - 1].id}`)
     await tab(page, 'Code')
     await page.getByRole('button', { name: 'Show solution' }).click()
     await page.getByRole('button', { name: /Replace your code/ }).click()
@@ -171,7 +172,7 @@ for (const game of games) {
 
   for (const step of game.steps) {
     test(`reference solution passes in the browser: ${game.id}/${step.id}`, async ({ page }) => {
-      await page.goto(`./#/games/${game.id}/${step.id}`)
+      await go(page, `/games/${game.id}/${step.id}`)
       await tab(page, 'Code')
       await page.getByRole('button', { name: 'Show solution' }).click()
       await page.getByRole('button', { name: /Replace your code/ }).click()
@@ -182,7 +183,7 @@ for (const game of games) {
 }
 
 test('no horizontal scroll on the games pages', async ({ page }) => {
-  for (const path of ['./#/games', './#/games/snake/01-canvas']) {
+  for (const path of ['/games', '/games/snake/01-canvas']) {
     await page.goto(path)
     await page.waitForLoadState('networkidle')
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -191,7 +192,7 @@ test('no horizontal scroll on the games pages', async ({ page }) => {
 })
 
 test('a step opens in four parts, one after another, and the code opens where this step is written', async ({ page }) => {
-  await page.goto('/#/games/snake/06-draw')
+  await go(page, '/games/snake/06-draw')
   await expect(page.getByTestId('step-part-1')).toContainText('What we are doing')
   await expect(page.getByTestId('step-part-2')).toHaveCount(0)
   for (const [part, title] of [[2, 'The code'], [3, 'What it means'], [4, 'Your turn']] as const) {
@@ -205,8 +206,8 @@ test('a step opens in four parts, one after another, and the code opens where th
     .poll(() => text.evaluate((el) => Math.round(el.scrollHeight - el.scrollTop - el.clientHeight)))
     .toBeLessThanOrEqual(1)
   // Opened parts stay open when coming back to the step.
-  await page.goto('/#/games/snake/05-head')
-  await page.goto('/#/games/snake/06-draw')
+  await go(page, '/games/snake/05-head')
+  await go(page, '/games/snake/06-draw')
   await expect(page.getByTestId('step-part-4')).toBeVisible()
 
   await tab(page, 'Code')
@@ -217,7 +218,7 @@ test('a step opens in four parts, one after another, and the code opens where th
 
 test('the last step is built without given code: only the goal, then the learner’s turn', async ({ page }) => {
   const snake = games.find((g) => g.id === 'snake')!
-  await page.goto(`/#/games/snake/${snake.steps.at(-1)!.id}`)
+  await go(page, `/games/snake/${snake.steps.at(-1)!.id}`)
   await expect(page.getByTestId('step-part-1')).toContainText('Build it yourself')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByTestId('step-part-2')).toContainText('Your turn')
@@ -227,7 +228,7 @@ test('the last step is built without given code: only the goal, then the learner
 })
 
 test('a guess before running shows whether it was right, and a failing check comes with a hint', async ({ page }) => {
-  await page.goto('/#/games/snake/08-loop')
+  await go(page, '/games/snake/08-loop')
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click()
   const predict = page.getByTestId('predict')
   await predict.getByRole('button', { name: 'Walk slowly to the right' }).click()
@@ -240,7 +241,7 @@ test('a guess before running shows whether it was right, and a failing check com
 })
 
 test('the finished parts of the code are locked until the learner unlocks them', async ({ page }) => {
-  await page.goto('/#/games/snake/02-context')
+  await go(page, '/games/snake/02-context')
   await tab(page, 'Code')
   const code = page.locator('[data-maymun="code"] .view-lines')
   await code.getByText('// Snake, step by step.').click()
@@ -268,7 +269,7 @@ test('the finished parts of the code are locked until the learner unlocks them',
 })
 
 test('a web project shows the page as it is typed and checks it in the page itself', async ({ page }) => {
-  await page.goto('/#/games/business-card/01-heading')
+  await go(page, '/games/business-card/01-heading')
   await tab(page, 'Code')
   await page.locator('[data-maymun="code"] .view-line').nth(7).click()
   await page.keyboard.insertText('<h1>Grace Hopper</h1>')
@@ -283,7 +284,7 @@ test('a web project shows the page as it is typed and checks it in the page itse
 })
 
 test('Maymun peeks into the panel under the pointer at its middle, its popup stays on screen, and it can be hidden', async ({ page }) => {
-  await page.goto('/#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   const cat = page.getByRole('button', { name: 'Ask Maymun about this panel' })
   await expect(cat).toBeVisible()
   const viewport = page.viewportSize()!
@@ -328,7 +329,7 @@ test('Maymun peeks into the panel under the pointer at its middle, its popup sta
   await page.reload()
   await expect(page.locator('.maymun-head')).toHaveCount(0)
 
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   await page.getByRole('radiogroup', { name: 'Maymun the cat' }).getByRole('radio', { name: 'Show' }).click()
   await expect(page.getByRole('button', { name: 'Ask Maymun about this panel' })).toBeVisible()
 })
@@ -373,7 +374,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
     }
     await cat.click()
   }
-  await page.goto('/#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await askAboutCode()
   const popup = page.getByRole('dialog', { name: 'Maymun' })
   const question = popup.getByRole('textbox', { name: 'Your question' })
@@ -438,14 +439,14 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
 
   // Claude through Anthropic's SDK in the browser: the whole conversation goes along.
   // The chat stays open on another page (one conversation for the whole app); close it to use the settings.
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   await expect(popup).toBeVisible()
   await popup.getByRole('button', { name: 'Close' }).click()
   const setup = page.locator('#main form').filter({ has: page.getByLabel('API key') })
   await setup.getByLabel('Service').selectOption('anthropic')
   await setup.getByLabel('API key').fill('sk-ant-test')
   await setup.getByRole('button', { name: 'Save' }).click()
-  await page.goto('/#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await askAboutCode()
   await question.fill('And now?')
   await question.press('Enter')
@@ -475,7 +476,7 @@ test('Maymun knows when the learner moves to another page, and what that page is
       body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`,
     })
   })
-  await page.goto('/#/')
+  await go(page, '/')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
   await page.reload()
   const popup = page.getByRole('dialog', { name: 'Maymun' })
@@ -490,10 +491,10 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(sent[0].messages[0].content).toContain('The Workshop (home page)')
 
   // The chat stays open on another page of the app, and knows it: the header, the page's text and what it is for.
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   await expect(popup).toContainText('Settings')
   // The page's title is set once it has rendered; on a busy machine that can come after the chat's header.
-  await expect(page).toHaveTitle('Settings · Learn Platform')
+  await expect(page).toHaveTitle('Settings · Learn by Building')
   await ask('And what can I do here?')
   const system = sent[1].messages[0].content
   expect(system).toContain('"Settings" (/settings): Settings: theme, language')
@@ -502,8 +503,8 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
 
   // Into a game: still the same conversation, open, with a line where the project changed.
-  await page.goto('/#/games/snake/01-canvas')
-  await expect(page).toHaveTitle('Snake · Learn Platform')
+  await go(page, '/games/snake/01-canvas')
+  await expect(page).toHaveTitle('Snake · Learn by Building')
   await expect(popup).toBeVisible()
   await expect(popup.getByText('What is here?')).toBeVisible()
   await ask('And in the game?')
@@ -527,13 +528,13 @@ test('Maymun asks for the map of the whole app when the question needs it, and a
     const system = (route.request().postDataJSON() as { messages: { content: string }[] }).messages[0].content
     systems.push(system)
     // Without the map, this model asks for it (in two pieces, as a stream may cut it); with it, it answers.
-    const pieces = system.includes('# Learn Platform: the map of the app') ? ['Try [Snake](#/games/snake).'] : ['<app-', 'map/>']
+    const pieces = system.includes('# Learn by Building: the map of the app') ? ['Try [Snake](/games/snake).'] : ['<app-', 'map/>']
     await route.fulfill({
       headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
       body: [...pieces.map((p) => `data: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`), 'data: [DONE]\n\n'].join(''),
     })
   })
-  await page.goto('/#/')
+  await go(page, '/')
   await page.evaluate(() => localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } })))
   await page.reload()
   const popup = page.getByRole('dialog', { name: 'Maymun' })
@@ -542,13 +543,13 @@ test('Maymun asks for the map of the whole app when the question needs it, and a
   await question.fill('Which game should I play to learn?')
   await question.press('Enter')
   await expect(popup.locator('.markdown').last()).toHaveText('Try Snake.')
-  await expect(popup.getByRole('link', { name: 'Snake' })).toHaveAttribute('href', '#/games/snake')
+  await expect(popup.getByRole('link', { name: 'Snake' })).toHaveAttribute('href', '/games/snake')
   await expect(popup).not.toContainText('app-map')
   // Only the second request carries the map, and it lists the games with their links.
   expect(systems).toHaveLength(2)
   expect(systems[0]).toContain('answer with exactly `<app-map/>`')
-  expect(systems[0]).not.toContain('# Learn Platform: the map of the app')
-  expect(systems[1]).toContain('(#/games/snake)')
+  expect(systems[0]).not.toContain('# Learn by Building: the map of the app')
+  expect(systems[1]).toContain('(/games/snake)')
   expect(systems[1]).toContain('do not ask for it again')
 })
 
@@ -571,7 +572,7 @@ test('OmniRoute: models grouped by connection, the best active one answers, the 
       body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'Gemini here.' } }] })}\n\ndata: [DONE]\n\n`,
     })
   })
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
   await setup.getByLabel('Service').selectOption('omniroute')
   await expect(setup.getByRole('link', { name: 'OmniRoute is open source: its page on GitHub' })).toHaveAttribute('href', 'https://github.com/diegosouzapw/OmniRoute')
@@ -586,8 +587,10 @@ test('OmniRoute: models grouped by connection, the best active one answers, the 
   await claude.getByRole('checkbox', { name: 'cc/claude-sonnet-4-5' }).uncheck()
   await expect(setup).toContainText('Order: cc/claude-opus-4-7 → gemini-cli/gemini-3.1-pro → gemini-cli/gemini-2.5-flash')
 
-  await page.goto('/#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   if (isMobile(page)) await tab(page, 'Code')
+  // The step's panels first: the cat opens a chat about the panel it sits on.
+  await expect(page.locator('[data-maymun="code"]')).toBeVisible()
   await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
   const popup = page.getByRole('dialog', { name: 'Maymun' })
   await popup.getByRole('textbox', { name: 'Your question' }).fill('Hello?')
@@ -607,7 +610,7 @@ test('Maymun keeps one conversation across panels, steps, projects and reloads',
     })
   })
   // The conversation from before projects existed moves into the conversation.
-  await page.goto('/#/games/snake/01-canvas')
+  await go(page, '/games/snake/01-canvas')
   await page.evaluate(() => {
     localStorage.setItem('lp.maymun.chat', JSON.stringify([{ role: 'user', text: 'An old question' }, { role: 'assistant', text: 'An old answer' }]))
     localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } }))
@@ -657,8 +660,8 @@ test('Maymun keeps one conversation across panels, steps, projects and reloads',
   expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-context, page "Snake"\] And here\?$/)
 
   // Another game: the same conversation goes on, the chat stays open, a line marks the new project.
-  await page.goto('/#/games/pong/01-court')
-  await expect(page).toHaveTitle('Pong · Learn Platform')
+  await go(page, '/games/pong/01-court')
+  await expect(page).toHaveTitle('Pong · Learn by Building')
   await expect(popup).toBeVisible()
   await expect(popup).toContainText('Why is it black?')
   await ask('Pong question')
@@ -667,7 +670,7 @@ test('Maymun keeps one conversation across panels, steps, projects and reloads',
   expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 01-court, page "Pong"\] Pong question$/)
 
   // Back in Snake after a reload, everything is still there; a new chat keeps it on screen, the model starts clean.
-  await page.goto('/#/games/snake/02-context')
+  await go(page, '/games/snake/02-context')
   await page.reload()
   await openOn('code', 'Code')
   await expect(popup).toContainText('What does this sentence mean?')
@@ -692,7 +695,7 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)',
   const popup = page.getByRole('dialog', { name: 'Maymun' })
   const question = popup.getByRole('textbox', { name: 'Your question' })
   const askAboutCode = async () => {
-    await page.goto('/#/games/snake/01-canvas')
+    await go(page, '/games/snake/01-canvas')
     await tab(page, 'Code')
     if (!isMobile(page)) {
       const code = (await page.locator('[data-maymun="code"]').boundingBox())!
@@ -703,7 +706,7 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)',
   }
 
   // An OpenAI-compatible server with its own address and model, and no key.
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   const setup = page.locator('#main form').filter({ has: page.getByLabel('Service') })
   // OmniRoute comes first; subscriptions are connected there, not through a service of their own.
   await expect(setup.getByLabel('Service').locator('option').first()).toHaveText('OmniRoute (everything you connected there)')
@@ -724,7 +727,7 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)',
 
   // A server that is not running is named as the problem. (The chat would stay open across pages: close it.)
   await popup.getByRole('button', { name: 'Close' }).click()
-  await page.goto('/#/settings')
+  await go(page, '/settings')
   await setup.getByLabel('Address').fill('http://127.0.0.1:8787/v1')
   await setup.getByRole('button', { name: 'Save' }).click()
   await askAboutCode()
@@ -754,7 +757,7 @@ test('Maymun’s conversation never ends: old pages go as a summary and an index
     const hasPage = system.includes('# The pages you asked for')
     await route.fulfill(reply(asksFirst && !hasPage ? '<recall pages="1"/>' : hasPage ? 'First we talked about closures.' : 'ok'))
   })
-  await page.goto('/#/')
+  await go(page, '/')
   // Thirty pages from earlier days, each a question and a long answer.
   await page.evaluate(async () => {
     localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } }))
@@ -842,9 +845,9 @@ test('Maymun’s conversation never ends: old pages go as a summary and an index
 })
 
 test('the home page and the top bar link to the code on GitHub and ask for a star', async ({ page }) => {
-  await page.goto('/#/')
+  await go(page, '/')
   const repo = 'https://github.com/sinangumuskabak-sys/learn-platform'
   await expect(page.getByRole('link', { name: 'Star on GitHub' })).toHaveAttribute('href', repo)
-  await expect(page.getByRole('link', { name: 'Learn Platform on GitHub: give it a star' })).toHaveAttribute('href', repo)
+  await expect(page.getByRole('link', { name: 'Learn by Building on GitHub: give it a star' })).toHaveAttribute('href', repo)
   await expect(page.getByRole('complementary')).toContainText('free and open source')
 })

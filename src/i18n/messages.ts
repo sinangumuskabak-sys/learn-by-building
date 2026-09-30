@@ -1,5 +1,5 @@
 const en = {
-  'app.name': 'Learn Platform',
+  'app.name': 'Learn by Building',
   'nav.skills': 'Skills',
   'nav.memory': 'Memory',
   'nav.settings': 'Settings',
@@ -69,7 +69,7 @@ const en = {
   'vault.saved': 'Saved',
   'vault.count': '{n} notes',
   'vault.mirror.title': 'Live copy in Obsidian',
-  'vault.mirror.help': 'Optional. Download the Maymun bridge, start it with your Obsidian vault folder, paste the key it prints below and turn this on: every note is copied into “Learn Platform” in that folder, and what you write under My notes there comes back.',
+  'vault.mirror.help': 'Optional. Download the Maymun bridge, start it with your Obsidian vault folder, paste the key it prints below and turn this on: every note is copied into “Learn by Building” in that folder, and what you write under My notes there comes back.',
   'vault.mirror.key': 'Bridge key',
   'vault.mirror.save': 'Save',
   'vault.mirror.start': 'Turn on',
@@ -181,8 +181,8 @@ const en = {
 
   'nav.games': 'Workshop',
   'games.title': 'Workshop',
-  'github.star': 'Learn Platform on GitHub: give it a star',
-  'github.ask': 'Learn Platform is free and open source. If it helps you, a star on GitHub helps others find it too.',
+  'github.star': 'Learn by Building on GitHub: give it a star',
+  'github.ask': 'Learn by Building is free and open source. If it helps you, a star on GitHub helps others find it too.',
   'github.starButton': 'Star on GitHub',
   'games.subtitle': 'Learn to code by building things you can see: web pages and real games, one small step at a time. Every step goes the same way: what we are doing, the code, what it means, then your turn. The result shows up right next to your code.',
   'games.storageNote': 'Your progress, code and notes are kept only in this browser; nothing is sent to a server. Clearing the browser data deletes them, so take a backup now and then.',
@@ -266,7 +266,7 @@ const en = {
 export type MessageKey = keyof typeof en
 
 const tr: Record<MessageKey, string> = {
-  'app.name': 'Learn Platform',
+  'app.name': 'Learn by Building',
   'nav.skills': 'Beceriler',
   'nav.memory': 'Hafıza',
   'nav.settings': 'Ayarlar',
@@ -336,7 +336,7 @@ const tr: Record<MessageKey, string> = {
   'vault.saved': 'Kaydedildi',
   'vault.count': '{n} not',
   'vault.mirror.title': 'Obsidian’da canlı kopya',
-  'vault.mirror.help': 'İsteğe bağlı. Maymun köprüsünü indir, Obsidian kasa klasörünle başlat, yazdığı anahtarı aşağıya yapıştır ve bunu aç: her not o klasördeki “Learn Platform” içine kopyalanır, oradaki Notlarım’a yazdıkların uygulamaya geri gelir.',
+  'vault.mirror.help': 'İsteğe bağlı. Maymun köprüsünü indir, Obsidian kasa klasörünle başlat, yazdığı anahtarı aşağıya yapıştır ve bunu aç: her not o klasördeki “Learn by Building” içine kopyalanır, oradaki Notlarım’a yazdıkların uygulamaya geri gelir.',
   'vault.mirror.key': 'Köprü anahtarı',
   'vault.mirror.save': 'Kaydet',
   'vault.mirror.start': 'Aç',
@@ -448,8 +448,8 @@ const tr: Record<MessageKey, string> = {
 
   'nav.games': 'Atölye',
   'games.title': 'Atölye',
-  'github.star': 'GitHub’da Learn Platform: yıldız ver',
-  'github.ask': 'Learn Platform ücretsiz ve açık kaynak. İşine yaradıysa GitHub’da bir yıldız ver; başkalarının da bulmasına yardım eder.',
+  'github.star': 'GitHub’da Learn by Building: yıldız ver',
+  'github.ask': 'Learn by Building ücretsiz ve açık kaynak. İşine yaradıysa GitHub’da bir yıldız ver; başkalarının da bulmasına yardım eder.',
   'github.starButton': 'GitHub’da yıldızla',
   'games.subtitle': 'Kodlamayı, sonucunu gördüğün şeyler yaparak öğren: web sayfaları ve gerçek oyunlar, küçük adımlarla. Her adım aynı sırayla ilerler: ne yapıyoruz, kod, ne işe yarıyor, sonra sıra sende. Sonuç kodunun hemen yanında görünür.',
   'games.storageNote': 'İlerlemen, kodların ve notların yalnız bu tarayıcıda saklanır; hiçbir sunucuya gönderilmez. Tarayıcı verilerini silersen kaybolur, arada bir yedek al.',

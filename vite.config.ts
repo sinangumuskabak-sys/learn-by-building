@@ -107,9 +107,11 @@ export function loadGame(id) {
   }
 }
 
-// Relative base + hash routing lets the build run from any static host (GitHub Pages, forks, file server).
+// Real addresses (/games/snake) need the site's folder: `/` on its own domain, `/<repo>/` on GitHub Pages. SITE_URL
+// (the published address) sets it; without it the build is for the site's root (local runs, tests).
+const siteUrl = process.env.SITE_URL?.replace(/\/+$/, '') ?? ''
 export default defineConfig({
-  base: './',
+  base: siteUrl ? `${new URL(siteUrl).pathname.replace(/\/+$/, '')}/` : '/',
   plugins: [contentPlugin(), gamesPlugin(), webHarnessPlugin(), react(), tailwindcss()],
   test: {
     environment: 'jsdom',
