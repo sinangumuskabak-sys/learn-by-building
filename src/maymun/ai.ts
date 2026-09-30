@@ -1,4 +1,5 @@
 import { splitDataUrl } from './capture.ts'
+import { nvidiaExtra } from './nvidia-models.ts'
 
 /** The AI services Maymun can talk to with the learner's own key (BYOK). The key never leaves this browser. */
 export type ProviderId = 'omniroute' | 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'nvidia' | 'custom'
@@ -37,7 +38,7 @@ export const providers: Provider[] = [
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
   // NVIDIA's hosted models (build.nvidia.com): its API does not let browsers call it, so requests go through the
   // project's proxy (or, for those who prefer, public/nvidia-bridge.mjs on their own computer as an OpenAI-compatible server).
-  { id: 'nvidia', name: 'NVIDIA NIM', model: 'z-ai/glm-5.3-flash', keys: 'https://build.nvidia.com/settings/api-keys', base: NVIDIA_PROXY, images: false, proxied: true },
+  { id: 'nvidia', name: 'NVIDIA NIM', model: 'openai/gpt-oss-20b', keys: 'https://build.nvidia.com/settings/api-keys', base: NVIDIA_PROXY, images: false, proxied: true },
   // Any OpenAI-compatible server the browser may call directly: Ollama, LM Studio…
   { id: 'custom', name: 'OpenAI-compatible (Ollama, LM Studio…)', model: '', keys: '', base: 'http://localhost:11434/v1', images: true, local: true, keyOptional: true },
 ]
@@ -181,6 +182,7 @@ async function streamOpenAiCompatible({ provider: id, key, base, model, system, 
         model,
         stream: true,
         messages: [{ role: 'system', content: system }, ...messages.map(openAiMessage)],
+        ...(id === 'nvidia' ? nvidiaExtra(model) : {}),
       }),
     })
   } catch (error) {

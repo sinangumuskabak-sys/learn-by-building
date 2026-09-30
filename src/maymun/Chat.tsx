@@ -5,6 +5,7 @@ import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { useMediaQuery } from '../lib/hooks.ts'
 import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
+import { NVIDIA_MODELS } from './nvidia-models.ts'
 import { canChat, groupModels, listModels, rankModels, type ListedModel, type OfferedModel } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
 import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
@@ -546,7 +547,8 @@ function ProviderForm({ compact }: { compact: boolean }) {
   const typing = typingFor === current.id
   const setTyping = (on: boolean) => setTypingFor(on ? current.id : null)
   useEffect(() => {
-    if (current.local) return
+    // NVIDIA lists many models its keys cannot use: only the measured ones are offered (NvidiaPicker).
+    if (current.local || current.id === 'nvidia') return
     let live = true
     listModels(current.id, savedKey)
       .then((models) => live && setListing({ id: current.id, models }))
@@ -661,6 +663,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
         />
       </label>
       {current.gateway && ai.keys[ai.provider] && <GatewayModels id={current.id} offered={offered} />}
+      {current.id === 'nvidia' && <NvidiaPicker value={model || current.model} onChange={setModel} />}
       {listed.length > 0 && (
         <ModelPicker
           models={listed}
@@ -672,7 +675,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
           }}
         />
       )}
-      <label className={`block text-xs font-medium ${current.gateway || (listed.length > 0 && !typing && listed.some((m) => m.id === (model || current.model))) ? 'hidden' : ''}`}>
+      <label className={`block text-xs font-medium ${current.gateway || current.id === 'nvidia' || (listed.length > 0 && !typing && listed.some((m) => m.id === (model || current.model))) ? 'hidden' : ''}`}>
         {listed.length > 0 ? t('maymun.models.typed') : t('maymun.model')}
         <input
           value={model}
@@ -800,6 +803,28 @@ function LocalNote() {
 }
 
 const OTHER = '\u0000other'
+
+/** NVIDIA's measured models, each with how long an answer takes and how good the answers are. */
+function NvidiaPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { t } = useI18n()
+  return (
+    <label className="block text-xs font-medium">
+      {t('maymun.model')}
+      <select
+        value={NVIDIA_MODELS.some((m) => m.id === value) ? value : NVIDIA_MODELS[0].id}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm"
+      >
+        {NVIDIA_MODELS.map((m) => (
+          <option key={m.id} value={m.id}>
+            {`${m.id.split('/').pop()} · ⚡ ~${m.seconds} ${t('maymun.nvidia.sec')} · ★ ${m.quality}/10`}
+          </option>
+        ))}
+      </select>
+      <span className="mt-1 block font-normal text-muted">{t('maymun.nvidia.scores')}</span>
+    </label>
+  )
+}
 
 /** The service's models as a list: free ones in their own group first (with a note on their daily limit), then the rest. */
 function ModelPicker({ models, value, onChange }: { models: OfferedModel[]; value: string; onChange: (id: string) => void }) {
