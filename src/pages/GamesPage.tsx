@@ -1,6 +1,7 @@
 import { ArrowRight, CheckCircle2, Hammer } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { StarCard } from '../components/GitHubStar.tsx'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { games, passedSteps, resumeStep } from '../games/catalog.ts'
 import { difficulties, type GameSummary } from '../games/schema.ts'
@@ -59,6 +60,8 @@ export function GamesPage() {
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{t('games.title')}</h1>
         <p className="mt-2 text-muted">{t('games.subtitle')}</p>
       </header>
+
+      <StarCard />
 
       <StorageNote />
 

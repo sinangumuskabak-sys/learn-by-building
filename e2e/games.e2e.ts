@@ -840,3 +840,11 @@ test('Maymun’s conversation never ends: old pages go as a summary and an index
   await expect(popup.getByText('Question number 28', { exact: true })).toBeVisible()
   await expect(popup.getByText('Question number 29', { exact: true })).toHaveCount(0)
 })
+
+test('the home page and the top bar link to the code on GitHub and ask for a star', async ({ page }) => {
+  await page.goto('/#/')
+  const repo = 'https://github.com/sinangumuskabak-sys/learn-platform'
+  await expect(page.getByRole('link', { name: 'Star on GitHub' })).toHaveAttribute('href', repo)
+  await expect(page.getByRole('link', { name: 'Learn Platform on GitHub: give it a star' })).toHaveAttribute('href', repo)
+  await expect(page.getByRole('complementary')).toContainText('free and open source')
+})

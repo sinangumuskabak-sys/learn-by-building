@@ -6,6 +6,7 @@ import { useI18n } from '../i18n/i18n.ts'
 import type { MessageKey } from '../i18n/messages.ts'
 import { themeStore, useTheme } from '../lib/settings.ts'
 import { Maymun } from '../maymun/Maymun.tsx'
+import { StarLink } from './GitHubStar.tsx'
 import { IconButton } from './ui.tsx'
 
 // On narrow screens the items show only their icon, so four sections still fit next to the toggles.
@@ -71,6 +72,7 @@ export function AppShell() {
             ))}
           </nav>
           <div className="flex items-center">
+            <StarLink />
             <IconButton
               label={lang === 'en' ? 'Türkçe' : 'English'}
               onClick={() => setLang(lang === 'en' ? 'tr' : 'en')}
