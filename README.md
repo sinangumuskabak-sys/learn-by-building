@@ -10,6 +10,20 @@ Every step goes the same way: **what we are doing → the code → what it means
 the result shows up right next to it, and checks tell you when the step is done. Progress is saved locally. No server,
 no account.
 
+![A Breakout step: the lesson and code on the left, the running game and its checks on the right](docs/screenshots/breakout.png)
+
+- **Real games and web pages, in small steps:** from a business card page and Tic-tac-toe to Tetris, Chess and a
+  Wolfenstein-style 3D maze ([full list](#workshop)).
+- **You write every line.** Finished code is locked, so you only type where this step's work goes; checks run right away.
+- **See it work instantly:** the page or game runs next to your code. Guess what will happen before you run it.
+- **Maymun, a cat tutor** that explains instead of handing out answers, using the AI you choose (your key stays in the
+  browser).
+- **No account, no server:** progress lives in your browser; English and Turkish.
+
+| Build a web page | Pick a game |
+|---|---|
+| ![Business card step: HTML and CSS on the left, the live page on the right](docs/screenshots/card.png) | ![The Workshop page listing games by level](docs/screenshots/home.png) |
+
 > Inspired by [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp)'s learn-by-doing model.
 > This is an independent project; no freeCodeCamp code is included.
 
