@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Maymun bridge: keeps a live copy of Learn Platform's memory vault in an Obsidian vault on this computer.
+ * Maymun bridge: keeps a live copy of Learn by Building's memory vault in an Obsidian vault on this computer.
  *
  *   node maymun-bridge.mjs --vault "path/to/your Obsidian vault" [--port 8787] [--origin https://your-site]
  *
- * Every note the app writes is copied into the vault's own "Learn Platform" subfolder, so Obsidian can open it; what
+ * Every note the app writes is copied into the vault's own "Learn by Building" subfolder, so Obsidian can open it; what
  * you write under "My notes" there goes back to the app.
  *
- * Only this computer can connect (127.0.0.1), only the sites you allow may call it (localhost always, plus each
+ * Only this computer can connect (127.0.0.1), only the sites you allow may call it (localhost and the published site always, plus each
  * --origin), and every request needs the bridge key printed at start.
  *
  * Needs Node.js 20 or newer. No dependencies.
@@ -20,11 +20,13 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const MAX_BODY = 25 * 1024 * 1024
+/** The published site, allowed without --origin (every request still needs the bridge key). */
+export const SITE_ORIGINS = ['https://learnbybuilding.dev', 'https://sinangumuskabak-sys.github.io']
 
 export function parseArgs(argv) {
   const options = {
     port: Number(process.env.MAYMUN_PORT) || 8787,
-    origins: (process.env.MAYMUN_ORIGINS ?? '').split(',').filter(Boolean),
+    origins: [...SITE_ORIGINS, ...(process.env.MAYMUN_ORIGINS ?? '').split(',').filter(Boolean)],
     home: process.env.MAYMUN_HOME ?? join(homedir(), '.maymun-bridge'),
     vault: process.env.MAYMUN_VAULT ?? '',
   }
@@ -42,7 +44,7 @@ export function parseArgs(argv) {
 }
 
 /** The app's notes live in this subfolder of the vault; the bridge never touches anything outside it. */
-export const VAULT_FOLDER = 'Learn Platform'
+export const VAULT_FOLDER = 'Learn by Building'
 
 /** The absolute file for a note path from the app, or null when the path could leave the vault folder. */
 export function vaultFile(root, path) {

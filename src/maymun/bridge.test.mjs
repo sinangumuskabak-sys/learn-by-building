@@ -36,6 +36,9 @@ describe('Maymun bridge', () => {
     expect(preflight.headers.get('access-control-allow-private-network')).toBe('true')
     const local = await fetch(`${url}/vault`, { headers: { Origin: 'http://localhost:5173', Authorization: `Bearer ${key}` } })
     expect(local.headers.get('access-control-allow-origin')).toBe('http://localhost:5173')
+    // The published site works without --origin.
+    const site = await fetch(`${url}/vault`, { method: 'OPTIONS', headers: { Origin: 'https://learnbybuilding.dev' } })
+    expect(site.headers.get('access-control-allow-origin')).toBe('https://learnbybuilding.dev')
   })
 
   it('only does the vault: chat and model requests are not found', async () => {
