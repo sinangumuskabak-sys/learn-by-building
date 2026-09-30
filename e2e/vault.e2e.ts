@@ -189,6 +189,8 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
 
 test('the live Obsidian copy: notes go to the folder, My notes written there come back', async ({ page }) => {
   test.skip(isMobile(page), 'one run is enough')
+  // It copies and reads back the whole vault several times: slow when the machine is busy with other tests.
+  test.slow()
   // The bridge is a plain script served with the site; it has no type declarations.
   // @ts-expect-error untyped module
   const { createBridge, parseArgs, VAULT_FOLDER } = await import('../public/maymun-bridge.mjs')

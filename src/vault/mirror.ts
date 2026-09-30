@@ -168,27 +168,17 @@ export async function startMirror(): Promise<boolean> {
     return false
   }
   await startVault()
-  // Listen from the start: notes written while the whole vault is being copied (which takes a while) wait and go
-  // right after, in their latest version, instead of being missed.
-  let waiting: Map<string, boolean> | null = new Map()
+  // Listen from the start: a note written while the whole vault is being copied (which takes a while) goes at once
+  // instead of being missed. A part of the first copy that lands after it cannot undo it: the bridge keeps notes on
+  // disk that differ from what the app last saw.
   stopListening?.()
-  stopListening = onVaultWrite((files, reset) => {
-    if (!waiting) return void push(reset ? vaultFiles() : files, reset)
-    for (const file of reset ? vaultFiles() : files) waiting.set(file.path, true)
-  })
-  const flush = async () => {
-    const paths = [...(waiting?.keys() ?? [])]
-    waiting = null
-    const files = paths.map((path) => readVaultFile(path)).filter((f): f is VaultFile => !!f)
-    if (files.length) await push(files)
-  }
+  stopListening = onVaultWrite((files, reset) => void push(reset ? vaultFiles() : files, reset))
   await pullNotes()
   if (mirrorStatus.get().state !== 'on' || !(await push(vaultFiles()))) {
     stopListening?.()
     stopListening = null
     return false
   }
-  await flush()
   window.clearInterval(timer)
   timer = window.setInterval(pullWhenShown, 30_000)
   document.addEventListener('visibilitychange', pullWhenShown)
