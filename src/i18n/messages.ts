@@ -114,7 +114,9 @@ const en = {
   'maymun.gateway.none': 'No models yet: check the address and the OmniRoute API key (OmniRoute dashboard → API Manager), and connect a provider there.',
   'maymun.privacyLocal':
     'Everything is kept in this browser. Your question, the conversation and the panels shown above go to the server at this address on your computer, and from there to the service it uses.',
-  'maymun.error.local': 'Could not reach {address}. Is your server running, and is the address right?',
+  'maymun.error.local': 'Could not reach {address}. Is your server running on this computer, and is the address right? If the browser asked to reach your local network, allow it (site settings, next to the address bar). On a phone this does not work: choose a service with your own key.',
+  'maymun.local.permission': 'The first time, the browser asks to let this site reach your local network: choose Allow, or Maymun cannot reach the server. It works only on the computer the server runs on.',
+  'maymun.local.phone': 'On a phone or tablet this cannot work: the server runs on your computer, and the phone cannot reach it. Choose OpenRouter, Anthropic, OpenAI or DeepSeek with your own key instead.',
   'maymun.send': 'Send',
   'maymun.stop': 'Stop',
   'maymun.newTopic': 'New topic (the conversation so far is kept)',
@@ -361,7 +363,9 @@ const tr: Record<MessageKey, string> = {
   'maymun.gateway.none': 'Henüz model yok: adresi ve OmniRoute API anahtarını (OmniRoute paneli → API Manager) kontrol et, orada bir sağlayıcı bağla.',
   'maymun.privacyLocal':
     'Her şey bu tarayıcıda saklanır. Sorun, sohbet ve yukarıda gösterilen paneller bilgisayarındaki bu adresteki sunucuya, oradan da onun kullandığı servise gider.',
-  'maymun.error.local': '{address} adresine ulaşılamadı. Sunucun çalışıyor mu, adres doğru mu?',
+  'maymun.error.local': '{address} adresine ulaşılamadı. Sunucun bu bilgisayarda çalışıyor mu, adres doğru mu? Tarayıcı yerel ağına erişim izni istediyse izin ver (adres çubuğunun yanındaki site ayarları). Telefonda bu çalışmaz: kendi anahtarınla bir servis seç.',
+  'maymun.local.permission': 'İlk seferde tarayıcı, bu sitenin yerel ağına erişmesine izin isteyecek: İzin ver\'i seç, yoksa Maymun sunucuya ulaşamaz. Yalnız sunucunun çalıştığı bilgisayarda çalışır.',
+  'maymun.local.phone': 'Telefonda ya da tablette bu çalışamaz: sunucu bilgisayarında çalışıyor, telefon ona ulaşamaz. Bunun yerine kendi anahtarınla OpenRouter, Anthropic, OpenAI ya da DeepSeek seç.',
   'maymun.send': 'Gönder',
   'maymun.stop': 'Durdur',
   'maymun.newTopic': 'Yeni konu (şimdiye kadarki sohbet saklanır)',

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
+import { useMediaQuery } from '../lib/hooks.ts'
 import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
 import { canChat, groupModels, rankModels, type ListedModel } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
@@ -487,6 +488,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
           </a>
         </p>
       )}
+      {current.local && <LocalNote />}
       {current.local && (
         <label className="block text-xs font-medium">
           {t('maymun.address')}
@@ -627,5 +629,19 @@ function GatewayModels({ id, offered }: { id: ProviderId; offered: string[] }) {
           })}
       </div>
     </div>
+  )
+}
+
+/**
+ * A server on this computer (OmniRoute, Ollama, LM Studio): the browser asks before a website may reach it, and a phone
+ * cannot reach it at all (its localhost is the phone itself), so say both where the service is chosen.
+ */
+function LocalNote() {
+  const { t } = useI18n()
+  const touch = useMediaQuery('(pointer: coarse)')
+  return (
+    <p role="note" className={`text-xs ${touch ? 'rounded-lg border border-danger/40 bg-danger/10 px-3 py-2' : 'text-muted'}`}>
+      {touch ? t('maymun.local.phone') : t('maymun.local.permission')}
+    </p>
   )
 }
