@@ -48,7 +48,7 @@ const skills = JSON.parse(readFileSync(join(root, 'content', 'skills.json'), 'ut
 const skillTitle = (lang: Lang, id: string) => pick(lang, skills.find((s) => s.id === id)?.title) || id
 
 const template = readFileSync(join(dist, 'index.html'), 'utf8')
-const STYLE = `<style>.prerender{max-width:52rem;margin:0 auto;padding:1.5rem 1rem 4rem;font-family:system-ui,sans-serif;line-height:1.6}.prerender nav a{margin-right:1rem}.prerender pre{overflow:auto;padding:.75rem;border-radius:.5rem;background:rgba(127,127,127,.12)}.prerender li{margin:.25rem 0}</style>`
+const STYLE = `<style>html[data-theme] .prerender{display:none}.prerender{max-width:52rem;margin:0 auto;padding:1.5rem 1rem 4rem;font-family:system-ui,sans-serif;line-height:1.6}.prerender nav a{margin-right:1rem}.prerender pre{overflow:auto;padding:.75rem;border-radius:.5rem;background:rgba(127,127,127,.12)}.prerender li{margin:.25rem 0}</style>`
 
 interface Page {
   /** App path, same in both languages. */
