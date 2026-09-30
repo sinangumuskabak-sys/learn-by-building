@@ -621,6 +621,15 @@ function ProviderForm({ compact }: { compact: boolean }) {
           </a>
         </p>
       )}
+      {current.id === 'nvidia' && (
+        <p className="text-xs text-muted">
+          {t('maymun.nvidia.help')}{' '}
+          <a href={`${import.meta.env.BASE_URL}nvidia-bridge.mjs`} download className="text-accent underline">
+            nvidia-bridge.mjs
+          </a>
+          <code className="mt-1 block font-mono">node nvidia-bridge.mjs</code>
+        </p>
+      )}
       {current.local && <LocalNote />}
       {current.local && (
         <label className="block text-xs font-medium">
@@ -711,7 +720,7 @@ function ProviderForm({ compact }: { compact: boolean }) {
           </button>
         )}
       </div>
-      <p className="text-xs text-muted">{current.local ? t('maymun.privacyLocal') : t('maymun.privacy')}</p>
+      <p className="text-xs text-muted">{current.local ? t('maymun.privacyLocal') : current.proxied ? t('maymun.privacyProxy') : t('maymun.privacy')}</p>
     </form>
   )
 }

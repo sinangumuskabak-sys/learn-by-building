@@ -1,7 +1,7 @@
 import { splitDataUrl } from './capture.ts'
 
 /** The AI services Maymun can talk to with the learner's own key (BYOK). The key never leaves this browser. */
-export type ProviderId = 'omniroute' | 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'custom'
+export type ProviderId = 'omniroute' | 'openrouter' | 'anthropic' | 'openai' | 'deepseek' | 'nvidia' | 'custom'
 
 export interface Provider {
   id: ProviderId
@@ -20,7 +20,12 @@ export interface Provider {
   keyOptional?: boolean
   /** A gateway with many models: the learner picks which are active, the best active one answers, the next takes over. */
   gateway?: boolean
+  /** Reached through the project's proxy, because the service does not let browsers call it directly. */
+  proxied?: boolean
 }
+
+/** Passes requests to NVIDIA, whose API sends no CORS headers (workers/nvidia-proxy). */
+export const NVIDIA_PROXY = 'https://nvidia-proxy.nvidia-proxy.workers.dev/v1'
 
 export const providers: Provider[] = [
   // OmniRoute on the learner's computer: whatever they connected there (Claude, Gemini, Codex…), under one key.
@@ -30,6 +35,9 @@ export const providers: Provider[] = [
   { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys', images: true },
   { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },
+  // NVIDIA's hosted models (build.nvidia.com): its API does not let browsers call it, so requests go through the
+  // project's proxy (or, for those who prefer, public/nvidia-bridge.mjs on their own computer as an OpenAI-compatible server).
+  { id: 'nvidia', name: 'NVIDIA NIM', model: 'z-ai/glm-5.3-flash', keys: 'https://build.nvidia.com/settings/api-keys', base: NVIDIA_PROXY, images: false, proxied: true },
   // Any OpenAI-compatible server the browser may call directly: Ollama, LM Studio…
   { id: 'custom', name: 'OpenAI-compatible (Ollama, LM Studio…)', model: '', keys: '', base: 'http://localhost:11434/v1', images: true, local: true, keyOptional: true },
 ]

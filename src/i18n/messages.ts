@@ -96,6 +96,7 @@ const en = {
   'maymun.question': 'Your question',
   'maymun.service.omniroute': 'OmniRoute (everything you connected there)',
   'maymun.service.custom': 'OpenAI-compatible (Ollama, LM Studio…)',
+  'maymun.nvidia.help': 'Get a free key at build.nvidia.com and paste it here: it works on any device. NVIDIA does not let web pages call it directly, so requests pass through this site’s proxy, which stores nothing. To skip the proxy on a computer, download the bridge, run it with Node.js 20+ and choose OpenAI-compatible with the address http://localhost:8788/v1:',
   'maymun.address': 'Address',
   'maymun.optional': '(optional)',
   'maymun.modelNeeded': 'the model name your server uses',
@@ -116,7 +117,7 @@ const en = {
     'Everything is kept in this browser. Your question, the conversation and the panels shown above go to the server at this address on your computer, and from there to the service it uses.',
   'maymun.error.local': 'Could not reach {address}. Is your server running on this computer, and is the address right? If the browser asked to reach your local network, allow it (site settings, next to the address bar). On a phone this does not work: choose a service with your own key.',
   'maymun.local.permission': 'The first time, the browser asks to let this site reach your local network: choose Allow, or Maymun cannot reach the server. It works only on the computer the server runs on.',
-  'maymun.local.phone': 'On a phone or tablet this cannot work: the server runs on your computer, and the phone cannot reach it. Choose OpenRouter, Anthropic, OpenAI or DeepSeek with your own key instead.',
+  'maymun.local.phone': 'On a phone or tablet this cannot work: the server runs on your computer, and the phone cannot reach it. Choose OpenRouter, Anthropic, OpenAI, DeepSeek or NVIDIA with your own key instead.',
   'maymun.send': 'Send',
   'maymun.stop': 'Stop',
   'maymun.newChat': 'New chat (Maymun still remembers the earlier pages)',
@@ -165,6 +166,8 @@ const en = {
   'maymun.forget': 'Forget key',
   'maymun.privacy':
     'The key is kept only in this browser. Your question, the conversation and the panel shown above go straight to the service you chose; its terms apply.',
+  'maymun.privacyProxy':
+    'The key is kept only in this browser. NVIDIA does not let web pages call it directly, so your key, question, conversation and the panel shown above pass through this site’s proxy to NVIDIA; the proxy stores and logs nothing. NVIDIA’s terms apply.',
   'maymun.error.key': 'The service did not accept the API key. Check it in the setup.',
   'maymun.error.rate': 'The service is busy or your quota is used up. Try again a little later.',
   'maymun.error.network':
@@ -172,7 +175,7 @@ const en = {
   'maymun.error.model': 'The service rejected the request. Check the model name.',
   'maymun.error.other': 'Something went wrong while answering.',
   'settings.maymunAi': 'Maymun’s AI service',
-  'settings.maymunAiHint': 'OmniRoute on your computer (connect your subscriptions and keys there), your own key (OpenRouter, Anthropic, OpenAI, DeepSeek) or another server on your computer (Ollama, LM Studio).',
+  'settings.maymunAiHint': 'OmniRoute on your computer (connect your subscriptions and keys there), your own key (OpenRouter, Anthropic, OpenAI, DeepSeek, NVIDIA) or another server on your computer (Ollama, LM Studio).',
   'maymun.panel.task': 'the lesson',
   'maymun.panel.code': 'your code',
   'maymun.panel.game': 'the game',
@@ -367,6 +370,7 @@ const tr: Record<MessageKey, string> = {
   'maymun.question': 'Sorun',
   'maymun.service.omniroute': 'OmniRoute (orada bağladığın her şey)',
   'maymun.service.custom': 'OpenAI uyumlu (Ollama, LM Studio…)',
+  'maymun.nvidia.help': 'build.nvidia.com’dan ücretsiz anahtar al ve buraya yapıştır: her cihazda çalışır. NVIDIA web sayfalarının kendisini doğrudan çağırmasına izin vermediği için istekler bu sitenin hiçbir şey saklamayan aktarıcısından geçer. Bilgisayarda aktarıcısız kullanmak istersen köprüyü indir, Node.js 20+ ile çalıştır ve OpenAI uyumlu seçip adrese http://localhost:8788/v1 yaz:',
   'maymun.address': 'Adres',
   'maymun.optional': '(isteğe bağlı)',
   'maymun.modelNeeded': 'sunucunun kullandığı model adı',
@@ -387,7 +391,7 @@ const tr: Record<MessageKey, string> = {
     'Her şey bu tarayıcıda saklanır. Sorun, sohbet ve yukarıda gösterilen paneller bilgisayarındaki bu adresteki sunucuya, oradan da onun kullandığı servise gider.',
   'maymun.error.local': '{address} adresine ulaşılamadı. Sunucun bu bilgisayarda çalışıyor mu, adres doğru mu? Tarayıcı yerel ağına erişim izni istediyse izin ver (adres çubuğunun yanındaki site ayarları). Telefonda bu çalışmaz: kendi anahtarınla bir servis seç.',
   'maymun.local.permission': 'İlk seferde tarayıcı, bu sitenin yerel ağına erişmesine izin isteyecek: İzin ver\'i seç, yoksa Maymun sunucuya ulaşamaz. Yalnız sunucunun çalıştığı bilgisayarda çalışır.',
-  'maymun.local.phone': 'Telefonda ya da tablette bu çalışamaz: sunucu bilgisayarında çalışıyor, telefon ona ulaşamaz. Bunun yerine kendi anahtarınla OpenRouter, Anthropic, OpenAI ya da DeepSeek seç.',
+  'maymun.local.phone': 'Telefonda ya da tablette bu çalışamaz: sunucu bilgisayarında çalışıyor, telefon ona ulaşamaz. Bunun yerine kendi anahtarınla OpenRouter, Anthropic, OpenAI, DeepSeek ya da NVIDIA seç.',
   'maymun.send': 'Gönder',
   'maymun.stop': 'Durdur',
   'maymun.newChat': 'Yeni sohbet (Maymun önceki sayfaları hatırlamaya devam eder)',
@@ -436,6 +440,8 @@ const tr: Record<MessageKey, string> = {
   'maymun.forget': 'Anahtarı unut',
   'maymun.privacy':
     'Anahtar yalnız bu tarayıcıda saklanır. Sorun, sohbet ve yukarıda gösterilen panel doğrudan seçtiğin servise gider; o servisin koşulları geçerlidir.',
+  'maymun.privacyProxy':
+    'Anahtar yalnız bu tarayıcıda saklanır. NVIDIA web sayfalarının kendisini doğrudan çağırmasına izin vermediği için anahtarın, sorun, sohbet ve yukarıda gösterilen panel bu sitenin aktarıcısından geçerek NVIDIA’ya gider; aktarıcı hiçbir şey saklamaz ve kaydetmez. NVIDIA’nın koşulları geçerlidir.',
   'maymun.error.key': 'Servis API anahtarını kabul etmedi. Kurulumdan kontrol et.',
   'maymun.error.rate': 'Servis meşgul ya da kotan doldu. Biraz sonra yeniden dene.',
   'maymun.error.network':
@@ -443,7 +449,7 @@ const tr: Record<MessageKey, string> = {
   'maymun.error.model': 'Servis isteği reddetti. Model adını kontrol et.',
   'maymun.error.other': 'Cevap verilirken bir şeyler ters gitti.',
   'settings.maymunAi': 'Maymun’un yapay zekâ servisi',
-  'settings.maymunAiHint': 'Bilgisayarındaki OmniRoute (aboneliklerini ve anahtarlarını orada bağlarsın), kendi anahtarın (OpenRouter, Anthropic, OpenAI, DeepSeek) ya da bilgisayarındaki başka bir sunucu (Ollama, LM Studio).',
+  'settings.maymunAiHint': 'Bilgisayarındaki OmniRoute (aboneliklerini ve anahtarlarını orada bağlarsın), kendi anahtarın (OpenRouter, Anthropic, OpenAI, DeepSeek, NVIDIA) ya da bilgisayarındaki başka bir sunucu (Ollama, LM Studio).',
   'maymun.panel.task': 'ders',
   'maymun.panel.code': 'kodun',
   'maymun.panel.game': 'oyun',

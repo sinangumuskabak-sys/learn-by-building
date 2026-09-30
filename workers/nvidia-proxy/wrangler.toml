@@ -1,0 +1,10 @@
+name = "nvidia-proxy"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+# Safety against any bill: runs on the project's Free plan with no payment method. No bindings (KV, D1, R2, AI,
+# Durable Objects…), no routes or custom domains, no logs. Past the free daily limit Cloudflare answers with error
+# 1027 until midnight UTC; nothing is charged.
+
+[observability]
+enabled = false
