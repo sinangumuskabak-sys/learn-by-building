@@ -211,8 +211,8 @@ test('a step opens in four parts, one after another, and the code opens where th
 
   await tab(page, 'Code')
   const code = page.locator('[data-maymun="code"] .view-lines')
-  // (Monaco puts a color swatch inside '#111', so the line is found by another part of it.)
-  await expect(code.locator('.view-line').filter({ hasText: 'canvas.height' })).toBeInViewport({ timeout: 15_000 })
+  // (Monaco puts a color swatch inside '#111', and a narrow screen wraps the line, so it is found by its start.)
+  await expect(code.locator('.view-line').filter({ hasText: 'ctx.fillRect(0, 0' })).toBeInViewport({ timeout: 15_000 })
 })
 
 test('the last step is built without given code: only the goal, then the learner’s turn', async ({ page }) => {
