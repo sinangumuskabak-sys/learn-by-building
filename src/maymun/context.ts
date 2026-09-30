@@ -117,9 +117,9 @@ export function systemPrompt(
           '',
           `# This project: ${project}`,
           '',
-          'The conversation below is the whole project so far: it goes on across its panels (lesson, code, game,',
-          'checks) and steps. Each learner message starts with where it was asked, like "[code panel, step',
-          '03-gravity]". Connect to earlier questions when it helps ("the error you asked about in the code panel").',
+          'The conversation below goes on across panels (lesson, code, game, checks), steps and projects. Each learner',
+          'message starts with where it was asked, like "[code panel, step 03-gravity, page "Flappy"]". Connect to',
+          'earlier questions when it helps ("the error you asked about in the code panel").',
         ]
       : []),
     ...(page

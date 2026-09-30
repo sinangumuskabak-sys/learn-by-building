@@ -597,7 +597,7 @@ test('OmniRoute: models grouped by connection, the best active one answers, the 
   expect(asked).toEqual(['cc/claude-opus-4-7', 'gemini-cli/gemini-3.1-pro'])
 })
 
-test('Maymun keeps one conversation per project, across panels, steps and reloads', async ({ page }) => {
+test('Maymun keeps one conversation across panels, steps, projects and reloads', async ({ page }) => {
   const sent: { messages: { role: string; content: string }[] }[] = []
   await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
     sent.push(route.request().postDataJSON())
@@ -606,7 +606,7 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
       body: `data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\ndata: [DONE]\n\n`,
     })
   })
-  // The conversation from before projects existed moves into the first project opened.
+  // The conversation from before projects existed moves into the conversation.
   await page.goto('/#/games/snake/01-canvas')
   await page.evaluate(() => {
     localStorage.setItem('lp.maymun.chat', JSON.stringify([{ role: 'user', text: 'An old question' }, { role: 'assistant', text: 'An old answer' }]))
@@ -656,22 +656,25 @@ test('Maymun keeps one conversation per project, across panels, steps and reload
   await ask('And here?')
   expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 02-context, page "Snake"\] And here\?$/)
 
-  // Another game has its own, empty conversation.
+  // Another game: the same conversation goes on, the chat stays open, a line marks the new project.
   await page.goto('/#/games/pong/01-court')
-  await openOn('code', 'Code')
-  await expect(popup).not.toContainText('Why is it black?')
+  await expect(page).toHaveTitle('Pong · Learn Platform')
+  await expect(popup).toBeVisible()
+  await expect(popup).toContainText('Why is it black?')
   await ask('Pong question')
-  expect(lastUserMessages()).toEqual(['[code panel, step 01-court, page "Pong"] Pong question'])
+  await expect(popup.getByRole('separator').filter({ hasText: 'Pong' })).toBeVisible()
+  expect(lastUserMessages().at(-2)).toMatch(/step 02-context, page "Snake"\] And here\?$/)
+  expect(lastUserMessages().at(-1)).toMatch(/^\[(task|code) panel, step 01-court, page "Pong"\] Pong question$/)
 
-  // Back in Snake after a reload, everything is still there; a new topic starts clean.
+  // Back in Snake after a reload, everything is still there; a new chat keeps it on screen, the model starts clean.
   await page.goto('/#/games/snake/02-context')
   await page.reload()
   await openOn('code', 'Code')
   await expect(popup).toContainText('What does this sentence mean?')
-  await expect(popup).not.toContainText('Pong question')
-  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
-  await expect(popup).not.toContainText('Why is it black?')
+  await expect(popup).toContainText('Pong question')
+  await popup.getByRole('button', { name: 'New chat (Maymun still remembers the earlier pages)' }).click()
   await ask('Fresh start')
+  await expect(popup).toContainText('Why is it black?')
   expect(lastUserMessages()).toEqual(['[code panel, step 02-context, page "Snake"] Fresh start'])
 })
 
@@ -719,7 +722,8 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)',
   expect(sent[0].body.messages[0].content).toContain('## How you teach')
   expect(sent[0].body.messages[0].content).toContain('<panel name="task"')
 
-  // A server that is not running is named as the problem.
+  // A server that is not running is named as the problem. (The chat would stay open across pages: close it.)
+  await popup.getByRole('button', { name: 'Close' }).click()
   await page.goto('/#/settings')
   await setup.getByLabel('Address').fill('http://127.0.0.1:8787/v1')
   await setup.getByRole('button', { name: 'Save' }).click()
@@ -727,4 +731,102 @@ test('Maymun talks to a server on the learner’s computer (OmniRoute, Ollama)',
   await question.fill('Hi again')
   await question.press('Enter')
   await expect(popup.getByRole('alert')).toContainText('Could not reach http://127.0.0.1:8787/v1')
+})
+
+test('Maymun’s conversation never ends: old pages go as a summary and an index, and it reads one when it needs it', async ({ page }) => {
+  const sent: { messages: { role: string; content: string }[] }[] = []
+  const summaries: string[] = []
+  const reply = (text: string) => ({
+    headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' },
+    body: `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n`,
+  })
+  await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    const body = route.request().postDataJSON() as { messages: { role: string; content: string }[] }
+    const system = body.messages[0].content
+    if (system.startsWith('You keep the running summary')) {
+      summaries.push(body.messages[1].content)
+      const titles = Object.fromEntries([...body.messages[1].content.matchAll(/<page n="(\d+)"/g)].map((m) => [m[1], `Page ${m[1]} topic`]))
+      return route.fulfill(reply(JSON.stringify({ summary: '**Now:** building Snake, closures understood.', titles })))
+    }
+    sent.push(body)
+    // Asked what came first: Maymun asks for page 1, then answers with it.
+    const asksFirst = body.messages.at(-1)!.content.endsWith('What did we talk about first?')
+    const hasPage = system.includes('# The pages you asked for')
+    await route.fulfill(reply(asksFirst && !hasPage ? '<recall pages="1"/>' : hasPage ? 'First we talked about closures.' : 'ok'))
+  })
+  await page.goto('/#/')
+  // Thirty pages from earlier days, each a question and a long answer.
+  await page.evaluate(async () => {
+    localStorage.setItem('lp.maymun.ai', JSON.stringify({ provider: 'openrouter', keys: { openrouter: 'sk-or-test' } }))
+    const start = Date.now() - 3 * 86_400_000
+    const pages = Array.from({ length: 30 }, (_, i) => ({
+      n: i + 1,
+      messages: [
+        { role: 'user', text: i === 0 ? 'What is a closure?' : `Question number ${i}`, tag: { panel: 'code', page: 'Snake', project: 'game:snake' }, at: start + i * 60_000 },
+        { role: 'assistant', text: `${i === 0 ? 'A closure keeps its scope. PAGE-ONE-ANSWER ' : ''}${'long answer '.repeat(500)}`, at: start + i * 60_000 + 1 },
+      ],
+    }))
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('lp-maymun', 2)
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('threads', { keyPath: 'project' })
+        request.result.createObjectStore('pages', { keyPath: 'n' })
+        request.result.createObjectStore('meta', { keyPath: 'key' })
+      }
+      request.onsuccess = () => {
+        const tx = request.result.transaction(['pages', 'meta'], 'readwrite')
+        for (const p of pages) tx.objectStore('pages').put(p)
+        tx.objectStore('meta').put({ key: 'meta', windowFrom: 0, sessionFrom: 60, summary: '', foldedThrough: 0 })
+        tx.oncomplete = () => {
+          request.result.close()
+          resolve()
+        }
+        tx.onerror = () => reject(tx.error)
+      }
+    })
+  })
+  await page.reload()
+  const popup = page.getByRole('dialog', { name: 'Maymun' })
+  const question = popup.getByRole('textbox', { name: 'Your question' })
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  // Back after days: the model starts clean; every message is still on screen (the latest pages first).
+  await expect(popup.getByText('Question number 29', { exact: true })).toBeVisible()
+  await expect(popup.getByText('What is a closure?', { exact: true })).toHaveCount(0)
+  await popup.getByRole('button', { name: 'Earlier messages' }).first().click()
+  await expect(popup.getByText('Question number 25', { exact: true })).toBeVisible()
+
+  // Opening the chat after the break folds the old pages into the summary in the background, a few at a time.
+  await expect.poll(() => summaries.length).toBe(3)
+  expect(summaries[0]).toContain('<page n="1"')
+  expect(summaries[2]).toContain('<page n="12"')
+
+  await question.fill('What did we talk about first?')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('First we talked about closures.')
+  await expect(popup.locator('.markdown').filter({ hasText: '<recall' })).toHaveCount(0)
+  await expect(popup.getByText('Looked at earlier pages: p.1')).toBeVisible()
+  // First request: only the new question word for word; the old pages as the summary and an index (titled where
+  // summed up, the start of the question where not yet). Second: page 1 itself.
+  const first = sent[0].messages[0].content
+  expect(sent[0].messages.slice(1)).toEqual([{ role: 'user', content: '[page panel, page "Workshop"] What did we talk about first?' }])
+  expect(first).toContain('**Now:** building Snake, closures understood.')
+  expect(first).toMatch(/- p\.1 · \d{4}-\d{2}-\d{2} · Snake · Page 1 topic/)
+  expect(first).toMatch(/- p\.30 · \d{4}-\d{2}-\d{2} · Snake · "Question number 29"/)
+  expect(first).not.toContain('PAGE-ONE-ANSWER')
+  expect(sent[1].messages[0].content).toContain('<page n="1"')
+  expect(sent[1].messages[0].content).toContain('PAGE-ONE-ANSWER')
+
+  // The latest exchange goes word for word with the next question.
+  await question.fill('And now?')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('ok')
+  expect(sent.at(-1)!.messages.slice(1).map((m) => m.content)).toContain('First we talked about closures.')
+
+  // A question whose words match an old page takes that page along, without Maymun asking for it.
+  await question.fill('Explain the closure scope once more')
+  await question.press('Enter')
+  await expect(popup.locator('.markdown').last()).toHaveText('ok')
+  expect(sent.at(-1)!.messages[0].content).toContain('## Maybe related to this question (found by its words): page 1')
+  expect(sent.at(-1)!.messages[0].content).toContain('PAGE-ONE-ANSWER')
+  await expect(popup.getByText('Looked at earlier pages: p.1')).toHaveCount(2)
 })

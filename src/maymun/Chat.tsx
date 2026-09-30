@@ -11,7 +11,9 @@ import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
-import { addMessages, forModel, getTimeline, markSessions, newChat, projectsOf, useTimeline, type Project, type StoredMessage } from './memory.ts'
+import { addMessages, forModel, getTimeline, loadTimeline, markSessions, newChat, projectsOf, useTimeline, type Project, type StoredMessage } from './memory.ts'
+import { fold, startOverAfterBreak } from './fold.ts'
+import { asksForPages, conversationPrompt, mayAskForPages, pagesBefore, recalled, relatedPage, windowStart } from './window.ts'
 import { aiStore, baseFor, isReady, modelFor, modelsFor, useMaymunAi } from './store.ts'
 import { progressStore } from '../progress/progress.ts'
 import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
@@ -22,8 +24,6 @@ type Context = ReturnType<typeof readContext>
 
 /** Pages of the conversation the chat shows at first, and adds with each "Earlier messages". */
 const SHOWN_PAGES = 4
-/** The latest messages that go to the model with a question. */
-const MAX_SENT = 40
 
 /**
  * The chat with Maymun about one panel. Each question goes with that panel's context as it is when the question is
@@ -115,6 +115,14 @@ export function MaymunChat({
     }
   }, [project.key])
   const language = lang === 'tr' ? 'Turkish' : 'English'
+  // Back after a long break: a clean window; and pages that left the window go into the summary.
+  useEffect(() => {
+    void loadTimeline().then(() => {
+      startOverAfterBreak()
+      void fold(language)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   /**
    * Sums up the project's last session into the memory vault, in the background: when the learner comes back after a
    * break (`force` when they start a new topic).
@@ -156,8 +164,15 @@ export function MaymunChat({
       at: Date.now(),
     }
     closeSession(false)
-    const previousPage = getTimeline().messages.findLast((m) => m.role === 'user')?.tag?.page
-    const history = [...getTimeline().messages.slice(getTimeline().windowFrom), asked].slice(-MAX_SENT)
+    startOverAfterBreak()
+    const timeline = getTimeline()
+    const previousPage = timeline.messages.findLast((m) => m.role === 'user')?.tag?.page
+    // The latest messages word for word; the rest as a summary, an index, and a page found by the question's words.
+    const from = windowStart(timeline, [asked])
+    const history = [...timeline.messages, asked].slice(from)
+    const related = relatedPage(pagesBefore(timeline, from), question, project.key)
+    const conversation = conversationPrompt(timeline, from, related)
+    let looked = related ? [related.n] : []
     addMessages(asked)
     setDraft('')
     setShot(null)
@@ -168,13 +183,13 @@ export function MaymunChat({
     let text = ''
     let answeredBy = ''
     const memory = await memoryFor(project.key, project.step).catch(() => null)
-    const ask = (map?: string) =>
+    const ask = (map?: string, pages?: string) =>
       streamChatWithFallback({
         provider: ai.provider,
         key: key ?? '',
         base: baseFor(ai, ai.provider),
         model: modelFor(ai, ai.provider),
-        system: systemPrompt(current, language, project.key === 'general' ? undefined : projectTitle, memory?.text, {
+        system: systemPrompt(current, language, project.key === 'general' ? undefined : projectTitle, [conversation, memory?.text, pages].filter(Boolean).join('\n\n'), {
           path: pathname,
           title: pageTitle(),
           previous: previousPage && previousPage !== pageTitle() ? previousPage : undefined,
@@ -183,19 +198,29 @@ export function MaymunChat({
         signal: abort.signal,
         onText: (piece) => {
           text += piece
-          // A request for the app map is for the app; so is the memory block at the end.
-          if (!map && mayAskForMap(text)) return
+          // A request for the app map or for earlier pages is for the app; so is the memory block at the end.
+          if ((!map && mayAskForMap(text)) || (!pages && mayAskForPages(text))) return
           setAnswer(visibleText(map ? text.replace(APP_MAP_MARKER, '') : text))
         },
       }, modelsFor(ai, ai.provider), (model) => (answeredBy = model))
     try {
       await ask()
-      // Maymun asked for the map of the whole app: ask again with it, once.
-      if (asksForMap(text) && !abort.signal.aborted) {
+      // Maymun asked for the map of the whole app, or for earlier pages: ask again with them, once each.
+      let map: string | undefined
+      let pages: string | undefined
+      for (let round = 0; round < 2 && !abort.signal.aborted; round++) {
+        const wanted = !pages && asksForPages(text)
+        if (!map && asksForMap(text)) map = appMap(lang, progressStore.get())
+        else if (wanted) {
+          const found = recalled(getTimeline(), wanted, project.key)
+          pages = found.text
+          looked = [...new Set([...looked, ...found.pages.map((p) => p.n)])]
+        } else break
         text = ''
-        await ask(appMap(lang, progressStore.get()))
-        text = text.replace(APP_MAP_MARKER, '')
+        await ask(map, pages)
       }
+      // Asked a third time instead of answering: the request itself is not an answer.
+      text = text.replace(APP_MAP_MARKER, '').replace(/^\s*<recall[^>]*>/, '')
     } catch (caught) {
       setError(caught instanceof ChatError ? caught.kind : 'other')
       setDetail(caught instanceof Error ? caught.message : String(caught))
@@ -204,7 +229,8 @@ export function MaymunChat({
         const { visible, ops } = parseMemory(text)
         const remembered = ops.length && memory ? await applyMemory(ops, memory.allowed).catch(() => []) : []
         const via = provider(ai.provider).gateway && answeredBy ? { model: answeredBy } : {}
-        if (visible) addMessages({ role: 'assistant', text: visible, at: Date.now(), ...via, ...(remembered.length ? { remembered } : {}) })
+        if (visible) addMessages({ role: 'assistant', text: visible, at: Date.now(), ...via, ...(remembered.length ? { remembered } : {}), ...(looked.length ? { recalled: looked } : {}) })
+        void fold(language)
       }
       setAnswer(null)
       controller.current = null
@@ -212,6 +238,7 @@ export function MaymunChat({
   }
 
   const busy = answer !== null
+  const conversationPreview = conversationPrompt(timeline, windowStart(timeline), null)
   const firstShown = timeline.pages.length > shownPages ? timeline.pages.slice(0, -shownPages).reduce((sum, p) => sum + p.messages.length, 0) : 0
 
   return (
@@ -225,6 +252,7 @@ export function MaymunChat({
           {context.others.map((other) => (
             <ContextText key={other.panel} context={other} />
           ))}
+          {conversationPreview && <ContextText context={{ title: t('maymun.conversation'), text: conversationPreview }} />}
           {memoryPreview && <ContextText context={{ title: t('maymun.memory'), text: memoryPreview }} />}
         </details>
         {!ready && <ProviderSetup compact />}
@@ -357,7 +385,7 @@ export function MaymunChat({
   )
 }
 
-function Bubble({ role, text, image, shot, tag, remembered, model }: StoredMessage) {
+function Bubble({ role, text, image, shot, tag, remembered, model, recalled: looked }: StoredMessage) {
   const { t } = useI18n()
   return role === 'user' ? (
     <div className="ml-8 rounded-lg bg-accent/15 px-3 py-2 whitespace-pre-wrap">
@@ -372,12 +400,17 @@ function Bubble({ role, text, image, shot, tag, remembered, model }: StoredMessa
       ) : (
         shot && <span className="mb-1 block text-xs text-muted">📷 {t('maymun.shotGone')}</span>
       )}
-      {text}
+      <span>{text}</span>
     </div>
   ) : (
     <div className="mr-4">
       <Markdown source={text} className="rounded-lg bg-surface-2 px-3 py-2" />
       {model && <p className="mt-1 font-mono text-[11px] text-muted">{t('maymun.answeredBy', { model })}</p>}
+      {looked && looked.length > 0 && (
+        <p className="mt-1 text-[11px] text-muted">
+          🔎 {t('maymun.recalled', { pages: looked.map((n) => `p.${n}`).join(', ') })}
+        </p>
+      )}
       {remembered && remembered.length > 0 && (
         <p className="mt-1 text-[11px] text-muted">
           📝 {t('maymun.remembered')}{' '}
