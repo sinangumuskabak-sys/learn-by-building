@@ -100,7 +100,8 @@ export function withSessionList(statusNote: string, sessionPaths: string[]): str
 export async function summarize(messages: StoredMessage[], language: string): Promise<Summary | null> {
   const ai = aiStore.get()
   if (!isReady(ai) || messages.length < 2) return null
-  const transcript = forModel(messages)
+  // A long session: its latest part is enough for a summary.
+  const transcript = forModel(messages.slice(-60))
     .map((m) => `${m.role === 'user' ? 'Learner' : 'Maymun'}: ${m.text}`)
     .join('\n\n')
   let text = ''

@@ -144,13 +144,11 @@ export function Maymun() {
     }
   }, [open, anchor, context, box])
 
-  // The conversation belongs to the project (a game, a challenge): moving between its steps keeps the chat open and
-  // points it at the new step's panels; leaving the project closes it.
+  // One conversation for the whole app: moving to another step, project or page keeps the chat open and points it at
+  // the new page's panels.
   const { pathname } = useLocation()
   const project = projectOf(pathname)
-  const [openOn, setOpenOn] = useState(project.key)
   const [projectTitle, setProjectTitle] = useState('')
-  if (open && openOn !== project.key) setOpen(false)
   useEffect(() => {
     if (!open) return
     // After the new step has rendered (and set its title).
@@ -186,7 +184,6 @@ export function Maymun() {
     if (!panel) return
     setContext(readContext(panel))
     setPanelEl(panel)
-    setOpenOn(project.key)
     setProjectTitle(titleOf(project.key))
     const rect = head.current?.getBoundingClientRect()
     setAnchor({ x: rect ? rect.left : window.innerWidth, y: rect ? rect.top + rect.height / 2 : 120 })

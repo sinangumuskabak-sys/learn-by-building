@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { addToThread, forModel, getThread, loadThread, MAX_SENT, newTopic, projectOf, resetMemoryForTests } from './memory.ts'
+import { addMessages, forModel, getTimeline, loadTimeline, mergeThreads, newChat, PAGE_TOKENS, paginate, projectOf, projectsOf, resetMemoryForTests } from './memory.ts'
 
 afterEach(() => {
   resetMemoryForTests()
@@ -15,22 +15,36 @@ describe('Maymun memory', () => {
     expect(projectOf('/games')).toEqual({ key: 'general' })
   })
 
-  it('keeps projects apart and starts a new topic without losing the old one', async () => {
-    await loadThread('game:snake')
-    await loadThread('game:pong')
-    addToThread('game:snake', { role: 'user', text: 'snake?', tag: { panel: 'code', step: '01-canvas' } })
-    addToThread('game:pong', { role: 'user', text: 'pong?' })
-    expect(getThread('game:snake').messages.map((m) => m.text)).toEqual(['snake?'])
-    newTopic('game:snake')
-    expect(getThread('game:snake').messages).toEqual([])
-    expect(getThread('game:snake').archived[0].messages.map((m) => m.text)).toEqual(['snake?'])
-    expect(getThread('game:pong').messages.map((m) => m.text)).toEqual(['pong?'])
+  it('keeps one conversation across projects, in pages that never lose a question from its answer', async () => {
+    await loadTimeline()
+    addMessages({ role: 'user', text: 'snake?', tag: { panel: 'code', step: '01-canvas', project: 'game:snake' } }, { role: 'assistant', text: 'yes' })
+    addMessages({ role: 'user', text: 'pong?', tag: { panel: 'game', project: 'game:pong' } })
+    const { messages } = getTimeline()
+    expect(messages.map((m) => m.text)).toEqual(['snake?', 'yes', 'pong?'])
+    expect(projectsOf(messages)).toEqual(['game:snake', 'game:snake', 'game:pong'])
+    // A new chat keeps every message; only the window starts over.
+    newChat()
+    expect(getTimeline().windowFrom).toBe(3)
+    expect(getTimeline().messages).toHaveLength(3)
+
+    const long = 'x'.repeat(PAGE_TOKENS * 4)
+    const { pages } = paginate([], [
+      { role: 'user', text: 'q1' },
+      { role: 'assistant', text: long },
+      { role: 'assistant', text: 'still the same page: no question yet' },
+      { role: 'user', text: 'q2' },
+      { role: 'assistant', text: 'a2' },
+    ])
+    expect(pages.map((p) => [p.n, p.messages.map((m) => m.text.slice(0, 5))])).toEqual([
+      [1, ['q1', 'xxxxx', 'still']],
+      [2, ['q2', 'a2']],
+    ])
   })
 
-  it('tells the model where each question was asked, and sends only the latest messages', () => {
+  it('tells the model where each question was asked', () => {
     const messages = [
-      { role: 'user' as const, text: 'why?', tag: { panel: 'code', step: '02-grid' }, at: 1 },
-      { role: 'assistant' as const, text: 'because', at: 2 },
+      { role: 'user' as const, text: 'why?', tag: { panel: 'code', step: '02-grid', project: 'game:snake' }, at: 1 },
+      { role: 'assistant' as const, text: 'because', at: 2, recalled: [1] },
       { role: 'user' as const, text: 'old, untagged' },
     ]
     expect(forModel(messages)).toEqual([
@@ -38,23 +52,32 @@ describe('Maymun memory', () => {
       { role: 'assistant', text: 'because' },
       { role: 'user', text: 'old, untagged' },
     ])
-    const many = Array.from({ length: MAX_SENT + 5 }, (_, i) => ({ role: 'user' as const, text: String(i) }))
-    expect(forModel(many)).toHaveLength(MAX_SENT)
-    expect(forModel(many)[0].text).toBe('5')
   })
 
-  it('moves the conversation from before projects into the first project opened, once', async () => {
+  it('merges the old conversations, one per project with their earlier topics, into one in time order', () => {
+    const merged = mergeThreads(
+      [
+        { project: 'game:snake', messages: [{ role: 'user', text: 's2', at: 30 }, { role: 'assistant', text: 's2a' }], archived: [{ endedAt: 15, messages: [{ role: 'user', text: 's1', at: 10 }] }] },
+        { project: 'game:pong', messages: [{ role: 'user', text: 'p1', at: 20, tag: { panel: 'code' } }] },
+      ],
+      [{ role: 'user', text: 'legacy' }],
+    )
+    expect(merged.map((m) => m.text)).toEqual(['legacy', 's1', 'p1', 's2', 's2a'])
+    expect(merged[2].tag).toEqual({ panel: 'code', project: 'game:pong' })
+    expect(merged[1].tag).toEqual({ panel: 'page', project: 'game:snake' })
+  })
+
+  it('moves the conversation from before projects into the conversation, once', async () => {
     localStorage.setItem('lp.maymun.chat', JSON.stringify([{ role: 'user', text: 'old', shot: true }, { role: 'nope', text: 'x' }]))
-    const thread = await loadThread('game:snake')
-    expect(thread.messages).toEqual([{ role: 'user', text: 'old', shot: true }])
+    const timeline = await loadTimeline()
+    expect(timeline.messages).toEqual([{ role: 'user', text: 'old', shot: true }])
     expect(localStorage.getItem('lp.maymun.chat')).toBeNull()
-    expect((await loadThread('game:pong')).messages).toEqual([])
   })
 
   it('does not lose a message added before the conversation has loaded', async () => {
-    addToThread('game:life', { role: 'user', text: 'early' })
-    await loadThread('game:life')
+    addMessages({ role: 'user', text: 'early' })
+    await loadTimeline()
     await Promise.resolve()
-    expect(getThread('game:life').messages.map((m) => m.text)).toEqual(['early'])
+    expect(getTimeline().messages.map((m) => m.text)).toEqual(['early'])
   })
 })

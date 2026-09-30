@@ -1,5 +1,5 @@
 import { Camera, MessageSquarePlus, Send, Square, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
@@ -11,7 +11,7 @@ import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
-import { addToThread, forModel, getThread, markSummarized, newTopic, useThread, type Project, type StoredMessage } from './memory.ts'
+import { addMessages, forModel, getTimeline, markSessions, newChat, projectsOf, useTimeline, type Project, type StoredMessage } from './memory.ts'
 import { aiStore, baseFor, isReady, modelFor, modelsFor, useMaymunAi } from './store.ts'
 import { progressStore } from '../progress/progress.ts'
 import { parseMemory, visibleText } from '../vault/maymun-memory.ts'
@@ -19,6 +19,11 @@ import { SESSION_GAP, summarize } from '../vault/sessions.ts'
 import { applyMemory, memoryFor, saveSession, welcomeFor, type Welcome } from '../vault/store.ts'
 
 type Context = ReturnType<typeof readContext>
+
+/** Pages of the conversation the chat shows at first, and adds with each "Earlier messages". */
+const SHOWN_PAGES = 4
+/** The latest messages that go to the model with a question. */
+const MAX_SENT = 40
 
 /**
  * The chat with Maymun about one panel. Each question goes with that panel's context as it is when the question is
@@ -43,7 +48,10 @@ export function MaymunChat({
   const { t, lang } = useI18n()
   const { pathname } = useLocation()
   const ai = useMaymunAi()
-  const { messages } = useThread(project.key)
+  const timeline = useTimeline()
+  const { messages } = timeline
+  // How many pages the chat shows; "Earlier messages" shows more (nothing is ever deleted).
+  const [shownPages, setShownPages] = useState(SHOWN_PAGES)
   const [draft, setDraft] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [error, setError] = useState<ChatErrorKind | null>(null)
@@ -95,7 +103,9 @@ export function MaymunChat({
   const [welcome, setWelcome] = useState<Welcome | null>(null)
   // Measured from when the chat opened, so a message sent now ends the greeting.
   const [openedAt] = useState(() => Date.now())
-  const lastAt = messages.at(-1)?.at
+  // The last word in this project since the chat started over; the greeting is for coming back to it.
+  const owners = projectsOf(messages)
+  const lastAt = messages.findLast((m, i) => i >= timeline.windowFrom && owners[i] === project.key && m.at)?.at
   const returning = !lastAt || openedAt - lastAt > SESSION_GAP
   useEffect(() => {
     let live = true
@@ -110,14 +120,24 @@ export function MaymunChat({
    * break (`force` when they start a new topic).
    */
   const closeSession = (force: boolean) => {
-    const thread = getThread(project.key)
-    const pending = thread.messages.slice(thread.summarized ?? 0)
-    const last = pending.at(-1)
-    if (pending.length < 2 || !last) return
+    const all = getTimeline().messages
+    const from = getTimeline().sessionFrom
+    const last = all.at(-1)
+    if (all.length - from < 2 || !last) return
     if (!force && !(last.at && Date.now() - last.at > SESSION_GAP)) return
-    markSummarized(project.key, thread.messages.length)
-    const ended = new Date(last.at ?? Date.now())
-    void summarize(pending, language).then((summary) => summary && saveSession(project.key, projectTitle, summary, ended))
+    markSessions(all.length)
+    // One session note for each game or challenge talked about (the conversation goes across projects).
+    const owners = projectsOf(all)
+    const byProject = new Map<string, StoredMessage[]>()
+    all.slice(from).forEach((m, i) => {
+      const key = owners[from + i]
+      if (key && key !== 'general') byProject.set(key, [...(byProject.get(key) ?? []), m])
+    })
+    for (const [key, pending] of byProject) {
+      const ended = new Date(pending.at(-1)!.at ?? Date.now())
+      const title = key === project.key ? projectTitle : pending.find((m) => m.tag?.page)?.tag?.page ?? key
+      void summarize(pending, language).then((summary) => summary && saveSession(key, title, summary, ended))
+    }
   }
 
   const send = async () => {
@@ -132,13 +152,13 @@ export function MaymunChat({
       role: 'user',
       text: question,
       ...(image ? { image } : {}),
-      tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}), page: pageTitle() },
+      tag: { panel: current.panel, ...(project.step ? { step: project.step } : {}), page: pageTitle(), project: project.key },
       at: Date.now(),
     }
     closeSession(false)
-    const previousPage = [...getThread(project.key).messages].reverse().find((m) => m.role === 'user')?.tag?.page
-    const history = [...getThread(project.key).messages, asked]
-    addToThread(project.key, asked)
+    const previousPage = getTimeline().messages.findLast((m) => m.role === 'user')?.tag?.page
+    const history = [...getTimeline().messages.slice(getTimeline().windowFrom), asked].slice(-MAX_SENT)
+    addMessages(asked)
     setDraft('')
     setShot(null)
     setError(null)
@@ -184,7 +204,7 @@ export function MaymunChat({
         const { visible, ops } = parseMemory(text)
         const remembered = ops.length && memory ? await applyMemory(ops, memory.allowed).catch(() => []) : []
         const via = provider(ai.provider).gateway && answeredBy ? { model: answeredBy } : {}
-        if (visible) addToThread(project.key, { role: 'assistant', text: visible, at: Date.now(), ...via, ...(remembered.length ? { remembered } : {}) })
+        if (visible) addMessages({ role: 'assistant', text: visible, at: Date.now(), ...via, ...(remembered.length ? { remembered } : {}) })
       }
       setAnswer(null)
       controller.current = null
@@ -192,6 +212,7 @@ export function MaymunChat({
   }
 
   const busy = answer !== null
+  const firstShown = timeline.pages.length > shownPages ? timeline.pages.slice(0, -shownPages).reduce((sum, p) => sum + p.messages.length, 0) : 0
 
   return (
     <>
@@ -211,9 +232,26 @@ export function MaymunChat({
           <WelcomeBack welcome={welcome} onAsk={(text) => setDraft(text)} onClose={() => setWelcome(null)} />
         )}
         {messages.length === 0 && ready && <p className="text-muted">{t('maymun.empty')}</p>}
-        {messages.map((message, i) => (
-          <Bubble key={i} {...message} />
-        ))}
+        {firstShown > 0 && (
+          <button
+            type="button"
+            onClick={() => setShownPages((n) => n + SHOWN_PAGES)}
+            className="mx-auto block rounded-md border border-border px-2 py-1 text-xs text-muted hover:text-fg"
+          >
+            {t('maymun.older')}
+          </button>
+        )}
+        {messages.slice(firstShown).map((message, j) => {
+          const i = firstShown + j
+          const moved = message.role === 'user' && i > firstShown && owners[i] !== owners[i - 1]
+          return (
+            <Fragment key={i}>
+              {i === timeline.windowFrom && i > firstShown && <Divider text={t('maymun.newChatDivider')} />}
+              {moved && i !== timeline.windowFrom && <Divider text={message.tag?.page ?? t('maymun.general')} />}
+              <Bubble {...message} />
+            </Fragment>
+          )
+        })}
         {busy && <Bubble role="assistant" text={answer || '…'} />}
         {error && (
           <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs">
@@ -304,12 +342,12 @@ export function MaymunChat({
           type="button"
           onClick={() => {
             closeSession(true)
-            newTopic(project.key)
+            newChat()
             setError(null)
           }}
-          disabled={busy || messages.length === 0}
-          aria-label={t('maymun.newTopic')}
-          title={t('maymun.newTopic')}
+          disabled={busy || messages.length === timeline.windowFrom}
+          aria-label={t('maymun.newChat')}
+          title={t('maymun.newChat')}
           className="rounded-lg p-2 text-muted hover:text-fg disabled:opacity-40"
         >
           <MessageSquarePlus size={16} />
@@ -354,6 +392,15 @@ function Bubble({ role, text, image, shot, tag, remembered, model }: StoredMessa
         </p>
       )}
     </div>
+  )
+}
+
+/** A thin line across the chat with a word on it: another project, or a new chat. */
+function Divider({ text }: { text: string }) {
+  return (
+    <p role="separator" className="flex items-center gap-2 text-[11px] text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+      {text}
+    </p>
   )
 }
 

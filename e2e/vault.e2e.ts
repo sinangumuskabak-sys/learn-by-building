@@ -155,11 +155,11 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   await expect(note).not.toContainText('not Maymun’s to write')
   await expect(note).toContainText('0/28')
 
-  // A new topic sums up the session into a note next to the project's status, linked from it.
+  // A new chat sums up the session into a note next to the project's status, linked from it. The chat stayed open
+  // on the memory pages (one conversation for the whole app).
   await page.goto('./#/games/snake/01-canvas')
-  if (isMobile(page)) await page.getByRole('tab', { name: 'Code', exact: true }).click()
-  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
-  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
+  await expect(popup).toBeVisible()
+  await popup.getByRole('button', { name: 'New chat (Maymun still remembers the earlier pages)' }).click()
   await page.goto('./#/memory?f=' + encodeURIComponent(statusNote))
   await expect(note).toContainText('Draw the grid.')
   await note.getByRole('link', { name: /^\d{4}-\d{2}-\d{2} \d{2}\.\d{2}$/ }).click()
@@ -168,6 +168,7 @@ test('Maymun fills the vault as the learner talks, without showing its memory bl
   const session = decodeURIComponent(new URL(page.url()).hash.split('f=')[1])
 
   // Resetting all data takes back what Maymun wrote, the session note and the conversation.
+  await popup.getByRole('button', { name: 'Close' }).click()
   await page.goto('./#/settings')
   await page.getByRole('button', { name: 'Reset all data' }).click()
   await page.getByRole('button', { name: /Delete all progress/ }).click()
@@ -293,11 +294,11 @@ test('coming back: where you were, what is next, and a skill due for review', as
   await welcome.getByRole('button', { name: 'One quick question' }).first().click()
   await expect(popup.getByRole('textbox', { name: 'Your question' })).toHaveValue(/^Ask me one quick review question about /)
 
-  // A conversation ends the greeting; after a new topic, it comes back with what Maymun noted.
+  // A conversation ends the greeting; after a new chat, it comes back with what Maymun noted.
   await popup.getByRole('textbox', { name: 'Your question' }).press('Enter')
   await expect(popup.locator('.markdown').last()).toHaveText('Nice.')
   await expect(welcome).toHaveCount(0)
-  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
+  await popup.getByRole('button', { name: 'New chat (Maymun still remembers the earlier pages)' }).click()
   await popup.getByRole('button', { name: 'Close' }).click()
   await open()
   await expect(welcome).toContainText('Last time: Board painted, grid next.')

@@ -437,8 +437,10 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(Math.round(after.height)).toBe(Math.round(size.height))
 
   // Claude through Anthropic's SDK in the browser: the whole conversation goes along.
+  // The chat stays open on another page (one conversation for the whole app); close it to use the settings.
   await page.goto('/#/settings')
-  await expect(popup).toHaveCount(0)
+  await expect(popup).toBeVisible()
+  await popup.getByRole('button', { name: 'Close' }).click()
   const setup = page.locator('#main form').filter({ has: page.getByLabel('API key') })
   await setup.getByLabel('Service').selectOption('anthropic')
   await setup.getByLabel('API key').fill('sk-ant-test')
@@ -453,8 +455,15 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   expect(claude.system).toContain('Code (game.js)')
   expect(claude.messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user'])
 
-  await popup.getByRole('button', { name: 'New topic (the conversation so far is kept)' }).click()
-  await expect(popup.locator('.markdown')).toHaveCount(0)
+  // A new chat keeps every message on screen; only what goes to the model word for word starts over.
+  await popup.getByRole('button', { name: 'New chat (Maymun still remembers the earlier pages)' }).click()
+  await expect(popup.getByRole('separator').filter({ hasText: 'New chat' })).toHaveCount(0)
+  await question.fill('Fresh start?')
+  await question.press('Enter')
+  await expect(popup.getByRole('separator').filter({ hasText: 'New chat' })).toBeVisible()
+  await expect(popup.locator('.markdown')).toHaveCount(4)
+  const fresh = sent.at(-1) as { messages: { role: string; content: string }[] }
+  expect(fresh.messages).toEqual([{ role: 'user', content: '[code panel, step 01-canvas, page "Snake"] Fresh start?' }])
 })
 
 test('Maymun knows when the learner moves to another page, and what that page is for', async ({ page }) => {
@@ -491,6 +500,25 @@ test('Maymun knows when the learner moves to another page, and what that page is
   expect(system).toContain('They moved here from "Workshop" since their previous question.')
   expect(system).toContain('Reset all data')
   expect(sent[1].messages.at(-1)!.content).toBe('[page panel, page "Settings"] And what can I do here?')
+
+  // Into a game: still the same conversation, open, with a line where the project changed.
+  await page.goto('/#/games/snake/01-canvas')
+  await expect(page).toHaveTitle('Snake · Learn Platform')
+  await expect(popup).toBeVisible()
+  await expect(popup.getByText('What is here?')).toBeVisible()
+  await ask('And in the game?')
+  await expect(popup.getByRole('separator').filter({ hasText: 'Snake' })).toBeVisible()
+  expect(sent[2].messages.map((m) => m.content).slice(1)).toEqual([
+    '[page panel, page "Workshop"] What is here?',
+    'ok',
+    '[page panel, page "Settings"] And what can I do here?',
+    'ok',
+    expect.stringMatching(/, page "Snake"\] And in the game\?$/),
+  ])
+  await page.reload()
+  if (isMobile(page)) await tab(page, 'Code')
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  await expect(popup.getByText('What is here?')).toBeVisible()
 })
 
 test('Maymun asks for the map of the whole app when the question needs it, and answers with it', async ({ page }) => {
