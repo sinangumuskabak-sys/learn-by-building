@@ -1,6 +1,6 @@
 # Learn by Building
 
-[![GitHub stars](https://img.shields.io/github/stars/sinangumuskabak-sys/learn-platform?style=social)](https://github.com/sinangumuskabak-sys/learn-platform/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/sinangumuskabak-sys/learn-by-building?style=social)](https://github.com/sinangumuskabak-sys/learn-by-building/stargazers)
 
 **Try it:** https://learnbybuilding.dev — free, no sign-up, English and Turkish. If it helps you,
 please ⭐ star the repo: it helps other learners find it.

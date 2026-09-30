@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle2, Hammer } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { StarCard } from '../components/GitHubStar.tsx'
+import { SiteFooter, StarCard } from '../components/GitHubStar.tsx'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
 import { games, passedSteps, resumeStep } from '../games/catalog.ts'
 import { difficulties, type GameSummary } from '../games/schema.ts'
@@ -91,6 +91,7 @@ export function GamesPage() {
         )
       })}
       <p className="mt-10 rounded-xl border border-dashed border-border p-5 text-sm text-muted">{t('games.soon')}</p>
+      <SiteFooter />
     </Page>
   )
 }

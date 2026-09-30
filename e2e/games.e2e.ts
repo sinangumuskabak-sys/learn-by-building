@@ -854,8 +854,14 @@ test('Maymun’s conversation never ends: old pages go as a summary and an index
 
 test('the home page and the top bar link to the code on GitHub and ask for a star', async ({ page }) => {
   await go(page, '/')
-  const repo = 'https://github.com/sinangumuskabak-sys/learn-platform'
-  await expect(page.getByRole('link', { name: 'Star on GitHub' })).toHaveAttribute('href', repo)
+  const repo = 'https://github.com/sinangumuskabak-sys/learn-by-building'
+  // The star count GitHub gave last time, as a visitor's browser keeps it.
+  await page.evaluate(() => localStorage.setItem('lp.github.stars', JSON.stringify({ count: 1234, at: Date.now() })))
+  await page.reload()
+  await expect(page.getByRole('link', { name: /^Star on GitHub/ }).first()).toHaveAttribute('href', repo)
+  await expect(page.getByRole('link', { name: 'Learn by Building on GitHub: give it a star' })).toContainText('1.2k')
+  // The foot of the page (inside the main area, so it has no landmark role of its own).
+  await expect(page.locator('#main footer')).toContainText('free and open source (MIT license)')
   await expect(page.getByRole('link', { name: 'Learn by Building on GitHub: give it a star' })).toHaveAttribute('href', repo)
   await expect(page.getByRole('complementary')).toContainText('free and open source')
 })

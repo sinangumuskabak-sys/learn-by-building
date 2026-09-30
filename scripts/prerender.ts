@@ -18,7 +18,7 @@ const SITE = (process.env.SITE_URL ?? 'https://learnbybuilding.dev').replace(/\/
 /** The site's folder: `/` on its own domain, `/<repo>/` on GitHub Pages (as vite.config.ts builds it). */
 const BASE = `${new URL(SITE).pathname.replace(/\/+$/, '')}/`
 const ORIGIN = new URL(SITE).origin
-const REPO = 'https://github.com/sinangumuskabak-sys/learn-platform'
+const REPO = 'https://github.com/sinangumuskabak-sys/learn-by-building'
 const NAME = 'Learn by Building'
 const LANGS: Lang[] = ['en', 'tr']
 
