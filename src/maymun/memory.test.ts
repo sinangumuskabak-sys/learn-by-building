@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { addMessages, forModel, getTimeline, loadTimeline, mergeThreads, newChat, PAGE_TOKENS, paginate, projectOf, projectsOf, resetMemoryForTests } from './memory.ts'
+import { addMessages, deletePage, forModel, saveSummary, getTimeline, loadTimeline, mergeThreads, newChat, PAGE_TOKENS, paginate, projectOf, projectsOf, resetMemoryForTests } from './memory.ts'
 
 afterEach(() => {
   resetMemoryForTests()
@@ -39,6 +39,22 @@ describe('Maymun memory', () => {
       [1, ['q1', 'xxxxx', 'still']],
       [2, ['q2', 'a2']],
     ])
+  })
+
+  it('deletes a page for good, keeping the other numbers, and starts the summary over when it held that page', async () => {
+    await loadTimeline()
+    const long = 'x'.repeat(PAGE_TOKENS * 4)
+    for (const q of ['one', 'two', 'three']) addMessages({ role: 'user', text: q }, { role: 'assistant', text: long })
+    newChat()
+    saveSummary('knows about one and two', 2, { 1: 'One', 2: 'Two' })
+    deletePage(3)
+    expect(getTimeline().pages.map((p) => p.n)).toEqual([1, 2])
+    expect(getTimeline().windowFrom).toBe(4)
+    expect(getTimeline().summary).toBe('knows about one and two')
+    deletePage(1)
+    expect(getTimeline().pages.map((p) => [p.n, p.title])).toEqual([[2, 'Two']])
+    expect(getTimeline().messages.map((m) => m.text)).toEqual(['two', long])
+    expect(getTimeline()).toMatchObject({ windowFrom: 2, summary: '', foldedThrough: 0 })
   })
 
   it('tells the model where each question was asked', () => {

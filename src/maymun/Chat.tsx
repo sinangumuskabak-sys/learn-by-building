@@ -1,4 +1,4 @@
-import { Camera, MessageSquarePlus, Send, Square, X } from 'lucide-react'
+import { Camera, MessageSquarePlus, Send, Square, Trash2, X } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Markdown } from '../components/Markdown.tsx'
@@ -11,7 +11,7 @@ import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
 import { Snip } from './Snip.tsx'
 import { currentPanel } from './tracker.ts'
-import { addMessages, forModel, getTimeline, loadTimeline, markSessions, newChat, projectsOf, useTimeline, type Project, type StoredMessage } from './memory.ts'
+import { addMessages, deletePage, forModel, getTimeline, loadTimeline, markSessions, newChat, projectsOf, useTimeline, type Project, type StoredMessage } from './memory.ts'
 import { fold, startOverAfterBreak } from './fold.ts'
 import { asksForPages, conversationPrompt, mayAskForPages, pagesBefore, recalled, relatedPage, windowStart } from './window.ts'
 import { aiStore, baseFor, isReady, modelFor, modelsFor, useMaymunAi } from './store.ts'
@@ -239,6 +239,9 @@ export function MaymunChat({
 
   const busy = answer !== null
   const conversationPreview = conversationPrompt(timeline, windowStart(timeline), null)
+  // The page each shown page starts at, by the index of its first message.
+  const pageStarts = new Map<number, number>()
+  timeline.pages.reduce((at, page) => (pageStarts.set(at, page.n), at + page.messages.length), 0)
   const firstShown = timeline.pages.length > shownPages ? timeline.pages.slice(0, -shownPages).reduce((sum, p) => sum + p.messages.length, 0) : 0
 
   return (
@@ -276,6 +279,7 @@ export function MaymunChat({
             <Fragment key={i}>
               {i === timeline.windowFrom && i > firstShown && <Divider text={t('maymun.newChatDivider')} />}
               {moved && i !== timeline.windowFrom && <Divider text={message.tag?.page ?? t('maymun.general')} />}
+              {pageStarts.has(i) && <PageMark n={pageStarts.get(i)!} disabled={busy} />}
               <Bubble {...message} />
             </Fragment>
           )
@@ -408,7 +412,7 @@ function Bubble({ role, text, image, shot, tag, remembered, model, recalled: loo
       {model && <p className="mt-1 font-mono text-[11px] text-muted">{t('maymun.answeredBy', { model })}</p>}
       {looked && looked.length > 0 && (
         <p className="mt-1 text-[11px] text-muted">
-          🔎 {t('maymun.recalled', { pages: looked.map((n) => `p.${n}`).join(', ') })}
+          🔎 {t('maymun.recalled', { pages: looked.map((n) => t('maymun.page', { n })).join(', ') })}
         </p>
       )}
       {remembered && remembered.length > 0 && (
@@ -433,6 +437,38 @@ function Divider({ text }: { text: string }) {
   return (
     <p role="separator" className="flex items-center gap-2 text-[11px] text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
       {text}
+    </p>
+  )
+}
+
+/** Where a page of the conversation starts: its number (Maymun's "p.3"), and deleting it, with a second click to confirm. */
+function PageMark({ n, disabled }: { n: number; disabled: boolean }) {
+  const { t } = useI18n()
+  const [sure, setSure] = useState(false)
+  return (
+    <p className="group flex items-center justify-end gap-1 text-[10px] text-muted">
+      <span>{t('maymun.page', { n })}</span>
+      {sure ? (
+        <>
+          <button type="button" onClick={() => deletePage(n)} className="rounded border border-danger/50 px-1.5 text-danger hover:bg-danger/10">
+            {t('maymun.deletePageSure', { n })}
+          </button>
+          <button type="button" onClick={() => setSure(false)} aria-label={t('maymun.dismiss')} title={t('maymun.dismiss')} className="rounded p-0.5 hover:text-fg">
+            <X size={11} />
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setSure(true)}
+          disabled={disabled}
+          aria-label={t('maymun.deletePage', { n })}
+          title={t('maymun.deletePage', { n })}
+          className="rounded p-0.5 opacity-40 group-hover:opacity-100 hover:text-fg focus-visible:opacity-100 disabled:hidden"
+        >
+          <Trash2 size={11} />
+        </button>
+      )}
     </p>
   )
 }

@@ -291,6 +291,37 @@ export function saveSummary(summary: string, foldedThrough: number, titles: Reco
   })
 }
 
+/**
+ * Deletes a page for good. Numbers of the other pages stay. When the page was already in the running summary, the
+ * summary starts over from the pages left, so nothing of the deleted page stays behind in it.
+ */
+export function deletePage(n: number) {
+  const index = state.pages.findIndex((p) => p.n === n)
+  if (index < 0) return
+  const start = state.pages.slice(0, index).reduce((sum, p) => sum + p.messages.length, 0)
+  const count = state.pages[index].messages.length
+  const shift = (i: number) => (i <= start ? i : Math.max(start, i - count))
+  const folded = n <= state.foldedThrough
+  state = build(state.pages.filter((p) => p.n !== n), {
+    windowFrom: shift(state.windowFrom),
+    sessionFrom: shift(state.sessionFrom),
+    summary: folded ? '' : state.summary,
+    foldedThrough: folded ? 0 : state.foldedThrough,
+  })
+  void (async () => {
+    const database = await openDb()
+    if (!database) return
+    try {
+      const tx = database.transaction([PAGES, META], 'readwrite')
+      tx.objectStore(PAGES).delete(n)
+      tx.objectStore(META).put({ key: 'meta', ...metaOf(state) })
+    } catch {
+      // Gone for this visit at least.
+    }
+  })()
+  emit()
+}
+
 /** The conversation, loaded on first use and kept up to date. */
 export function useTimeline(): Timeline {
   useEffect(() => {

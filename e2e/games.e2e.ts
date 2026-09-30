@@ -829,4 +829,14 @@ test('Maymun’s conversation never ends: old pages go as a summary and an index
   expect(sent.at(-1)!.messages[0].content).toContain('## Maybe related to this question (found by its words): page 1')
   expect(sent.at(-1)!.messages[0].content).toContain('PAGE-ONE-ANSWER')
   await expect(popup.getByText('Looked at earlier pages: p.1')).toHaveCount(2)
+
+  // A page can be deleted for good (a second click confirms); it is gone after a reload too.
+  await expect(popup.getByText('Question number 29', { exact: true })).toBeVisible()
+  await popup.getByRole('button', { name: 'Delete page 30 of the conversation' }).click()
+  await popup.getByRole('button', { name: 'Delete page 30 for good' }).click()
+  await expect(popup.getByText('Question number 29', { exact: true })).toHaveCount(0)
+  await page.reload()
+  await page.getByRole('button', { name: 'Ask Maymun about this panel' }).click()
+  await expect(popup.getByText('Question number 28', { exact: true })).toBeVisible()
+  await expect(popup.getByText('Question number 29', { exact: true })).toHaveCount(0)
 })

@@ -80,7 +80,9 @@ export async function fold(language: string, rounds = 3): Promise<void> {
       },
     }, modelsFor(ai, ai.provider))
     const result = parseFold(text)
-    if (!result) return
+    // A page deleted meanwhile (the summary started over): this result may carry it, drop it.
+    const now = getTimeline()
+    if (!result || now.summary !== timeline.summary || now.foldedThrough !== timeline.foldedThrough || pages.some((p) => !now.pages.some((q) => q.n === p.n))) return
     saveSummary(result.summary, pages.at(-1)!.n, result.titles)
     ok = true
   } catch {
