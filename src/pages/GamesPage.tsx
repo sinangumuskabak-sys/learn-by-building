@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Hammer } from 'lucide-react'
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { SiteFooter, StarCard } from '../components/GitHubStar.tsx'
 import { Badge, Page, ProgressBar } from '../components/ui.tsx'
@@ -10,6 +10,23 @@ import { useDocumentTitle } from '../lib/hooks.ts'
 import { useProgress } from '../progress/progress.ts'
 
 const NOTE_KEY = 'lp.storageNote'
+
+// Where the list was scrolled to, so coming back from a game opens it at the same place, not at the top.
+let savedScroll = 0
+
+/** Keeps the page's scroll position (the shell's <main> scrolls, not the window) while the app is open. */
+function useKeptScroll() {
+  useLayoutEffect(() => {
+    const main = document.getElementById('main')
+    if (!main) return
+    main.scrollTop = savedScroll
+    const onScroll = () => {
+      savedScroll = main.scrollTop
+    }
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => main.removeEventListener('scroll', onScroll)
+  }, [])
+}
 
 /** Once, on the home page: everything is kept in this browser, so take a backup now and then. */
 function StorageNote() {
@@ -49,6 +66,7 @@ function StorageNote() {
 export function GamesPage() {
   const { t } = useI18n()
   useDocumentTitle(t('games.title'))
+  useKeptScroll()
   const projects = games.filter((game) => game.kind === 'web')
 
   return (
