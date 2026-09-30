@@ -24,7 +24,9 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      # Every step's reference solution already passes its tests in `npm run validate`; running each one again in a
+      # browser (about 1,400 tests) is left to local full runs so a push reaches the site in minutes, not hours.
+      - run: npm run e2e -- --grep-invert "reference solution passes in the browser"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
