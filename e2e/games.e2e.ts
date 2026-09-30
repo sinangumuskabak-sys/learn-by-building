@@ -388,7 +388,7 @@ test('Maymun chats about the panel with the learner’s own key, keeps the conve
   await expect(popup.locator('.markdown').last()).toHaveText('Try moving the snake.')
   await expect(popup.locator('.markdown strong')).toHaveText('moving')
   const first = sent[0] as { model: string; messages: { role: string; content: string }[] }
-  expect(first.model).toBe('openrouter/auto')
+  expect(first.model).toBe('openrouter/free')
   expect(first.messages[0].role).toBe('system')
   expect(first.messages[0].content).toContain('Code (game.js)')
   expect(first.messages[0].content).toContain('# This project: Snake')

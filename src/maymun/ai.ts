@@ -25,7 +25,8 @@ export interface Provider {
 export const providers: Provider[] = [
   // OmniRoute on the learner's computer: whatever they connected there (Claude, Gemini, Codex…), under one key.
   { id: 'omniroute', name: 'OmniRoute', model: '', keys: 'http://localhost:20128/dashboard', base: 'http://localhost:20128/v1', images: true, local: true, gateway: true },
-  { id: 'openrouter', name: 'OpenRouter', model: 'openrouter/auto', keys: 'https://openrouter.ai/keys', base: 'https://openrouter.ai/api/v1', images: true },
+  // `openrouter/free` picks one of the free models, so a new key with no credit answers straight away.
+  { id: 'openrouter', name: 'OpenRouter', model: 'openrouter/free', keys: 'https://openrouter.ai/keys', base: 'https://openrouter.ai/api/v1', images: true },
   { id: 'anthropic', name: 'Anthropic (Claude)', model: 'claude-opus-5', keys: 'https://console.anthropic.com/settings/keys', images: true },
   { id: 'openai', name: 'OpenAI', model: 'gpt-5-mini', keys: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com/v1', images: true },
   { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat', keys: 'https://platform.deepseek.com/api_keys', base: 'https://api.deepseek.com', images: false },

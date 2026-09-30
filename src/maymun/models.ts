@@ -4,6 +4,8 @@
  * takes over when one fails.
  */
 
+import { provider, type ProviderId } from './ai.ts'
+
 /** OmniRoute's connection prefixes, as people know them. */
 const GROUPS: Record<string, string> = {
   cc: 'Claude (Claude Code)',
@@ -96,4 +98,39 @@ export function rankScore(id: string): number {
 /** The active models, best first: the order they are tried in. */
 export function rankModels(ids: string[]): string[] {
   return [...new Set(ids)].sort((a, b) => rankScore(b) - rankScore(a) || a.localeCompare(b))
+}
+
+/** A model a service offers, for the learner to pick from a list instead of typing its name. */
+export interface OfferedModel {
+  id: string
+  free: boolean
+}
+
+// Models an account lists that cannot hold a conversation (pictures, speech, embeddings…).
+const NOT_CHAT = /(embed|whisper|tts|dall-e|image|audio|realtime|moderation|transcribe|search|computer-use|sora|codex-mini)/i
+
+/**
+ * The models a service offers, free ones first. OpenRouter's list is public and says which cost nothing
+ * (`openrouter/free` picks one of them); the other services list the models of the key's account.
+ */
+export async function listModels(id: ProviderId, key?: string): Promise<OfferedModel[]> {
+  type Listed = ListedModel & { pricing?: { prompt?: string; completion?: string }; architecture?: { output_modalities?: unknown } }
+  let listed: Listed[] = []
+  if (id === 'openrouter') {
+    const response = await fetch('https://openrouter.ai/api/v1/models')
+    listed = ((await response.json()) as { data?: Listed[] }).data ?? []
+  } else if (key && id === 'anthropic') {
+    const response = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    })
+    listed = ((await response.json()) as { data?: Listed[] }).data ?? []
+  } else if (key && provider(id).base && !provider(id).local) {
+    const response = await fetch(`${provider(id).base}/models`, { headers: { Authorization: `Bearer ${key}` } })
+    listed = ((await response.json()) as { data?: Listed[] }).data ?? []
+  }
+  const models = listed
+    .filter((m) => typeof m.id === 'string' && !NOT_CHAT.test(m.id) && canChat(m) && canChat({ output_modalities: m.architecture?.output_modalities }))
+    .map((m) => ({ id: m.id as string, free: m.id === 'openrouter/free' || String(m.id).endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0') }))
+  const rank = (m: OfferedModel) => (m.id === 'openrouter/free' ? 0 : m.id === 'openrouter/auto' ? 2 : m.free ? 1 : 3)
+  return models.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id))
 }

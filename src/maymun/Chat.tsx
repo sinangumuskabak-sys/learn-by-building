@@ -5,7 +5,7 @@ import { Markdown } from '../components/Markdown.tsx'
 import { useI18n } from '../i18n/i18n.ts'
 import { useMediaQuery } from '../lib/hooks.ts'
 import { ChatError, provider, providers, streamChatWithFallback, type ChatErrorKind, type ProviderId } from './ai.ts'
-import { canChat, groupModels, rankModels, type ListedModel } from './models.ts'
+import { canChat, groupModels, listModels, rankModels, type ListedModel, type OfferedModel } from './models.ts'
 import { captureRegion, type Region } from './capture.ts'
 import { APP_MAP_MARKER, appMap, asksForMap, mayAskForMap } from './app-map.ts'
 import { readContext, systemPrompt, type PanelContext } from './context.ts'
@@ -422,6 +422,23 @@ function ProviderForm({ compact }: { compact: boolean }) {
   const [offered, setOffered] = useState<string[]>([])
   const savedKey = ai.keys[ai.provider]
   const savedBase = baseFor(ai, ai.provider)
+  // An online service's models, to pick from a list (OpenRouter's is public; the others need the saved key).
+  // Kept with the service it came from, so switching services never shows the previous one's list.
+  const [listing, setListing] = useState<{ id: ProviderId; models: OfferedModel[] } | null>(null)
+  const listed = !current.local && listing?.id === current.id ? listing.models : []
+  const [typingFor, setTypingFor] = useState<ProviderId | null>(null)
+  const typing = typingFor === current.id
+  const setTyping = (on: boolean) => setTypingFor(on ? current.id : null)
+  useEffect(() => {
+    if (current.local) return
+    let live = true
+    listModels(current.id, savedKey)
+      .then((models) => live && setListing({ id: current.id, models }))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [current.local, current.id, savedKey])
   useEffect(() => {
     if (!current.local || !savedBase) return
     let live = true
@@ -519,8 +536,19 @@ function ProviderForm({ compact }: { compact: boolean }) {
         />
       </label>
       {current.gateway && ai.keys[ai.provider] && <GatewayModels id={current.id} offered={offered} />}
-      <label className={`block text-xs font-medium ${current.gateway ? 'hidden' : ''}`}>
-        {t('maymun.model')}
+      {listed.length > 0 && (
+        <ModelPicker
+          models={listed}
+          value={model || current.model}
+          onChange={(id) => {
+            if (id === OTHER) return setTyping(true)
+            setTyping(false)
+            setModel(id)
+          }}
+        />
+      )}
+      <label className={`block text-xs font-medium ${current.gateway || (listed.length > 0 && !typing && listed.some((m) => m.id === (model || current.model))) ? 'hidden' : ''}`}>
+        {listed.length > 0 ? t('maymun.models.typed') : t('maymun.model')}
         <input
           value={model}
           onChange={(event) => setModel(event.target.value)}
@@ -643,5 +671,47 @@ function LocalNote() {
     <p role="note" className={`text-xs ${touch ? 'rounded-lg border border-danger/40 bg-danger/10 px-3 py-2' : 'text-muted'}`}>
       {touch ? t('maymun.local.phone') : t('maymun.local.permission')}
     </p>
+  )
+}
+
+const OTHER = '\u0000other'
+
+/** The service's models as a list: free ones in their own group first (with a note on their daily limit), then the rest. */
+function ModelPicker({ models, value, onChange }: { models: OfferedModel[]; value: string; onChange: (id: string) => void }) {
+  const { t } = useI18n()
+  const free = models.filter((m) => m.free)
+  const paid = models.filter((m) => !m.free)
+  const known = models.some((m) => m.id === value)
+  const label = (id: string) => (id === 'openrouter/free' ? t('maymun.models.anyFree') : id === 'openrouter/auto' ? t('maymun.models.auto') : id)
+  return (
+    <label className="block text-xs font-medium">
+      {t('maymun.model')}
+      <select
+        value={known ? value : OTHER}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm"
+      >
+        {free.length > 0 && (
+          <optgroup label={t('maymun.models.free')}>
+            {free.map((m) => (
+              <option key={m.id} value={m.id}>
+                {label(m.id)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {paid.length > 0 && (
+          <optgroup label={free.length > 0 ? t('maymun.models.paid') : t('maymun.models.all')}>
+            {paid.map((m) => (
+              <option key={m.id} value={m.id}>
+                {label(m.id)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <option value={OTHER}>{t('maymun.models.other')}</option>
+      </select>
+      {free.some((m) => m.id === value) && <span className="mt-1 block font-normal text-muted">{t('maymun.models.freeHint')}</span>}
+    </label>
   )
 }
