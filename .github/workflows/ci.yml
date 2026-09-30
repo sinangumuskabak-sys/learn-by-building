@@ -56,3 +56,17 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Search engines that take IndexNow (Bing, Yandex, …) hear about the new version at once.
+  indexnow:
+    if: github.event_name == 'push'
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/indexnow.mjs
+        env:
+          SITE_URL: https://learnbybuilding.dev
